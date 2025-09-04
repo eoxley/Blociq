@@ -8,400 +8,314 @@
     
     <style>
         body {
-            font-family: 'Segoe UI', sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             padding: 0;
             height: 100vh;
             display: flex;
             flex-direction: column;
+            background-color: #f5f5f5;
         }
         
         .header {
             background: linear-gradient(135deg, #008C8F, #7645ED);
             color: white;
-            padding: 12px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
+            padding: 16px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         
-        .logo {
-            width: 24px;
-            height: 24px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
+        .header h1 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .header p {
+            margin: 4px 0 0 0;
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        
+        .content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .email-info {
+            background: white;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .email-info h3 {
+            margin: 0 0 12px 0;
+            color: #333;
             font-size: 14px;
         }
         
-        .draft-reply-section {
-            padding: 12px;
-            border-bottom: 1px solid #e1dfdd;
-            background: #f8f9fa;
+        .email-info p {
+            margin: 4px 0;
+            color: #666;
+            font-size: 12px;
         }
         
-        .draft-button {
-            background: linear-gradient(135deg, #008C8F, #2BBEB4);
-            color: white;
-            border: none;
-            padding: 12px 16px;
+        .actions {
+            background: white;
             border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 6px;
             font-size: 14px;
             font-weight: 600;
             cursor: pointer;
-            width: 100%;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
+            margin-bottom: 8px;
+            transition: all 0.2s ease;
         }
         
-        .draft-button:hover {
+        .btn-primary {
+            background: linear-gradient(135deg, #008C8F, #2BBEB4);
+            color: white;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
             background: linear-gradient(135deg, #006d70, #1a9b94);
             transform: translateY(-1px);
         }
         
-        .draft-button:disabled {
-            background: #6c757d;
+        .btn:disabled {
+            background: #ccc;
             cursor: not-allowed;
             transform: none;
         }
         
-        .chat-container {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-        
-        .chat-iframe {
-            flex: 1;
-            border: none;
-            width: 100%;
-        }
-        
         .status {
+            margin-top: 12px;
             padding: 8px 12px;
+            border-radius: 4px;
             font-size: 12px;
             text-align: center;
             display: none;
-            margin-top: 8px;
-            border-radius: 4px;
         }
         
         .status.success {
             background: #d4edda;
             color: #155724;
+            border: 1px solid #c3e6cb;
         }
         
         .status.error {
             background: #f8d7da;
             color: #721c24;
+            border: 1px solid #f5c6cb;
         }
         
         .status.info {
             background: #d1ecf1;
             color: #0c5460;
+            border: 1px solid #bee5eb;
         }
         
-        .loading-spinner {
+        .loading {
             display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid rgba(255,255,255,0.3);
+            width: 12px;
+            height: 12px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #008C8F;
             border-radius: 50%;
-            border-top-color: white;
-            animation: spin 1s ease-in-out infinite;
+            animation: spin 1s linear infinite;
         }
         
         @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        .email-context {
-            padding: 8px 12px;
-            background: #e3f2fd;
-            border-bottom: 1px solid #bbdefb;
-            font-size: 12px;
-            color: #1565c0;
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
 
 <body>
-    <!-- Header -->
     <div class="header">
-        <div class="logo">B</div>
-        <div>
-            <div style="font-weight: 600;">BlocIQ AI Assistant</div>
-            <div style="font-size: 11px; opacity: 0.9;">Chat & Email Assistant</div>
+        <h1>BlocIQ AI Assistant</h1>
+        <p>Email Analysis & Response Helper</p>
+    </div>
+    
+    <div class="content">
+        <div class="email-info" id="emailInfo">
+            <h3>📧 Current Email</h3>
+            <p id="emailDetails">Loading email information...</p>
         </div>
-    </div>
-    
-    <!-- Email Context Display -->
-    <div class="email-context" id="emailContext" style="display: none;">
-        <div id="contextText">Loading email context...</div>
-    </div>
-    
-    <!-- Draft Reply Section -->
-    <div class="draft-reply-section">
-        <button class="draft-button" onclick="generateDraftReply()" id="draftBtn">
-            <span id="buttonIcon">📝</span>
-            <span id="buttonText">Draft Reply</span>
-        </button>
-        <div class="status" id="status"></div>
-    </div>
-    
-    <!-- Chat Interface (iframe to your existing Ask AI) -->
-    <div class="chat-container">
-        <iframe 
-            id="chatIframe"
-            class="chat-iframe" 
-            src="about:blank">
-        </iframe>
+        
+        <div class="actions">
+            <button class="btn btn-primary" onclick="showEmailInfo()" id="infoBtn">
+                📋 Show Email Details
+            </button>
+            
+            <button class="btn btn-primary" onclick="testOfficeAPI()" id="testBtn">
+                🔧 Test Office Connection
+            </button>
+            
+            <div class="status" id="status"></div>
+        </div>
     </div>
 
     <script>
         let currentEmail = null;
         
-        // Initialize
+        // Initialize when Office is ready
         Office.onReady((info) => {
-            console.log('BlocIQ Outlook Add-in loaded');
+            console.log('BlocIQ Add-in initialized');
+            console.log('Host:', info.host);
+            console.log('Platform:', info.platform);
             
             if (info.host === Office.HostType.Outlook) {
-                initializeAddIn();
+                initializeAddin();
+            } else {
+                showStatus('This add-in works only in Outlook', 'error');
             }
         });
         
-        function initializeAddIn() {
-            // Load your existing Ask AI chat interface
-            loadChatInterface();
+        function initializeAddin() {
+            console.log('Initializing BlocIQ add-in...');
             
-            // Get current email context
-            getCurrentEmailContext();
-        }
-        
-        function loadChatInterface() {
-            const iframe = document.getElementById('chatIframe');
-            
-            // Load your Ask AI interface with Outlook context
-            iframe.src = 'https://www.blociq.co.uk/ai-assistant?outlook=true&context=email';
-            
-            // Handle iframe load
-            iframe.onload = function() {
-                console.log('Chat interface loaded');
-                if (currentEmail) {
-                    updateChatContext(currentEmail);
-                }
-            };
+            try {
+                // Get current email context
+                getCurrentEmailContext();
+                showStatus('Add-in loaded successfully!', 'success');
+            } catch (error) {
+                console.error('Initialization error:', error);
+                showStatus('Error during initialization: ' + error.message, 'error');
+            }
         }
         
         function getCurrentEmailContext() {
             try {
                 const item = Office.context.mailbox.item;
+                
                 if (item) {
-                    // Get basic email info
                     currentEmail = {
-                        subject: item.subject || '',
-                        from: item.from?.emailAddress || '',
-                        itemType: item.itemType,
-                        itemId: item.itemId,
-                        dateTimeCreated: item.dateTimeCreated
+                        subject: item.subject || 'No subject',
+                        from: item.from ? (item.from.emailAddress || item.from.displayName || 'Unknown') : 'Unknown sender',
+                        itemType: item.itemType || 'unknown',
+                        itemId: item.itemId || 'no-id',
+                        dateTimeCreated: item.dateTimeCreated ? new Date(item.dateTimeCreated).toLocaleString() : 'Unknown date'
                     };
                     
-                    // Display email context
-                    displayEmailContext(currentEmail);
-                    
-                    // Update chat interface with email context
-                    updateChatContext(currentEmail);
+                    console.log('Email context loaded:', currentEmail);
+                    updateEmailDisplay();
+                } else {
+                    console.log('No email item found');
+                    document.getElementById('emailDetails').textContent = 'No email selected';
                 }
             } catch (error) {
                 console.error('Error getting email context:', error);
-                showStatus('Error loading email context', 'error');
+                document.getElementById('emailDetails').textContent = 'Error loading email: ' + error.message;
             }
         }
         
-        function displayEmailContext(emailData) {
-            const contextDiv = document.getElementById('emailContext');
-            const contextText = document.getElementById('contextText');
+        function updateEmailDisplay() {
+            const emailDetails = document.getElementById('emailDetails');
             
-            if (emailData.subject || emailData.from) {
-                contextText.innerHTML = `
-                    <strong>Email:</strong> ${emailData.subject || 'No subject'}<br>
-                    <strong>From:</strong> ${emailData.from || 'Unknown sender'}
+            if (currentEmail) {
+                emailDetails.innerHTML = `
+                    <strong>Subject:</strong> ${currentEmail.subject}<br>
+                    <strong>From:</strong> ${currentEmail.from}<br>
+                    <strong>Type:</strong> ${currentEmail.itemType}<br>
+                    <strong>Date:</strong> ${currentEmail.dateTimeCreated}
                 `;
-                contextDiv.style.display = 'block';
             }
         }
         
-        function updateChatContext(emailData) {
-            // Send email context to your Ask AI interface
-            const iframe = document.getElementById('chatIframe');
-            
-            // Post message to your Ask AI interface with email context
-            try {
-                iframe.contentWindow.postMessage({
-                    type: 'email_context',
-                    data: emailData
-                }, 'https://www.blociq.co.uk');
-            } catch (error) {
-                console.log('Could not send context to iframe:', error);
-            }
-        }
-        
-        async function generateDraftReply() {
-            const btn = document.getElementById('draftBtn');
-            const buttonIcon = document.getElementById('buttonIcon');
-            const buttonText = document.getElementById('buttonText');
-            
+        function showEmailInfo() {
+            const btn = document.getElementById('infoBtn');
             btn.disabled = true;
-            buttonIcon.innerHTML = '<div class="loading-spinner"></div>';
-            buttonText.textContent = 'Analyzing...';
-            
-            showStatus('Analyzing email and generating reply...', 'info');
+            btn.innerHTML = '<span class="loading"></span> Loading...';
             
             try {
-                // Get full email content
-                const emailContent = await getFullEmailContent();
-                
-                // Call your v2 inbox API for reply generation
-                const reply = await callReplyGenerationAPI(emailContent);
-                
-                // Insert reply into email
-                await insertReplyIntoEmail(reply);
-                
-                showStatus('Draft reply inserted successfully!', 'success');
-                
+                if (currentEmail) {
+                    showStatus('Email loaded: ' + currentEmail.subject, 'info');
+                } else {
+                    getCurrentEmailContext();
+                    if (currentEmail) {
+                        showStatus('Email context refreshed', 'success');
+                    } else {
+                        showStatus('No email found to display', 'error');
+                    }
+                }
             } catch (error) {
-                console.error('Error generating reply:', error);
-                showStatus('Error generating reply: ' + error.message, 'error');
+                console.error('Error showing email info:', error);
+                showStatus('Error: ' + error.message, 'error');
             } finally {
                 btn.disabled = false;
-                buttonIcon.textContent = '📝';
-                buttonText.textContent = 'Draft Reply';
+                btn.innerHTML = '📋 Show Email Details';
             }
         }
         
-        function getFullEmailContent() {
-            return new Promise((resolve, reject) => {
-                const item = Office.context.mailbox.item;
+        function testOfficeAPI() {
+            const btn = document.getElementById('testBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading"></span> Testing...';
+            
+            try {
+                // Test basic Office.js functionality
+                const context = Office.context;
+                const info = {
+                    host: context.host,
+                    platform: context.platform,
+                    version: context.version,
+                    mailboxVersion: context.mailbox ? context.mailbox.diagnostics.version : 'Not available'
+                };
                 
-                // Get email body content
-                item.body.getAsync(Office.CoercionType.Text, (result) => {
-                    if (result.status === Office.AsyncResultStatus.Succeeded) {
-                        resolve({
-                            subject: item.subject || '',
-                            body: result.value || '',
-                            from: item.from?.emailAddress || '',
-                            to: item.to?.map(r => r.emailAddress).join(', ') || '',
-                            cc: item.cc?.map(r => r.emailAddress).join(', ') || '',
-                            dateTimeCreated: item.dateTimeCreated,
-                            itemType: item.itemType
-                        });
-                    } else {
-                        reject(new Error('Failed to get email content'));
-                    }
-                });
-            });
-        }
-        
-        async function callReplyGenerationAPI(emailContent) {
-            // Call your existing v2 inbox API for reply generation
-            const response = await fetch('https://www.blociq.co.uk/api/addin/ask-ai', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                credentials: 'include', // Include cookies for authentication
-                body: JSON.stringify({
-                    prompt: `Please generate a professional reply to this email:
-                    
-Subject: ${emailContent.subject}
-From: ${emailContent.from}
-Body: ${emailContent.body}
-
-Generate a concise, professional reply that addresses the main points in the email.`,
-                    contextType: 'email_reply',
-                    emailContext: emailContent
-                })
-            });
-            
-            if (!response.ok) {
-                throw new Error('API request failed: ' + response.status);
+                console.log('Office API test results:', info);
+                showStatus('Office API connection successful!', 'success');
+                
+            } catch (error) {
+                console.error('Office API test failed:', error);
+                showStatus('Office API test failed: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '🔧 Test Office Connection';
             }
-            
-            const result = await response.json();
-            
-            // Return the generated reply
-            return result.response || 'I apologize, but I was unable to generate a reply at this time.';
         }
         
-        function insertReplyIntoEmail(replyText) {
-            return new Promise((resolve, reject) => {
-                Office.context.mailbox.item.body.setAsync(
-                    replyText,
-                    { coercionType: Office.CoercionType.Text },
-                    (result) => {
-                        if (result.status === Office.AsyncResultStatus.Succeeded) {
-                            resolve();
-                        } else {
-                            reject(new Error('Failed to insert reply'));
-                        }
-                    }
-                );
-            });
-        }
-        
-        function showStatus(message, type) {
+        function showStatus(message, type = 'info') {
             const statusDiv = document.getElementById('status');
             statusDiv.textContent = message;
             statusDiv.className = `status ${type}`;
             statusDiv.style.display = 'block';
             
-            if (type === 'success') {
+            console.log(`Status (${type}):`, message);
+            
+            // Auto-hide success and info messages
+            if (type === 'success' || type === 'info') {
                 setTimeout(() => {
                     statusDiv.style.display = 'none';
-                }, 4000);
-            } else if (type === 'info') {
-                setTimeout(() => {
-                    statusDiv.style.display = 'none';
-                }, 3000);
+                }, type === 'success' ? 4000 : 3000);
             }
         }
         
-        // Handle messages from the chat iframe
-        window.addEventListener('message', function(event) {
-            if (event.origin !== 'https://www.blociq.co.uk') {
-                return;
-            }
-            
-            // Handle messages from your Ask AI interface
-            if (event.data.type === 'chat_ready') {
-                console.log('Chat interface is ready');
-                if (currentEmail) {
-                    updateChatContext(currentEmail);
-                }
-            }
-        });
-        
-        // Error handling
-        window.onerror = function(msg, url, line) {
-            console.error('Error:', msg);
-            showStatus('Error: ' + msg, 'error');
+        // Global error handler
+        window.onerror = function(msg, url, line, col, error) {
+            console.error('Global error:', msg, 'at', url, ':', line);
+            showStatus('JavaScript error: ' + msg, 'error');
+            return false;
         };
         
-        // Handle offline/online status
-        window.addEventListener('online', function() {
-            showStatus('Connection restored', 'success');
+        // Unhandled promise rejection handler
+        window.addEventListener('unhandledrejection', function(event) {
+            console.error('Unhandled promise rejection:', event.reason);
+            showStatus('Promise error: ' + event.reason, 'error');
         });
         
-        window.addEventListener('offline', function() {
-            showStatus('No internet connection', 'error');
-        });
+        console.log('BlocIQ taskpane script loaded successfully');
     </script>
 </body>
 </html>
