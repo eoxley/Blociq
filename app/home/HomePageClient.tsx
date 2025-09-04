@@ -19,6 +19,9 @@ import { toast } from 'sonner'
 import DocumentQA from '@/components/DocumentQA'
 import DocumentSummary, { DocumentSummary as DocumentSummaryType } from '@/components/DocumentSummary'
 import LeaseDocumentQA, { extractLeaseMetadata } from '@/components/LeaseDocumentQA'
+import { LeaseAnalysisResponse } from '@/components/lease/LeaseAnalysisResponse'
+import { LeaseDocumentParser, isLeaseDocument } from '@/lib/lease/LeaseDocumentParser'
+import { processFileWithOCR } from '@/lib/ocr-integration'
 import { checkOutlookConnection, fetchOutlookEvents, getOutlookAuthUrl } from '@/lib/outlookUtils'
 import { normalizeEventTimes, formatInZone, getClientZone } from '@/lib/time'
 import { getTimeBasedGreeting } from '@/utils/greeting'
@@ -118,7 +121,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   const [askInput, setAskInput] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [uploadStatus, setUploadStatus] = useState<string>('')
-  const [messages, setMessages] = useState<Array<{sender: 'user' | 'ai', text: string, timestamp: Date}>>([])
+  const [messages, setMessages] = useState<Array<{sender: 'user' | 'ai', text: string, timestamp: Date, type?: 'lease_analysis', leaseData?: any}>>([])
   const [showChat, setShowChat] = useState(false)
   const [chatSize, setChatSize] = useState({ width: 600, height: 500 })
   const [chatPosition, setChatPosition] = useState({ x: 0, y: 0 })
@@ -690,8 +693,30 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
               console.log(`✅ File processed successfully via ${source}: ${uploadedFile.name} - ${uploadData.textLength} characters extracted`)
               setUploadStatus(`✅ ${uploadedFile.name} processed via ${source} - ${uploadData.textLength} characters extracted`)
               
+              // Check if this is a lease document
+              const extractedText = uploadData.extractedText || '';
+              if (isLeaseDocument(uploadedFile.name, extractedText)) {
+                console.log('🏠 Detected lease document, generating enhanced analysis...');
+                
+                // Generate lease analysis using LeaseDocumentParser
+                const parser = new LeaseDocumentParser(extractedText, uploadedFile.name);
+                const leaseAnalysis = parser.parse();
+                
+                // Add lease analysis message to chat
+                const leaseMessage = {
+                  sender: 'ai' as const,
+                  text: 'I\'ve analyzed your lease document and extracted key information.',
+                  timestamp: new Date(),
+                  type: 'lease_analysis' as const,
+                  leaseData: leaseAnalysis
+                };
+                
+                setMessages(prev => [...prev, leaseMessage]);
+                console.log('✅ Added lease analysis to chat:', leaseAnalysis);
+              }
+              
               // Extract document metadata for Q&A system
-              const extractedInfo = extractPropertyInfo(uploadData.extractedText || '');
+              const extractedInfo = extractPropertyInfo(extractedText);
               
               // Add to processed documents for Q&A
               const processedDoc = {
@@ -699,7 +724,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                 filename: uploadedFile.name,
                 documentType: uploadData.documentType || 'lease_agreement',
                 textLength: uploadData.textLength,
-                extractedText: uploadData.extractedText || '',
+                extractedText: extractedText,
                 property: extractedInfo.property,
                 parties: extractedInfo.parties,
                 premium: extractedInfo.premium,
@@ -1540,24 +1565,39 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                           animation: `fadeIn 0.3s ease-in-out ${index * 0.1}s forwards`
                         }}
                       >
-                                                <div className={`max-w-[70%] rounded-xl p-3 shadow-sm ${
-                            message.sender === 'user' 
-                              ? 'bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white' 
-                              : 'bg-white text-gray-900 border border-gray-200 shadow-sm'
-                          }`}>
-                          {/* Message Content */}
-                          <div className="text-sm whitespace-pre-line leading-relaxed mb-2">
-                            {message.text}
-                          </div>
-                          
-                          
-                          
-                          {/* Timestamp */}
-                          <div className={`text-xs mt-2 ${
-                            message.sender === 'user' ? 'text-white/70' : 'text-gray-500'
-                          }`}>
-                            {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </div>
+                                                <div className={`${
+                          message.type === 'lease_analysis' 
+                            ? 'max-w-2xl' 
+                            : 'max-w-[70%] rounded-xl p-3 shadow-sm'
+                        } ${
+                          message.sender === 'user' 
+                            ? 'bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white' 
+                            : message.type === 'lease_analysis'
+                            ? ''
+                            : 'bg-white text-gray-900 border border-gray-200 shadow-sm'
+                        }`}>
+                          {/* Lease Analysis or Regular Message Content */}
+                          {message.type === 'lease_analysis' ? (
+                            <LeaseAnalysisResponse 
+                              leaseData={message.leaseData} 
+                              onStartQA={() => {
+                                setAskInput('Tell me more about the lease obligations');
+                              }}
+                            />
+                          ) : (
+                            <>
+                              <div className="text-sm whitespace-pre-line leading-relaxed mb-2">
+                                {message.text}
+                              </div>
+                              
+                              {/* Timestamp */}
+                              <div className={`text-xs mt-2 ${
+                                message.sender === 'user' ? 'text-white/70' : 'text-gray-500'
+                              }`}>
+                                {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                            </>
+                          )}
                         </div>
                       </div>
                     ))}

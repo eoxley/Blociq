@@ -10,6 +10,8 @@ import { Plus, Calendar, Loader2, Send, Upload, FileText, X, Check, Sparkles, Fi
 import { toast } from 'sonner';
 import AIChatDisclaimer from '@/components/ui/AIChatDisclaimer';
 import { SuggestedAction, DocumentAnalysis } from '@/types/ai';
+import { LeaseAnalysisResponse } from '@/components/lease/LeaseAnalysisResponse';
+import { LeaseDocumentParser, isLeaseDocument } from '@/lib/lease/LeaseDocumentParser';
 
 type Message = {
   id: string;
@@ -18,6 +20,8 @@ type Message = {
   timestamp: Date;
   files?: UploadedFile[];
   documentAnalysis?: DocumentAnalysis[]; // Added for document analysis results
+  type?: 'lease_analysis';
+  leaseData?: any;
 };
 
 type UploadedFile = {
@@ -427,34 +431,59 @@ export default function AskBlocIQ({
             console.log('✅ Comprehensive analysis successful:', analysisResult);
             
             if (analysisResult.success) {
-              // Create structured document analysis result
-              const documentAnalysis: DocumentAnalysis = {
-                filename: uploadedFile.name,
-                summary: analysisResult.analysis.summary || 'Document analyzed successfully',
-                suggestedActions: analysisResult.suggestedActions || [],
-                extractionMethod: 'comprehensive_analysis',
-                extractedText: analysisResult.extractedText,
-                documentType: analysisResult.documentType
-              };
+              // Check if this is a lease document for enhanced analysis
+              const extractedText = analysisResult.extractedText || '';
+              const isLease = isLeaseDocument(uploadedFile.name, extractedText);
               
-              uploadedFileResults.push(documentAnalysis);
+              if (isLease) {
+                console.log('🏠 Detected lease document, generating enhanced analysis...');
+                
+                // Generate lease analysis using LeaseDocumentParser
+                const parser = new LeaseDocumentParser(extractedText, uploadedFile.name);
+                const leaseAnalysis = parser.parse();
+                
+                // Add lease analysis message to chat
+                const leaseMessage: Message = {
+                  id: Date.now().toString(),
+                  role: 'assistant',
+                  content: 'I\'ve analyzed your lease document and extracted key information.',
+                  timestamp: new Date(),
+                  type: 'lease_analysis',
+                  leaseData: leaseAnalysis
+                };
+                
+                setMessages(prev => [...prev, leaseMessage]);
+                console.log('✅ Added lease analysis to chat:', leaseAnalysis);
+              } else {
+                // Create structured document analysis result for non-lease documents
+                const documentAnalysis: DocumentAnalysis = {
+                  filename: uploadedFile.name,
+                  summary: analysisResult.analysis.summary || 'Document analyzed successfully',
+                  suggestedActions: analysisResult.suggestedActions || [],
+                  extractionMethod: 'comprehensive_analysis',
+                  extractedText: analysisResult.extractedText,
+                  documentType: analysisResult.documentType
+                };
+                
+                uploadedFileResults.push(documentAnalysis);
+
+                // Add document analysis to messages for display
+                const analysisMessage: Message = {
+                  id: Date.now().toString(),
+                  role: 'assistant',
+                  content: `📄 **${uploadedFile.name}** analyzed successfully!\n\n**Document Type:** ${analysisResult.documentType}\n**Summary:** ${analysisResult.analysis.summary}`,
+                  timestamp: new Date(),
+                  documentAnalysis: [documentAnalysis]
+                };
+                
+                setMessages(prev => [...prev, analysisMessage]);
+              }
 
               // Add comprehensive analysis to the prompt
               if (!finalPrompt) {
                 finalPrompt = `Please analyze the uploaded document: ${uploadedFile.name}`;
               }
               finalPrompt += `\n\nDocument: ${uploadedFile.name}\nType: ${analysisResult.documentType}\nSummary: ${analysisResult.analysis.summary}\n\nPlease provide insights and answer any specific questions about this document.`;
-              
-              // Add document analysis to messages for display
-              const analysisMessage: Message = {
-                id: Date.now().toString(),
-                role: 'assistant',
-                content: `📄 **${uploadedFile.name}** analyzed successfully!\n\n**Document Type:** ${analysisResult.documentType}\n**Summary:** ${analysisResult.analysis.summary}`,
-                timestamp: new Date(),
-                documentAnalysis: [documentAnalysis]
-              };
-              
-              setMessages(prev => [...prev, analysisMessage]);
             } else {
               throw new Error('Document analysis failed');
             }
@@ -681,41 +710,52 @@ export default function AskBlocIQ({
                       </div>
                     )}
 
-                    {/* Message Bubble */}
-                    <div className={`relative inline-block px-5 py-3 rounded-2xl ${
-                      isUser 
-                        ? 'bg-gradient-to-br from-blue-500 to-purple-600 text-white rounded-tr-md' 
-                        : 'bg-gray-100 text-gray-900 rounded-tl-md'
-                    }`}>
-                      
-                      {/* Content with formatting */}
-                      <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                        {message.content.split('\n').map((line, index) => {
-                          if (line.startsWith('**') && line.endsWith('**')) {
+                    {/* Message Bubble or Lease Analysis */}
+                    {message.type === 'lease_analysis' ? (
+                      <LeaseAnalysisResponse 
+                        leaseData={message.leaseData} 
+                        onStartQA={() => {
+                          setQuestion('Tell me more about the lease obligations');
+                          inputRef.current?.focus();
+                        }}
+                      />
+                    ) : (
+                      <div className={`relative inline-block px-5 py-3 rounded-2xl ${
+                        isUser 
+                          ? 'bg-gradient-to-br from-blue-500 to-purple-600 text-white rounded-tr-md' 
+                          : 'bg-gray-100 text-gray-900 rounded-tl-md'
+                      }`}>
+                        
+                        {/* Content with formatting */}
+                        <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                          {message.content.split('\n').map((line, index) => {
+                            if (line.startsWith('**') && line.endsWith('**')) {
+                              return (
+                                <h4 key={index} className={`font-semibold mt-3 mb-2 first:mt-0 ${
+                                  isUser ? 'text-white' : 'text-gray-800'
+                                }`}>
+                                  {line.replace(/\*\*/g, '')}
+                                </h4>
+                              );
+                            }
+                            
+                            if (line.startsWith('• ')) {
+                              return (
+                                <div key={index} className="ml-4 mb-1">
+                                  {line}
+                                </div>
+                              );
+                            }
+                            
+                            const processedLine = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                            
                             return (
-                              <h4 key={index} className={`font-semibold mt-3 mb-2 first:mt-0 ${
-                                isUser ? 'text-white' : 'text-gray-800'
-                              }`}>
-                                {line.replace(/\*\*/g, '')}
-                              </h4>
+                              <div key={index} className={index > 0 ? 'mt-2' : ''} dangerouslySetInnerHTML={{ __html: processedLine }} />
                             );
-                          }
-                          
-                          if (line.startsWith('• ')) {
-                            return (
-                              <div key={index} className="ml-4 mb-1">
-                                {line}
-                              </div>
-                            );
-                          }
-                          
-                          const processedLine = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                          
-                          return (
-                            <div key={index} className={index > 0 ? 'mt-2' : ''} dangerouslySetInnerHTML={{ __html: processedLine }} />
-                          );
-                        })}
+                          })}
+                        </div>
                       </div>
+                    )}
 
                       {/* File attachments */}
                       {message.files && message.files.length > 0 && (
