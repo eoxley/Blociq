@@ -7,7 +7,7 @@
   xsi:type="MailApp">
 
   <Id>85e47bf9-847d-4fa6-ab0b-7d73531345db</Id>
-  <Version>1.0.0.6</Version>
+  <Version>1.0.0.8</Version>
   <ProviderName>BlocIQ</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="BlocIQ AI Assistant"/>
@@ -16,17 +16,12 @@
   <IconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-32.png"/>
   <HighResolutionIconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-80.png"/>
 
-  <SupportUrl DefaultValue="https://blociq.co.uk"/>
+  <SupportUrl DefaultValue="https://www.blociq.co.uk"/>
   
-  <!-- Required for Microsoft AppSource -->
   <AppDomains>
     <AppDomain>https://blociq.co.uk</AppDomain>
     <AppDomain>https://www.blociq.co.uk</AppDomain>
   </AppDomains>
-  
-  <!-- Privacy Policy required for Microsoft validation -->
-  <PrivacyUrl DefaultValue="https://www.blociq.co.uk/privacy-policy"/>
-  <TermsOfUseUrl DefaultValue="https://www.blociq.co.uk/terms"/>
 
   <Hosts>
     <Host Name="Mailbox"/>
@@ -62,8 +57,6 @@
         </bt:Sets>
       </Requirements>
 
-      <!-- WebApplicationInfo removed - add only if you have a properly configured Azure AD app -->
-
       <Hosts>
         <Host xsi:type="MailHost">
           <DesktopFormFactor>
@@ -86,7 +79,6 @@
                       <bt:Image size="80" resid="icon80"/>
                     </Icon>
                     <Action xsi:type="ShowTaskpane">
-                      <TaskpaneId>ButtonId1</TaskpaneId>
                       <SourceLocation resid="taskpaneUrl"/>
                     </Action>
                   </Control>
