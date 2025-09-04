@@ -277,12 +277,12 @@ CRITICAL RULES:
 6. Use plain English to explain legal terms
 
 LEASE DETAILS:
-- Property: ${metadata.property || 'Flat 5, 260 Holloway Road, London N7 8PE'}
-- Lessor: ${metadata.lessor || 'Kensington & Edinburgh Estates Limited'}
-- Lessee: ${metadata.lessee || 'Tenant'}
-- Date: ${metadata.leaseDate || '17th February 2017'}
-- Term: ${metadata.term || '125 years'}
-- Premium: ${metadata.premium || '£636,000'}
+- Property: ${metadata.property || 'Property details not available from extracted text'}
+- Lessor: ${metadata.lessor || 'Lessor not identified from extracted text'}
+- Lessee: ${metadata.lessee || 'Lessee not identified from extracted text'}  
+- Date: ${metadata.leaseDate || 'Lease date not extracted'}
+- Term: ${metadata.term || 'Lease term not extracted'}
+- Premium: ${metadata.premium || 'Premium not extracted'}
 
 KEY LEASE STRUCTURE:
 - Main clauses 1-21 (interpretation, grant, rights, reservations, covenants)
@@ -406,12 +406,12 @@ export async function GET() {
       documentText: 'Your lease document text here...',
       documentMetadata: {
         filename: 'lease.pdf',
-        property: 'Flat 5, 260 Holloway Road',
-        lessor: 'Landlord Name',
-        lessee: 'Tenant Name',
-        leaseDate: '17th February 2017',
-        premium: '£636,000',
-        term: '125 years'
+        property: 'Example Property Address',
+        lessor: 'Example Landlord Name',
+        lessee: 'Example Tenant Name',
+        leaseDate: 'Example Date',
+        premium: 'Example Premium',
+        term: 'Example Term'
       }
     }
   });

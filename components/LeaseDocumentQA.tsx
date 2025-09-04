@@ -119,12 +119,12 @@ export default function LeaseDocumentQA({ extractedText, documentMetadata }: Lea
           documentText: extractedText,
           documentMetadata: {
             filename: documentMetadata.filename,
-            property: documentMetadata.property || 'Flat 5, 260 Holloway Road, London N7 8PE',
-            lessor: documentMetadata.lessor || 'Kensington & Edinburgh Estates Limited',
-            lessee: documentMetadata.lessee || 'Tenant',
-            leaseDate: documentMetadata.leaseDate || '17th February 2017',
-            premium: documentMetadata.premium || '£636,000',
-            term: documentMetadata.term || '125 years'
+            property: documentMetadata.property || 'Property details not extracted',
+            lessor: documentMetadata.lessor || 'Lessor not identified',
+            lessee: documentMetadata.lessee || 'Lessee not identified',
+            leaseDate: documentMetadata.leaseDate || 'Date not extracted',
+            premium: documentMetadata.premium || 'Premium not extracted',
+            term: documentMetadata.term || 'Term not extracted'
           }
         }),
       });
@@ -455,11 +455,11 @@ export function extractLeaseMetadata(extractedText: string, filename: string) {
   };
 
   try {
-    // Extract property address with multiple patterns
+    // Extract property address with generic patterns
     const propertyPatterns = [
-      /(?:Property|Flat|Unit)[:\s]*(?:the\s+)?(?:third\s+floor\s+)?(?:flat\s+)?(?:in\s+the\s+building\s+)?(?:known\s+as\s+)?Flat\s+5[^,\n]*260\s+Holloway\s+Road[^,\n]*/i,
-      /Flat\s+5[^,\n]*Holloway\s+Road[^,\n]*/i,
-      /260\s+Holloway\s+Road[^,\n]*/i
+      /(?:Property|Flat|Unit|Apartment|House)[:\s]*(?:the\s+)?[^,\n]*(?:Road|Street|Avenue|Lane|Close|Drive|Way|Place|Square|Gardens|Court|Mews)[^,\n]*/i,
+      /(?:being|known\s+as|situated\s+at)[:\s]*[^,\n]*(?:Road|Street|Avenue|Lane|Close|Drive|Way|Place|Square|Gardens|Court|Mews)[^,\n]*/i,
+      /(?:address|located\s+at)[:\s]*[^,\n]*(?:Road|Street|Avenue|Lane|Close|Drive|Way|Place|Square|Gardens|Court|Mews)[^,\n]*/i
     ];
 
     for (const pattern of propertyPatterns) {
@@ -470,11 +470,11 @@ export function extractLeaseMetadata(extractedText: string, filename: string) {
       }
     }
 
-    // Extract lessor with multiple patterns
+    // Extract lessor with generic patterns
     const lessorPatterns = [
-      /Kensington\s+&\s+Edinburgh\s+Estates\s+\(Holloway\s+Road\)\s+Limited/i,
-      /Kensington\s+&\s+Edinburgh\s+Estates[^,\n]*/i,
-      /(?:Lessor|Landlord)[:\s]*([^,\n]+(?:Limited|Ltd|Company))/i
+      /(?:Lessor|Landlord)[:\s]*([^,\n]+(?:Limited|Ltd|Company|Estate|Estates|Management|Properties|Property|Developments|Group))/i,
+      /(?:being|known\s+as|named)[:\s]*([^,\n]+(?:Limited|Ltd|Company|Estate|Estates|Management|Properties|Property|Developments|Group))/i,
+      /([A-Z][a-z]+\s+(?:&\s+)?[A-Z][a-z]+\s+(?:Limited|Ltd|Company|Estate|Estates|Management|Properties|Property|Developments|Group))/i
     ];
 
     for (const pattern of lessorPatterns) {
