@@ -20,7 +20,7 @@ OUTLOOK_TENANT_ID=your_tenant_id_or_common
 OUTLOOK_REDIRECT_URI=https://your-domain.com/auth/callback
 
 # Client-side variables (for OAuth flow)
-NEXT_PUBLIC_MICROSOFT_CLIENT_ID=your_microsoft_client_id
+NEXT_PUBLIC_MICROSOFT_CLIENT_ID=03d6ee20-cbe3-4d98-867c-084b0419fd96
 NEXT_PUBLIC_MICROSOFT_REDIRECT_URI=https://your-domain.com/auth/callback
 ```
 

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>BlocIQ Authentication</title>
+    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+</head>
+<body>
+    <div style="text-align: center; padding: 50px; font-family: 'Segoe UI', sans-serif;">
+        <h2>Authenticating with BlocIQ...</h2>
+        <p>Please wait while we complete the authentication process.</p>
+    </div>
+
+    <script>
+        Office.onReady(() => {
+            // Handle the authentication callback
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            const error = urlParams.get('error');
+
+            if (error) {
+                console.error('Authentication error:', error);
+                // Send error back to parent window
+                if (window.opener) {
+                    window.opener.postMessage({ 
+                        type: 'auth_error', 
+                        error: error 
+                    }, '*');
+                }
+            } else if (code) {
+                console.log('Authentication successful, code:', code);
+                // Send success back to parent window
+                if (window.opener) {
+                    window.opener.postMessage({ 
+                        type: 'auth_success', 
+                        code: code 
+                    }, '*');
+                }
+            }
+
+            // Close this popup window
+            setTimeout(() => {
+                window.close();
+            }, 2000);
+        });
+    </script>
+</body>
+</html>

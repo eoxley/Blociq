@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BlocIQ AI Reply Assistant</title>
+    
+    <!-- Office.js -->
+    <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+    
+    <!-- BlocIQ Brand Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            /* BlocIQ Master Brand Colors */
+            --brand-teal: #14b8a6;
+            --brand-blue: #3b82f6;
+            --brand-purple: #8b5cf6;
+            --brand-indigo: #4f46e5;
+            
+            /* Master Gradients */
+            --hero-gradient: linear-gradient(to right, #4f46e5 0%, #a855f7 100%);
+            --brand-gradient: linear-gradient(135deg, #14b8a6 0%, #3b82f6 50%, #8b5cf6 100%);
+            --ai-gradient: linear-gradient(135deg, #14b8a6 0%, #3b82f6 50%, #8b5cf6 100%);
+            
+            /* UI System Colors */
+            --ui-white: #ffffff;
+            --ui-slate-50: #f8fafc;
+            --ui-slate-100: #f1f5f9;
+            --ui-slate-200: #e2e8f0;
+            --ui-slate-300: #cbd5e1;
+            --ui-slate-400: #94a3b8;
+            --ui-slate-500: #64748b;
+            --ui-slate-600: #475569;
+            --ui-slate-700: #334155;
+            --ui-slate-800: #1e293b;
+            --ui-slate-900: #0f172a;
+            
+            /* Status Colors */
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --info: #3b82f6;
+            
+            /* Semantic UI Variables */
+            --primary-bg: var(--ui-white);
+            --secondary-bg: var(--ui-slate-50);
+            --tertiary-bg: var(--ui-slate-100);
+            --border: var(--ui-slate-200);
+            --text-primary: var(--ui-slate-800);
+            --text-secondary: var(--ui-slate-500);
+            --text-muted: var(--ui-slate-400);
+            --radius: 12px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: var(--hero-gradient);
+            color: var(--text-primary);
+            font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #0078d4, #106ebe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+
+        .tagline {
+            color: #605e5c;
+            font-size: 14px;
+        }
+
+        .ai-button {
+            background: linear-gradient(135deg, #0078d4, #106ebe);
+            color: white;
+            border: none;
+            padding: 15px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            width: 100%;
+            margin-bottom: 20px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .ai-button:hover {
+            background: linear-gradient(135deg, #106ebe, #005a9e);
+            transform: translateY(-1px);
+        }
+
+        .ai-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: #fff;
+            margin: 5% auto;
+            padding: 0;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .modal-header {
+            padding: 20px;
+            background: linear-gradient(135deg, #0078d4, #106ebe);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+        }
+
+        .close:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-body {
+            padding: 20px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .email-analysis {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border-left: 4px solid #0078d4;
+        }
+
+        .analysis-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #323130;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .analysis-content {
+            color: #605e5c;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        .suggested-reply {
+            background: white;
+            border: 1px solid #e1dfdd;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .reply-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #323130;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .reply-text {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 4px;
+            border: 1px solid #e1dfdd;
+            min-height: 120px;
+            font-family: inherit;
+            resize: vertical;
+            width: 100%;
+            box-sizing: border-box;
+            line-height: 1.5;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn-primary {
+            background: #0078d4;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            flex: 1;
+            transition: background-color 0.2s;
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #323130;
+            border: 1px solid #e1dfdd;
+            padding: 12px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            flex: 1;
+            transition: background-color 0.2s;
+        }
+
+        .btn-primary:hover {
+            background: #106ebe;
+        }
+
+        .btn-secondary:hover {
+            background: #f8f9fa;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #0078d4;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            color: #d13438;
+            background: #fdf2f2;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #d13438;
+            margin: 15px 0;
+        }
+
+        .status-message {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 4px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .status-success {
+            background: #f3f9f1;
+            color: #0e5814;
+            border: 1px solid #9fdb9f;
+        }
+
+        .status-error {
+            background: #fdf2f2;
+            color: #d13438;
+            border: 1px solid #f5c6cb;
+        }
+
+        .email-preview {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            border-left: 3px solid #0078d4;
+        }
+
+        .email-meta {
+            font-size: 12px;
+            color: #605e5c;
+            margin-bottom: 8px;
+        }
+
+        .email-subject {
+            font-weight: 600;
+            color: #323130;
+            margin-bottom: 8px;
+        }
+
+        .email-snippet {
+            color: #605e5c;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .confidence-badge {
+            display: inline-flex;
+            align-items: center;
+            background: #e6f3ff;
+            color: #0078d4;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-left: 8px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🏢 BlocIQ</div>
+            <div class="tagline">AI-Powered Property Management Assistant</div>
+        </div>
+        
+        <button id="analyzeButton" class="ai-button" onclick="openAnalysisModal()">
+            🤖 Analyze Email & Generate Reply
+        </button>
+        
+        <div id="statusMessage"></div>
+    </div>
+
+    <!-- Modal -->
+    <div id="analysisModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">🤖 BlocIQ AI Email Analysis</h3>
+                <button class="close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="loadingState" class="loading">
+                    <div class="spinner"></div>
+                    <p>Analyzing email with BlocIQ AI...</p>
+                    <div style="font-size: 12px; color: #605e5c;">
+                        Processing content for property management context
+                    </div>
+                </div>
+                
+                <div id="analysisResult" style="display: none;">
+                    <div id="emailPreview" class="email-preview">
+                        <div class="email-meta">
+                            <span id="emailSender"></span> • <span id="emailDate"></span>
+                        </div>
+                        <div id="emailSubject" class="email-subject"></div>
+                        <div id="emailSnippet" class="email-snippet"></div>
+                    </div>
+
+                    <div class="email-analysis">
+                        <div class="analysis-title">
+                            📊 Email Analysis
+                            <span id="confidenceBadge" class="confidence-badge"></span>
+                        </div>
+                        <div id="analysisContent" class="analysis-content"></div>
+                    </div>
+                    
+                    <div class="suggested-reply">
+                        <div class="reply-title">
+                            ✨ Suggested Reply
+                        </div>
+                        <textarea id="replyText" class="reply-text" placeholder="AI-generated reply will appear here..."></textarea>
+                        <div class="action-buttons">
+                            <button class="btn-primary" onclick="insertReply()">📧 Insert Reply</button>
+                            <button class="btn-secondary" onclick="regenerateReply()">🔄 Regenerate</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="errorState" style="display: none;">
+                    <div class="error-message">
+                        <strong>⚠️ Error:</strong> <span id="errorMessage"></span>
+                    </div>
+                    <button class="btn-secondary" onclick="retryAnalysis()">🔄 Try Again</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Office.js
+        Office.onReady((info) => {
+            if (info.host === Office.HostType.Outlook) {
+                console.log('BlocIQ Outlook add-in loaded successfully');
+            }
+        });
+
+        // Use your existing BlocIQ API endpoint
+        const API_ENDPOINT = '/api/ai-email-reply';
+        
+        let currentEmailData = null;
+
+        async function openAnalysisModal() {
+            const modal = document.getElementById('analysisModal');
+            const button = document.getElementById('analyzeButton');
+            
+            // Show modal and loading state
+            modal.style.display = 'block';
+            showLoadingState();
+            button.disabled = true;
+            
+            try {
+                // Get current email content
+                const emailData = await getCurrentEmailContent();
+                currentEmailData = emailData;
+                
+                // Show email preview
+                showEmailPreview(emailData);
+                
+                // Call BlocIQ API to analyze the email
+                const analysis = await analyzeEmailWithBlocIQ(emailData);
+                
+                // Show results
+                showAnalysisResult(analysis);
+                
+            } catch (error) {
+                console.error('Error analyzing email:', error);
+                showErrorState(error.message);
+            } finally {
+                button.disabled = false;
+            }
+        }
+
+        async function getCurrentEmailContent() {
+            return new Promise((resolve, reject) => {
+                Office.context.mailbox.item.body.getAsync(
+                    Office.CoercionType.Text,
+                    (result) => {
+                        if (result.status === Office.AsyncResultStatus.Succeeded) {
+                            const emailData = {
+                                subject: Office.context.mailbox.item.subject || 'No Subject',
+                                body: result.value || '',
+                                sender: Office.context.mailbox.item.sender?.emailAddress || 'Unknown Sender',
+                                senderName: Office.context.mailbox.item.sender?.displayName || 'Unknown',
+                                recipients: Office.context.mailbox.item.to || [],
+                                dateTime: Office.context.mailbox.item.dateTimeCreated || new Date(),
+                                conversationId: Office.context.mailbox.item.conversationId || null
+                            };
+                            resolve(emailData);
+                        } else {
+                            reject(new Error('Failed to read email content: ' + result.error.message));
+                        }
+                    }
+                );
+            });
+        }
+
+        async function analyzeEmailWithBlocIQ(emailData) {
+            try {
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        subject: emailData.subject,
+                        body: emailData.body,
+                        sender: emailData.sender,
+                        senderName: emailData.senderName,
+                        context: 'outlook_addin_reply',
+                        conversationId: emailData.conversationId
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`BlocIQ API request failed: ${response.status} ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                
+                if (!result.success) {
+                    throw new Error(result.error || 'Analysis failed');
+                }
+                
+                return result;
+            } catch (error) {
+                // Fallback to public API if authenticated endpoint fails
+                console.log('Trying public API endpoint...');
+                const response = await fetch('/api/ask-ai-public', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        prompt: `Analyze this email and generate a professional reply:
+                        
+Subject: ${emailData.subject}
+From: ${emailData.senderName} (${emailData.sender})
+Content: ${emailData.body}
+
+Please provide:
+1. Brief analysis of the email content
+2. A professional reply suitable for property management context`,
+                        is_public: false,
+                        context: 'outlook_email_analysis'
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                
+                if (!result.success) {
+                    throw new Error(result.error || 'Analysis failed');
+                }
+
+                // Transform public API response to match expected format
+                return {
+                    success: true,
+                    analysis: result.response || result.result || 'Email analyzed successfully',
+                    suggested_reply: extractReplyFromResponse(result.response || result.result || ''),
+                    confidence: 85
+                };
+            }
+        }
+
+        function extractReplyFromResponse(response) {
+            // Try to extract reply from AI response
+            const replyMatch = response.match(/(?:reply|response):\s*([\s\S]*?)(?:\n\n|$)/i);
+            if (replyMatch) {
+                return replyMatch[1].trim();
+            }
+            
+            // If no clear reply section, use the second half of the response
+            const lines = response.split('\n').filter(line => line.trim());
+            if (lines.length > 2) {
+                return lines.slice(Math.floor(lines.length / 2)).join('\n').trim();
+            }
+            
+            return response;
+        }
+
+        function showEmailPreview(emailData) {
+            document.getElementById('emailSender').textContent = emailData.senderName;
+            document.getElementById('emailDate').textContent = new Date(emailData.dateTime).toLocaleDateString();
+            document.getElementById('emailSubject').textContent = emailData.subject;
+            
+            // Show first 150 characters of email body
+            const snippet = emailData.body.substring(0, 150) + (emailData.body.length > 150 ? '...' : '');
+            document.getElementById('emailSnippet').textContent = snippet;
+        }
+
+        function showLoadingState() {
+            document.getElementById('loadingState').style.display = 'block';
+            document.getElementById('analysisResult').style.display = 'none';
+            document.getElementById('errorState').style.display = 'none';
+        }
+
+        function showAnalysisResult(analysis) {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('errorState').style.display = 'none';
+            document.getElementById('analysisResult').style.display = 'block';
+            
+            // Show confidence badge
+            const confidenceBadge = document.getElementById('confidenceBadge');
+            confidenceBadge.textContent = `${analysis.confidence || 85}% confidence`;
+            
+            // Populate analysis content
+            document.getElementById('analysisContent').textContent = 
+                analysis.analysis || analysis.summary || 'Email analyzed successfully';
+            
+            // Populate suggested reply
+            document.getElementById('replyText').value = 
+                analysis.suggested_reply || analysis.reply || analysis.response || '';
+        }
+
+        function showErrorState(errorMessage) {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('analysisResult').style.display = 'none';
+            document.getElementById('errorState').style.display = 'block';
+            document.getElementById('errorMessage').textContent = errorMessage;
+        }
+
+        async function insertReply() {
+            const replyText = document.getElementById('replyText').value;
+            
+            if (!replyText.trim()) {
+                showStatusMessage('No reply text to insert', 'error');
+                return;
+            }
+
+            try {
+                // Insert the AI-generated reply into the email body
+                Office.context.mailbox.item.body.setAsync(
+                    replyText,
+                    { coercionType: Office.CoercionType.Text },
+                    (result) => {
+                        if (result.status === Office.AsyncResultStatus.Succeeded) {
+                            showStatusMessage('✅ Reply inserted successfully!', 'success');
+                            closeModal();
+                        } else {
+                            showStatusMessage('❌ Error inserting reply: ' + result.error.message, 'error');
+                        }
+                    }
+                );
+            } catch (error) {
+                showStatusMessage('❌ Error inserting reply: ' + error.message, 'error');
+            }
+        }
+
+        async function regenerateReply() {
+            if (!currentEmailData) {
+                showErrorState('No email data available for regeneration');
+                return;
+            }
+
+            showLoadingState();
+            
+            try {
+                // Add a regeneration flag to get a different response
+                const emailDataWithRegenFlag = {
+                    ...currentEmailData,
+                    regenerate: true,
+                    previous_reply: document.getElementById('replyText').value
+                };
+                
+                const analysis = await analyzeEmailWithBlocIQ(emailDataWithRegenFlag);
+                showAnalysisResult(analysis);
+            } catch (error) {
+                showErrorState(error.message);
+            }
+        }
+
+        function retryAnalysis() {
+            openAnalysisModal();
+        }
+
+        function closeModal() {
+            document.getElementById('analysisModal').style.display = 'none';
+            
+            // Reset modal state
+            showLoadingState();
+            document.getElementById('replyText').value = '';
+            document.getElementById('analysisContent').textContent = '';
+        }
+
+        function showStatusMessage(message, type) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.textContent = message;
+            statusDiv.className = `status-message status-${type}`;
+            
+            // Clear message after 4 seconds
+            setTimeout(() => {
+                statusDiv.textContent = '';
+                statusDiv.className = '';
+            }, 4000);
+        }
+
+        // Close modal when clicking outside of it
+        window.onclick = function(event) {
+            const modal = document.getElementById('analysisModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Handle ESC key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>

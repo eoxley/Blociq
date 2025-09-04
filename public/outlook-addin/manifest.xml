@@ -9,7 +9,7 @@
   <!-- Begin Basic Settings: Add-in metadata, used for all versions of Office unless override provided. -->
 
   <!-- IMPORTANT! Id must be unique for your add-in, if you reuse this manifest ensure that you change this id to a new GUID. -->
-  <Id>4ab4eae8-71e3-462b-ab41-a754b48d8839</Id>
+  <Id>85e47bf9-847d-4fa6-ab0b-7d73531345db</Id>
 
   <!--Version. Updates from the store only get triggered if there is a version change. -->
   <Version>1.0.0.1</Version>
@@ -44,13 +44,31 @@
   <FormSettings>
     <Form xsi:type="ItemRead">
       <DesktopSettings>
-        <SourceLocation DefaultValue="https://blociq.co.uk/outlook-addin"/>
-        <RequestedHeight>450</RequestedHeight>
+        <SourceLocation DefaultValue="https://blociq.co.uk/outlook-addin/taskpane.html"/>
+        <RequestedHeight>500</RequestedHeight>
+      </DesktopSettings>
+    </Form>
+    <Form xsi:type="ItemEdit">
+      <DesktopSettings>
+        <SourceLocation DefaultValue="https://blociq.co.uk/outlook-addin/taskpane.html"/>
+        <RequestedHeight>500</RequestedHeight>
       </DesktopSettings>
     </Form>
   </FormSettings>
 
-  <Permissions>ReadWriteItem</Permissions>
+  <Permissions>ReadWriteMailbox</Permissions>
+
+  <!-- WebApplicationInfo for Azure AD Authentication -->
+  <WebApplicationInfo>
+    <Id>85e47bf9-847d-4fa6-ab0b-7d73531345db</Id>
+    <Resource>api://blociq.co.uk/85e47bf9-847d-4fa6-ab0b-7d73531345db</Resource>
+    <Scopes>
+      <Scope>https://graph.microsoft.com/Mail.Read</Scope>
+      <Scope>https://graph.microsoft.com/Mail.ReadWrite</Scope>
+      <Scope>https://graph.microsoft.com/Mail.Send</Scope>
+      <Scope>https://graph.microsoft.com/User.Read</Scope>
+    </Scopes>
+  </WebApplicationInfo>
 
   <Rule xsi:type="RuleCollection" Mode="Or">
     <Rule xsi:type="ItemIs" ItemType="Message" FormType="Read" />
@@ -127,7 +145,7 @@
           <bt:Image id="Icon.80x80" DefaultValue="https://blociq.co.uk/outlook-addin/icon-80.png"/>
         </bt:Images>
         <bt:Urls>
-          <bt:Url id="Taskpane.Url" DefaultValue="https://blociq.co.uk/outlook-addin" />
+          <bt:Url id="Taskpane.Url" DefaultValue="https://blociq.co.uk/outlook-addin/taskpane.html" />
         </bt:Urls>
         <bt:ShortStrings>
           <bt:String id="GroupLabel" DefaultValue="BlocIQ AI"/>

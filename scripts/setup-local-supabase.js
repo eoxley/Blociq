@@ -16,7 +16,7 @@ SUPABASE_SERVICE_ROLE_KEY=placeholder-local-service-role-key
 # Other settings (keeping existing ones)
 OPENAI_API_KEY=sk-placeholder-replace-with-actual-key
 MICROSOFT_TENANT_ID=placeholder-tenant-id
-MICROSOFT_CLIENT_ID=placeholder-client-id
+MICROSOFT_CLIENT_ID=03d6ee20-cbe3-4d98-867c-084b0419fd96
 MICROSOFT_CLIENT_SECRET=placeholder-client-secret
 MICROSOFT_USER_EMAIL=placeholder-email@example.com
 GOOGLE_APPLICATION_CREDENTIALS=./gcloud-key.json

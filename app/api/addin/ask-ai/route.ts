@@ -1,132 +1,164 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
+import OpenAI from 'openai';
 
-export const runtime = "nodejs";
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🤖 Add-in AI request received...');
+    const supabase = createRouteHandlerClient({ cookies });
     
-    const supabase = createClient(cookies());
+    // Get the current user
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     
-    // Authentication is optional for add-in - works without login
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    // Parse request body (handle both FormData and JSON)
-    let prompt = '';
-    let buildingId = null;
-    let emailContext = null;
-    let files: File[] = [];
-
-    const contentType = request.headers.get('content-type');
-    
-    if (contentType?.includes('multipart/form-data')) {
-      // Handle FormData (with files)
-      const formData = await request.formData();
-      prompt = formData.get('prompt') as string;
-      buildingId = formData.get('building_id') as string;
-      
-      const emailContextStr = formData.get('email_context') as string;
-      if (emailContextStr) {
-        try {
-          emailContext = JSON.parse(emailContextStr);
-        } catch (e) {
-          console.warn('Failed to parse email context from FormData');
-        }
-      }
-
-      // Handle files
-      const fileEntries = formData.getAll('file');
-      files = fileEntries.filter(entry => entry instanceof File) as File[];
-      
-    } else {
-      // Handle JSON
-      const body = await request.json();
-      prompt = body.prompt;
-      buildingId = body.building_id;
-      emailContext = body.email_context;
-    }
-
-    if (!prompt?.trim()) {
+    if (authError || !user) {
       return NextResponse.json({ 
-        success: false, 
-        error: 'Prompt is required' 
-      }, { status: 400 });
+        error: 'Authentication required',
+        code: 'login_required',
+        message: 'Please sign in to BlocIQ to use the AI assistant'
+      }, { status: 401 });
     }
 
-    console.log(`📧 Email context: ${emailContext ? 'Yes' : 'No'}`);
-    console.log(`📎 Files attached: ${files.length}`);
+    const body = await request.json();
+    const { 
+      prompt, 
+      contextType = 'general',
+      building_id,
+      emailContext 
+    } = body;
 
-    // Enhance prompt with email context
-    let enhancedPrompt = prompt;
+    if (!prompt) {
+      return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
+    }
+
+    // Get user's agency for context
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select(`
+        id,
+        email,
+        full_name,
+        agency_id,
+        agencies (
+          id,
+          name,
+          type
+        )
+      `)
+      .eq('id', user.id)
+      .single();
+
+    // Build enhanced prompt with email context
+    let enhancedPrompt = `You are BlocIQ AI, an expert property management assistant integrated with Microsoft Outlook.
+
+User Context:
+- Name: ${profile?.full_name || 'User'}
+- Agency: ${profile?.agencies?.name || 'Unknown'}
+- Email: ${user.email}`;
+
     if (emailContext) {
-      enhancedPrompt = `I'm working on an email from ${emailContext.senderName} (${emailContext.sender}) with subject "${emailContext.subject}". 
+      enhancedPrompt += `
 
-Email content preview: "${emailContext.body.substring(0, 500)}${emailContext.body.length > 500 ? '...' : ''}"
-
-User question: ${prompt}
-
-Please help me with this email-related request.`;
+Current Email Context:
+- Subject: ${emailContext.subject || 'N/A'}
+- From: ${emailContext.from || 'N/A'}
+- To: ${emailContext.to || 'N/A'}
+- Body Preview: ${emailContext.bodyPreview ? emailContext.bodyPreview.substring(0, 500) + '...' : 'N/A'}`;
     }
 
-    // Call the same AI endpoint as homepage but with enhanced context
-    const aiResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/ask-ai-public`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        // Forward any authentication if available
-        ...(user ? { 'Authorization': `Bearer ${user.id}` } : {})
-      },
-      body: JSON.stringify({
-        prompt: enhancedPrompt,
-        building_id: buildingId,
-        is_public: !user, // Public if no user authenticated
-        context: {
-          source: 'outlook_addin',
-          email_context: emailContext,
-          user_authenticated: !!user
+    if (building_id) {
+      // Get building context if provided
+      const { data: building } = await supabase
+        .from('buildings')
+        .select('name, address, property_type')
+        .eq('id', building_id)
+        .eq('agency_id', profile?.agency_id)
+        .single();
+
+      if (building) {
+        enhancedPrompt += `
+
+Building Context:
+- Name: ${building.name}
+- Address: ${building.address}
+- Type: ${building.property_type}`;
+      }
+    }
+
+    enhancedPrompt += `
+
+Context Type: ${contextType}
+
+User Question: ${prompt}
+
+Please provide a helpful, professional response as BlocIQ AI. If this relates to property management, compliance, or email communication, provide specific actionable advice.`;
+
+    // Call OpenAI
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are BlocIQ AI, an expert property management assistant. Provide professional, accurate, and actionable advice for property managers, landlords, and housing professionals.'
+        },
+        {
+          role: 'user',
+          content: enhancedPrompt
         }
-      }),
+      ],
+      max_tokens: 1000,
+      temperature: 0.7,
     });
 
-    const aiData = await aiResponse.json();
+    const response = completion.choices[0]?.message?.content;
 
-    if (aiData.success) {
-      console.log('✅ AI response received successfully');
-      
-      // Format response for add-in
-      return NextResponse.json({
-        success: true,
-        result: aiData.result || aiData.response,
-        context_type: 'email_assistant',
-        email_subject: emailContext?.subject,
-        has_email_context: !!emailContext
-      });
-    } else {
-      console.error('❌ AI request failed:', aiData);
-      return NextResponse.json({
-        success: false,
-        error: aiData.error || 'AI request failed'
-      }, { status: 500 });
+    if (!response) {
+      throw new Error('No response from AI');
     }
 
-  } catch (error) {
-    console.error('❌ Add-in AI error:', error);
+    // Log the interaction
+    await supabase
+      .from('ai_interactions')
+      .insert({
+        user_id: user.id,
+        prompt: prompt,
+        response: response,
+        context_type: contextType,
+        building_id: building_id || null,
+        metadata: {
+          source: 'outlook_addin',
+          email_context: emailContext || null,
+          agency_id: profile?.agency_id || null
+        }
+      });
+
     return NextResponse.json({
-      success: false,
-      error: 'Failed to process AI request',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      response,
+      user: {
+        name: profile?.full_name,
+        agency: profile?.agencies?.name
+      }
+    });
+
+  } catch (error) {
+    console.error('[Addin Ask AI] Error:', error);
+    
+    return NextResponse.json({
+      error: 'Failed to process request',
+      message: error instanceof Error ? error.message : 'Unknown error occurred'
     }, { status: 500 });
   }
 }
 
-// Handle preflight CORS requests
+// Handle OPTIONS for CORS
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,
     headers: {
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': 'https://blociq.co.uk',
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       'Access-Control-Allow-Credentials': 'true',

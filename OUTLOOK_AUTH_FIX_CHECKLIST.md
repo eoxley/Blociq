@@ -3,7 +3,7 @@
 ## 🎯 **Problem Identified**
 Your system is using mixed Azure app IDs:
 - ❌ **Old App**: `f8033f58-1b3b-40a7-8f0c-86678499cc74` (causing AADSTS7000215)
-- ✅ **New App**: `4ab4eae8-71e3-462b-ab41-a754b48d8839` (should be used everywhere)
+- ✅ **New App**: `03d6ee20-cbe3-4d98-867c-084b0419fd96` (should be used everywhere)
 
 ## 📋 **Step-by-Step Fix (Do in Order)**
 
@@ -13,9 +13,9 @@ Set ALL these to the **same value**: `4ab4eae8-71e3-462b-ab41-a754b8d8839`
 
 ```bash
 # In Vercel Dashboard → Settings → Environment Variables
-OUTLOOK_CLIENT_ID=4ab4eae8-71e3-462b-ab41-a754b48d8839
-MICROSOFT_CLIENT_ID=4ab4eae8-71e3-462b-ab41-a754b48d8839
-NEXT_PUBLIC_MICROSOFT_CLIENT_ID=4ab4eae8-71e3-462b-ab41-a754b48d8839
+OUTLOOK_CLIENT_ID=03d6ee20-cbe3-4d98-867c-084b0419fd96
+MICROSOFT_CLIENT_ID=03d6ee20-cbe3-4d98-867c-084b0419fd96
+NEXT_PUBLIC_MICROSOFT_CLIENT_ID=03d6ee20-cbe3-4d98-867c-084b0419fd96
 
 # Keep duplicates for now - ensures both frontend & backend use same ID
 ```
@@ -80,7 +80,7 @@ DELETE FROM outlook_tokens;
 ### **Step 8: Test Reconnection**
 
 1. **In your app**: Click "Disconnect Outlook" → "Connect Outlook"
-2. **Check the consent URL** - should show: `client_id=4ab4eae8-71e3-462b-ab41-a754b48d8839`
+2. **Check the consent URL** - should show: `client_id=03d6ee20-cbe3-4d98-867c-084b0419fd96`
 3. **If you still see** `f803...` → something is cached/hardcoded
 
 ### **Step 9: Verify Required Scopes**
@@ -103,7 +103,7 @@ Ensure these scopes are granted in Azure → API permissions:
 ### Check Environment Variables
 ```bash
 # In your app, visit: /api/check-env
-# Should show all client IDs as: 4ab4eae8-71e3-462b-ab41-a754b48d8839
+# Should show all client IDs as: 03d6ee20-cbe3-4d98-867c-084b0419fd96
 ```
 
 ### Check for Hardcoded IDs
@@ -136,7 +136,7 @@ grep -r "f803" .
 ## 🚨 **Troubleshooting**
 
 ### If you still get AADSTS7000215:
-1. **Double-check**: All environment variables use `4ab4eae8-71e3-462b-ab41-a754b48d8839`
+1. **Double-check**: All environment variables use `03d6ee20-cbe3-4d98-867c-084b0419fd96`
 2. **Verify**: Client secret is the VALUE, not the Secret ID
 3. **Confirm**: You've deleted old tokens from database
 4. **Redeploy**: Both frontend and backend have new environment variables
@@ -152,7 +152,7 @@ grep -r "f803" .
 
 ## 📝 **Quick Summary**
 
-1. ✅ Set all client IDs to: `4ab4eae8-71e3-462b-ab41-a754b48d8839`
+1. ✅ Set all client IDs to: `03d6ee20-cbe3-4d98-867c-084b0419fd96`
 2. ✅ Generate new client secret and update in Vercel  
 3. ✅ Verify redirect URIs in Azure
 4. ✅ Deploy changes

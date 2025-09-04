@@ -21,7 +21,7 @@ const requiredEnvVars = [
   },
   {
     name: 'OUTLOOK_CLIENT_ID',
-    value: 'YOUR_MICROSOFT_CLIENT_ID',
+    value: '03d6ee20-cbe3-4d98-867c-084b0419fd96',
     description: 'Microsoft OAuth Client ID'
   },
   {
@@ -41,7 +41,7 @@ const requiredEnvVars = [
   },
   {
     name: 'NEXT_PUBLIC_MICROSOFT_CLIENT_ID',
-    value: 'YOUR_MICROSOFT_CLIENT_ID',
+    value: '03d6ee20-cbe3-4d98-867c-084b0419fd96',
     description: 'Public Microsoft Client ID (same as OUTLOOK_CLIENT_ID)'
   },
   {

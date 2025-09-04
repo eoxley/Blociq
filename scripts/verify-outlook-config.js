@@ -4,7 +4,7 @@
 console.log('🔍 Verifying Outlook Configuration...\n');
 
 // Expected values
-const EXPECTED_CLIENT_ID = '4ab4eae8-71e3-462b-ab41-a754b48d8839';
+const EXPECTED_CLIENT_ID = '03d6ee20-cbe3-4d98-867c-084b0419fd96';
 const OLD_CLIENT_ID = 'f8033f58-1b3b-40a7-8f0c-86678499cc74';
 
 // Check all client ID environment variables

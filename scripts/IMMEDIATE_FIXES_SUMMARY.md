@@ -37,7 +37,7 @@ The dashboard API has been updated with proper error handling. Deploy these chan
 After the database fix:
 1. Go to your app's Outlook connection page
 2. Click "Connect Outlook" 
-3. Complete the OAuth flow (should work with correct client ID `4ab4eae8-71e3-462b-ab41-a754b48d8839`)
+3. Complete the OAuth flow (should work with correct client ID `03d6ee20-cbe3-4d98-867c-084b0419fd96`)
 4. This will populate the `outlook_tokens` table and fix the 406 error
 
 ## 🎯 **Expected Results After All Fixes:**
