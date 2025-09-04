@@ -1,147 +1,51 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8" />
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>BlocIQ AI Assistant</title>
     <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
-    
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 0;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
+            margin: 20px;
+            padding: 20px;
             background-color: #f5f5f5;
         }
         
         .header {
             background: linear-gradient(135deg, #008C8F, #7645ED);
             color: white;
-            padding: 16px;
+            padding: 20px;
             text-align: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        .header h1 {
-            margin: 0;
-            font-size: 18px;
-            font-weight: 600;
-        }
-        
-        .header p {
-            margin: 4px 0 0 0;
-            font-size: 12px;
-            opacity: 0.9;
+            border-radius: 8px;
+            margin-bottom: 20px;
         }
         
         .content {
-            flex: 1;
+            background: white;
             padding: 20px;
-            overflow-y: auto;
-        }
-        
-        .email-info {
-            background: white;
             border-radius: 8px;
-            padding: 16px;
-            margin-bottom: 16px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         
-        .email-info h3 {
-            margin: 0 0 12px 0;
-            color: #333;
-            font-size: 14px;
-        }
-        
-        .email-info p {
-            margin: 4px 0;
-            color: #666;
-            font-size: 12px;
-        }
-        
-        .actions {
-            background: white;
-            border-radius: 8px;
-            padding: 16px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        
-        .btn {
-            width: 100%;
-            padding: 12px 16px;
-            border: none;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            margin-bottom: 8px;
-            transition: all 0.2s ease;
-        }
-        
-        .btn-primary {
+        button {
             background: linear-gradient(135deg, #008C8F, #2BBEB4);
             color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            margin: 8px 0;
+            width: 100%;
         }
         
-        .btn-primary:hover:not(:disabled) {
+        button:hover {
             background: linear-gradient(135deg, #006d70, #1a9b94);
-            transform: translateY(-1px);
-        }
-        
-        .btn:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-            transform: none;
-        }
-        
-        .status {
-            margin-top: 12px;
-            padding: 8px 12px;
-            border-radius: 4px;
-            font-size: 12px;
-            text-align: center;
-            display: none;
-        }
-        
-        .status.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        
-        .status.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        
-        .status.info {
-            background: #d1ecf1;
-            color: #0c5460;
-            border: 1px solid #bee5eb;
-        }
-        
-        .loading {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border: 2px solid #f3f3f3;
-            border-top: 2px solid #008C8F;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
-
 <body>
     <div class="header">
         <h1>BlocIQ AI Assistant</h1>
@@ -149,215 +53,32 @@
     </div>
     
     <div class="content">
-        <div class="email-info" id="emailInfo">
-            <h3>📧 Current Email</h3>
-            <p id="emailDetails">Loading email information...</p>
-        </div>
-        
-        <div class="actions">
-            <button class="btn btn-primary" onclick="showEmailInfo()" id="infoBtn">
-                📋 Show Email Details
-            </button>
-            
-            <button class="btn btn-primary" onclick="testOfficeAPI()" id="testBtn">
-                🔧 Test Office Connection
-            </button>
-            
-            <div class="status" id="status"></div>
-        </div>
+        <p>This add-in helps analyze your emails and provide AI-powered insights.</p>
+        <button id="helloButton">Insert Sample Text</button>
     </div>
 
-    <script>
-        var currentEmail = null;
-        
-        // Check if Office.js is available before using it
-        function checkOfficeAvailability() {
-            if (typeof window.Office === 'undefined') {
-                showStatus('Office.js not available. Please ensure you are running in Outlook.', 'error');
-                return false;
-            }
-            return true;
+<script>
+    Office.onReady(function(info) {
+        if (info.host === Office.HostType.Outlook) {
+            document.getElementById("helloButton").onclick = sayHello;
         }
-        
-        // Initialize when Office is ready - with fallback
-        function initializeOffice() {
-            if (!checkOfficeAvailability()) {
-                return;
-            }
-            
-            try {
-                Office.onReady(function(info) {
-                    console.log('BlocIQ Add-in initialized');
-                    console.log('Host:', info.host);
-                    console.log('Platform:', info.platform);
-                    
-                    if (info.host === Office.HostType.Outlook) {
-                        initializeAddin();
-                    } else {
-                        showStatus('This add-in works only in Outlook', 'error');
-                    }
-                });
-            } catch (error) {
-                console.error('Error initializing Office:', error);
-                showStatus('Failed to initialize Office.js: ' + error.message, 'error');
-            }
-        }
-        
-        function initializeAddin() {
-            console.log('Initializing BlocIQ add-in...');
-            
-            try {
-                // Get current email context
-                getCurrentEmailContext();
-                showStatus('Add-in loaded successfully!', 'success');
-            } catch (error) {
-                console.error('Initialization error:', error);
-                showStatus('Error during initialization: ' + error.message, 'error');
-            }
-        }
-        
-        function getCurrentEmailContext() {
-            try {
-                if (!checkOfficeAvailability()) {
-                    return;
-                }
-                
-                var item = Office.context.mailbox.item;
-                
-                if (item) {
-                    currentEmail = {
-                        subject: item.subject || 'No subject',
-                        from: item.from ? (item.from.emailAddress || item.from.displayName || 'Unknown') : 'Unknown sender',
-                        itemType: item.itemType || 'unknown',
-                        itemId: item.itemId || 'no-id',
-                        dateTimeCreated: item.dateTimeCreated ? new Date(item.dateTimeCreated).toLocaleString() : 'Unknown date'
-                    };
-                    
-                    console.log('Email context loaded:', currentEmail);
-                    updateEmailDisplay();
+    });
+
+    function sayHello() {
+        Office.context.mailbox.item.body.setAsync(
+            "Hello from BlocIQ! This text was inserted by the add-in.",
+            {
+                coercionType: Office.CoercionType.Text
+            },
+            function(asyncResult) {
+                if (asyncResult.status === Office.AsyncResultStatus.Failed) {
+                    console.error(asyncResult.error.message);
                 } else {
-                    console.log('No email item found');
-                    document.getElementById('emailDetails').textContent = 'No email selected';
+                    console.log("Text inserted successfully!");
                 }
-            } catch (error) {
-                console.error('Error getting email context:', error);
-                document.getElementById('emailDetails').textContent = 'Error loading email: ' + error.message;
             }
-        }
-        
-        function updateEmailDisplay() {
-            var emailDetails = document.getElementById('emailDetails');
-            
-            if (currentEmail) {
-                emailDetails.innerHTML = 
-                    '<strong>Subject:</strong> ' + currentEmail.subject + '<br>' +
-                    '<strong>From:</strong> ' + currentEmail.from + '<br>' +
-                    '<strong>Type:</strong> ' + currentEmail.itemType + '<br>' +
-                    '<strong>Date:</strong> ' + currentEmail.dateTimeCreated;
-            }
-        }
-        
-        function showEmailInfo() {
-            var btn = document.getElementById('infoBtn');
-            btn.disabled = true;
-            btn.innerHTML = '<span class="loading"></span> Loading...';
-            
-            try {
-                if (currentEmail) {
-                    showStatus('Email loaded: ' + currentEmail.subject, 'info');
-                } else {
-                    getCurrentEmailContext();
-                    if (currentEmail) {
-                        showStatus('Email context refreshed', 'success');
-                    } else {
-                        showStatus('No email found to display', 'error');
-                    }
-                }
-            } catch (error) {
-                console.error('Error showing email info:', error);
-                showStatus('Error: ' + error.message, 'error');
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '📋 Show Email Details';
-            }
-        }
-        
-        function testOfficeAPI() {
-            var btn = document.getElementById('testBtn');
-            btn.disabled = true;
-            btn.innerHTML = '<span class="loading"></span> Testing...';
-            
-            try {
-                if (!checkOfficeAvailability()) {
-                    btn.disabled = false;
-                    btn.innerHTML = '🔧 Test Office Connection';
-                    return;
-                }
-                
-                // Test basic Office.js functionality
-                var context = Office.context;
-                var info = {
-                    host: context.host,
-                    platform: context.platform,
-                    version: context.version,
-                    mailboxVersion: context.mailbox ? context.mailbox.diagnostics.version : 'Not available'
-                };
-                
-                console.log('Office API test results:', info);
-                showStatus('Office API connection successful!', 'success');
-                
-            } catch (error) {
-                console.error('Office API test failed:', error);
-                showStatus('Office API test failed: ' + error.message, 'error');
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '🔧 Test Office Connection';
-            }
-        }
-        
-        function showStatus(message, type) {
-            type = type || 'info';
-            var statusDiv = document.getElementById('status');
-            statusDiv.textContent = message;
-            statusDiv.className = 'status ' + type;
-            statusDiv.style.display = 'block';
-            
-            console.log('Status (' + type + '):', message);
-            
-            // Auto-hide success and info messages
-            if (type === 'success' || type === 'info') {
-                setTimeout(function() {
-                    statusDiv.style.display = 'none';
-                }, type === 'success' ? 4000 : 3000);
-            }
-        }
-        
-        // Global error handler
-        window.onerror = function(msg, url, line, col, error) {
-            console.error('Global error:', msg, 'at', url, ':', line);
-            showStatus('JavaScript error: ' + msg, 'error');
-            return false;
-        };
-        
-        // Unhandled promise rejection handler - use try/catch for IE compatibility
-        try {
-            window.addEventListener('unhandledrejection', function(event) {
-                console.error('Unhandled promise rejection:', event.reason);
-                showStatus('Promise error: ' + event.reason, 'error');
-            });
-        } catch (error) {
-            // Promise rejection handler not supported in older browsers
-            console.log('Promise rejection handler not supported');
-        }
-        
-        console.log('BlocIQ taskpane script loaded successfully');
-        
-        // Initialize when page loads
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initializeOffice);
-        } else {
-            initializeOffice();
-        }
-    </script>
+        );
+    }
+</script>
 </body>
 </html>
