@@ -6,10 +6,10 @@ Office.onReady(() => {
   
   try {
     // Register the functions with Office.js
-    Office.actions.associate("showAIReplyModal", showAIReplyModal);
+    Office.actions.associate("generateAIReply", generateAIReply);
     Office.actions.associate("showInboxTriage", showInboxTriage);
     
-    console.log('✅ Functions registered: showAIReplyModal, showInboxTriage');
+    console.log('✅ Functions registered: generateAIReply, showInboxTriage');
   } catch (error) {
     console.error('❌ Error registering functions:', error);
   }
@@ -19,7 +19,7 @@ Office.onReady(() => {
  * Opens the AI Reply Generation modal
  * Called when user clicks the "AI Reply" button
  */
-function showAIReplyModal(event) {
+function generateAIReply(event) {
   console.log('🚀 Opening AI Reply modal...');
   
   try {
