@@ -1,615 +1,228 @@
-// BlocIQ Outlook Add-in - Enhanced with Email Analysis, Reply Generation & Triage
-// Integrates with existing BlocIQ API infrastructure
+// BlocIQ Assistant - Clean Chat Interface
+// This provides a focused chat experience with full database access
 
-// API Configuration - matches existing Ask AI implementation
-const API_CONFIG = {
-  endpoints: {
-    askAI: '/api/addin/ask-ai',
-    generateReply: '/api/generate-reply',
-    emailAnalysis: '/api/ai-email-reply',
-    triage: '/api/triage',
-    bulkTriage: '/api/bulk-triage'
-  },
-  headers: {
-    'Content-Type': 'application/json'
-  }
-};
+let messages = [];
+let isProcessing = false;
 
-// Global state
-let currentEmailData = null;
-let isOfficeReady = false;
-let conversationHistory = [];
-let isLoading = false;
+// DOM elements
+const chatContainer = document.getElementById('chatContainer');
+const inputField = document.getElementById('inputField');
+const sendButton = document.getElementById('sendButton');
 
-// Initialize Office.js
-Office.onReady((info) => {
-  if (info.host === Office.HostType.Outlook) {
-    console.log('🚀 BlocIQ Outlook Add-in initialized');
-    isOfficeReady = true;
-    initializeApp();
-  }
-});
-
-// Main initialization
-function initializeApp() {
+// Initialize add-in
+Office.onReady(() => {
+  console.log('BlocIQ Assistant loaded successfully');
   setupEventListeners();
-  loadCurrentEmail();
-  displayWelcomeMessage();
-  setupQuickActions();
-}
+  setupEmailCapture(); // Add email capture functionality
+  
+  // Register function commands for the add-in
+  if (Office.context.document) {
+    Office.context.document.addHandlerAsync(Office.EventType.DocumentSelectionChanged, handleDocumentSelectionChanged);
+  }
+  
+  console.log('✅ Function commands registered');
+});
 
 // Setup event listeners
 function setupEventListeners() {
-  const inputField = document.getElementById('inputField');
-  const sendButton = document.getElementById('sendButton');
+  // Send button click
+  sendButton.onclick = handleSendMessage;
   
-  if (inputField) {
-    inputField.addEventListener('input', handleInputChange);
-    inputField.addEventListener('keydown', handleKeyDown);
-  }
-  
-  if (sendButton) {
-    sendButton.addEventListener('click', handleSendMessage);
-  }
-}
-
-// Handle input changes
-function handleInputChange() {
-  const inputField = document.getElementById('inputField');
-  const sendButton = document.getElementById('sendButton');
-  
-  if (inputField && sendButton) {
-    const hasContent = inputField.value.trim().length > 0;
-    sendButton.disabled = !hasContent || isLoading;
-    
-    // Auto-resize textarea
-    inputField.style.height = 'auto';
-    inputField.style.height = Math.min(inputField.scrollHeight, 120) + 'px';
-  }
-}
-
-// Handle key down events
-function handleKeyDown(event) {
-  if (event.key === 'Enter' && !event.shiftKey) {
-    event.preventDefault();
-    handleSendMessage();
-  }
-}
-
-// Load current email context
-async function loadCurrentEmail() {
-  if (!isOfficeReady) return;
-  
-  try {
-    const emailData = await getCurrentEmailContent();
-    currentEmailData = emailData;
-    console.log('📧 Current email loaded:', emailData);
-    
-    // Show email context in chat
-    if (emailData.subject) {
-      displayEmailContext(emailData);
+  // Enter key in input field
+  inputField.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
     }
+  });
+  
+  // Input field changes
+  inputField.addEventListener('input', () => {
+    sendButton.disabled = !inputField.value.trim();
+    adjustTextareaHeight();
+  });
+}
+
+// Setup automatic email capture
+function setupEmailCapture() {
+  try {
+    // Listen for email sends
+    Office.context.mailbox.addHandlerAsync(Office.EventType.ItemSend, handleItemSend);
+    
+    // Listen for email changes (for reply/forward detection)
+    Office.context.mailbox.addHandlerAsync(Office.EventType.ItemChanged, handleItemChanged);
+    
+    console.log('✅ Email capture system activated');
+    
+    // Add status indicator
+    const statusIndicator = document.querySelector('.status-indicator');
+    if (statusIndicator) {
+      statusIndicator.innerHTML = `
+        <span class="status-dot"></span>
+        Connected to BlocIQ • Email capture active • Ready to assist
+      `;
+    }
+    
   } catch (error) {
-    console.error('❌ Error loading email:', error);
+    console.error('Error setting up email capture:', error);
   }
 }
 
-// Get current email content from Outlook
-async function getCurrentEmailContent() {
-  return new Promise((resolve, reject) => {
-    if (!Office.context.mailbox.item) {
-      resolve({ subject: 'No email selected', body: '', sender: '' });
+// Handle email send events
+async function handleItemSend(event) {
+  try {
+    console.log('📧 Email send event detected');
+    
+    // Get email context
+    const emailContext = await getCurrentEmailContext();
+    if (!emailContext) {
+      console.log('No email context available for logging');
       return;
     }
-
-    const item = Office.context.mailbox.item;
     
-    // Get email body
-    item.body.getAsync(Office.CoercionType.Text, (result) => {
-      if (result.status === Office.AsyncResultStatus.Succeeded) {
-        const emailData = {
-          id: item.itemId || 'unknown',
-          subject: item.subject || 'No Subject',
-          body: result.value || '',
-          sender: item.sender?.emailAddress || 'Unknown',
-          senderName: item.sender?.displayName || 'Unknown',
-          recipients: item.to || [],
-          dateTime: item.dateTimeCreated || new Date(),
-          importance: item.importance || 'normal',
-          itemType: item.itemType || 'message',
-          conversationId: item.conversationId || null
-        };
-        resolve(emailData);
-      } else {
-        reject(new Error('Failed to read email: ' + result.error.message));
-      }
-    });
-  });
-}
-
-// Display email context in chat
-function displayEmailContext(emailData) {
-  const contextMessage = {
-    role: 'assistant',
-    content: `📧 **Current Email Context**
+    // Log the outgoing email to communications log
+    await logOutgoingEmail(emailContext);
     
-**Subject:** ${emailData.subject}
-**From:** ${emailData.senderName} (${emailData.sender})
-**Received:** ${new Date(emailData.dateTime).toLocaleDateString('en-GB')}
-
-I can help you with:
-• **AI Reply Generation** - Create professional responses
-• **Email Analysis** - Understand content and urgency  
-• **Triage Recommendations** - Categorize and prioritize
-• **Property Context** - Building and compliance information
-
-What would you like to do with this email?`,
-    timestamp: new Date()
-  };
-  
-  displayMessage(contextMessage);
-  addQuickActionButtons();
-}
-
-// Add quick action buttons for email operations
-function addQuickActionButtons() {
-  const chatContainer = document.getElementById('chatContainer');
-  
-  const quickActionsHtml = `
-    <div class="quick-actions" style="margin: 16px 0; display: flex; flex-wrap: wrap; gap: 8px;">
-      <button onclick="generateAIReply()" class="quick-action-btn" style="background: linear-gradient(135deg, var(--blociq-primary), var(--blociq-secondary)); color: white; border: none; padding: 8px 16px; border-radius: 20px; font-size: 12px; cursor: pointer; transition: transform 0.2s;">
-        🤖 Generate Reply
-      </button>
-      <button onclick="analyzeEmail()" class="quick-action-btn" style="background: white; color: var(--blociq-primary); border: 1px solid var(--blociq-primary); padding: 8px 16px; border-radius: 20px; font-size: 12px; cursor: pointer; transition: transform 0.2s;">
-        📊 Analyze Email
-      </button>
-      <button onclick="triageEmail()" class="quick-action-btn" style="background: white; color: var(--blociq-accent); border: 1px solid var(--blociq-accent); padding: 8px 16px; border-radius: 20px; font-size: 12px; cursor: pointer; transition: transform 0.2s;">
-        🎯 Triage Email
-      </button>
-      <button onclick="bulkTriage()" class="quick-action-btn" style="background: white; color: var(--blociq-warning); border: 1px solid var(--blociq-warning); padding: 8px 16px; border-radius: 20px; font-size: 12px; cursor: pointer; transition: transform 0.2s;">
-        📬 Bulk Triage
-      </button>
-    </div>
-  `;
-  
-  const quickActionsDiv = document.createElement('div');
-  quickActionsDiv.innerHTML = quickActionsHtml;
-  chatContainer.appendChild(quickActionsDiv);
-  
-  // Add hover effects
-  const buttons = quickActionsDiv.querySelectorAll('.quick-action-btn');
-  buttons.forEach(btn => {
-    btn.addEventListener('mouseenter', () => btn.style.transform = 'scale(1.05)');
-    btn.addEventListener('mouseleave', () => btn.style.transform = 'scale(1)');
-  });
-}
-
-// Generate AI Reply
-async function generateAIReply() {
-  if (!currentEmailData) {
-    displayMessage({
-      role: 'assistant',
-      content: '❌ No email context available. Please select an email first.',
-      timestamp: new Date()
-    });
-    return;
-  }
-
-  displayMessage({
-    role: 'user',
-    content: '🤖 Generate AI reply for this email',
-    timestamp: new Date()
-  });
-
-  setLoading(true);
-
-  try {
-    const response = await fetch(API_CONFIG.endpoints.emailAnalysis, {
-      method: 'POST',
-      headers: API_CONFIG.headers,
-      body: JSON.stringify({
-        subject: currentEmailData.subject,
-        body: currentEmailData.body,
-        sender: currentEmailData.sender,
-        senderName: currentEmailData.senderName,
-        context: 'outlook_addin_reply'
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`API Error: ${response.status}`);
-    }
-
-    const result = await response.json();
-
-    if (result.success) {
-      const replyContent = `✨ **AI-Generated Reply**
-
-${result.suggested_reply}
-
-**Analysis:** ${result.analysis}
-**Confidence:** ${result.confidence}%
-
-Would you like me to insert this reply into your email or generate a different version?`;
-
-      displayMessage({
-        role: 'assistant',
-        content: replyContent,
-        timestamp: new Date()
-      });
-
-      // Add action buttons for the reply
-      addReplyActionButtons(result.suggested_reply);
-    } else {
-      throw new Error(result.error || 'Failed to generate reply');
-    }
+    console.log('✅ Outgoing email logged successfully');
+    
   } catch (error) {
-    console.error('❌ Reply generation error:', error);
-    displayMessage({
-      role: 'assistant',
-      content: `❌ **Error generating reply:** ${error.message}`,
-      timestamp: new Date()
-    });
-  } finally {
-    setLoading(false);
+    console.error('Error logging outgoing email:', error);
   }
 }
 
-// Add reply action buttons
-function addReplyActionButtons(replyText) {
-  const chatContainer = document.getElementById('chatContainer');
-  
-  const actionsHtml = `
-    <div class="reply-actions" style="margin: 12px 0; display: flex; gap: 8px;">
-      <button onclick="insertReply('${btoa(replyText)}')" class="action-btn" style="background: var(--blociq-success); color: white; border: none; padding: 8px 16px; border-radius: 16px; font-size: 12px; cursor: pointer;">
-        📧 Insert Reply
-      </button>
-      <button onclick="regenerateReply()" class="action-btn" style="background: var(--blociq-secondary); color: white; border: none; padding: 8px 16px; border-radius: 16px; font-size: 12px; cursor: pointer;">
-        🔄 Regenerate
-      </button>
-      <button onclick="copyToClipboard('${btoa(replyText)}')" class="action-btn" style="background: var(--blociq-accent); color: white; border: none; padding: 8px 16px; border-radius: 16px; font-size: 12px; cursor: pointer;">
-        📋 Copy
-      </button>
-    </div>
-  `;
-  
-  const actionsDiv = document.createElement('div');
-  actionsDiv.innerHTML = actionsHtml;
-  chatContainer.appendChild(actionsDiv);
-  scrollToBottom();
-}
-
-// Insert reply into Outlook
-async function insertReply(encodedReply) {
-  const replyText = atob(encodedReply);
-  
+// Handle email changes (for detecting reply/forward mode)
+function handleItemChanged(event) {
   try {
-    Office.context.mailbox.item.body.setAsync(
-      replyText,
-      { coercionType: Office.CoercionType.Text },
-      (result) => {
-        if (result.status === Office.AsyncResultStatus.Succeeded) {
-          displayMessage({
-            role: 'assistant',
-            content: '✅ **Reply inserted successfully!** You can now review and send your email.',
-            timestamp: new Date()
-          });
-        } else {
-          throw new Error(result.error.message);
-        }
-      }
-    );
+    // Reset email context when item changes
+    console.log('📧 Email context changed');
   } catch (error) {
-    console.error('❌ Insert reply error:', error);
-    displayMessage({
-      role: 'assistant',
-      content: `❌ **Error inserting reply:** ${error.message}`,
-      timestamp: new Date()
-    });
+    console.error('Error handling item change:', error);
   }
 }
 
-// Regenerate reply
-async function regenerateReply() {
-  displayMessage({
-    role: 'user',
-    content: '🔄 Regenerate a different reply',
-    timestamp: new Date()
-  });
-
-  setLoading(true);
-
+// Log outgoing email to communications system
+async function logOutgoingEmail(emailContext) {
   try {
-    const response = await fetch(API_CONFIG.endpoints.emailAnalysis, {
-      method: 'POST',
-      headers: API_CONFIG.headers,
-      body: JSON.stringify({
-        subject: currentEmailData.subject,
-        body: currentEmailData.body,
-        sender: currentEmailData.sender,
-        senderName: currentEmailData.senderName,
-        context: 'outlook_addin_reply',
-        regenerate: true
-      })
-    });
-
-    const result = await response.json();
-
-    if (result.success) {
-      const replyContent = `🔄 **Regenerated Reply**
-
-${result.suggested_reply}
-
-**Analysis:** ${result.analysis}
-**Confidence:** ${result.confidence}%`;
-
-      displayMessage({
-        role: 'assistant',
-        content: replyContent,
-        timestamp: new Date()
-      });
-
-      addReplyActionButtons(result.suggested_reply);
-    } else {
-      throw new Error(result.error || 'Failed to regenerate reply');
-    }
-  } catch (error) {
-    console.error('❌ Regenerate error:', error);
-    displayMessage({
-      role: 'assistant',
-      content: `❌ **Error regenerating reply:** ${error.message}`,
-      timestamp: new Date()
-    });
-  } finally {
-    setLoading(false);
-  }
-}
-
-// Analyze Email
-async function analyzeEmail() {
-  if (!currentEmailData) {
-    displayMessage({
-      role: 'assistant',
-      content: '❌ No email context available.',
-      timestamp: new Date()
-    });
-    return;
-  }
-
-  displayMessage({
-    role: 'user',
-    content: '📊 Analyze this email',
-    timestamp: new Date()
-  });
-
-  setLoading(true);
-
-  try {
-    // Use the enhanced triage endpoint for comprehensive analysis
-    const response = await fetch(API_CONFIG.endpoints.triage, {
-      method: 'POST',
-      headers: API_CONFIG.headers,
-      body: JSON.stringify({
-        messageId: currentEmailData.id,
-        analysisMode: true
-      })
-    });
-
-    const result = await response.json();
-
-    if (result.success || result.triage) {
-      const analysis = result.triage || result;
+    // Extract recipient information
+    const recipients = parseRecipients(emailContext.to);
+    
+    // For each recipient, try to link to building/leaseholder
+    for (const recipient of recipients) {
+      const buildingInfo = await extractBuildingFromEmail(emailContext);
       
-      const analysisContent = `📊 **Email Analysis Complete**
-
-**🎯 Category:** ${analysis.enhancedCategory || analysis.label || 'General'}
-**⚡ Urgency:** ${analysis.urgency?.level || 'Medium'} (Score: ${analysis.urgency?.score || 'N/A'})
-**🏠 Properties Mentioned:** ${analysis.properties?.map(p => p.name).join(', ') || 'None detected'}
-
-**🔍 Key Insights:**
-${analysis.insights?.map(insight => `• ${insight.message}`).join('\n') || 'Processing insights...'}
-
-**📝 Suggested Actions:**
-${analysis.suggestedActions?.map(action => `• ${action}`).join('\n') || analysis.attachments_suggestions?.join('\n• ') || 'No specific actions suggested'}
-
-**🧠 AI Reasoning:**
-${analysis.urgency?.reasoning || analysis.reasoning || 'Email analyzed for content and context'}`;
-
-      displayMessage({
-        role: 'assistant',
-        content: analysisContent,
-        timestamp: new Date()
-      });
-    } else {
-      throw new Error('Analysis failed');
-    }
-  } catch (error) {
-    console.error('❌ Analysis error:', error);
-    displayMessage({
-      role: 'assistant',
-      content: `❌ **Error analyzing email:** ${error.message}`,
-      timestamp: new Date()
-    });
-  } finally {
-    setLoading(false);
-  }
-}
-
-// Triage Email
-async function triageEmail() {
-  displayMessage({
-    role: 'user',
-    content: '🎯 Triage this email',
-    timestamp: new Date()
-  });
-
-  setLoading(true);
-
-  try {
-    const response = await fetch(API_CONFIG.endpoints.triage, {
-      method: 'POST',
-      headers: API_CONFIG.headers,
-      body: JSON.stringify({
-        messageId: currentEmailData?.id || 'current',
-        emailData: currentEmailData
-      })
-    });
-
-    const result = await response.json();
-
-    if (result.success || result.triage) {
-      const triage = result.triage || result;
+      // Log to communications_log table
+      const logData = {
+        type: 'email',
+        building_id: buildingInfo?.buildingId || null,
+        unit_id: buildingInfo?.unitId || null,
+        leaseholder_id: buildingInfo?.leaseholderId || null,
+        subject: emailContext.subject,
+        content: emailContext.body,
+        sent_at: new Date().toISOString(),
+        sent_by: 'outlook_addin', // Will be updated with actual user ID
+        building_name: buildingInfo?.buildingName || 'Unknown',
+        leaseholder_name: recipient.name || recipient.email,
+        unit_number: buildingInfo?.unitNumber || 'Unknown',
+        status: 'sent',
+        direction: 'outgoing',
+        recipient_email: recipient.email,
+        is_reply: emailContext.subject.toLowerCase().includes('re:'),
+        is_forward: emailContext.subject.toLowerCase().includes('fw:') || emailContext.subject.toLowerCase().includes('fwd:')
+      };
       
-      const triageContent = `🎯 **Email Triage Complete**
-
-**📋 Category:** ${triage.label || 'Uncategorized'}
-**⚡ Priority:** ${triage.priority || 'Medium'}
-**🏷️ Tags:** ${triage.tags?.join(', ') || 'None'}
-
-**📝 Recommended Actions:**
-${triage.attachments_suggestions?.map(action => `• ${action}`).join('\n') || 'No specific actions recommended'}
-
-**💬 Suggested Reply:**
-${triage.reply?.content || 'No reply suggested'}
-
-**🔄 Next Steps:**
-• ${triage.priority === 'P1' ? 'Handle immediately - urgent matter' : 
-     triage.priority === 'P2' ? 'Address within 24 hours' : 
-     'Standard response timeline applies'}
-• Review any attached documents or requirements
-• Update internal systems if needed`;
-
-      displayMessage({
-        role: 'assistant',
-        content: triageContent,
-        timestamp: new Date()
+      // Send to your communications logging API
+      await fetch('https://www.blociq.co.uk/api/communications/log-outgoing', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(logData),
       });
-    } else {
-      throw new Error('Triage failed');
-    }
-  } catch (error) {
-    console.error('❌ Triage error:', error);
-    displayMessage({
-      role: 'assistant',
-      content: `❌ **Error triaging email:** ${error.message}`,
-      timestamp: new Date()
-    });
-  } finally {
-    setLoading(false);
-  }
-}
-
-// Bulk Triage
-async function bulkTriage() {
-  displayMessage({
-    role: 'user',
-    content: '📬 Start bulk inbox triage',
-    timestamp: new Date()
-  });
-
-  setLoading(true);
-
-  try {
-    const response = await fetch(API_CONFIG.endpoints.bulkTriage, {
-      method: 'POST',
-      headers: API_CONFIG.headers,
-      body: JSON.stringify({
-        bulkTriage: true,
-        maxEmails: 20 // Limit for performance
-      })
-    });
-
-    const result = await response.json();
-
-    if (result.success && result.triage) {
-      const processed = result.triage.processed || 0;
-      const actions = result.triage.actions || [];
       
-      const bulkContent = `📬 **Bulk Triage Complete**
-
-**📊 Processed:** ${processed} emails
-**⚡ Actions Taken:** ${actions.length}
-
-**📋 Summary:**
-${actions.slice(0, 10).map(action => `• ${action}`).join('\n')}
-${actions.length > 10 ? `\n... and ${actions.length - 10} more actions` : ''}
-
-**🎯 Next Steps:**
-• Review categorized emails in your inbox
-• Follow up on high-priority items
-• Check for any urgent matters requiring immediate attention
-
-*Bulk triage helps organize your inbox automatically based on AI analysis.*`;
-
-      displayMessage({
-        role: 'assistant',
-        content: bulkContent,
-        timestamp: new Date()
-      });
-    } else {
-      throw new Error('Bulk triage failed');
+      console.log(`✅ Logged email to ${recipient.email}`);
     }
+    
   } catch (error) {
-    console.error('❌ Bulk triage error:', error);
-    displayMessage({
-      role: 'assistant',
-      content: `❌ **Error with bulk triage:** ${error.message}`,
-      timestamp: new Date()
-    });
-  } finally {
-    setLoading(false);
+    console.error('Error logging outgoing email:', error);
   }
 }
 
-// Copy to clipboard
-async function copyToClipboard(encodedText) {
-  const text = atob(encodedText);
+// Parse email recipients
+function parseRecipients(recipientsString) {
+  if (!recipientsString) return [];
   
   try {
-    await navigator.clipboard.writeText(text);
-    displayMessage({
-      role: 'assistant',
-      content: '📋 **Text copied to clipboard!**',
-      timestamp: new Date()
-    });
+    // Handle different recipient formats
+    if (typeof recipientsString === 'string') {
+      // Simple comma-separated emails
+      return recipientsString.split(',').map(email => ({
+        email: email.trim(),
+        name: email.trim()
+      }));
+    } else if (Array.isArray(recipientsString)) {
+      // Array of recipient objects
+      return recipientsString.map(recipient => ({
+        email: recipient.email || recipient.address || recipient,
+        name: recipient.name || recipient.displayName || recipient.email || recipient.address || recipient
+      }));
+    }
+    
+    return [];
   } catch (error) {
-    console.error('❌ Copy error:', error);
-    displayMessage({
-      role: 'assistant',
-      content: '❌ Failed to copy to clipboard',
-      timestamp: new Date()
-    });
+    console.error('Error parsing recipients:', error);
+    return [];
   }
 }
 
-// Handle send message - Uses authenticated database-linked endpoint
+// Handle sending a message
 async function handleSendMessage() {
-  const inputField = document.getElementById('inputField');
-  if (!inputField || isLoading) return;
-
   const message = inputField.value.trim();
-  if (!message) return;
-
-  // Clear input
+  if (!message || isProcessing) return;
+  
+  // Add user message to chat
+  addMessage(message, 'user');
   inputField.value = '';
-  handleInputChange();
-
-  // Add user message
-  displayMessage({
-    role: 'user',
-    content: message,
-    timestamp: new Date()
-  });
-
-  setLoading(true);
-
+  adjustTextareaHeight();
+  sendButton.disabled = true;
+  
+  // Show typing indicator
+  const typingMessage = addMessage('', 'assistant', true);
+  
   try {
+    isProcessing = true;
+    
+    // Get current email context for better responses
+    const emailContext = await getCurrentEmailContext();
+    
+    // Call Ask BlocIQ API
+    const response = await callAskBlocIQ(message, emailContext);
+    
+    // Remove typing indicator and add response
+    removeMessage(typingMessage);
+    addMessage(response, 'assistant');
+    
+  } catch (error) {
+    console.error('Error getting response:', error);
+    removeMessage(typingMessage);
+    addMessage('Sorry, I encountered an error. Please try again.', 'assistant');
+  } finally {
+    isProcessing = false;
+    sendButton.disabled = false;
+    inputField.focus();
+  }
+}
+
+// Call Ask BlocIQ API with full context
+async function callAskBlocIQ(prompt, emailContext) {
+  try {
+    console.log('🔍 Calling BlocIQ Add-in API with prompt:', prompt);
+    
     // Get current building context if available
     const buildingContext = await getBuildingContext();
     
     const requestBody = {
-      prompt: message,
-      contextType: determineContextType(message, buildingContext),
+      prompt: prompt,
+      contextType: determineContextType(prompt, buildingContext),
       is_outlook_addin: true,
     };
 
@@ -619,14 +232,15 @@ async function handleSendMessage() {
     }
 
     // Add email context if available
-    if (currentEmailData) {
-      requestBody.emailContext = currentEmailData;
+    if (emailContext) {
+      requestBody.emailContext = emailContext;
     }
 
     console.log('📤 Request body:', requestBody);
 
-    // Use the authenticated add-in endpoint that links to user's database
-    const response = await fetch('/api/addin/ask-ai', {
+    // Use the add-in specific endpoint
+    console.log('🌐 Calling API endpoint: https://www.blociq.co.uk/api/addin/ask-ai');
+    const response = await fetch('https://www.blociq.co.uk/api/addin/ask-ai', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -643,12 +257,7 @@ async function handleSendMessage() {
       
       // Handle specific error cases
       if (errorData.action === 'login_required') {
-        displayMessage({
-          role: 'assistant',
-          content: `🔐 ${errorData.message}\n\nPlease ensure you are logged into your BlocIQ account in your browser.`,
-          timestamp: new Date()
-        });
-        return;
+        return `🔐 ${errorData.message}\n\nPlease ensure you are logged into your BlocIQ account in your browser.`;
       }
       
       throw new Error(`API error: ${response.status} - ${errorData.message || errorData.error || 'Unknown error'}`);
@@ -657,265 +266,592 @@ async function handleSendMessage() {
     const data = await response.json();
     console.log('📥 Response data:', data);
     
-    if (data.success && (data.response || data.result)) {
-      const aiResponse = data.response || data.result;
-      
-      displayMessage({
-        role: 'assistant',
-        content: aiResponse,
-        timestamp: new Date()
-      });
-    } else {
-      throw new Error(data.error || 'No response received from AI');
-    }
+    // Return the response
+    return data.response || 'I apologize, but I couldn\'t generate a response. Please try again.';
+
   } catch (error) {
-    console.error('❌ Chat error:', error);
-    displayMessage({
-      role: 'assistant',
-      content: `❌ **Error:** ${error.message}. Please try again.`,
-      timestamp: new Date()
-    });
-  } finally {
-    setLoading(false);
+    console.error('Ask BlocIQ API call failed:', error);
+    
+    // Provide more specific error messages
+    if (error.message.includes('401')) {
+      return '🔐 I need to authenticate with BlocIQ. Please ensure you are logged into your BlocIQ account.';
+    } else if (error.message.includes('403')) {
+      return '🚫 I don\'t have permission to access that information. Please check your BlocIQ account permissions.';
+    } else if (error.message.includes('500')) {
+      return '⚠️ There was a server error. Please try again in a few moments.';
+    } else if (error.message.includes('fetch') || error.message.includes('Failed to fetch')) {
+      return '🌐 I couldn\'t connect to BlocIQ. Please check your internet connection and try again.';
+    } else {
+      return `❌ Sorry, I encountered an error: ${error.message}. Please try again.`;
+    }
   }
 }
 
-// Display message in chat
-function displayMessage(message) {
-  const chatContainer = document.getElementById('chatContainer');
-  if (!chatContainer) return;
+// Get current email context for better responses
+async function getCurrentEmailContext() {
+  try {
+    const item = Office.context.mailbox.item;
+    if (!item) return null;
 
-  const messageDiv = document.createElement('div');
-  messageDiv.className = `message ${message.role}`;
-  
-  const avatar = message.role === 'user' ? 'U' : 'AI';
-  const timestamp = message.timestamp.toLocaleTimeString('en-GB', { 
-    hour: '2-digit', 
-    minute: '2-digit' 
-  });
+    const [subject, body, from, to] = await Promise.all([
+      getItemProperty(item.subject),
+      getItemProperty(item.body),
+      getItemProperty(item.from),
+      getItemProperty(item.to),
+    ]);
 
-  messageDiv.innerHTML = `
-    <div class="message-avatar">${avatar}</div>
-    <div class="message-content">
-      ${formatMessageContent(message.content)}
-      <div style="font-size: 10px; opacity: 0.7; margin-top: 8px;">${timestamp}</div>
-    </div>
-  `;
+    return {
+      subject: subject || 'No subject',
+      body: body || 'No body content',
+      from: from || 'Unknown sender',
+      to: to || 'Unknown recipient',
+      itemId: item.itemId || null,
+    };
 
-  chatContainer.appendChild(messageDiv);
-  scrollToBottom();
-}
-
-// Format message content (basic markdown support)
-function formatMessageContent(content) {
-  return content
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/\n/g, '<br>')
-    .replace(/^(#{1,6})\s(.+)$/gm, (match, hashes, title) => {
-      const level = hashes.length;
-      return `<h${level} style="margin: 8px 0; font-size: ${20 - level}px;">${title}</h${level}>`;
-    });
-}
-
-// Set loading state
-function setLoading(loading) {
-  isLoading = loading;
-  const sendButton = document.getElementById('sendButton');
-  const inputField = document.getElementById('inputField');
-  
-  if (sendButton) {
-    sendButton.disabled = loading;
-  }
-  
-  if (inputField) {
-    inputField.disabled = loading;
-  }
-
-  if (loading) {
-    displayTypingIndicator();
-  } else {
-    removeTypingIndicator();
+  } catch (error) {
+    console.error('Error getting email context:', error);
+    return null;
   }
 }
 
-// Display typing indicator
-function displayTypingIndicator() {
-  const chatContainer = document.getElementById('chatContainer');
-  if (!chatContainer) return;
-
-  const typingDiv = document.createElement('div');
-  typingDiv.id = 'typing-indicator';
-  typingDiv.className = 'message assistant typing';
-  typingDiv.innerHTML = `
-    <div class="message-avatar">AI</div>
-    <div class="message-content">
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <div style="display: flex; gap: 4px;">
-          <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--blociq-primary); animation: pulse 1.5s infinite;"></div>
-          <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--blociq-primary); animation: pulse 1.5s infinite 0.2s;"></div>
-          <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--blociq-primary); animation: pulse 1.5s infinite 0.4s;"></div>
-        </div>
-        <span style="font-size: 12px; color: var(--blociq-text-light);">BlocIQ is thinking...</span>
-      </div>
-    </div>
-  `;
-
-  chatContainer.appendChild(typingDiv);
-  scrollToBottom();
-}
-
-// Remove typing indicator
-function removeTypingIndicator() {
-  const typingIndicator = document.getElementById('typing-indicator');
-  if (typingIndicator) {
-    typingIndicator.remove();
-  }
-}
-
-// Scroll to bottom of chat
-function scrollToBottom() {
-  const chatContainer = document.getElementById('chatContainer');
-  if (chatContainer) {
-    setTimeout(() => {
-      chatContainer.scrollTop = chatContainer.scrollHeight;
-    }, 100);
-  }
-}
-
-// Display welcome message
-function displayWelcomeMessage() {
-  const welcomeMessage = {
-    role: 'assistant',
-    content: `🏢 **Welcome to BlocIQ Assistant!**
-
-I'm connected to your BlocIQ database and can help you with:
-
-• **🗣️ Ask Questions** - Full access to your buildings, documents, and data
-• **📧 Email Analysis** - Understand content, urgency, and context
-• **🤖 Reply Generation** - Create professional, contextual responses  
-• **🎯 Email Triage** - Categorize and prioritize messages
-• **🏠 Building Information** - Your property data and compliance
-• **📋 Document Search** - Access your uploaded documents
-
-${currentEmailData ? '**Current email loaded with full database context!**' : 'I have access to your full BlocIQ account data.'}
-
-*🔐 Authenticated and connected to your personal database.*`,
-    timestamp: new Date()
-  };
-
-  displayMessage(welcomeMessage);
-}
-
-// Setup quick actions in the interface
-function setupQuickActions() {
-  // Add any additional quick action setup here
-  console.log('✅ Quick actions initialized');
-}
-
-// Get building context from email or user data
+// Get building context from current email or user
 async function getBuildingContext() {
   try {
-    // Try to extract building information from current email
-    if (currentEmailData) {
-      const buildingInfo = await extractBuildingFromContent(currentEmailData);
-      if (buildingInfo?.building_id) {
-        return {
-          buildingId: buildingInfo.building_id,
-          buildingName: buildingInfo.building_name,
-          source: 'email_extraction'
-        };
-      }
+    // Try to extract building info from email content
+    const emailContext = await getCurrentEmailContext();
+    if (emailContext) {
+      const buildingInfo = await extractBuildingFromEmail(emailContext);
+      if (buildingInfo) return buildingInfo;
     }
-    
-    // Could add other building context detection methods here
+
+    // Fallback: get user's default building if available
+    // This would require additional API calls to your user profile system
     return null;
+
   } catch (error) {
     console.error('Error getting building context:', error);
     return null;
   }
 }
 
-// Determine context type based on message content and building context
-function determineContextType(message, buildingContext) {
-  const lowerMessage = message.toLowerCase();
-  
-  if (lowerMessage.includes('reply') || lowerMessage.includes('respond') || lowerMessage.includes('email')) {
-    return 'email_reply';
+// Extract building information from email content
+async function extractBuildingFromEmail(emailContext) {
+  try {
+    const response = await fetch('https://www.blociq.co.uk/api/ai-extract-building', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        emailContent: `${emailContext.subject}\n\n${emailContext.body}`,
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      return data.building || null;
+    }
+
+    return null;
+
+  } catch (error) {
+    console.error('Error extracting building info:', error);
+    return null;
   }
+}
+
+// Determine context type based on question and building context
+function determineContextType(prompt, buildingContext) {
+  const lowerPrompt = prompt.toLowerCase();
   
-  if (lowerMessage.includes('major works') || lowerMessage.includes('construction') || lowerMessage.includes('project')) {
-    return 'major_works';
-  }
-  
-  if (lowerMessage.includes('compliance') || lowerMessage.includes('regulation') || lowerMessage.includes('certificate')) {
+  if (lowerPrompt.includes('compliance') || lowerPrompt.includes('regulation') || lowerPrompt.includes('safety')) {
     return 'compliance';
   }
   
-  if (buildingContext?.buildingId) {
+  if (lowerPrompt.includes('leaseholder') || lowerPrompt.includes('tenant') || lowerPrompt.includes('resident')) {
+    return 'leaseholder';
+  }
+  
+  if (lowerPrompt.includes('major works') || lowerPrompt.includes('section 20') || lowerPrompt.includes('construction')) {
+    return 'major_works';
+  }
+  
+  if (lowerPrompt.includes('email') || lowerPrompt.includes('reply') || lowerPrompt.includes('response')) {
+    return 'email_reply';
+  }
+  
+  if (buildingContext) {
     return 'building_specific';
   }
   
   return 'general';
 }
 
-// Extract building information from email content (simplified version)
-async function extractBuildingFromContent(emailContext) {
-  try {
-    const text = `${emailContext.subject} ${emailContext.body}`;
-    
-    // Simple pattern matching for building names/addresses
-    const buildingPatterns = [
-      /\b([A-Z][a-z]+\s+(House|Manor|Gardens|Lodge|Court|Building|Apartments?|Flats?|Estate|Tower|Place|Square|Mews|Close|Road|Street|Avenue|Lane|Drive|Way))\b/gi,
-      /\b(\d+\s+[A-Z][a-z]+\s+(Road|Street|Avenue|Lane|Drive|Way))\b/gi,
-    ];
-    
-    for (const pattern of buildingPatterns) {
-      const match = text.match(pattern);
-      if (match) {
-        return {
-          building_name: match[0],
-          building_id: null, // Would need API call to resolve
-          confidence: 0.7
-        };
+// Get item property safely
+async function getItemProperty(property) {
+  return new Promise((resolve) => {
+    if (!property) {
+      resolve(null);
+      return;
+    }
+
+    property.getAsync((result) => {
+      if (result.status === Office.AsyncResultStatus.Succeeded) {
+        resolve(result.value);
+      } else {
+        resolve(null);
       }
+    });
+  });
+}
+
+// Add message to chat
+function addMessage(content, type, isTyping = false) {
+  const messageDiv = document.createElement('div');
+  messageDiv.className = `message ${type}${isTyping ? ' typing' : ''}`;
+  
+  const avatar = document.createElement('div');
+  avatar.className = 'message-avatar';
+  avatar.textContent = type === 'user' ? 'U' : 'AI';
+  
+  const messageContent = document.createElement('div');
+  messageContent.className = 'message-content';
+  messageContent.textContent = content;
+  
+  messageDiv.appendChild(avatar);
+  messageDiv.appendChild(messageContent);
+  
+  chatContainer.appendChild(messageDiv);
+  chatContainer.scrollTop = chatContainer.scrollHeight;
+  
+  return messageDiv;
+}
+
+// Remove message from chat
+function removeMessage(messageElement) {
+  if (messageElement && messageElement.parentNode) {
+    messageElement.parentNode.removeChild(messageElement);
+  }
+}
+
+// Adjust textarea height automatically
+function adjustTextareaHeight() {
+  inputField.style.height = 'auto';
+  inputField.style.height = Math.min(inputField.scrollHeight, 120) + 'px';
+}
+
+// Export functions for potential external use
+window.BlocIQAssistant = {
+  addMessage,
+  removeMessage,
+  callAskBlocIQ,
+  getCurrentEmailContext,
+  getBuildingContext,
+  logOutgoingEmail,
+};
+
+// BlocIQ Outlook Add-in Function Commands
+// This handles the "Generate by Ask BlocIQ" button functionality
+
+Office.onReady(() => {
+  console.log('BlocIQ function commands loaded');
+});
+
+// Main function called when user clicks "Generate by Ask BlocIQ" button
+function showAIReplyModal(event) {
+  try {
+    console.log('Opening AI Reply Modal');
+    
+    // Get current email context
+    getCurrentEmailContext()
+      .then(emailContext => {
+        if (!emailContext) {
+          showError('No email context available. Please ensure you have an email open.');
+          return;
+        }
+        
+        // Determine reply type based on email context
+        const replyType = determineReplyType(emailContext);
+        
+        // Open the AI reply generation dialog
+        Office.context.ui.displayDialogAsync(
+          'https://www.blociq.co.uk/addin/ai-reply-modal.html?replyType=' + replyType,
+          {
+            height: 70,
+            width: 60,
+            displayInIframe: true
+          },
+          (result) => {
+            if (result.status === Office.AsyncResultStatus.Succeeded) {
+              const dialog = result.value;
+              
+              // Handle messages from the dialog
+              dialog.addEventHandler(Office.EventType.DialogMessageReceived, (arg) => {
+                try {
+                  const data = JSON.parse(arg.message);
+                  
+                  switch (data.action) {
+                    case 'insertReply':
+                      insertGeneratedReply(data.content);
+                      dialog.close();
+                      break;
+                      
+                    case 'close':
+                      dialog.close();
+                      break;
+                      
+                    case 'error':
+                      showError(data.message);
+                      break;
+                  }
+                } catch (error) {
+                  console.error('Error handling dialog message:', error);
+                }
+              });
+              
+              // Handle dialog close
+              dialog.addEventHandler(Office.EventType.DialogEventReceived, (arg) => {
+                console.log('Dialog event:', arg);
+              });
+              
+            } else {
+              console.error('Failed to open dialog:', result.error);
+              showError('Failed to open AI Reply dialog');
+            }
+          }
+        );
+      })
+      .catch(error => {
+        console.error('Error getting email context:', error);
+        showError('Error accessing email context');
+      });
+    
+  } catch (error) {
+    console.error('Error in showAIReplyModal:', error);
+    showError('Unexpected error occurred');
+  } finally {
+    event.completed();
+  }
+}
+
+// Function to show inbox triage modal
+function showInboxTriage(event) {
+  try {
+    console.log('Opening Inbox Triage Modal');
+    
+    // Open the triage dialog
+    Office.context.ui.displayDialogAsync(
+      'https://www.blociq.co.uk/addin/ai-triage-modal.html',
+      {
+        height: 80,
+        width: 70,
+        displayInIframe: true
+      },
+      (result) => {
+        if (result.status === Office.AsyncResultStatus.Succeeded) {
+          const dialog = result.value;
+          
+          // Handle messages from the dialog
+          dialog.addEventHandler(Office.EventType.DialogMessageReceived, (arg) => {
+            try {
+              const data = JSON.parse(arg.message);
+              
+              switch (data.action) {
+                case 'triageComplete':
+                  showSuccess(`Triage complete! Generated ${data.count} draft replies.`);
+                  dialog.close();
+                  break;
+                  
+                case 'close':
+                  dialog.close();
+                  break;
+                  
+                case 'error':
+                  showError(data.message);
+                  break;
+              }
+            } catch (error) {
+              console.error('Error handling triage dialog message:', error);
+            }
+          });
+          
+        } else {
+          console.error('Failed to open triage dialog:', result.error);
+          showError('Failed to open Inbox Triage dialog');
+        }
+      }
+    );
+    
+  } catch (error) {
+    console.error('Error in showInboxTriage:', error);
+    showError('Unexpected error occurred');
+  } finally {
+    event.completed();
+  }
+}
+
+// Get current email context
+async function getCurrentEmailContext() {
+  try {
+    const item = Office.context.mailbox.item;
+    if (!item) return null;
+
+    const [subject, body, from, to, conversationId] = await Promise.all([
+      getItemProperty(item.subject),
+      getItemProperty(item.body),
+      getItemProperty(item.from),
+      getItemProperty(item.to),
+      Promise.resolve(item.conversationId)
+    ]);
+
+    // Get email thread if available
+    let emailThread = null;
+    try {
+      emailThread = await getEmailThread(conversationId);
+    } catch (error) {
+      console.log('Could not retrieve email thread:', error);
+    }
+
+    return {
+      subject: subject || 'No subject',
+      body: body || 'No content',
+      from: typeof from === 'string' ? from : (from?.emailAddress || from?.displayName || 'Unknown'),
+      to: Array.isArray(to) ? to.map(t => t.emailAddress || t.displayName || t).join(', ') : 
+          (typeof to === 'string' ? to : (to?.emailAddress || to?.displayName || 'Unknown')),
+      itemId: item.itemId,
+      conversationId: conversationId,
+      emailThread: emailThread,
+      itemType: item.itemType, // Message or Appointment
+      isReply: subject && subject.toLowerCase().startsWith('re:'),
+      isForward: subject && (subject.toLowerCase().startsWith('fw:') || subject.toLowerCase().startsWith('fwd:'))
+    };
+
+  } catch (error) {
+    console.error('Error getting email context:', error);
+    throw error;
+  }
+}
+
+// Get email thread for better context
+async function getEmailThread(conversationId) {
+  return new Promise((resolve) => {
+    if (!conversationId) {
+      resolve(null);
+      return;
+    }
+
+    try {
+      // Try to get conversation items
+      Office.context.mailbox.getSelectedItemAsync((result) => {
+        if (result.status === Office.AsyncResultStatus.Succeeded) {
+          // This is a simplified approach - in production you'd want to
+          // use Graph API to get full conversation thread
+          resolve({
+            conversationId: conversationId,
+            itemCount: 1,
+            items: [result.value]
+          });
+        } else {
+          resolve(null);
+        }
+      });
+    } catch (error) {
+      console.error('Error getting email thread:', error);
+      resolve(null);
+    }
+  });
+}
+
+// Determine reply type based on context
+function determineReplyType(emailContext) {
+  if (!emailContext) return 'reply';
+  
+  const subject = emailContext.subject?.toLowerCase() || '';
+  
+  if (subject.startsWith('fw:') || subject.startsWith('fwd:')) {
+    return 'forward';
+  } else if (subject.startsWith('re:')) {
+    return 'reply';
+  } else {
+    // Default to reply for new compositions
+    return 'reply';
+  }
+}
+
+// Insert the generated reply into the email body
+function insertGeneratedReply(content) {
+  try {
+    console.log('Inserting generated reply');
+    
+    // Insert the content into the email body
+    Office.context.mailbox.item.body.setAsync(
+      content,
+      {
+        coercionType: Office.CoercionType.Text,
+        asyncContext: { action: 'insertReply' }
+      },
+      (result) => {
+        if (result.status === Office.AsyncResultStatus.Succeeded) {
+          console.log('Reply inserted successfully');
+          showSuccess('AI-generated reply has been inserted into your email.');
+        } else {
+          console.error('Failed to insert reply:', result.error);
+          showError('Failed to insert the generated reply. Please try copying and pasting manually.');
+        }
+      }
+    );
+    
+  } catch (error) {
+    console.error('Error inserting reply:', error);
+    showError('Error inserting the generated reply');
+  }
+}
+
+// Get item property safely
+function getItemProperty(property) {
+  return new Promise((resolve) => {
+    if (!property) {
+      resolve(null);
+      return;
+    }
+
+    if (typeof property === 'string') {
+      resolve(property);
+      return;
+    }
+
+    if (property.getAsync) {
+      property.getAsync((result) => {
+        if (result.status === Office.AsyncResultStatus.Succeeded) {
+          resolve(result.value);
+        } else {
+          resolve(null);
+        }
+      });
+    } else {
+      resolve(property);
+    }
+  });
+}
+
+// Show success notification
+function showSuccess(message) {
+  try {
+    Office.context.ui.messageParent(JSON.stringify({
+      action: 'notification',
+      type: 'success',
+      message: message
+    }));
+  } catch (error) {
+    console.log('Success:', message);
+  }
+}
+
+// Show error notification
+function showError(message) {
+  try {
+    Office.context.ui.messageParent(JSON.stringify({
+      action: 'notification',
+      type: 'error',
+      message: message
+    }));
+  } catch (error) {
+    console.error('Error:', message);
+  }
+}
+
+// Log outgoing emails automatically when they're sent
+Office.context.mailbox.addHandlerAsync(Office.EventType.ItemSend, async (event) => {
+  try {
+    console.log('Email send event detected');
+    
+    const emailContext = await getCurrentEmailContext();
+    if (emailContext) {
+      // Log the email to your communications system
+      await logEmailToSupabase(emailContext, 'outgoing');
     }
     
+  } catch (error) {
+    console.error('Error logging outgoing email:', error);
+  }
+});
+
+// Log email to Supabase communications system
+async function logEmailToSupabase(emailContext, direction = 'outgoing') {
+  try {
+    const logData = {
+      type: 'email',
+      direction: direction,
+      subject: emailContext.subject,
+      content: emailContext.body,
+      from_email: direction === 'outgoing' ? Office.context.mailbox.userProfile.emailAddress : emailContext.from,
+      to_email: direction === 'outgoing' ? emailContext.to : Office.context.mailbox.userProfile.emailAddress,
+      sent_at: new Date().toISOString(),
+      conversation_id: emailContext.conversationId,
+      outlook_item_id: emailContext.itemId,
+      is_reply: emailContext.isReply,
+      is_forward: emailContext.isForward,
+      user_email: Office.context.mailbox.userProfile.emailAddress,
+      source: 'outlook_addin'
+    };
+
+    // Extract building/property information from email content
+    const buildingInfo = await extractBuildingFromContent(emailContext);
+    if (buildingInfo) {
+      logData.building_id = buildingInfo.building_id;
+      logData.unit_id = buildingInfo.unit_id;
+      logData.leaseholder_id = buildingInfo.leaseholder_id;
+    }
+
+    // Send to your communications logging API
+    const response = await fetch('https://www.blociq.co.uk/api/communications/log', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify(logData),
+    });
+
+    if (response.ok) {
+      console.log('Email logged successfully to communications system');
+    } else {
+      console.error('Failed to log email:', response.status);
+    }
+
+  } catch (error) {
+    console.error('Error logging email to Supabase:', error);
+  }
+}
+
+// Extract building information from email content
+async function extractBuildingFromContent(emailContext) {
+  try {
+    const response = await fetch('https://www.blociq.co.uk/api/ai/extract-building', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        content: `${emailContext.subject}\n\n${emailContext.body}`,
+        from_email: emailContext.from,
+        to_email: emailContext.to
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      return data.building_info || null;
+    }
+
     return null;
   } catch (error) {
-    console.error('Error extracting building from content:', error);
+    console.error('Error extracting building info:', error);
     return null;
   }
 }
 
-// Utility functions
-function formatFileSize(bytes) {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
-
-// Error handling
-window.onerror = function(msg, url, lineNo, columnNo, error) {
-  console.error('❌ JavaScript Error:', {
-    message: msg,
-    source: url,
-    line: lineNo,
-    column: columnNo,
-    error: error
-  });
-  return false;
-};
-
-// Export functions for global access
-window.generateAIReply = generateAIReply;
-window.analyzeEmail = analyzeEmail;
-window.triageEmail = triageEmail;
-window.bulkTriage = bulkTriage;
-window.insertReply = insertReply;
-window.regenerateReply = regenerateReply;
-window.copyToClipboard = copyToClipboard;
-
-console.log('🚀 BlocIQ Outlook Add-in fully loaded and ready!');
+// Function commands are now registered in functions.js
+// Duplicate functions removed to prevent conflicts
