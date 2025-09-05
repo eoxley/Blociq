@@ -1084,6 +1084,56 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`❌ OCR API failed (${response.status}):`, errorText);
+        
+        // Try to parse error response for better handling
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { detail: errorText };
+        }
+        
+        // If Render service is not available, try legacy OCR as fallback
+        if (errorData.reason === 'render-endpoint-not-found' || 
+            errorData.reason === 'render-connection-failed' ||
+            errorData.reason === 'missing-render-config') {
+          
+          console.log('🔄 Render service unavailable, trying legacy OCR fallback...');
+          
+          try {
+            const fallbackFormData = new FormData();
+            fallbackFormData.append('file', file);
+            
+            const fallbackResponse = await fetch('/api/ask-ai/upload', {
+              method: 'POST',
+              body: fallbackFormData,
+              signal: controller.signal
+            });
+            
+            if (fallbackResponse.ok) {
+              const fallbackResult = await fallbackResponse.json();
+              console.log('✅ Legacy OCR fallback succeeded');
+              
+              return {
+                success: fallbackResult.success || false,
+                documentType: fallbackResult.documentType || 'document',
+                summary: fallbackResult.summary || 'Document processed via legacy OCR',
+                analysis: fallbackResult.analysis || 'Processed using fallback OCR method',
+                filename: fallbackResult.filename || file.name,
+                textLength: fallbackResult.textLength || 0,
+                extractedText: fallbackResult.extractedText || '',
+                ocrSource: 'legacy-fallback',
+                metadata: {
+                  ...(fallbackResult.metadata || {}),
+                  fallbackReason: 'Render service unavailable'
+                }
+              };
+            }
+          } catch (fallbackError) {
+            console.warn('⚠️ Legacy OCR fallback also failed:', fallbackError);
+          }
+        }
+        
         throw new Error(`OCR API failed: ${response.status}`);
       }
       

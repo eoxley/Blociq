@@ -8,11 +8,22 @@ export async function POST(req: NextRequest) {
     const token = process.env.RENDER_OCR_TOKEN;
     const ocrUrl = process.env.RENDER_OCR_URL;
     
+    console.log('🔧 Render OCR Configuration:', {
+      hasToken: !!token,
+      ocrUrl: ocrUrl ? `${ocrUrl.substring(0, 50)}...` : 'NOT SET',
+      tokenLength: token ? token.length : 0
+    });
+    
     if (!token || !ocrUrl) {
+      console.error('❌ Missing Render OCR configuration');
       return NextResponse.json({
         success: false,
         reason: 'missing-render-config',
-        details: 'RENDER_OCR_TOKEN and RENDER_OCR_URL must be configured'
+        details: 'RENDER_OCR_TOKEN and RENDER_OCR_URL must be configured',
+        config: {
+          hasToken: !!token,
+          hasUrl: !!ocrUrl
+        }
       }, { status: 500 });
     }
     
@@ -86,19 +97,50 @@ export async function POST(req: NextRequest) {
 
     // Forward to Render OCR service
     console.log('🔄 Forwarding to Render OCR service:', ocrUrl);
+    console.log('📤 Payload keys:', Object.keys(payload));
+    console.log('🔐 Using token:', token ? `${token.substring(0, 10)}...` : 'NO TOKEN');
     
-    const renderResponse = await fetch(ocrUrl, {
-      method: "POST",
-      headers: { 
-        "Content-Type": "application/json", 
-        "Authorization": `Bearer ${token}` 
-      },
-      body: JSON.stringify(payload),
-    });
+    let renderResponse: Response;
+    try {
+      renderResponse = await fetch(ocrUrl, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json", 
+          "Authorization": `Bearer ${token}` 
+        },
+        body: JSON.stringify(payload),
+      });
+      
+      console.log('📨 Render service response status:', renderResponse.status);
+      
+    } catch (fetchError) {
+      console.error('❌ Network error connecting to Render service:', fetchError);
+      return NextResponse.json({
+        success: false,
+        reason: "render-connection-failed",
+        details: `Cannot connect to Render OCR service at ${ocrUrl}. Service may be down or URL incorrect.`,
+        error: fetchError instanceof Error ? fetchError.message : 'Network error'
+      }, { status: 503 });
+    }
 
     if (!renderResponse.ok) {
       const errorText = await renderResponse.text().catch(() => "");
       console.error('❌ Render OCR service failed:', renderResponse.status, errorText);
+      
+      // Handle specific error types
+      if (renderResponse.status === 404) {
+        return NextResponse.json({
+          success: false,
+          reason: "render-endpoint-not-found",
+          details: `Render OCR service endpoint not found at ${ocrUrl}. Please check the URL and ensure the service is deployed.`,
+          suggestions: [
+            "Verify RENDER_OCR_URL environment variable is correct",
+            "Ensure Render OCR service is deployed and running", 
+            "Check that the /ocr/process endpoint exists on the service"
+          ],
+          status: renderResponse.status
+        }, { status: 502 });
+      }
       
       // Check for bucket-related errors from Render service
       if (errorText.includes('BUCKET_NOT_FOUND') || errorText.includes('bucket') || errorText.includes('Bucket not found')) {
