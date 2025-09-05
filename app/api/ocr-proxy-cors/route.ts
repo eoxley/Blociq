@@ -134,12 +134,23 @@ export async function POST(req: NextRequest) {
         });
       } catch (externalError) {
         console.warn('⚠️ CORS Proxy: External OCR failed after retries, trying OpenAI Vision fallback...', externalError);
+        console.error('❌ External OCR Error details:', {
+          message: externalError instanceof Error ? externalError.message : 'Unknown error',
+          name: externalError instanceof Error ? externalError.name : 'Unknown',
+          stack: externalError instanceof Error ? externalError.stack : 'No stack trace'
+        });
       }
     } else {
       console.log('📏 Skipping external OCR due to file size limit');
     }
 
     // Fallback to OpenAI Vision API
+    console.log('🔍 OpenAI Vision check:', {
+      hasApiKey: !!process.env.OPENAI_API_KEY,
+      fileType: file.type,
+      isImageOrPdf: (file.type.startsWith('image/') || file.type === 'application/pdf')
+    });
+    
     if (process.env.OPENAI_API_KEY && (file.type.startsWith('image/') || file.type === 'application/pdf')) {
       try {
         console.log('🤖 CORS Proxy: Using OpenAI Vision API fallback...');
@@ -249,6 +260,10 @@ export async function POST(req: NextRequest) {
         });
       } catch (openAIError) {
         console.error('❌ CORS Proxy: OpenAI Vision error:', openAIError);
+        console.error('❌ OpenAI Error details:', {
+          message: openAIError instanceof Error ? openAIError.message : 'Unknown error',
+          stack: openAIError instanceof Error ? openAIError.stack : 'No stack trace'
+        });
       }
     } else {
       console.warn('⚠️ CORS Proxy: OpenAI API key not configured or unsupported file type, skipping OpenAI Vision fallback');
