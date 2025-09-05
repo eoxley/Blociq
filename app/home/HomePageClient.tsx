@@ -1016,7 +1016,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     
     // Set up timeout and controller outside try block for proper cleanup
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout
+    const timeoutId = setTimeout(() => controller.abort(), 600000); // 10 minute timeout
     
     try {
       // Validate file has content before processing

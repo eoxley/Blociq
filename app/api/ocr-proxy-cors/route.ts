@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
-export const maxDuration = 300; // 5 minutes for OCR processing
+export const maxDuration = 600; // 10 minutes for OCR processing
 
 export async function POST(req: NextRequest) {
   console.log('🔧 CORS Proxy: Handling OCR request to external server');
   
   // Set a reasonable timeout for the entire request
   const startTime = Date.now();
-  const REQUEST_TIMEOUT = 180000; // 3 minutes to match Render service limits
+  const REQUEST_TIMEOUT = 580000; // 9.5 minutes - allowing full time for Render OCR processing
   
   // API Key verification logging
   console.log('🔑 API Key check:', {
@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
         
         const result = await retryWithBackoff(async () => {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minute timeout per attempt to allow Render service to complete
+          const timeoutId = setTimeout(() => controller.abort(), 580000); // 9.5 minute timeout per attempt to allow Render service to complete
           
           try {
             // Manually construct multipart data with proper CR/LF boundaries
@@ -333,7 +333,7 @@ export async function POST(req: NextRequest) {
           ? 'Try breaking the document into smaller sections or wait a few minutes before retrying.'
           : 'Please check the document format and try uploading again.',
         availableMethods: [
-          `External OCR: Timeout after 5 minutes`,
+          `External OCR: Timeout after 9.5 minutes`,
           `OpenAI Vision: ${process.env.OPENAI_API_KEY ? 'Available but timed out' : 'Not configured'}`
         ]
       }

@@ -10,7 +10,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
 
-export const maxDuration = 300; // 5 minutes for comprehensive testing
+export const maxDuration = 600; // 10 minutes for comprehensive testing
 
 export async function POST(request: NextRequest) {
   try {
