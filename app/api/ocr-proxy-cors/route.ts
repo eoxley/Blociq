@@ -311,20 +311,30 @@ export async function POST(req: NextRequest) {
       console.log(`📄 File type: ${file.type}, OpenAI key configured: ${!!process.env.OPENAI_API_KEY}`);
     }
 
-    // If both methods fail, return partial success with metadata
-    console.warn('⚠️ All OCR methods failed, returning fallback response');
+    // If both methods fail, return user-friendly explanation
+    console.warn('⚠️ All OCR methods failed, returning user-friendly response');
+    const isLargeFile = file.size > 2 * 1024 * 1024; // 2MB threshold
+    const userMessage = isLargeFile 
+      ? 'Large document processing is taking longer than expected. This may be due to high server load or the document complexity. Please try again in a few minutes, or consider breaking the document into smaller sections.'
+      : 'Document processing failed. This may be due to document format or temporary service issues. Please try uploading the document again.';
+      
     return NextResponse.json({
       success: false,
       text: '',
-      source: 'failed',
-      error: 'OCR processing failed',
+      source: 'timeout',
+      error: userMessage,
       metadata: {
         fileType: file.type,
         fileSize: file.size,
         fileName: file.name,
+        fileSizeMB: (file.size / (1024 * 1024)).toFixed(2),
+        isLargeFile,
+        suggestion: isLargeFile 
+          ? 'Try breaking the document into smaller sections or wait a few minutes before retrying.'
+          : 'Please check the document format and try uploading again.',
         availableMethods: [
-          `External OCR: ${process.env.OPENAI_API_KEY ? 'Available' : 'Unavailable'}`,
-          `OpenAI Vision: ${process.env.OPENAI_API_KEY ? 'Available' : 'Unavailable'} (supports images and PDFs)`
+          `External OCR: Timeout after 5 minutes`,
+          `OpenAI Vision: ${process.env.OPENAI_API_KEY ? 'Available but timed out' : 'Not configured'}`
         ]
       }
     }, {
