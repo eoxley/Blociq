@@ -100,6 +100,20 @@ export async function POST(req: NextRequest) {
       const errorText = await renderResponse.text().catch(() => "");
       console.error('❌ Render OCR service failed:', renderResponse.status, errorText);
       
+      // Check for bucket-related errors from Render service
+      if (errorText.includes('BUCKET_NOT_FOUND') || errorText.includes('bucket') || errorText.includes('Bucket not found')) {
+        const bucketMatch = errorText.match(/BUCKET_NOT_FOUND:([^,\s]+)/);
+        const bucket = bucketMatch ? bucketMatch[1] : 'building_documents';
+        
+        return NextResponse.json({ 
+          success: false, 
+          reason: "bucket-not-found",
+          bucket: bucket,
+          detail: `Storage bucket "${bucket}" not found on Render OCR service. Please ensure bucket exists in Supabase.`,
+          status: renderResponse.status
+        }, { status: 502 });
+      }
+      
       return NextResponse.json({ 
         success: false, 
         reason: "render-ocr-failed", 

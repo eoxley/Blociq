@@ -1022,7 +1022,31 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       // Always upload to Supabase first for StorageKey
       const { uploadToSupabase } = await import('@/lib/upload-utils');
       console.log('📤 Uploading to Supabase for StorageKey...');
-      const storageKey = await uploadToSupabase(file);
+      
+      let storageKey: string;
+      try {
+        storageKey = await uploadToSupabase(file);
+      } catch (uploadError) {
+        if (uploadError instanceof Error && uploadError.message.startsWith('BUCKET_NOT_FOUND:')) {
+          const bucket = uploadError.message.split(':')[1];
+          return {
+            success: false,
+            documentType: 'document',
+            summary: 'Storage bucket configuration error',
+            analysis: `Unable to upload file to Supabase. The storage bucket "${bucket}" was not found. Please ensure the bucket is created in Supabase and the environment variables are configured correctly.`,
+            filename: file.name,
+            textLength: 0,
+            extractedText: '',
+            ocrSource: 'bucket-error',
+            metadata: {
+              reason: 'bucket-not-found',
+              bucket: bucket,
+              error: 'Storage bucket not found in Supabase'
+            }
+          };
+        }
+        throw uploadError; // Re-throw other upload errors
+      }
       
       const MAX_DIRECT_BYTES = 4_500_000; // Vercel safe limit
       
