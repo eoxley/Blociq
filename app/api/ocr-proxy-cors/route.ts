@@ -97,12 +97,22 @@ export async function POST(req: NextRequest) {
           const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout per attempt
           
           try {
+            // Re-create FormData to ensure it's properly formatted for external service
+            const externalFormData = new FormData();
+            const originalFile = formData.get('file') as File;
+            if (originalFile) {
+              externalFormData.append('file', originalFile);
+            }
+            
+            console.log('📤 Sending to external OCR:', {
+              fileName: originalFile?.name,
+              fileSize: originalFile?.size,
+              fileType: originalFile?.type
+            });
+            
             const ocrResponse = await fetch('https://ocr-server-2-ykmk.onrender.com/upload', {
               method: 'POST',
-              body: formData,
-              headers: {
-                'User-Agent': 'BlocIQ-OCR-Client/1.0'
-              },
+              body: externalFormData,
               signal: controller.signal
             });
 
@@ -114,7 +124,9 @@ export async function POST(req: NextRequest) {
               console.log('✅ CORS Proxy: External OCR processing successful');
               return result;
             } else {
-              throw new Error(`External OCR failed: ${ocrResponse.status}`);
+              const errorText = await ocrResponse.text().catch(() => 'No error text available');
+              console.error(`❌ External OCR failed: ${ocrResponse.status}`, errorText);
+              throw new Error(`External OCR failed: ${ocrResponse.status} - ${errorText}`);
             }
           } finally {
             clearTimeout(timeoutId);
