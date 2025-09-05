@@ -100,13 +100,70 @@ export async function GET() {
   }
 }
 
-export async function POST(request: NextRequest) {
-  return NextResponse.json({
-    message: 'Use GET method to test OCR system configuration',
-    available_methods: ['GET'],
-    ocr_endpoints: [
-      'POST /api/ocr-proxy-cors',
-      'POST /api/ocr-openai'
-    ]
-  }, { status: 405 });
+export async function POST(req: NextRequest) {
+  try {
+    console.log('🧪 OCR Test with file upload');
+    
+    const formData = await req.formData();
+    const file = formData.get('file') as File;
+
+    if (!file) {
+      return NextResponse.json({
+        error: 'No file provided',
+        envCheck: {
+          OPENAI_API_KEY: !!process.env.OPENAI_API_KEY,
+          USE_DOCUMENT_AI: process.env.USE_DOCUMENT_AI,
+          DOCUMENT_AI_PROCESSOR_ID: !!process.env.DOCUMENT_AI_PROCESSOR_ID,
+        }
+      }, { status: 400 });
+    }
+
+    console.log('📁 Test file info:', {
+      name: file.name,
+      size: file.size,
+      type: file.type
+    });
+
+    // Use our enhanced extractText function with all our new diagnostics
+    const { extractText } = await import('@/lib/extract-text');
+    const result = await extractText(file);
+    
+    console.log('🎯 Test OCR result:', {
+      source: result.source,
+      textLength: result.textLength,
+      success: result.source !== 'failed',
+      hasMetadata: !!result.metadata,
+      errorDetails: result.metadata?.errorDetails
+    });
+
+    return NextResponse.json({
+      testResult: {
+        source: result.source,
+        textLength: result.textLength,
+        success: result.source !== 'failed',
+        extractedText: result.extractedText.substring(0, 500) + (result.extractedText.length > 500 ? '...' : ''),
+        metadata: result.metadata
+      },
+      environment: {
+        OPENAI_API_KEY: !!process.env.OPENAI_API_KEY,
+        USE_DOCUMENT_AI: process.env.USE_DOCUMENT_AI,
+        DOCUMENT_AI_LOCATION: process.env.DOCUMENT_AI_LOCATION,
+        runtime: 'nodejs'
+      },
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ OCR Test error:', error);
+    
+    return NextResponse.json({
+      error: 'OCR test failed',
+      details: error instanceof Error ? error.message : 'Unknown error',
+      environment: {
+        OPENAI_API_KEY: !!process.env.OPENAI_API_KEY,
+        USE_DOCUMENT_AI: process.env.USE_DOCUMENT_AI,
+        DOCUMENT_AI_LOCATION: process.env.DOCUMENT_AI_LOCATION,
+      }
+    }, { status: 500 });
+  }
 }
