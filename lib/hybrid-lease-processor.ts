@@ -332,7 +332,7 @@ Provide a focused, helpful answer to their question based on the lease content. 
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
-          'x-api-key': process.env.NEXT_PUBLIC_BACKGROUND_PROCESSOR_API_KEY || ''
+          'x-api-key': process.env.NEXT_PUBLIC_BACKGROUND_PROCESSOR_API_KEY || process.env.CRON_SECRET || 'blociq-secure-background-processor-key-2025'
         },
         body: formData
       });
