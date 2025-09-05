@@ -1036,17 +1036,42 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       throw new Error(`Storage upload failed (${putRes.status} ${putRes.statusText})`)
     }
 
-    // Step 3: Process the uploaded file via OCR API
-    console.log('🔄 Processing file with OCR API:', file.name);
+    // Step 3: Download the uploaded file content and process via OCR API
+    console.log('🔄 Downloading uploaded file for OCR processing:', file.name);
     
     // Set up timeout and controller outside try block for proper cleanup
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout
     
     try {
-      // Convert file to FormData for OCR API
+      // Download the file content from storage
+      const downloadRes = await fetch(signJson.signedUrl, {
+        method: 'GET',
+        signal: controller.signal
+      });
+      
+      if (!downloadRes.ok) {
+        throw new Error(`Failed to download file from storage: ${downloadRes.status}`);
+      }
+      
+      // Convert to blob to maintain original file metadata
+      const fileBlob = await downloadRes.blob();
+      
+      // Create new File object with downloaded content
+      const downloadedFile = new File([fileBlob], file.name, {
+        type: file.type || 'application/octet-stream'
+      });
+      
+      console.log('📁 Downloaded file info:', {
+        name: downloadedFile.name,
+        size: downloadedFile.size,
+        type: downloadedFile.type,
+        sizeInMB: (downloadedFile.size / (1024 * 1024)).toFixed(2)
+      });
+      
+      // Convert downloaded file to FormData for OCR API
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', downloadedFile);
       
       const response = await fetch('/api/ask-ai/upload', {
         method: 'POST',

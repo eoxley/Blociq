@@ -31,6 +31,40 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'No file provided' }, { status: 400 });
       }
 
+      // Validate file has non-zero content
+      if (!file.size || file.size === 0) {
+        console.warn('❌ Received file with zero size:', file.name);
+        return NextResponse.json({
+          error: 'File is empty or corrupted',
+          details: 'The uploaded file appears to be empty. Please check the file and try again.'
+        }, { status: 400 });
+      }
+
+      // Additional buffer validation - convert to buffer and check content
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+          console.warn('❌ File ArrayBuffer is empty:', file.name);
+          return NextResponse.json({
+            error: 'File buffer is empty',
+            details: 'The file content could not be read or is empty. Please verify the file is not corrupted.'
+          }, { status: 400 });
+        }
+        
+        console.log('✅ Lease extraction - File buffer validation passed:', {
+          bufferSize: arrayBuffer.byteLength,
+          expectedSize: file.size,
+          matches: arrayBuffer.byteLength === file.size
+        });
+        
+      } catch (bufferError) {
+        console.error('❌ Failed to read file buffer for lease extraction:', bufferError);
+        return NextResponse.json({
+          error: 'Failed to read file content',
+          details: 'Unable to read the file content. The file may be corrupted or in an unsupported format.'
+        }, { status: 400 });
+      }
+
       // Check file size (50MB limit)
       if (file.size > 50 * 1024 * 1024) {
         return NextResponse.json({ 

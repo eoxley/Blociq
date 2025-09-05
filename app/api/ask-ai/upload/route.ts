@@ -25,6 +25,60 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
+    // Validate file has non-zero content
+    if (!file.size || file.size === 0) {
+      console.warn('❌ Received file with zero size:', file.name);
+      return NextResponse.json({
+        success: false,
+        error: 'File is empty or corrupted',
+        textLength: 0,
+        extractedText: '',
+        filename: file.name,
+        documentType: 'document',
+        summary: 'Empty file provided',
+        analysis: 'The uploaded file appears to be empty or corrupted. Please check the file and try again.'
+      }, { status: 400 });
+    }
+
+    // Additional buffer validation - convert to buffer and check content
+    let fileBuffer: Buffer;
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+        console.warn('❌ File ArrayBuffer is empty:', file.name);
+        return NextResponse.json({
+          success: false,
+          error: 'File buffer is empty',
+          textLength: 0,
+          extractedText: '',
+          filename: file.name,
+          documentType: 'document',
+          summary: 'Empty file buffer',
+          analysis: 'The file content could not be read or is empty. Please verify the file is not corrupted.'
+        }, { status: 400 });
+      }
+      
+      fileBuffer = Buffer.from(arrayBuffer);
+      console.log('✅ File buffer validation passed:', {
+        bufferSize: fileBuffer.length,
+        expectedSize: file.size,
+        matches: fileBuffer.length === file.size
+      });
+      
+    } catch (bufferError) {
+      console.error('❌ Failed to read file buffer:', bufferError);
+      return NextResponse.json({
+        success: false,
+        error: 'Failed to read file content',
+        textLength: 0,
+        extractedText: '',
+        filename: file.name,
+        documentType: 'document',
+        summary: 'File read error',
+        analysis: 'Unable to read the file content. The file may be corrupted or in an unsupported format.'
+      }, { status: 400 });
+    }
+
     console.log('📁 File info:', {
       name: file.name,
       size: file.size,

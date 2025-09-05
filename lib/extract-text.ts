@@ -437,33 +437,41 @@ export async function extractText(file: File): Promise<TextExtractionResult> {
   console.log('🔄 Starting text extraction for:', file.name);
   console.log(`📊 File details: ${(file.size / (1024 * 1024)).toFixed(2)} MB, type: ${file.type}`);
   
-  // Try Document AI first if enabled
+  // Try Document AI first if enabled (EU endpoint)
   const useDocAI = process.env.USE_DOCUMENT_AI === 'true' && !!process.env.DOCUMENT_AI_PROCESSOR_ID;
   if (useDocAI) {
     try {
-      console.log('🤖 Attempting Document AI OCR...');
+      console.log('🤖 Attempting Document AI OCR (EU endpoint)...');
       const { docaiProcessToText } = await import('@/lib/docai/client');
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
-      const { text } = await docaiProcessToText(buffer, file.type || 'application/pdf');
       
-      if (text && text.length > 0) {
-        console.log('✅ Document AI success:', text.length, 'characters');
+      const startTime = Date.now();
+      const docaiResult = await docaiProcessToText(buffer, file.type || 'application/pdf');
+      const processingTime = Date.now() - startTime;
+      
+      if (docaiResult.text && docaiResult.text.length > 0) {
+        console.log('✅ Document AI success:', docaiResult.text.length, 'characters');
         return {
-          extractedText: text,
-          textLength: text.length,
+          extractedText: docaiResult.text,
+          textLength: docaiResult.text.length,
           source: 'docai',
           metadata: {
             fileType: file.type,
-            processingTime: Date.now()
+            processingTime: docaiResult.processingTime || processingTime
           }
         };
+      } else {
+        console.log('⚠️ Document AI returned empty text, trying fallback methods...');
       }
     } catch (error) {
       console.log('⚠️ Document AI failed, continuing with fallback methods:', (error as Error).message);
     }
+  } else {
+    console.log('ℹ️ Document AI disabled or not configured, using fallback OCR methods');
   }
   
+  // Define OCR fallback chain: PDF.js → OpenAI Vision → Google Vision → Tesseract
   const methods = [
     { name: 'PDF.js', fn: extractWithPDFJS, condition: () => file.type === 'application/pdf' },
     { name: 'OpenAI Vision', fn: extractWithOpenAI, condition: () => !!process.env.OPENAI_API_KEY },
@@ -498,6 +506,12 @@ export async function extractText(file: File): Promise<TextExtractionResult> {
         return result;
       } else {
         console.log(`⚠️ ${method.name} failed: ${result.metadata?.errorDetails || 'Unknown error'}`);
+        
+        // Special case: If PDF.js failed with no text (image-based PDF), try rasterize-on-empty fallback
+        if (method.name === 'PDF.js' && file.type === 'application/pdf' && 
+            result.metadata?.errorDetails?.includes('no extractable text')) {
+          console.log('🖼️ PDF appears to be image-based, rasterize-on-empty fallback will be handled by subsequent OCR methods');
+        }
       }
     } else {
       console.log(`⏭️ Skipping ${method.name} (conditions not met)`);
