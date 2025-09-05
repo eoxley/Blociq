@@ -90,12 +90,7 @@ export async function POST(req: Request) {
         process.env.SUPABASE_SERVICE_ROLE_KEY!
       );
       
-      // Debug: Check if admin functions are available
-      console.log('🔍 Debug: Supabase client auth object:', {
-        hasAuth: !!supabase.auth,
-        hasAdmin: !!supabase.auth.admin,
-        adminMethods: supabase.auth.admin ? Object.keys(supabase.auth.admin) : 'no admin'
-      });
+      console.log('🔍 Using profiles table for user lookup');
       
       // Look up user by email in Supabase
       const { data: user, error: userError } = await supabase
