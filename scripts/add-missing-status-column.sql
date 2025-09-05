@@ -31,8 +31,7 @@ ON CONFLICT (id) DO UPDATE SET
 -- Step 5: Ensure user is properly linked
 INSERT INTO agency_members (agency_id, user_id, role, created_at)
 VALUES (
-  '00000000-0000-0000-0000-000000000001',
-  '938498a6-2906-4a75-bc91-5d0d586b227e',
+  '00000000-0000-0000-0000-000000000001',1Pu
   'owner',
   NOW()
 )
