@@ -86,21 +86,27 @@ export async function POST(req: NextRequest) {
       sizeInMB: (file.size / (1024 * 1024)).toFixed(2)
     });
 
-    // Check file size limits
-    const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB limit
+    // Check file size limits - Vercel serverless functions have 4.5MB payload limit
+    const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB limit for Vercel compatibility
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json({
         success: false,
-        error: 'File too large for OCR processing (max 100MB)',
+        error: `File too large for serverless OCR processing (max ${(MAX_FILE_SIZE / (1024 * 1024))}MB)`,
         textLength: 0,
         extractedText: '',
         filename: file.name,
         documentType: 'document',
         summary: 'File too large for processing',
-        analysis: `The file ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB) exceeds the maximum size limit of 100MB`,
+        analysis: `The file ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB) exceeds the maximum size limit of ${(MAX_FILE_SIZE / (1024 * 1024))}MB for serverless processing. This is due to Vercel's 4.5MB payload limit. Please compress the PDF or split it into smaller files.`,
         metadata: {
           fileSizeMB: (file.size / (1024 * 1024)).toFixed(2),
-          maxSizeMB: (MAX_FILE_SIZE / (1024 * 1024)).toFixed(2)
+          maxSizeMB: (MAX_FILE_SIZE / (1024 * 1024)).toFixed(2),
+          reason: 'VERCEL_PAYLOAD_LIMIT',
+          recommendations: [
+            'Compress the PDF using online tools',
+            'Split large documents into smaller sections',
+            'Use image formats (PNG/JPG) instead of high-resolution PDFs'
+          ]
         }
       }, { status: 413 });
     }

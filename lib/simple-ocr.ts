@@ -12,10 +12,11 @@ export async function processFileWithOCR(file: File): Promise<{text: string, sou
   console.log('🔄 Processing file with OCR via API:', file.name);
   logFileInfo(file);
   
-  // Check file size (100MB limit based on API constraints)
-  if (file.size > 100 * 1024 * 1024) {
-    console.log('❌ File too large for OCR processing');
-    throw new Error('File too large for OCR processing');
+  // Check file size (4MB limit due to Vercel serverless function payload constraints)
+  const MAX_FILE_SIZE = 4 * 1024 * 1024;
+  if (file.size > MAX_FILE_SIZE) {
+    console.log('❌ File too large for serverless OCR processing');
+    throw new Error(`File too large for serverless OCR processing. Maximum size is ${MAX_FILE_SIZE / (1024 * 1024)}MB due to Vercel payload limits.`);
   }
   
   try {
