@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
-import { createClient } from '@supabase/supabase-js';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -85,10 +85,17 @@ export async function POST(req: Request) {
     if (body.bypass_auth && body.email) {
       console.log('🔍 Attempting email-based authentication for:', body.email);
       
-      const supabase = createClient(
+      const supabase = createSupabaseClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!
       );
+      
+      // Debug: Check if admin functions are available
+      console.log('🔍 Debug: Supabase client auth object:', {
+        hasAuth: !!supabase.auth,
+        hasAdmin: !!supabase.auth.admin,
+        adminMethods: supabase.auth.admin ? Object.keys(supabase.auth.admin) : 'no admin'
+      });
       
       // Look up user by email in Supabase
       const { data: user, error: userError } = await supabase
@@ -99,6 +106,7 @@ export async function POST(req: Request) {
       
       if (userError || !user) {
         // If user doesn't exist in profiles, try auth.users
+        console.log('🔍 Attempting admin getUserByEmail...');
         const { data: authUser, error: authError } = await supabase.auth.admin.getUserByEmail(body.email);
         
         if (authError || !authUser.user) {
@@ -186,7 +194,7 @@ export async function POST(req: Request) {
     }
     
     // Validate the token with Supabase (original logic)
-    const supabase = createClient(
+    const supabase = createSupabaseClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
