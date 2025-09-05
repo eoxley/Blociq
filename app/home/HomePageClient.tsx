@@ -1004,74 +1004,27 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     return '📎'
   }
 
-  // Upload function that handles both small and large files
+  // Upload function with reliable bytes handoff - direct file processing
   const uploadToAskAI = async (file: File, buildingId?: string) => {
-    // Large file path - signed URL upload  
-    console.log('📁 Processing large file via signed URL:', file.name);
-    
-    // Step 1: Get signed upload URL
-    const signRes = await fetch('/api/ask-ai/upload/sign', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ 
-        filename: file.name, 
-        contentType: file.type || 'application/octet-stream' 
-      }),
-    })
-    
-    const signJson = await signRes.json().catch(() => ({}))
-    if (!signRes.ok || !signJson?.success || !signJson?.signedUrl) {
-      const detail = signJson?.error || `${signRes.status} ${signRes.statusText}`
-      throw new Error(`Could not prepare upload: ${detail}`)
-    }
-
-    // Step 2: Upload file directly to storage
-    const putRes = await fetch(signJson.signedUrl, {
-      method: 'PUT',
-      headers: { 'content-type': file.type || 'application/octet-stream' },
-      body: file,
-    })
-    
-    if (!putRes.ok) {
-      throw new Error(`Storage upload failed (${putRes.status} ${putRes.statusText})`)
-    }
-
-    // Step 3: Download the uploaded file content and process via OCR API
-    console.log('🔄 Downloading uploaded file for OCR processing:', file.name);
+    console.log('📁 Processing file with reliable bytes handoff:', file.name);
+    console.log(`📊 File details: ${(file.size / (1024 * 1024)).toFixed(2)} MB, type: ${file.type}`);
     
     // Set up timeout and controller outside try block for proper cleanup
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout
     
     try {
-      // Download the file content from storage
-      const downloadRes = await fetch(signJson.signedUrl, {
-        method: 'GET',
-        signal: controller.signal
-      });
+      // Direct file upload to OCR API with reliable bytes
+      console.log('🔄 Sending file directly to OCR API with validated bytes:', file.name);
       
-      if (!downloadRes.ok) {
-        throw new Error(`Failed to download file from storage: ${downloadRes.status}`);
+      // Validate file has content before sending
+      if (!file.size || file.size === 0) {
+        throw new Error('File is empty or corrupted');
       }
       
-      // Convert to blob to maintain original file metadata
-      const fileBlob = await downloadRes.blob();
-      
-      // Create new File object with downloaded content
-      const downloadedFile = new File([fileBlob], file.name, {
-        type: file.type || 'application/octet-stream'
-      });
-      
-      console.log('📁 Downloaded file info:', {
-        name: downloadedFile.name,
-        size: downloadedFile.size,
-        type: downloadedFile.type,
-        sizeInMB: (downloadedFile.size / (1024 * 1024)).toFixed(2)
-      });
-      
-      // Convert downloaded file to FormData for OCR API
+      // Convert file to FormData for OCR API
       const formData = new FormData();
-      formData.append('file', downloadedFile);
+      formData.append('file', file);
       
       const response = await fetch('/api/ask-ai/upload', {
         method: 'POST',
