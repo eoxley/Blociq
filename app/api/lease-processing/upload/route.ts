@@ -18,10 +18,19 @@ export async function POST(req: NextRequest) {
     // Validate API key for background processing access
     const apiKey = req.headers.get('x-api-key');
     const validApiKey = process.env.NEXT_PUBLIC_BACKGROUND_PROCESSOR_API_KEY || process.env.CRON_SECRET || process.env.CRON_SECRET_TOKEN || 'blociq-secure-background-processor-key-2025';
+    
+    console.log('🔑 API Key validation:', { 
+      hasApiKey: !!apiKey, 
+      keyMatch: apiKey === validApiKey,
+      expectedKey: validApiKey 
+    });
+    
     if (!apiKey || apiKey !== validApiKey) {
+      console.error('❌ API Key validation failed:', { received: apiKey, expected: validApiKey });
       return NextResponse.json({ 
         success: false, 
-        error: 'Authentication required for background processing' 
+        error: 'Authentication required for background processing',
+        details: 'Invalid or missing API key'
       }, { status: 401 });
     }
     
@@ -34,14 +43,17 @@ export async function POST(req: NextRequest) {
       }, { status: 401 });
     }
     
-    // Extract user from JWT token (you might need to adjust this based on your auth setup)
+    // Extract user from JWT token
     const token = authHeader.replace('Bearer ', '');
+    console.log('🔍 Validating token for user authentication...');
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
     if (authError || !user) {
+      console.error('❌ Authentication failed:', authError?.message || 'No user found');
       return NextResponse.json({ 
         success: false, 
-        error: 'Invalid authentication token' 
+        error: 'Invalid authentication token',
+        details: authError?.message || 'No user found for token'
       }, { status: 401 });
     }
     
