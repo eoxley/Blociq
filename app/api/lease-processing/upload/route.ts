@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   try {
     // Validate API key for background processing access
     const apiKey = req.headers.get('x-api-key');
-    const validApiKey = process.env.NEXT_PUBLIC_BACKGROUND_PROCESSOR_API_KEY || process.env.CRON_SECRET || 'blociq-secure-background-processor-key-2025';
+    const validApiKey = process.env.NEXT_PUBLIC_BACKGROUND_PROCESSOR_API_KEY || process.env.CRON_SECRET || process.env.CRON_SECRET_TOKEN || 'blociq-secure-background-processor-key-2025';
     if (!apiKey || apiKey !== validApiKey) {
       return NextResponse.json({ 
         success: false, 
