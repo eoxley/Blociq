@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Files that SHOULD trigger a FRONTEND build (tweak to match repo layout)
-FRONTEND_REGEX='^(components/|pages/|styles/|next\.config|tailwind\.config|postcss\.config|tsconfig\.json$|package\.json$|package-lock\.json$|pnpm-lock\.yaml$|yarn\.lock$)'
+# Files that SHOULD trigger a FRONTEND build (updated to include more paths)
+FRONTEND_REGEX='^(components/|pages/|styles/|app/|contexts/|hooks/|lib/|next\.config|tailwind\.config|postcss\.config|tsconfig\.json$|package\.json$|package-lock\.json$|pnpm-lock\.yaml$|yarn\.lock$)'
 
 if git rev-parse --verify HEAD^ >/dev/null 2>&1; then
   changed="$(git diff --name-only HEAD^ HEAD || true)"
@@ -22,9 +22,9 @@ if echo "$changed" | grep -q "^app/" && ! echo "$changed" | grep -q "^app/api/";
   exit 0
 fi
 
-# Check for public files (excluding addin)
-if echo "$changed" | grep -q "^public/" && ! echo "$changed" | grep -q "^public/addin/"; then
-  echo "[frontend] Public files changed (excluding addin) — building."
+# Check for public files (including outlook-addin)
+if echo "$changed" | grep -q "^public/"; then
+  echo "[frontend] Public files changed — building."
   exit 0
 fi
 

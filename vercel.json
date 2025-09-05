@@ -4,7 +4,6 @@
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "framework": "nextjs",
-  "ignoreCommand": "bash scripts/should-build-frontend.sh",
   "crons": [
     {
       "path": "/api/cron/sync-inbox",
@@ -94,6 +93,7 @@
   },
   "env": {
     "NODE_ENV": "production",
-    "BUILD_TIMESTAMP": "2025-09-05T22:02:00Z"
+    "BUILD_TIMESTAMP": "2025-09-05T23:30:00Z",
+    "FORCE_BUILD": "true"
   }
 } 
