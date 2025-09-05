@@ -927,7 +927,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   // File handling constants
   const acceptedFileTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain']
   const maxFiles = 5
-  const MAX_FILE_SIZE = 12 * 1024 * 1024 // 12MB
+  const MAX_FILE_SIZE = 100 * 1024 * 1024 // 100MB - no more hard limits, StorageKey handles large files
 
   const validateFile = (file: File): boolean => {
     if (!acceptedFileTypes.includes(file.type)) {
@@ -1004,9 +1004,9 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     return '📎'
   }
 
-  // Upload function with reliable bytes handoff - direct file processing
+  // Upload function with size-aware handoff - StorageKey flow for large files
   const uploadToAskAI = async (file: File, buildingId?: string) => {
-    console.log('📁 Processing file with reliable bytes handoff:', file.name);
+    console.log('📁 Processing file with size-aware StorageKey handoff:', file.name);
     console.log(`📊 File details: ${(file.size / (1024 * 1024)).toFixed(2)} MB, type: ${file.type}`);
     
     // Set up timeout and controller outside try block for proper cleanup
@@ -1014,23 +1014,46 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout
     
     try {
-      // Direct file upload to OCR API with reliable bytes
-      console.log('🔄 Sending file directly to OCR API with validated bytes:', file.name);
-      
-      // Validate file has content before sending
+      // Validate file has content before processing
       if (!file.size || file.size === 0) {
         throw new Error('File is empty or corrupted');
       }
       
-      // Convert file to FormData for OCR API
-      const formData = new FormData();
-      formData.append('file', file);
+      // Always upload to Supabase first for StorageKey
+      const { uploadToSupabase } = await import('@/lib/upload-utils');
+      console.log('📤 Uploading to Supabase for StorageKey...');
+      const storageKey = await uploadToSupabase(file);
       
-      const response = await fetch('/api/ask-ai/upload', {
-        method: 'POST',
-        body: formData,
-        signal: controller.signal
-      });
+      const MAX_DIRECT_BYTES = 4_500_000; // Vercel safe limit
+      
+      let response: Response;
+      
+      if (file.size <= MAX_DIRECT_BYTES) {
+        // Small file: can use FormData with StorageKey for traceability
+        console.log('🔄 Small file - using FormData + StorageKey:', file.name);
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('storageKey', storageKey);
+        
+        response = await fetch('/api/ocr/process', {
+          method: 'POST',
+          body: formData,
+          signal: controller.signal
+        });
+      } else {
+        // Large file: JSON only with StorageKey
+        console.log('🔄 Large file - using JSON StorageKey only:', file.name);
+        response = await fetch('/api/ocr/process', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            storageKey,
+            filename: file.name,
+            mime: file.type || 'application/pdf'
+          }),
+          signal: controller.signal
+        });
+      }
       
       clearTimeout(timeoutId);
       
@@ -1047,10 +1070,10 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         // Still return the result since it might have useful fallback data
       }
       
-      console.log('✅ OCR processing completed via API for:', file.name);
+      console.log('✅ OCR processing completed via StorageKey for:', file.name);
       console.log('📊 OCR Results:', {
         textLength: result.textLength || 0,
-        source: result.ocrSource || 'unknown',
+        source: result.source || 'unknown',
         success: result.success || false
       });
       
@@ -1063,7 +1086,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         filename: result.filename || file.name,
         textLength: result.textLength || 0,
         extractedText: result.extractedText || '',
-        ocrSource: result.ocrSource || 'unknown',
+        ocrSource: result.source || 'unknown',
         metadata: result.metadata || {}
       }
     } catch (ocrError) {

@@ -68,19 +68,8 @@ export async function POST(req: NextRequest) {
         }, { status: 400 });
       }
 
-      // Check file size - Vercel serverless functions have 4.5MB payload limit
-      const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB limit for Vercel compatibility
-      if (file.size > MAX_FILE_SIZE) {
-        return NextResponse.json({ 
-          error: `File too large for serverless processing. Maximum size is ${(MAX_FILE_SIZE / (1024 * 1024))}MB due to Vercel payload limits.`,
-          details: `The file ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB) exceeds the serverless function limit. Please compress the PDF or split it into smaller sections.`,
-          recommendations: [
-            'Compress the PDF using online tools',
-            'Split large documents into smaller sections',
-            'Use image formats for processing instead'
-          ]
-        }, { status: 413 });
-      }
+      // Note: File size limits removed - large files are now handled via StorageKey flow in /api/ocr/process
+      // This endpoint maintains compatibility for smaller files that can be processed directly
     } else {
       // Handle JSON request with document ID
       const body = await req.json();
@@ -303,7 +292,7 @@ export async function GET(req: NextRequest) {
       'Agency-aware data isolation'
     ],
     limits: {
-      fileSize: '4MB maximum (Vercel serverless limit)',
+      fileSize: 'No limits - large files processed via StorageKey flow',
       timeout: '60 seconds per OCR method'
     }
   });
