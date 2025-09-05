@@ -112,34 +112,72 @@ export async function extractWithGoogleVision(file: File): Promise<TextExtractio
         body: JSON.stringify(visionPayload)
       });
     } else {
-      // Fallback to service account authentication
-      const googleAuthModule = await import('google-auth-library').catch(() => null);
-      if (!googleAuthModule) {
-        throw new Error('google-auth-library not available');
+      // Try alternative authentication methods first
+      try {
+        const { tryAlternativeAuth, getAuthHeaders, getAuthenticatedEndpoint } = await import('./google-auth-alternatives');
+        
+        console.log('🔐 Attempting alternative authentication for Google Vision...');
+        const authResult = await tryAlternativeAuth();
+        
+        if (authResult.success && authResult.method === 'api_key') {
+          // Use API key authentication
+          const apiKey = process.env.GOOGLE_CLOUD_API_KEY || process.env.GOOGLE_VISION_API_KEY;
+          response = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(visionPayload)
+          });
+          console.log('✅ Using API key authentication for Google Vision');
+        } else if (authResult.success && authResult.method === 'token') {
+          // Use access token authentication
+          const accessToken = process.env.GOOGLE_CLOUD_ACCESS_TOKEN;
+          response = await fetch('https://vision.googleapis.com/v1/images:annotate', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(visionPayload)
+          });
+          console.log('✅ Using access token authentication for Google Vision');
+        } else {
+          throw new Error('Alternative authentication failed');
+        }
+      } catch (altAuthError) {
+        console.log('⚠️  Alternative authentication failed, trying service account...');
+        
+        // Fallback to service account authentication
+        const googleAuthModule = await import('google-auth-library').catch(() => null);
+        if (!googleAuthModule) {
+          throw new Error('google-auth-library not available');
+        }
+        
+        // Use robust credential parsing for service account
+        let credentials;
+        if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
+          credentials = parseRobustGoogleCredentials(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
+        }
+        
+        const auth = new googleAuthModule.GoogleAuth({
+          scopes: ['https://www.googleapis.com/auth/cloud-vision'],
+          ...(credentials && { credentials })
+        });
+        
+        const client = await auth.getClient();
+        const accessToken = await client.getAccessToken();
+        
+        response = await fetch('https://vision.googleapis.com/v1/images:annotate', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken.token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(visionPayload)
+        });
+        console.log('✅ Using service account authentication for Google Vision');
       }
-      
-      // Use robust credential parsing for service account
-      let credentials;
-      if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
-        credentials = parseRobustGoogleCredentials(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
-      }
-      
-      const auth = new googleAuthModule.GoogleAuth({
-        scopes: ['https://www.googleapis.com/auth/cloud-vision'],
-        ...(credentials && { credentials })
-      });
-      
-      const client = await auth.getClient();
-      const accessToken = await client.getAccessToken();
-      
-      response = await fetch('https://vision.googleapis.com/v1/images:annotate', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken.token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(visionPayload)
-      });
     }
 
     if (!response.ok) {
