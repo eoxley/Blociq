@@ -676,8 +676,13 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
             const fileSize = formatFileSize(uploadedFile.file.size)
             console.log(`📤 Uploading file: ${uploadedFile.name} (${fileSize})`)
             
-            // Update status for each file
-            setUploadStatus(`Processing ${uploadedFile.name}...`)
+            // Update status for each file with charming British message for large documents
+            const isLargeFile = uploadedFile.file.size > 2 * 1024 * 1024; // 2MB threshold
+            if (isLargeFile) {
+              setUploadStatus(`If this is a large document please be patient, go pop the kettle on and we'll be ready to summarise with you and your new brew ☕ - Processing ${uploadedFile.name}...`);
+            } else {
+              setUploadStatus(`Processing ${uploadedFile.name}...`);
+            }
             
             const uploadData = await uploadToAskAI(uploadedFile.file)
             console.log('🔍 Upload response data:', uploadData)
@@ -1515,17 +1520,17 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                   {/* Upload Status Display */}
                   {uploadStatus && (
                     <div className="p-4 bg-gray-50 border border-gray-200 rounded-2xl">
-                      <div className="flex items-center gap-3 text-sm">
+                      <div className="flex items-start gap-3 text-sm">
                         {uploadStatus.includes('Processing') && (
-                          <Loader2 className="h-4 w-4 animate-spin text-[#4f46e5]" />
+                          <Loader2 className="h-4 w-4 animate-spin text-[#4f46e5] mt-0.5 flex-shrink-0" />
                         )}
                         {uploadStatus.includes('✅') && (
-                          <span className="text-green-600 text-lg">✓</span>
+                          <span className="text-green-600 text-lg flex-shrink-0">✓</span>
                         )}
                         {uploadStatus.includes('❌') && (
-                          <span className="text-red-600 text-lg">✗</span>
+                          <span className="text-red-600 text-lg flex-shrink-0">✗</span>
                         )}
-                        <span className={`text-sm ${
+                        <span className={`text-sm leading-relaxed ${
                           uploadStatus.includes('❌') ? 'text-red-600' : 
                           uploadStatus.includes('✅') ? 'text-green-600' : 
                           'text-[#4f46e5]'
