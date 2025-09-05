@@ -1056,7 +1056,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
   // Hybrid lease processing function - attempts quick processing first, falls back to background processing
   const uploadToAskAI = async (file: File, buildingId?: string) => {
-    console.log('🎯 Hybrid lease processing initiated:', file.name);
+    console.log('🎯 Hybrid lease processing with full backend support:', file.name);
     console.log(`📊 File details: ${(file.size / (1024 * 1024)).toFixed(2)} MB, type: ${file.type}`);
     
     // Use the user's current question as context for processing
