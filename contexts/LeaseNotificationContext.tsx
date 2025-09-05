@@ -38,7 +38,18 @@ const LeaseNotificationContext = createContext<NotificationContextType | undefin
 export function useLeaseNotifications() {
   const context = useContext(LeaseNotificationContext);
   if (!context) {
-    throw new Error('useLeaseNotifications must be used within LeaseNotificationProvider');
+    // Return default values when provider is not available (for pages outside dashboard)
+    console.warn('useLeaseNotifications used outside provider context, returning defaults');
+    return {
+      notifications: [],
+      unreadCount: 0,
+      isLoading: false,
+      markAsRead: () => {},
+      markAllAsRead: () => {},
+      clearNotification: () => {},
+      refreshNotifications: async () => {},
+      getNotificationsByStatus: () => []
+    };
   }
   return context;
 }

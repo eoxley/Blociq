@@ -41,7 +41,17 @@ const ToastContext = createContext<ToastContextType | undefined>(undefined);
 export function useToast() {
   const context = useContext(ToastContext);
   if (!context) {
-    throw new Error('useToast must be used within a ToastProvider');
+    // Return default values when provider is not available (for pages outside dashboard)
+    console.warn('useToast used outside provider context, returning defaults');
+    return {
+      notifications: [],
+      showToast: () => {},
+      hideToast: () => {},
+      clearAll: () => {},
+      showProcessingComplete: () => {},
+      showProcessingFailed: () => {},
+      showProcessingStarted: () => {}
+    };
   }
   return context;
 }
