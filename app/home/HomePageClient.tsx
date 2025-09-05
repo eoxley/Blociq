@@ -1052,12 +1052,12 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       
       let response: Response;
       
-      // Use direct OCR upload - simple and reliable
-      console.log('🔄 Using direct OCR upload:', file.name, `(${(file.size / (1024 * 1024)).toFixed(2)} MB)`);
+      // Use CORS proxy to external OCR service - bypasses CORS restrictions
+      console.log('🔄 Using CORS proxy for OCR upload:', file.name, `(${(file.size / (1024 * 1024)).toFixed(2)} MB)`);
       const formData = new FormData();
       formData.append('file', file);
       
-      response = await fetch('https://ocr-server-2-ykmk.onrender.com/upload', {
+      response = await fetch('/api/ocr-proxy-cors', {
         method: 'POST',
         body: formData,
         signal: controller.signal
