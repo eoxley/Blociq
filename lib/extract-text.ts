@@ -57,8 +57,9 @@ function parseRobustGoogleCredentials(credentialsJson: string): any {
 export interface TextExtractionResult {
   extractedText: string;
   textLength: number;
-  source: 'google_vision' | 'openai_vision' | 'tesseract' | 'pdfjs' | 'test_mode' | 'failed';
+  source: 'docai' | 'google_vision' | 'openai_vision' | 'tesseract' | 'pdfjs' | 'test_mode' | 'failed';
   confidence?: number;
+  pages?: string[]; // Optional per-page text array (for citations)
   metadata?: {
     pageCount?: number;
     processingTime?: number;
@@ -384,6 +385,7 @@ export async function extractWithPDFJS(file: File): Promise<TextExtractionResult
     const pdf = await pdfjsModule.getDocument(arrayBuffer).promise;
     
     let extractedText = '';
+    const pages: string[] = [];
     
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
       const page = await pdf.getPage(pageNum);
@@ -391,8 +393,10 @@ export async function extractWithPDFJS(file: File): Promise<TextExtractionResult
       
       const pageText = textContent.items
         .map((item: any) => item.str)
-        .join(' ');
+        .join(' ')
+        .trim();
       
+      pages.push(pageText);
       extractedText += pageText + '\n\n';
     }
 
@@ -408,6 +412,7 @@ export async function extractWithPDFJS(file: File): Promise<TextExtractionResult
       extractedText,
       textLength: extractedText.length,
       source: 'pdfjs',
+      pages, // Include per-page text for citation detection
       metadata: {
         pageCount: pdf.numPages,
         fileType: file.type
@@ -431,6 +436,33 @@ export async function extractWithPDFJS(file: File): Promise<TextExtractionResult
 export async function extractText(file: File): Promise<TextExtractionResult> {
   console.log('🔄 Starting text extraction for:', file.name);
   console.log(`📊 File details: ${(file.size / (1024 * 1024)).toFixed(2)} MB, type: ${file.type}`);
+  
+  // Try Document AI first if enabled
+  const useDocAI = process.env.USE_DOCUMENT_AI === 'true' && !!process.env.DOCUMENT_AI_PROCESSOR_ID;
+  if (useDocAI) {
+    try {
+      console.log('🤖 Attempting Document AI OCR...');
+      const { docaiProcessToText } = await import('@/lib/docai/client');
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      const { text } = await docaiProcessToText(buffer, file.type || 'application/pdf');
+      
+      if (text && text.length > 0) {
+        console.log('✅ Document AI success:', text.length, 'characters');
+        return {
+          extractedText: text,
+          textLength: text.length,
+          source: 'docai',
+          metadata: {
+            fileType: file.type,
+            processingTime: Date.now()
+          }
+        };
+      }
+    } catch (error) {
+      console.log('⚠️ Document AI failed, continuing with fallback methods:', (error as Error).message);
+    }
+  }
   
   const methods = [
     { name: 'PDF.js', fn: extractWithPDFJS, condition: () => file.type === 'application/pdf' },

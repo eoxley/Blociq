@@ -21,7 +21,9 @@
     "fix:email-user-ids": "node scripts/fix_email_user_ids.js",
     "test:dummy-buildings": "node scripts/test-dummy-buildings.js",
     "deploy:check": "node test-deployment.js",
-    "deploy:vercel": "vercel --prod"
+    "deploy:vercel": "vercel --prod",
+    "test:docai": "tsx scripts/test-docai.ts",
+    "test:citations": "tsx scripts/test-citations.ts"
   },
   "dependencies": {
     "@azure/msal-node": "^3.6.2",
