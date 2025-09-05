@@ -113,7 +113,24 @@ async function attemptOutlookEmailAuthentication() {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('❌ Email authentication failed:', errorText);
-      return { success: false, error: `Authentication failed: ${response.status}` };
+      
+      // Try to parse JSON error response for better details
+      let errorDetails = `Authentication failed: ${response.status}`;
+      try {
+        const errorJson = JSON.parse(errorText);
+        if (errorJson.details) {
+          errorDetails = errorJson.details;
+        } else if (errorJson.error) {
+          errorDetails = errorJson.error;
+        }
+      } catch (parseError) {
+        // If not JSON, use the raw text if it's meaningful
+        if (errorText && errorText.length < 200) {
+          errorDetails = errorText;
+        }
+      }
+      
+      return { success: false, error: errorDetails };
     }
     
     const authData = await response.json();

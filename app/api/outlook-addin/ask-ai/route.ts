@@ -519,7 +519,8 @@ What would you like to know?`;
       success: false,
       error: 'Failed to process your request',
       details: error.message,
-      systemVersion: 'outlook_addin_v1'
+      systemVersion: 'outlook_addin_v1',
+      timestamp: new Date().toISOString()
     }, { status: 500 });
   }
 }

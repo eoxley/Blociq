@@ -70,6 +70,14 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    // Check required environment variables
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL environment variable');
+    }
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY environment variable');
+    }
+
     const body = await req.json();
     
     // Check for email-based authentication bypass
@@ -209,6 +217,10 @@ export async function POST(req: Request) {
     
   } catch (error) {
     console.error('Authentication error:', error);
-    return NextResponse.json({ error: 'Authentication failed' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Authentication failed', 
+      details: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    }, { status: 500 });
   }
 }
