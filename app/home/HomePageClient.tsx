@@ -28,6 +28,7 @@ import { getTimeBasedGreeting } from '@/utils/greeting'
 import { formatEventTimeUK } from '@/utils/date'
 import CommunicationModal from '@/components/CommunicationModal'
 import { getRandomWelcomeMessage } from '@/utils/messages'
+import { HybridLeaseProcessor } from '@/lib/hybrid-lease-processor'
 import ClientOnly from '@/components/ClientOnly'
 
 
@@ -693,14 +694,51 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
               data: uploadData
             })
             
-            if (uploadData.textLength > 0) {
+            if (uploadData.textLength > 0 || uploadData.metadata?.processingType === 'background') {
               const source = uploadData.ocrSource || 'OCR'
-              console.log(`✅ File processed successfully via ${source}: ${uploadedFile.name} - ${uploadData.textLength} characters extracted`)
-              setUploadStatus(`✅ ${uploadedFile.name} processed via ${source} - ${uploadData.textLength} characters extracted`)
               
-              // Check if this is a lease document
+              if (uploadData.metadata?.processingType === 'background') {
+                console.log(`📋 Background processing initiated for: ${uploadedFile.name}`)
+                setUploadStatus(`📋 ${uploadedFile.name} queued for background processing - you'll receive an email when complete`)
+              } else {
+                console.log(`✅ File processed successfully via ${source}: ${uploadedFile.name} - ${uploadData.textLength} characters extracted`)
+                setUploadStatus(`✅ ${uploadedFile.name} processed via ${source} - ${uploadData.textLength} characters extracted`)
+              }
+              
+              // Handle different processing types
               const extractedText = uploadData.extractedText || '';
-              if (isLeaseDocument(uploadedFile.name, extractedText)) {
+              
+              if (uploadData.metadata?.processingType === 'background') {
+                // Add background processing message to chat
+                const backgroundMessage = {
+                  sender: 'ai' as const,
+                  text: uploadData.analysis || 'Your lease document is being processed in the background.',
+                  timestamp: new Date(),
+                  type: 'background_processing' as const,
+                  metadata: {
+                    jobId: uploadData.metadata.jobId,
+                    filename: uploadedFile.name,
+                    alternatives: uploadData.metadata.alternatives,
+                    estimatedTime: uploadData.metadata.estimatedTime
+                  }
+                };
+                
+                setMessages(prev => [...prev, backgroundMessage]);
+                console.log('📋 Added background processing message to chat');
+                
+                // If there are alternatives, show them
+                if (uploadData.metadata.alternatives && uploadData.metadata.alternatives.length > 0) {
+                  const alternativesMessage = {
+                    sender: 'ai' as const,
+                    text: `In the meantime, I can help with:\n${uploadData.metadata.alternatives.map((alt: string, i: number) => `${i + 1}. ${alt}`).join('\n')}`,
+                    timestamp: new Date(),
+                    type: 'alternatives' as const
+                  };
+                  
+                  setMessages(prev => [...prev, alternativesMessage]);
+                }
+                
+              } else if (isLeaseDocument(uploadedFile.name, extractedText)) {
                 console.log('🏠 Detected lease document, generating enhanced analysis...');
                 
                 // Generate lease analysis using LeaseDocumentParser
@@ -1009,185 +1047,93 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     return '📎'
   }
 
-  // Upload function with size-aware handoff - StorageKey flow for large files
+  // Hybrid lease processing function - attempts quick processing first, falls back to background
   const uploadToAskAI = async (file: File, buildingId?: string) => {
-    console.log('📁 Processing file with size-aware StorageKey handoff:', file.name);
+    console.log('🎯 Hybrid lease processing:', file.name);
     console.log(`📊 File details: ${(file.size / (1024 * 1024)).toFixed(2)} MB, type: ${file.type}`);
     
-    // Set up timeout and controller outside try block for proper cleanup
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 600000); // 10 minute timeout
+    // Use the user's current question as context for processing
+    const userQuestion = askInput.trim() || 'Please analyze this lease document and provide key information.';
     
     try {
-      // Validate file has content before processing
-      if (!file.size || file.size === 0) {
-        throw new Error('File is empty or corrupted');
-      }
-      
-      // Always upload to Supabase first for StorageKey
-      const { uploadToSupabase } = await import('@/lib/upload-utils');
-      console.log('📤 Uploading to Supabase for StorageKey...');
-      
-      let storageKey: string;
-      try {
-        storageKey = await uploadToSupabase(file);
-      } catch (uploadError) {
-        if (uploadError instanceof Error && uploadError.message.startsWith('BUCKET_NOT_FOUND:')) {
-          const bucket = uploadError.message.split(':')[1];
+      // Use hybrid processor for intelligent processing
+      const result = await HybridLeaseProcessor.processLease(file, userQuestion, {
+        buildingId,
+        userId: userData?.id,
+        userQuestion: userQuestion
+      });
+
+      if (result.success) {
+        if (result.type === 'quick') {
+          // Quick processing succeeded - return immediate results
+          console.log('⚡ Quick processing successful');
           return {
-            success: false,
-            documentType: 'document',
-            summary: 'Storage bucket configuration error',
-            analysis: `Unable to upload file to Supabase. The storage bucket "${bucket}" was not found. Please ensure the bucket is created in Supabase and the environment variables are configured correctly.`,
+            success: true,
+            documentType: 'lease',
+            summary: 'Lease analysis completed',
+            analysis: result.data?.analysis || 'Analysis completed successfully',
+            filename: file.name,
+            textLength: result.data?.extractedText?.length || 0,
+            extractedText: result.data?.extractedText || '',
+            ocrSource: result.data?.ocrSource || 'hybrid-quick',
+            metadata: {
+              processingType: 'quick',
+              processingTime: result.data?.processingTime,
+              ...result.data?.metadata
+            }
+          };
+        } else if (result.type === 'background') {
+          // Background processing initiated - return status message
+          console.log('📋 Background processing initiated');
+          return {
+            success: true,
+            documentType: 'lease',
+            summary: 'Background processing started',
+            analysis: result.message || 'Document queued for comprehensive analysis. You will receive an email notification when complete.',
             filename: file.name,
             textLength: 0,
             extractedText: '',
-            ocrSource: 'bucket-error',
+            ocrSource: 'hybrid-background',
             metadata: {
-              reason: 'bucket-not-found',
-              bucket: bucket,
-              error: 'Storage bucket not found in Supabase'
+              processingType: 'background',
+              jobId: result.jobId,
+              alternatives: result.alternatives,
+              estimatedTime: '5-10 minutes'
             }
           };
         }
-        throw uploadError; // Re-throw other upload errors
       }
-      
-      const MAX_DIRECT_BYTES = 4_500_000; // Vercel safe limit
-      
-      let response: Response;
-      
-      // Use CORS proxy to external OCR service - bypasses CORS restrictions
-      console.log('🔄 Using CORS proxy for OCR upload:', file.name, `(${(file.size / (1024 * 1024)).toFixed(2)} MB)`);
-      const formData = new FormData();
-      formData.append('file', file);
-      
-      response = await fetch('/api/ocr-proxy-cors', {
-        method: 'POST',
-        body: formData,
-        signal: controller.signal
-      });
-      
-      clearTimeout(timeoutId);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`❌ OCR API failed (${response.status}):`, errorText);
-        
-        // Try to parse error response for better handling
-        let errorData;
-        try {
-          errorData = JSON.parse(errorText);
-        } catch {
-          errorData = { detail: errorText };
-        }
-        
-        // If Render service is not available, try legacy OCR as fallback
-        if (errorData.reason === 'render-endpoint-not-found' || 
-            errorData.reason === 'render-connection-failed' ||
-            errorData.reason === 'missing-render-config') {
-          
-          console.log('🔄 Render service unavailable, trying legacy OCR fallback...');
-          
-          try {
-            const fallbackFormData = new FormData();
-            fallbackFormData.append('file', file);
-            
-            const fallbackResponse = await fetch('/api/ask-ai/upload', {
-              method: 'POST',
-              body: fallbackFormData,
-              signal: controller.signal
-            });
-            
-            if (fallbackResponse.ok) {
-              const fallbackResult = await fallbackResponse.json();
-              console.log('✅ Legacy OCR fallback succeeded');
-              
-              return {
-                success: fallbackResult.success || false,
-                documentType: fallbackResult.documentType || 'document',
-                summary: fallbackResult.summary || 'Document processed via legacy OCR',
-                analysis: fallbackResult.analysis || 'Processed using fallback OCR method',
-                filename: fallbackResult.filename || file.name,
-                textLength: fallbackResult.textLength || 0,
-                extractedText: fallbackResult.extractedText || '',
-                ocrSource: 'legacy-fallback',
-                metadata: {
-                  ...(fallbackResult.metadata || {}),
-                  fallbackReason: 'Render service unavailable'
-                }
-              };
-            }
-          } catch (fallbackError) {
-            console.warn('⚠️ Legacy OCR fallback also failed:', fallbackError);
-          }
-        }
-        
-        throw new Error(`OCR API failed: ${response.status}`);
-      }
-      
-      const result = await response.json();
-      
-      if (!result.success || !result.extractedText || result.textLength === 0) {
-        console.warn('⚠️ OCR processing incomplete:', result);
-        // Still return the result since it might have useful fallback data
-      }
-      
-      console.log('✅ OCR processing completed via StorageKey for:', file.name);
-      console.log('📊 OCR Results:', {
-        textLength: result.textLength || 0,
-        source: result.source || 'unknown',
-        success: result.success || false
-      });
-      
-      // Return the standardized response format
-      return {
-        success: result.success || false,
-        documentType: result.documentType || 'document',
-        summary: result.summary || 'Document processing completed',
-        analysis: result.analysis || 'Document has been processed for analysis',
-        filename: result.filename || file.name,
-        textLength: result.textLength || 0,
-        extractedText: result.extractedText || '',
-        ocrSource: result.source || 'unknown',
-        metadata: result.metadata || {}
-      }
-    } catch (ocrError) {
-      clearTimeout(timeoutId); // Clean up timeout if error occurs
-      console.error('❌ OCR processing failed:', ocrError);
-      
-      // Check if it's a timeout/abort error
-      if (ocrError instanceof Error && ocrError.name === 'AbortError') {
-        console.error('⏰ OCR request timed out after 5 minutes');
-        return {
-          success: false,
-          documentType: 'document',
-          summary: 'OCR processing timed out',
-          analysis: 'The document processing took too long and was cancelled. This may be due to a large file size or server issues.',
-          filename: file.name,
-          textLength: 0,
-          extractedText: '',
-          ocrSource: 'timeout',
-          metadata: {
-            error: 'Request timed out after 5 minutes',
-            fileSize: file.size,
-            fileName: file.name
-          }
-        };
-      }
-      
-      // Return a fallback response instead of throwing
+
+      // Processing failed - return error with helpful message
+      console.error('❌ Hybrid processing failed:', result.error);
       return {
         success: false,
         documentType: 'document',
-        summary: 'Document processing failed',
-        analysis: `Failed to process ${file.name}. Error: ${ocrError instanceof Error ? ocrError.message : 'Unknown error'}`,
+        summary: 'Processing failed',
+        analysis: result.message || 'Document processing encountered an issue. Please try again or contact support.',
         filename: file.name,
         textLength: 0,
         extractedText: '',
-        ocrSource: 'failed',
-        error: ocrError instanceof Error ? ocrError.message : 'Unknown error'
-      }
+        ocrSource: 'hybrid-failed',
+        metadata: {
+          processingType: 'error',
+          alternatives: result.alternatives
+        }
+      };
+
+    } catch (error) {
+      console.error('❌ Hybrid processing error:', error);
+      return {
+        success: false,
+        documentType: 'document',
+        summary: 'Processing error',
+        analysis: `Failed to process ${file.name}. Please try again or contact support if the issue persists.`,
+        filename: file.name,
+        textLength: 0,
+        extractedText: '',
+        ocrSource: 'hybrid-error',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
     }
   }
 
