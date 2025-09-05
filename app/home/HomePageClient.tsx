@@ -677,12 +677,16 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
             const fileSize = formatFileSize(uploadedFile.file.size)
             console.log(`📤 Uploading file: ${uploadedFile.name} (${fileSize})`)
             
-            // Update status for each file with charming British message for large documents
-            const isLargeFile = uploadedFile.file.size > 2 * 1024 * 1024; // 2MB threshold
+            // Update status with intelligent processing message
+            const fileSizeMB = uploadedFile.file.size / (1024 * 1024);
+            const isLargeFile = uploadedFile.file.size > 5 * 1024 * 1024; // 5MB threshold
+            
             if (isLargeFile) {
-              setUploadStatus(`If this is a large document please be patient, go pop the kettle on and we'll be ready to summarise with you and your new brew ☕ - Processing ${uploadedFile.name}...`);
+              setUploadStatus(`🚀 Large file detected (${fileSizeMB.toFixed(1)}MB) - using background processing for ${uploadedFile.name}...`);
+            } else if (uploadedFile.file.size > 2 * 1024 * 1024) {
+              setUploadStatus(`⚡ Trying quick processing for ${uploadedFile.name} (${fileSizeMB.toFixed(1)}MB)...`);
             } else {
-              setUploadStatus(`Processing ${uploadedFile.name}...`);
+              setUploadStatus(`⚡ Quick processing ${uploadedFile.name} (${fileSizeMB.toFixed(1)}MB)...`);
             }
             
             const uploadData = await uploadToAskAI(uploadedFile.file)
@@ -699,7 +703,10 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
               
               if (uploadData.metadata?.processingType === 'background') {
                 console.log(`📋 Background processing initiated for: ${uploadedFile.name}`)
-                setUploadStatus(`📋 ${uploadedFile.name} queued for background processing - you'll receive an email when complete`)
+                setUploadStatus(`📋 ${uploadedFile.name} is being analyzed in the background (${uploadData.metadata.estimatedTime || '5-10 minutes'}) - you'll receive an email notification when complete`)
+              } else if (uploadData.metadata?.processingType === 'quick') {
+                console.log(`⚡ Quick processing successful for: ${uploadedFile.name} - ${uploadData.textLength} characters extracted`)
+                setUploadStatus(`⚡ ${uploadedFile.name} processed quickly - ${uploadData.textLength} characters extracted`)
               } else {
                 console.log(`✅ File processed successfully via ${source}: ${uploadedFile.name} - ${uploadData.textLength} characters extracted`)
                 setUploadStatus(`✅ ${uploadedFile.name} processed via ${source} - ${uploadData.textLength} characters extracted`)

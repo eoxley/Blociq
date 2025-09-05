@@ -25,8 +25,8 @@ interface QuickProcessingOptions {
 }
 
 export class HybridLeaseProcessor {
-  private static QUICK_TIMEOUT = 180000; // 3 minutes for quick processing
-  private static MAX_QUICK_FILE_SIZE = 10 * 1024 * 1024; // 10MB for quick processing
+  private static QUICK_TIMEOUT = 90000; // 90 seconds for quick processing
+  private static MAX_QUICK_FILE_SIZE = 5 * 1024 * 1024; // 5MB for quick processing
   
   /**
    * Main hybrid processing entry point
@@ -106,33 +106,42 @@ export class HybridLeaseProcessor {
    * Determine if quick processing should be attempted based on file and question characteristics
    */
   private static shouldAttemptQuickProcessing(file: File, userQuestion: string): boolean {
-    // Always try quick processing for small files
+    // Conservative approach - only try quick processing for small files and specific patterns
+    const fileSizeMB = file.size / (1024 * 1024);
+    
+    // Very small files (under 2MB) - always try quick processing
+    if (file.size <= 2 * 1024 * 1024) {
+      console.log(`📄 Very small file (${fileSizeMB.toFixed(1)}MB) - attempting quick processing`);
+      return true;
+    }
+    
+    // Medium files (2-5MB) - only if question suggests it might work quickly
     if (file.size <= this.MAX_QUICK_FILE_SIZE) {
-      console.log('📄 Small file - attempting quick processing');
-      return true;
+      const quickQuestionPatterns = [
+        /page \d+/i,
+        /first page/i,
+        /last page/i,
+        /signature/i,
+        /parties|tenant|landlord/i,
+        /rent amount|monthly rent/i,
+        /address/i,
+        /date/i,
+        /summary/i
+      ];
+      
+      const hasQuickPattern = quickQuestionPatterns.some(pattern => pattern.test(userQuestion));
+      
+      if (hasQuickPattern) {
+        console.log(`🎯 Medium file (${fileSizeMB.toFixed(1)}MB) with targeted question - attempting quick processing`);
+        return true;
+      }
+      
+      console.log(`📋 Medium file (${fileSizeMB.toFixed(1)}MB) with complex question - skipping to background`);
+      return false;
     }
     
-    // For larger files, check if the question suggests quick processing might work
-    const quickQuestionPatterns = [
-      /page \d+/i,
-      /first page/i,
-      /last page/i,
-      /signature/i,
-      /parties|tenant|landlord/i,
-      /rent amount|monthly rent/i,
-      /address/i,
-      /date/i
-    ];
-    
-    const hasQuickPattern = quickQuestionPatterns.some(pattern => pattern.test(userQuestion));
-    
-    if (hasQuickPattern) {
-      console.log('🎯 Question suggests targeted info - attempting quick processing');
-      return true;
-    }
-    
-    // Large file with complex question - skip quick processing
-    console.log('📋 Large file with complex question - going straight to background');
+    // Large files (over 5MB) - go straight to background processing
+    console.log(`📋 Large file (${fileSizeMB.toFixed(1)}MB) - going straight to background processing`);
     return false;
   }
   
@@ -156,24 +165,30 @@ export class HybridLeaseProcessor {
       const formData = new FormData();
       formData.append('file', file);
       
-      console.log('🔍 Quick OCR processing...');
+      const startTime = Date.now();
+      console.log(`🔍 Quick OCR processing for ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)...`);
+      
       const response = await fetch('/api/ocr-proxy-cors', {
         method: 'POST',
         body: formData,
         signal: controller.signal
       });
       
+      const elapsedTime = Date.now() - startTime;
+      console.log(`📊 OCR request completed in ${elapsedTime}ms, status: ${response.status}`);
+      
       if (!response.ok) {
-        throw new Error(`OCR failed: ${response.status}`);
+        const errorText = await response.text().catch(() => 'Unknown error');
+        throw new Error(`OCR failed: ${response.status} - ${errorText}`);
       }
       
       const ocrResult = await response.json();
       
       if (!ocrResult.success || !ocrResult.text) {
-        throw new Error('No text extracted');
+        throw new Error(`No text extracted: ${ocrResult.error || 'Unknown OCR error'}`);
       }
       
-      console.log(`📝 Extracted ${ocrResult.text.length} characters`);
+      console.log(`📝 Successfully extracted ${ocrResult.text.length} characters in ${elapsedTime}ms`);
       
       // Quick AI analysis focused on the user's question
       const analysis = await this.quickLeaseAnalysis(ocrResult.text, userQuestion);
@@ -191,14 +206,29 @@ export class HybridLeaseProcessor {
       
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        console.log('⏰ Quick processing timed out');
-        return { success: false, error: 'Processing timeout' };
+        console.log('⏰ Quick processing timed out after', options.maxTimeoutMs || this.QUICK_TIMEOUT, 'ms');
+        return { success: false, error: 'Quick processing timeout - falling back to background processing' };
       }
       
-      console.warn('⚠️ Quick processing error:', error);
+      // Log detailed error information
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.warn('⚠️ Quick processing failed:', errorMessage, error);
+      
+      // Categorize error types for better fallback decisions
+      let fallbackReason = 'Processing failed';
+      if (errorMessage.includes('timeout') || errorMessage.includes('time')) {
+        fallbackReason = 'Processing timeout - using background processing';
+      } else if (errorMessage.includes('500') || errorMessage.includes('502') || errorMessage.includes('503')) {
+        fallbackReason = 'Server error - using background processing';
+      } else if (errorMessage.includes('413') || errorMessage.includes('too large')) {
+        fallbackReason = 'File too large for quick processing - using background processing';
+      } else if (errorMessage.includes('OCR failed')) {
+        fallbackReason = 'OCR processing issue - using background processing';
+      }
+      
       return { 
         success: false, 
-        error: error instanceof Error ? error.message : 'Processing failed' 
+        error: fallbackReason
       };
     } finally {
       clearTimeout(timeoutId);
