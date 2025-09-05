@@ -119,14 +119,15 @@ export async function POST(req: NextRequest) {
             const textEncoder = new TextEncoder();
             const CRLF = '\r\n';
             
-            const bodyParts = [
+            // Build the multipart body parts with strict RFC 2046 compliance
+            const bodyStart = textEncoder.encode([
               `--${boundary}${CRLF}`,
               `Content-Disposition: form-data; name="file"; filename="${originalFile.name}"${CRLF}`,
               `Content-Type: ${originalFile.type}${CRLF}`,
               `${CRLF}`
-            ];
+            ].join(''));
             
-            const bodyStart = textEncoder.encode(bodyParts.join(''));
+            // Closing boundary must have CRLF before the boundary and after the final --
             const bodyEnd = textEncoder.encode(`${CRLF}--${boundary}--${CRLF}`);
             
             // Combine all parts
