@@ -13,8 +13,9 @@ export async function POST(request: NextRequest) {
   console.log('🚀 Starting Document AI processor setup...');
 
   try {
-    // Import the processor creation function
-    const { createLeaseProcessor, listExistingProcessors } = require('../../../scripts/create-document-ai-processor.js');
+    // Import the processor creation function using dynamic import
+    const processorModule = await import('../../../scripts/create-document-ai-processor.mjs');
+    const { createLeaseProcessor, listExistingProcessors } = processorModule;
 
     console.log('📋 Listing existing processors...');
     const existingProcessors = await listExistingProcessors();

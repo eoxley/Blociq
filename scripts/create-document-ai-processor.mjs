@@ -12,7 +12,7 @@
  * - DOCUMENT_AI_LOCATION: Location for processor (us)
  */
 
-const { DocumentProcessorServiceClient } = require('@google-cloud/documentai');
+import { DocumentProcessorServiceClient } from '@google-cloud/documentai';
 
 /**
  * Initialize Google Document AI client using environment variables
@@ -208,15 +208,14 @@ async function main() {
   }
 }
 
-// Export for use as module or run directly
-if (require.main === module) {
-  // Running directly
+// Export for use as module
+export {
+  createLeaseProcessor,
+  listExistingProcessors,
+  initializeClient
+};
+
+// Run directly if called as main module
+if (import.meta.url === `file://${process.argv[1]}`) {
   main();
-} else {
-  // Being imported as module
-  module.exports = {
-    createLeaseProcessor,
-    listExistingProcessors,
-    initializeClient
-  };
 }
