@@ -105,39 +105,16 @@ export async function POST(req: Request) {
         .single();
       
       if (userError || !user) {
-        // If user doesn't exist in profiles, try auth.users
-        console.log('🔍 Attempting admin getUserByEmail...');
-        const { data: authUser, error: authError } = await supabase.auth.admin.getUserByEmail(body.email);
+        // User not found in profiles table - check if this might be a valid user
+        console.log('❌ User not found in profiles for email:', body.email);
+        console.log('Profile lookup error:', userError?.message);
         
-        if (authError || !authUser.user) {
-          console.log('❌ User not found for email:', body.email);
-          return NextResponse.json({ 
-            error: 'User not found', 
-            message: 'No BlocIQ account found for this email address' 
-          }, { status: 404 });
-        }
-        
-        // Use auth user data
-        const authUserData = authUser.user;
-        
-        // Generate a temporary token for this session
-        const tempToken = Buffer.from(JSON.stringify({
-          user_id: authUserData.id,
-          email: authUserData.email,
-          timestamp: Date.now(),
-          context: 'outlook_email_auth'
-        })).toString('base64');
-        
-        return NextResponse.json({
-          success: true,
-          token: tempToken,
-          user_id: authUserData.id,
-          user: {
-            id: authUserData.id,
-            email: authUserData.email,
-            name: authUserData.user_metadata?.full_name || body.display_name || authUserData.email.split('@')[0]
-          }
-        });
+        // Instead of using admin API, return appropriate response for unknown users
+        return NextResponse.json({ 
+          error: 'User not found', 
+          message: `No BlocIQ account found for ${body.email}. Please sign up first.`,
+          needsSignup: true
+        }, { status: 404 });
       } else {
         // User found in profiles
         const tempToken = Buffer.from(JSON.stringify({
