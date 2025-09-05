@@ -1052,32 +1052,16 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       
       let response: Response;
       
-      if (file.size <= MAX_DIRECT_BYTES) {
-        // Small file: can use FormData with StorageKey for traceability
-        console.log('🔄 Small file - using FormData + StorageKey:', file.name);
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('storageKey', storageKey);
-        
-        response = await fetch('/api/ocr/process', {
-          method: 'POST',
-          body: formData,
-          signal: controller.signal
-        });
-      } else {
-        // Large file: JSON only with StorageKey
-        console.log('🔄 Large file - using JSON StorageKey only:', file.name);
-        response = await fetch('/api/ocr/process', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            storageKey,
-            filename: file.name,
-            mime: file.type || 'application/pdf'
-          }),
-          signal: controller.signal
-        });
-      }
+      // Use direct OCR upload - simple and reliable
+      console.log('🔄 Using direct OCR upload:', file.name, `(${(file.size / (1024 * 1024)).toFixed(2)} MB)`);
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      response = await fetch('https://ocr-server-2-ykmk.onrender.com/upload', {
+        method: 'POST',
+        body: formData,
+        signal: controller.signal
+      });
       
       clearTimeout(timeoutId);
       
