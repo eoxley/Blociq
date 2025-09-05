@@ -1,6 +1,59 @@
 // Enhanced text extraction library with multiple OCR fallbacks
 // Handles PDFs, images, and documents with robust error handling
 
+/**
+ * Robust Google credentials parsing with multiple fallback strategies
+ * Handles common Vercel environment variable corruption issues
+ */
+function parseRobustGoogleCredentials(credentialsJson: string): any {
+  try {
+    // Strategy 1: Fix common escaping issues from environment variables
+    let cleanedJson = credentialsJson
+      .replace(/\\n/g, '\n')           // Fix escaped newlines
+      .replace(/\\"/g, '"')            // Fix escaped quotes  
+      .replace(/\\\\/g, '\\')          // Fix double backslashes
+      .replace(/\\t/g, '\t')           // Fix escaped tabs
+      .replace(/\\r/g, '\r');          // Fix escaped carriage returns
+    
+    return JSON.parse(cleanedJson);
+  } catch (jsonError) {
+    try {
+      // Strategy 2: Character-by-character cleaning for corrupted JSON
+      let sanitizedJson = '';
+      for (let i = 0; i < credentialsJson.length; i++) {
+        const char = credentialsJson[i];
+        const charCode = char.charCodeAt(0);
+        
+        // Skip control characters except newlines, tabs, and carriage returns
+        if (charCode < 32 && charCode !== 9 && charCode !== 10 && charCode !== 13) {
+          continue;
+        }
+        
+        // Fix specific problematic characters that appear around position 162
+        if (charCode === 8232 || charCode === 8233) { // Line separator, paragraph separator
+          sanitizedJson += '\n';
+        } else if (charCode === 160) { // Non-breaking space
+          sanitizedJson += ' ';
+        } else {
+          sanitizedJson += char;
+        }
+      }
+      
+      sanitizedJson = sanitizedJson.replace(/\\n/g, '\n');
+      return JSON.parse(sanitizedJson);
+    } catch (sanitizeError) {
+      try {
+        // Strategy 3: Base64 decode attempt
+        const decodedJson = Buffer.from(credentialsJson, 'base64').toString('utf-8');
+        const fixedDecodedJson = decodedJson.replace(/\\n/g, '\n');
+        return JSON.parse(fixedDecodedJson);
+      } catch (base64Error) {
+        throw new Error(`All credential parsing strategies failed: ${(jsonError as Error).message}`);
+      }
+    }
+  }
+}
+
 export interface TextExtractionResult {
   extractedText: string;
   textLength: number;
@@ -65,8 +118,15 @@ export async function extractWithGoogleVision(file: File): Promise<TextExtractio
         throw new Error('google-auth-library not available');
       }
       
+      // Use robust credential parsing for service account
+      let credentials;
+      if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
+        credentials = parseRobustGoogleCredentials(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
+      }
+      
       const auth = new googleAuthModule.GoogleAuth({
-        scopes: ['https://www.googleapis.com/auth/cloud-vision']
+        scopes: ['https://www.googleapis.com/auth/cloud-vision'],
+        ...(credentials && { credentials })
       });
       
       const client = await auth.getClient();

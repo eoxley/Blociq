@@ -16,6 +16,64 @@ import { DocumentProcessorServiceClient } from '@google-cloud/documentai';
 import fs from 'fs';
 
 /**
+ * Extract position number from JSON parse error message
+ */
+function extractPositionFromError(error) {
+  const match = error.message.match(/position (\d+)/);
+  return match ? match[1] : 'unknown';
+}
+
+/**
+ * Manual JSON reconstruction for severely corrupted credentials
+ * This handles cases where standard parsing completely fails
+ */
+function reconstructJsonFromCorrupted(corruptedJson) {
+  console.log('🔧 Attempting manual JSON reconstruction...');
+  
+  // Extract key components using regex patterns
+  const patterns = {
+    type: /"type":\s*"([^"]+)"/,
+    project_id: /"project_id":\s*"([^"]+)"/,
+    private_key_id: /"private_key_id":\s*"([^"]+)"/,
+    private_key: /"private_key":\s*"([^"]+)"/,
+    client_email: /"client_email":\s*"([^"]+)"/,
+    client_id: /"client_id":\s*"([^"]+)"/,
+    auth_uri: /"auth_uri":\s*"([^"]+)"/,
+    token_uri: /"token_uri":\s*"([^"]+)"/,
+    auth_provider_x509_cert_url: /"auth_provider_x509_cert_url":\s*"([^"]+)"/,
+    client_x509_cert_url: /"client_x509_cert_url":\s*"([^"]+)"/
+  };
+  
+  const reconstructed = {};
+  
+  // Extract each field
+  for (const [key, pattern] of Object.entries(patterns)) {
+    const match = corruptedJson.match(pattern);
+    if (match) {
+      let value = match[1];
+      
+      // Special handling for private_key
+      if (key === 'private_key') {
+        value = value.replace(/\\n/g, '\n');
+      }
+      
+      reconstructed[key] = value;
+    }
+  }
+  
+  // Validate required fields
+  const requiredFields = ['type', 'project_id', 'private_key', 'client_email'];
+  for (const field of requiredFields) {
+    if (!reconstructed[field]) {
+      throw new Error(`Failed to extract required field: ${field}`);
+    }
+  }
+  
+  console.log('✅ Successfully reconstructed JSON from corrupted data');
+  return reconstructed;
+}
+
+/**
  * Initialize Google Document AI client using environment variables
  */
 function initializeClient() {
@@ -24,24 +82,69 @@ function initializeClient() {
     let credentialsJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
     let credentials;
 
-    // Method 1: Direct JSON string
+    // Method 1: Direct JSON string with comprehensive character fixes
     if (credentialsJson) {
       try {
-        // Fix escaped newlines in the JSON string
-        const fixedCredentialsJson = credentialsJson.replace(/\\n/g, '\n');
-        credentials = JSON.parse(fixedCredentialsJson);
-        console.log('✅ Using direct JSON credentials');
-      } catch (jsonError) {
-        console.log('⚠️  Direct JSON parsing failed, trying Base64...');
+        // Apply multiple parsing strategies for Vercel environment variables
+        let cleanedJson = credentialsJson;
         
-        // Method 2: Base64 encoded JSON
+        // Strategy 1: Fix common escaping issues from environment variables
+        cleanedJson = cleanedJson
+          .replace(/\\n/g, '\n')           // Fix escaped newlines
+          .replace(/\\"/g, '"')            // Fix escaped quotes  
+          .replace(/\\\\/g, '\\')          // Fix double backslashes
+          .replace(/\\t/g, '\t')           // Fix escaped tabs
+          .replace(/\\r/g, '\r');          // Fix escaped carriage returns
+        
+        credentials = JSON.parse(cleanedJson);
+        console.log('✅ Using direct JSON credentials (Strategy 1)');
+      } catch (jsonError) {
+        console.log(`⚠️  Strategy 1 failed at position ${extractPositionFromError(jsonError)}, trying Strategy 2...`);
+        
         try {
-          const decodedJson = Buffer.from(credentialsJson, 'base64').toString('utf-8');
-          const fixedDecodedJson = decodedJson.replace(/\\n/g, '\n');
-          credentials = JSON.parse(fixedDecodedJson);
-          console.log('✅ Using Base64 decoded credentials');
-        } catch (base64Error) {
-          throw new Error(`Failed to parse credentials as JSON or Base64: ${jsonError.message}`);
+          // Strategy 2: Character-by-character cleaning for corrupted JSON
+          let sanitizedJson = '';
+          for (let i = 0; i < credentialsJson.length; i++) {
+            const char = credentialsJson[i];
+            const charCode = char.charCodeAt(0);
+            
+            // Skip control characters except newlines, tabs, and carriage returns
+            if (charCode < 32 && charCode !== 9 && charCode !== 10 && charCode !== 13) {
+              continue;
+            }
+            
+            // Fix specific problematic characters that appear in position 162 area
+            if (charCode === 8232 || charCode === 8233) { // Line separator, paragraph separator
+              sanitizedJson += '\n';
+            } else if (charCode === 160) { // Non-breaking space
+              sanitizedJson += ' ';
+            } else {
+              sanitizedJson += char;
+            }
+          }
+          
+          // Apply basic escaping fixes
+          sanitizedJson = sanitizedJson.replace(/\\n/g, '\n');
+          credentials = JSON.parse(sanitizedJson);
+          console.log('✅ Using direct JSON credentials (Strategy 2 - Character sanitized)');
+        } catch (sanitizeError) {
+          console.log('⚠️  Strategy 2 failed, trying Base64...');
+          
+          // Strategy 3: Base64 encoded JSON
+          try {
+            const decodedJson = Buffer.from(credentialsJson, 'base64').toString('utf-8');
+            const fixedDecodedJson = decodedJson.replace(/\\n/g, '\n');
+            credentials = JSON.parse(fixedDecodedJson);
+            console.log('✅ Using Base64 decoded credentials');
+          } catch (base64Error) {
+            // Strategy 4: Manual JSON reconstruction as last resort
+            try {
+              credentials = reconstructJsonFromCorrupted(credentialsJson);
+              console.log('✅ Using reconstructed JSON credentials (Strategy 4)');
+            } catch (reconstructError) {
+              throw new Error(`All parsing strategies failed. Original: ${jsonError.message}, Sanitized: ${sanitizeError.message}, Base64: ${base64Error.message}, Reconstruct: ${reconstructError.message}`);
+            }
+          }
         }
       }
     } else {
