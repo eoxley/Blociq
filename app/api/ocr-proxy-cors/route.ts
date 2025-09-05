@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
         
         const result = await retryWithBackoff(async () => {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout per attempt
+          const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minute timeout per attempt for OCR processing
           
           try {
             // Manually construct multipart data with proper CR/LF boundaries
@@ -213,7 +213,7 @@ export async function POST(req: NextRequest) {
         
         const result = await retryWithBackoff(async () => {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout for OpenAI
+          const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minute timeout for OpenAI
           
           try {
             const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
