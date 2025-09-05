@@ -331,7 +331,8 @@ Provide a focused, helpful answer to their question based on the lease content. 
       const response = await fetch('/api/lease-processing/upload', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${session.access_token}`
+          'Authorization': `Bearer ${session.access_token}`,
+          'x-api-key': process.env.NEXT_PUBLIC_BACKGROUND_PROCESSOR_API_KEY || ''
         },
         body: formData
       });

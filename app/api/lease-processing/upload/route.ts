@@ -15,12 +15,21 @@ export async function POST(req: NextRequest) {
   console.log('📤 Async lease upload: Handling file upload for background processing');
   
   try {
+    // Validate API key for background processing access
+    const apiKey = req.headers.get('x-api-key');
+    if (!apiKey || apiKey !== process.env.NEXT_PUBLIC_BACKGROUND_PROCESSOR_API_KEY) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Authentication required for background processing' 
+      }, { status: 401 });
+    }
+    
     // Get user authentication
     const authHeader = req.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ 
         success: false, 
-        error: 'Authentication required' 
+        error: 'User authentication required' 
       }, { status: 401 });
     }
     
