@@ -58,7 +58,8 @@ export async function POST(req: NextRequest) {
         payload = { 
           storageKey, 
           filename: file.name, 
-          mime: file.type || "application/pdf" 
+          mime: file.type || "application/pdf",
+          file: null  // Required by Render service validation
         };
         
         console.log('📤 Routing large file via storageKey:', file.name, `(${(file.size / (1024 * 1024)).toFixed(2)} MB)`);
@@ -67,7 +68,8 @@ export async function POST(req: NextRequest) {
         payload = { 
           storageKey, 
           filename: file.name, 
-          mime: file.type || "application/pdf" 
+          mime: file.type || "application/pdf",
+          file: null  // Required by Render service validation
         };
         
         console.log('📤 Routing small file via storageKey:', file.name, `(${(file.size / (1024 * 1024)).toFixed(2)} MB)`);
@@ -90,6 +92,11 @@ export async function POST(req: NextRequest) {
           reason: "missing-storageKey",
           details: "storageKey is required in JSON requests"
         }, { status: 400 });
+      }
+      
+      // Add required file field for Render service validation
+      if (!payload.file) {
+        payload.file = null;
       }
       
       console.log('📤 Routing file via JSON storageKey:', payload.filename);
