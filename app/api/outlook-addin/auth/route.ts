@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -84,14 +85,9 @@ export async function POST(req: Request) {
     if (body.bypass_auth && body.email) {
       console.log('🔍 Attempting email-based authentication for:', body.email);
       
-      const supabase = createServerClient(
+      const supabase = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        {
-          cookies: {
-            get() { return undefined },
-          },
-        }
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
       );
       
       // Look up user by email in Supabase
@@ -190,14 +186,9 @@ export async function POST(req: Request) {
     }
     
     // Validate the token with Supabase (original logic)
-    const supabase = createServerClient(
+    const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        cookies: {
-          get() { return undefined },
-        },
-      }
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
     
     const { data: { user }, error } = await supabase.auth.getUser(token);
