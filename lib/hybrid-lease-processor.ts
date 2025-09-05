@@ -1,10 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
-
-// Initialize Supabase client
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { supabase } from '@/lib/supabaseClient';
 
 interface ProcessingResult {
   success: boolean;
@@ -332,7 +326,7 @@ Provide a focused, helpful answer to their question based on the lease content. 
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
-          'x-api-key': process.env.NEXT_PUBLIC_BACKGROUND_PROCESSOR_API_KEY || process.env.CRON_SECRET || process.env.CRON_SECRET_TOKEN || 'blociq-secure-background-processor-key-2025'
+          'x-api-key': process.env.NEXT_PUBLIC_BACKGROUND_PROCESSOR_API_KEY || 'blociq-secure-background-processor-key-2025'
         },
         body: formData
       });
