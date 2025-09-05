@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: blociq-ocr-service
+    env: node
+    plan: starter
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: RENDER_OCR_TOKEN
+        sync: false  # Set in Render dashboard
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false  # Set in Render dashboard  
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false  # Set in Render dashboard
+      - key: SUPABASE_STORAGE_BUCKET
+        value: building_documents
+      - key: USE_DOCUMENT_AI
+        value: "true"
+      - key: DOCUMENT_AI_LOCATION
+        value: eu
+      - key: DOCUMENT_AI_PROCESSOR_ID
+        sync: false  # Set in Render dashboard
+      - key: GOOGLE_CLOUD_PROJECT_ID
+        sync: false  # Set in Render dashboard
+      - key: GOOGLE_APPLICATION_CREDENTIALS_JSON
+        sync: false  # Set in Render dashboard
+      - key: OPENAI_API_KEY
+        sync: false  # Set in Render dashboard
+    healthCheckPath: /health
