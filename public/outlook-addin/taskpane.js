@@ -215,11 +215,14 @@ function showAuthenticationNeeded(errorMessage = null) {
   
   authContent += `
       <p style="margin: 0 0 15px 0;">
-        To access your property data and get personalized responses, we'll try to authenticate you automatically using your Outlook email.
+        To access your property data and get personalized responses, please sign in to your BlocIQ account.
       </p>
-      <p style="margin: 0 0 15px 0; font-size: 11px; color: #6b7280;">
-        If automatic authentication fails, you can sign in manually:
-      </p>
+      <div style="background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; padding: 12px; margin: 12px 0; font-size: 11px; color: #374151;">
+        <strong>📋 How to sign in:</strong><br/>
+        1. Click "Sign in to BlocIQ" below<br/>
+        2. Enter your BlocIQ login credentials<br/>
+        3. Return to this window - you'll be signed in automatically
+      </div>
       <a href="https://www.blociq.co.uk/api/outlook-addin/auth?return_url=${encodeURIComponent(window.location.href)}" 
          class="auth-button" 
          target="_blank" 
@@ -227,7 +230,7 @@ function showAuthenticationNeeded(errorMessage = null) {
         Sign in to BlocIQ
       </a>
       <p style="margin: 15px 0 0 0; font-size: 10px; color: #6b7280;">
-        After signing in, please refresh this window to continue.
+        The sign-in opens in a new window and will redirect back to this add-in automatically.
       </p>
     </div>
   `;
@@ -297,9 +300,18 @@ function setupEventListeners() {
   window.addEventListener('focus', () => {
     if (!currentUser) {
       // Check if authentication was completed
+      console.log('🔍 Window focused, checking for authentication updates...');
       setTimeout(initializeAuthentication, 1000);
     }
   });
+  
+  // Also check for authentication updates periodically when unauthenticated
+  setInterval(() => {
+    if (!currentUser) {
+      console.log('🔄 Periodic authentication check...');
+      initializeAuthentication();
+    }
+  }, 5000); // Check every 5 seconds
 }
 
 // Show demo mode for users without BlocIQ accounts

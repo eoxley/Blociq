@@ -57,7 +57,7 @@ export async function GET(req: Request) {
     }
     
     // User not authenticated, redirect to login
-    const loginUrl = `/auth/login?returnUrl=${encodeURIComponent(`/api/outlook-addin/auth?return_url=${encodeURIComponent(returnUrl)}`)}`;
+    const loginUrl = `/login?returnUrl=${encodeURIComponent(`/api/outlook-addin/auth?return_url=${encodeURIComponent(returnUrl)}`)}`;
     return NextResponse.redirect(new URL(loginUrl, req.url));
     
   } catch (error) {

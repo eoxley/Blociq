@@ -10,9 +10,18 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [returnUrl, setReturnUrl] = useState('/home');
 
-  // Add CSS animation for fade-in effect
+  // Extract returnUrl from URL params and add CSS animation
   useEffect(() => {
+    // Get returnUrl from URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const returnUrlParam = urlParams.get('returnUrl');
+    if (returnUrlParam) {
+      setReturnUrl(decodeURIComponent(returnUrlParam));
+    }
+    
+    // Add CSS animation for fade-in effect
     const style = document.createElement('style');
     style.textContent = `
       @keyframes fadeIn {
@@ -53,9 +62,10 @@ export default function LoginPage() {
         } = await supabase.auth.getSession();
 
         console.log('✅ Logged-in user ID:', session?.user?.id);
+        console.log('🔄 Redirecting to:', returnUrl);
 
-        // ✅ Step 3: manual redirect to home
-        window.location.href = '/home';
+        // ✅ Step 3: redirect to returnUrl or default to home
+        window.location.href = returnUrl;
       }
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');
