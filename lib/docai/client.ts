@@ -1,7 +1,28 @@
 import { DocumentProcessorServiceClient } from "@google-cloud/documentai";
 
+function resolveDocAiHost(loc?: string) {
+  if (!loc) return "eu-documentai.googleapis.com"; // safe default
+  // If user passed a full regional host like "europe-west3", build host accordingly
+  if (/^[a-z]+-[a-z]+[0-9]+$/i.test(loc)) return `${loc}-documentai.googleapis.com`;
+  // Short forms "eu" | "us"
+  if (loc === "eu") return "eu-documentai.googleapis.com";
+  if (loc === "us") return "us-documentai.googleapis.com";
+  // Fallback
+  return "eu-documentai.googleapis.com";
+}
+
+let docaiEnvChecked = false;
+function checkDocAiEnv() {
+  if (docaiEnvChecked) return;
+  docaiEnvChecked = true;
+  const ok = !!process.env.DOCUMENT_AI_PROCESSOR_ID && !!process.env.GOOGLE_CLOUD_PROJECT_ID && !!process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+  console.info("DocAI env:", { ok, loc: process.env.DOCUMENT_AI_LOCATION || "missing", processorId: !!process.env.DOCUMENT_AI_PROCESSOR_ID });
+}
+
 export async function docaiProcessToText(buffer: Buffer, mime: string = "application/pdf") {
   console.log('🤖 DocAI: Starting document processing...');
+  
+  checkDocAiEnv();
   
   const loc = process.env.DOCUMENT_AI_LOCATION;
   const name = process.env.DOCUMENT_AI_PROCESSOR_ID;
@@ -19,8 +40,9 @@ export async function docaiProcessToText(buffer: Buffer, mime: string = "applica
     throw new Error(`DocAI env missing: ${missing.join(', ')}`);
   }
 
+  const host = resolveDocAiHost(loc);
   console.log('✅ DocAI: Environment variables present');
-  console.log(`🌍 DocAI: Using EU endpoint: ${loc}-documentai.googleapis.com`);
+  console.log(`🌍 DocAI: Using endpoint: ${host}`);
   console.log(`📄 DocAI: Processing ${mime} document (${buffer.length} bytes)`);
 
   let creds;
@@ -38,7 +60,7 @@ export async function docaiProcessToText(buffer: Buffer, mime: string = "applica
   try {
     const client = new DocumentProcessorServiceClient({
       projectId,
-      apiEndpoint: `${loc}-documentai.googleapis.com`,
+      apiEndpoint: host,
       credentials: {
         client_email: creds.client_email,
         private_key: creds.private_key?.replace(/\\n/g, "\n"),

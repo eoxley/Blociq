@@ -4,6 +4,9 @@ import { extractText } from "@/lib/extract-text";
 import { extractLeaseHybrid } from "@/lib/extractors/leaseHybrid";
 import { renderLeaseReport } from "@/lib/reports/leaseReport";
 
+export const runtime = "nodejs";
+export const preferredRegion = "fra1";
+
 // Create Supabase client with service role for database operations
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,

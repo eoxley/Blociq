@@ -57,7 +57,7 @@ function parseRobustGoogleCredentials(credentialsJson: string): any {
 export interface TextExtractionResult {
   extractedText: string;
   textLength: number;
-  source: 'docai' | 'google_vision' | 'openai_vision' | 'tesseract' | 'pdfjs' | 'test_mode' | 'failed';
+  source: 'docai' | 'google_vision' | 'openai_vision' | 'tesseract' | 'pdfjs' | 'pdfjs-raster-openai' | 'test_mode' | 'failed';
   confidence?: number;
   pages?: string[]; // Optional per-page text array (for citations)
   metadata?: {
@@ -215,6 +215,59 @@ export async function extractWithGoogleVision(file: File): Promise<TextExtractio
         errorDetails: error instanceof Error ? error.message : 'Unknown Google Vision error'
       }
     };
+  }
+}
+
+// OpenAI Vision API for image buffers (used by rasterized PDF pages)
+export async function extractWithOpenAIVisionImage(imageBuffer: Buffer): Promise<string> {
+  try {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('OpenAI API key not configured');
+    }
+
+    const base64 = imageBuffer.toString('base64');
+    
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: 'Extract ALL text from this image. Please extract every piece of text visible, maintaining structure and formatting. Include all headers, body text, footnotes, and any small text.'
+              },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: `data:image/png;base64,${base64}`,
+                  detail: 'high'
+                }
+              }
+            ]
+          }
+        ],
+        max_tokens: 4000,
+        temperature: 0
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`OpenAI Vision API failed: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result.choices?.[0]?.message?.content?.trim() || '';
+
+  } catch (error) {
+    console.error('❌ OpenAI Vision image extraction failed:', error);
+    return '';
   }
 }
 
@@ -437,14 +490,18 @@ export async function extractText(file: File): Promise<TextExtractionResult> {
   console.log('🔄 Starting text extraction for:', file.name);
   console.log(`📊 File details: ${(file.size / (1024 * 1024)).toFixed(2)} MB, type: ${file.type}`);
   
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  console.info("OCR input bytes:", buffer.length, "mime:", file.type);
+  
   // Try Document AI first if enabled (EU endpoint)
   const useDocAI = process.env.USE_DOCUMENT_AI === 'true' && !!process.env.DOCUMENT_AI_PROCESSOR_ID;
+  console.info("OCR attempt:", "docai", useDocAI ? "enabled" : "disabled");
+  
   if (useDocAI) {
     try {
       console.log('🤖 Attempting Document AI OCR (EU endpoint)...');
       const { docaiProcessToText } = await import('@/lib/docai/client');
-      const arrayBuffer = await file.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
       
       const startTime = Date.now();
       const docaiResult = await docaiProcessToText(buffer, file.type || 'application/pdf');
@@ -452,7 +509,7 @@ export async function extractText(file: File): Promise<TextExtractionResult> {
       
       if (docaiResult.text && docaiResult.text.length > 0) {
         console.log('✅ Document AI success:', docaiResult.text.length, 'characters');
-        return {
+        const result = {
           extractedText: docaiResult.text,
           textLength: docaiResult.text.length,
           source: 'docai',
@@ -461,6 +518,8 @@ export async function extractText(file: File): Promise<TextExtractionResult> {
             processingTime: docaiResult.processingTime || processingTime
           }
         };
+        console.info("OCR selected source:", result.source, "textLength:", result.textLength);
+        return result;
       } else {
         console.log('⚠️ Document AI returned empty text, trying fallback methods...');
       }
@@ -481,6 +540,7 @@ export async function extractText(file: File): Promise<TextExtractionResult> {
 
   for (const method of methods) {
     if (method.condition()) {
+      console.info("OCR attempt:", method.name.toLowerCase().replace(/\s+/g, '_'));
       console.log(`🔍 Trying ${method.name}...`);
       
       // Add timeout to each method to prevent hanging
@@ -503,6 +563,7 @@ export async function extractText(file: File): Promise<TextExtractionResult> {
       
       if (result.source !== 'failed' && result.textLength > 0) {
         console.log(`✅ ${method.name} succeeded with ${result.textLength} characters`);
+        console.info("OCR selected source:", result.source, "textLength:", result.textLength);
         return result;
       } else {
         console.log(`⚠️ ${method.name} failed: ${result.metadata?.errorDetails || 'Unknown error'}`);
@@ -510,7 +571,35 @@ export async function extractText(file: File): Promise<TextExtractionResult> {
         // Special case: If PDF.js failed with no text (image-based PDF), try rasterize-on-empty fallback
         if (method.name === 'PDF.js' && file.type === 'application/pdf' && 
             result.metadata?.errorDetails?.includes('no extractable text')) {
-          console.log('🖼️ PDF appears to be image-based, rasterize-on-empty fallback will be handled by subsequent OCR methods');
+          console.info("OCR fallback:", "rasterizing pdf pages");
+          try {
+            const { rasterizePdfToPngBuffers } = await import('@/lib/ocr/rasterize');
+            const images = await rasterizePdfToPngBuffers(buffer, 15, 180);
+            let concat = "";
+            
+            for (const img of images) {
+              const txt = await extractWithOpenAIVisionImage(img);
+              if (txt) concat += "\n" + txt;
+            }
+            
+            if (concat.trim().length > 0) {
+              const rasterResult = {
+                extractedText: concat.trim(),
+                textLength: concat.trim().length,
+                source: 'pdfjs-raster-openai' as const,
+                metadata: {
+                  fileType: file.type,
+                  pageCount: images.length
+                }
+              };
+              console.info("OCR selected source:", rasterResult.source, "textLength:", rasterResult.textLength);
+              return rasterResult;
+            } else {
+              console.log('⚠️ Rasterized PDF OCR produced no text');
+            }
+          } catch (rasterError) {
+            console.error('❌ PDF rasterization failed:', rasterError);
+          }
         }
       }
     } else {
