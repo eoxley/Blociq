@@ -13,19 +13,40 @@
  */
 
 import { DocumentProcessorServiceClient } from '@google-cloud/documentai';
+import fs from 'fs';
 
 /**
  * Initialize Google Document AI client using environment variables
  */
 function initializeClient() {
   try {
-    // Parse credentials from environment variable
-    const credentialsJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
-    if (!credentialsJson) {
+    // Try multiple credential sources
+    let credentialsJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+    let credentials;
+
+    // Method 1: Direct JSON string
+    if (credentialsJson) {
+      try {
+        // Fix escaped newlines in the JSON string
+        const fixedCredentialsJson = credentialsJson.replace(/\\n/g, '\n');
+        credentials = JSON.parse(fixedCredentialsJson);
+        console.log('✅ Using direct JSON credentials');
+      } catch (jsonError) {
+        console.log('⚠️  Direct JSON parsing failed, trying Base64...');
+        
+        // Method 2: Base64 encoded JSON
+        try {
+          const decodedJson = Buffer.from(credentialsJson, 'base64').toString('utf-8');
+          const fixedDecodedJson = decodedJson.replace(/\\n/g, '\n');
+          credentials = JSON.parse(fixedDecodedJson);
+          console.log('✅ Using Base64 decoded credentials');
+        } catch (base64Error) {
+          throw new Error(`Failed to parse credentials as JSON or Base64: ${jsonError.message}`);
+        }
+      }
+    } else {
       throw new Error('GOOGLE_APPLICATION_CREDENTIALS_JSON environment variable is not set');
     }
-
-    const credentials = JSON.parse(credentialsJson);
     
     // Validate required credential fields
     const requiredFields = ['type', 'project_id', 'private_key', 'client_email'];
@@ -35,15 +56,51 @@ function initializeClient() {
       }
     }
 
+    // Fix private key formatting - ensure proper line breaks and remove extra escaping
+    if (credentials.private_key) {
+      credentials.private_key = credentials.private_key
+        .replace(/\\n/g, '\n')  // Convert escaped newlines to actual newlines
+        .replace(/\n\n+/g, '\n')  // Remove multiple consecutive newlines
+        .trim();  // Remove leading/trailing whitespace
+      
+      // Ensure the private key has proper BEGIN/END markers
+      if (!credentials.private_key.includes('-----BEGIN PRIVATE KEY-----')) {
+        console.warn('⚠️  Private key may be missing BEGIN/END markers');
+      }
+    }
+
     console.log('✅ Parsed Google Cloud credentials');
     console.log(`📧 Service Account: ${credentials.client_email}`);
     console.log(`🆔 Project ID: ${credentials.project_id}`);
 
-    // Initialize the client
-    const client = new DocumentProcessorServiceClient({
-      credentials: credentials,
-      projectId: process.env.GOOGLE_CLOUD_PROJECT_ID || credentials.project_id
-    });
+    // Initialize the client with multiple fallback methods
+    let client;
+    const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID || credentials.project_id;
+
+    // Method 1: Direct credentials object
+    try {
+      client = new DocumentProcessorServiceClient({
+        credentials: credentials,
+        projectId: projectId
+      });
+      console.log('✅ Client initialized with direct credentials');
+    } catch (directError) {
+      console.log('⚠️  Direct credentials failed, trying alternative method...');
+      
+      // Method 2: Using keyFilename approach (write temp file)
+      try {
+        const tempKeyFile = '/tmp/google-credentials.json';
+        fs.writeFileSync(tempKeyFile, JSON.stringify(credentials, null, 2));
+        
+        client = new DocumentProcessorServiceClient({
+          keyFilename: tempKeyFile,
+          projectId: projectId
+        });
+        console.log('✅ Client initialized with temporary key file');
+      } catch (keyFileError) {
+        throw new Error(`All authentication methods failed. Direct: ${directError.message}, KeyFile: ${keyFileError.message}`);
+      }
+    }
 
     return client;
   } catch (error) {
