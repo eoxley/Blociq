@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
         
         const result = await retryWithBackoff(async () => {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 150000); // 2.5 minute timeout per attempt to match Render service
+          const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minute timeout per attempt to allow Render service to complete
           
           try {
             // Manually construct multipart data with proper CR/LF boundaries
