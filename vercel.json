@@ -9,6 +9,10 @@
     {
       "path": "/api/cron/sync-inbox",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/process-lease-jobs",
+      "schedule": "*/2 * * * *"
     }
   ],
   "functions": {
@@ -55,6 +59,29 @@
     },
     "app/api/tools/process-document/route.ts": {
       "maxDuration": 240,
+      "memory": 1024
+    },
+    "app/api/lease-processing/upload/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/lease-processing/processor/route.ts": {
+      "maxDuration": 600,
+      "memory": 1024
+    },
+    "app/api/lease-processing/status/[jobId]/route.ts": {
+      "maxDuration": 30
+    },
+    "app/api/lease-processing/results/[jobId]/route.ts": {
+      "maxDuration": 30
+    },
+    "app/api/lease-processing/results/[jobId]/download/route.ts": {
+      "maxDuration": 30
+    },
+    "app/api/cron/process-lease-jobs/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/ask-ai/hybrid/route.ts": {
+      "maxDuration": 300,
       "memory": 1024
     }
   },
