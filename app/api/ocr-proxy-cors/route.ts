@@ -97,11 +97,10 @@ export async function POST(req: NextRequest) {
           const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout per attempt
           
           try {
-            // Re-create FormData to ensure it's properly formatted for external service
-            const externalFormData = new FormData();
+            // Manually construct multipart data with proper CR/LF boundaries
             const originalFile = formData.get('file') as File;
-            if (originalFile) {
-              externalFormData.append('file', originalFile);
+            if (!originalFile) {
+              throw new Error('No file found in form data');
             }
             
             console.log('📤 Sending to external OCR:', {
@@ -110,9 +109,38 @@ export async function POST(req: NextRequest) {
               fileType: originalFile?.type
             });
             
+            // Generate a proper boundary
+            const boundary = '----formdata-blociq-' + Math.random().toString(36).substring(2);
+            
+            // Get file data
+            const fileBuffer = await originalFile.arrayBuffer();
+            
+            // Construct multipart body with proper CR/LF line endings
+            const textEncoder = new TextEncoder();
+            const CRLF = '\r\n';
+            
+            const bodyParts = [
+              `--${boundary}${CRLF}`,
+              `Content-Disposition: form-data; name="file"; filename="${originalFile.name}"${CRLF}`,
+              `Content-Type: ${originalFile.type}${CRLF}`,
+              `${CRLF}`
+            ];
+            
+            const bodyStart = textEncoder.encode(bodyParts.join(''));
+            const bodyEnd = textEncoder.encode(`${CRLF}--${boundary}--${CRLF}`);
+            
+            // Combine all parts
+            const bodyArray = new Uint8Array(bodyStart.length + fileBuffer.byteLength + bodyEnd.length);
+            bodyArray.set(bodyStart, 0);
+            bodyArray.set(new Uint8Array(fileBuffer), bodyStart.length);
+            bodyArray.set(bodyEnd, bodyStart.length + fileBuffer.byteLength);
+            
             const ocrResponse = await fetch('https://ocr-server-2-ykmk.onrender.com/upload', {
               method: 'POST',
-              body: externalFormData,
+              headers: {
+                'Content-Type': `multipart/form-data; boundary=${boundary}`
+              },
+              body: bodyArray,
               signal: controller.signal
             });
 
