@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
   
   // Set a reasonable timeout for the entire request
   const startTime = Date.now();
-  const REQUEST_TIMEOUT = 270000; // 4.5 minutes (less than Vercel's 5 min limit)
+  const REQUEST_TIMEOUT = 480000; // 8 minutes to allow for longer OCR processing
   
   // API Key verification logging
   console.log('🔑 API Key check:', {
@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
         
         const result = await retryWithBackoff(async () => {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minute timeout per attempt for OCR processing
+          const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout per attempt for OCR processing
           
           try {
             // Manually construct multipart data with proper CR/LF boundaries
@@ -213,7 +213,7 @@ export async function POST(req: NextRequest) {
         
         const result = await retryWithBackoff(async () => {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minute timeout for OpenAI
+          const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout for OpenAI
           
           try {
             const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
