@@ -26,7 +26,19 @@ async function initializeAuthentication() {
   try {
     headerStatus.textContent = 'Connecting...';
     
-    // Check for existing authentication token in cookies
+    // NEW: Attempt email-based authentication from Outlook context
+    const outlookAuth = await attemptOutlookEmailAuthentication();
+    if (outlookAuth.success) {
+      console.log('✅ User authenticated via Outlook email:', outlookAuth.user.email);
+      currentUser = outlookAuth.user;
+      authToken = outlookAuth.token;
+      headerStatus.innerHTML = `${currentUser.name} <span class="user-info">(${currentUser.email})</span>`;
+      addWelcomeMessage();
+      enableChat();
+      return;
+    }
+    
+    // Fallback: Check for existing authentication token in cookies
     authToken = getCookie('blociq_outlook_token');
     const userInfo = getCookie('blociq_outlook_user');
     
@@ -38,7 +50,7 @@ async function initializeAuthentication() {
         const isValid = await validateToken(authToken);
         
         if (isValid) {
-          console.log('✅ User authenticated:', currentUser.email);
+          console.log('✅ User authenticated via cookie:', currentUser.email);
           headerStatus.innerHTML = `${currentUser.name} <span class="user-info">(${currentUser.email})</span>`;
           addWelcomeMessage();
           enableChat();
@@ -49,12 +61,90 @@ async function initializeAuthentication() {
       }
     }
     
-    // No valid authentication, show auth needed message
-    showAuthenticationNeeded();
+    // No valid authentication
+    if (outlookAuth.showDemo) {
+      // User has valid email but no BlocIQ account, show demo mode
+      const userProfile = Office.context.mailbox.userProfile;
+      showDemoMode(userProfile.emailAddress);
+      return;
+    }
+    
+    console.log('📧 Email authentication failed, showing fallback auth');
+    showAuthenticationNeeded(outlookAuth.error || 'Email extraction failed');
     
   } catch (error) {
     console.error('Authentication initialization error:', error);
-    showAuthenticationNeeded();
+    showAuthenticationNeeded(error.message || 'Failed to initialize authentication');
+  }
+}
+
+// NEW: Attempt authentication using Outlook email context
+async function attemptOutlookEmailAuthentication() {
+  try {
+    console.log('🔍 Attempting Outlook email authentication...');
+    
+    // Extract user email and name from Outlook context
+    const userProfile = Office.context.mailbox.userProfile;
+    
+    if (!userProfile || !userProfile.emailAddress) {
+      console.warn('❌ No user profile or email available from Outlook');
+      return { success: false, error: 'No email available from Outlook context' };
+    }
+    
+    const userEmail = userProfile.emailAddress;
+    const displayName = userProfile.displayName || userEmail.split('@')[0];
+    
+    console.log('📧 Extracted from Outlook:', { email: userEmail, name: displayName });
+    
+    // Call backend for email-based authentication
+    const response = await fetch('https://www.blociq.co.uk/api/outlook-addin/auth', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: userEmail,
+        display_name: displayName,
+        bypass_auth: true,
+        context: 'outlook'
+      }),
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ Email authentication failed:', errorText);
+      return { success: false, error: `Authentication failed: ${response.status}` };
+    }
+    
+    const authData = await response.json();
+    
+    if (authData.success && authData.token) {
+      console.log('✅ Email authentication successful');
+      
+      return {
+        success: true,
+        user: {
+          email: userEmail,
+          name: displayName,
+          id: authData.user_id || userEmail
+        },
+        token: authData.token
+      };
+    } else if (authData.error === 'User not found') {
+      console.log('👤 User not found, offering demo mode');
+      return { 
+        success: false, 
+        error: `No BlocIQ account found for ${userEmail}. You can still use basic assistance.`,
+        showDemo: true 
+      };
+    } else {
+      console.warn('❌ Authentication response invalid:', authData);
+      return { success: false, error: authData.message || 'Authentication failed' };
+    }
+    
+  } catch (error) {
+    console.error('❌ Error during Outlook email authentication:', error);
+    return { success: false, error: error.message };
   }
 }
 
@@ -92,13 +182,26 @@ function getCookie(name) {
 }
 
 // Show authentication needed message
-function showAuthenticationNeeded() {
+function showAuthenticationNeeded(errorMessage = null) {
   headerStatus.textContent = 'Authentication Required';
-  chatContainer.innerHTML = `
+  
+  let authContent = `
     <div class="auth-needed">
-      <h3 style="margin: 0 0 10px 0; color: #92400e;">🔐 Authentication Required</h3>
+      <h3 style="margin: 0 0 10px 0; color: #92400e;">🔐 Authentication Required</h3>`;
+  
+  if (errorMessage) {
+    authContent += `
+      <div style="background: #fee; border: 1px solid #fcc; border-radius: 4px; padding: 8px; margin-bottom: 10px; font-size: 11px;">
+        <strong>Error:</strong> ${errorMessage}
+      </div>`;
+  }
+  
+  authContent += `
       <p style="margin: 0 0 15px 0;">
-        To access your property data and get personalized responses, please authenticate with your BlocIQ account.
+        To access your property data and get personalized responses, we'll try to authenticate you automatically using your Outlook email.
+      </p>
+      <p style="margin: 0 0 15px 0; font-size: 11px; color: #6b7280;">
+        If automatic authentication fails, you can sign in manually:
       </p>
       <a href="https://www.blociq.co.uk/api/outlook-addin/auth?return_url=${encodeURIComponent(window.location.href)}" 
          class="auth-button" 
@@ -112,6 +215,7 @@ function showAuthenticationNeeded() {
     </div>
   `;
   
+  chatContainer.innerHTML = authContent;
   disableChat();
 }
 
@@ -181,6 +285,28 @@ function setupEventListeners() {
   });
 }
 
+// Show demo mode for users without BlocIQ accounts
+function showDemoMode(userEmail) {
+  headerStatus.textContent = 'Demo Mode';
+  currentUser = { email: userEmail, name: userEmail.split('@')[0], demo: true };
+  
+  const demoMessage = `Hi there! I'm BlocIQ's AI assistant. 
+
+I noticed you don't have a BlocIQ account yet, but I can still help with:
+
+• **General property management advice**
+• **UK property law questions** 
+• **Email response drafting**
+• **Compliance guidance**
+
+For full access to your property portfolio, buildings, and leaseholder data, you'll need a BlocIQ account.
+
+What can I help you with today?`;
+  
+  addMessage(demoMessage, 'assistant');
+  enableChat();
+}
+
 // Add welcome message
 function addWelcomeMessage() {
   const welcomeMessage = `Hi ${currentUser.name}! I'm your BlocIQ Assistant with full access to your property portfolio. I can help you with:
@@ -195,9 +321,65 @@ What would you like to know?`;
   addMessage(welcomeMessage, 'assistant');
 }
 
+// Handle demo mode messages
+async function handleDemoMessage() {
+  const message = inputField.value.trim();
+  if (!message || isProcessing) return;
+  
+  // Add user message to chat
+  addMessage(message, 'user');
+  inputField.value = '';
+  adjustTextareaHeight();
+  sendButton.disabled = true;
+  isProcessing = true;
+  
+  // Show typing indicator
+  const typingMessage = addMessage('', 'assistant', true);
+  
+  try {
+    // Get current email context
+    const emailContext = await getCurrentEmailContext();
+    
+    // Simple response for demo mode - can be enhanced with basic AI
+    let response = `I'm running in demo mode since you don't have a BlocIQ account yet. 
+
+For general property management questions, I'd recommend:
+
+• **Property-specific data**: Sign up for BlocIQ to access your portfolio
+• **UK property law**: I can provide general guidance
+• **Email assistance**: I can help draft professional responses
+• **Compliance**: General regulatory information
+
+Would you like to learn more about BlocIQ's full features or get a specific type of help?`;
+    
+    // Remove typing indicator and add response
+    removeMessage(typingMessage);
+    addMessage(response, 'assistant');
+    
+  } catch (error) {
+    console.error('Error in demo mode:', error);
+    removeMessage(typingMessage);
+    addMessage('Sorry, I encountered an error. Please try again.', 'assistant');
+  } finally {
+    isProcessing = false;
+    sendButton.disabled = false;
+    inputField.focus();
+  }
+}
+
 // Handle sending a message
 async function handleSendMessage() {
-  if (!currentUser || !authToken) {
+  if (!currentUser) {
+    showAuthenticationNeeded();
+    return;
+  }
+  
+  if (currentUser.demo && !authToken) {
+    // Demo mode - limited functionality
+    return handleDemoMessage();
+  }
+  
+  if (!authToken) {
     showAuthenticationNeeded();
     return;
   }

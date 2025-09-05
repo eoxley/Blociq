@@ -300,7 +300,46 @@ export async function POST(req: Request) {
     );
 
     // Validate token and get user
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    let user: any;
+    let authError: any;
+    
+    // Check if it's a temporary email-based token
+    if (token.length > 100) { // Base64 encoded token
+      try {
+        const tokenData = JSON.parse(Buffer.from(token, 'base64').toString());
+        
+        if (tokenData.context === 'outlook_email_auth' && tokenData.timestamp) {
+          // Check if token is not too old (24 hours)
+          const tokenAge = Date.now() - tokenData.timestamp;
+          if (tokenAge > 24 * 60 * 60 * 1000) {
+            return NextResponse.json({ 
+              success: false, 
+              error: 'Email authentication token expired' 
+            }, { status: 401 });
+          }
+          
+          // Create a user object for temporary email authentication
+          user = {
+            id: tokenData.user_id,
+            email: tokenData.email,
+            user_metadata: {
+              full_name: tokenData.email.split('@')[0]
+            }
+          };
+          authError = null;
+        } else {
+          authError = new Error('Invalid email token format');
+        }
+      } catch (e) {
+        console.warn('Invalid temporary token:', e);
+        authError = new Error('Invalid token format');
+      }
+    } else {
+      // Standard Supabase token validation
+      const { data, error } = await supabase.auth.getUser(token);
+      user = data?.user;
+      authError = error;
+    }
     
     if (authError || !user) {
       return NextResponse.json({ 
@@ -312,20 +351,42 @@ export async function POST(req: Request) {
     console.log('🚀 Processing Outlook add-in query for user:', user.email);
 
     // Create user-scoped Supabase client
-    const userSupabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get() { return undefined },
-        },
-        global: {
-          headers: {
-            Authorization: `Bearer ${token}`
+    let userSupabase;
+    
+    // For email-based authentication, use service role key with RLS context
+    if (token.length > 100 && user.email) {
+      userSupabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        {
+          cookies: {
+            get() { return undefined },
+          },
+          global: {
+            headers: {
+              'x-user-email': user.email, // Pass user email for RLS context
+              'x-user-id': user.id
+            }
           }
         }
-      }
-    );
+      );
+    } else {
+      // Standard authenticated client
+      userSupabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          cookies: {
+            get() { return undefined },
+          },
+          global: {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        }
+      );
+    }
 
     let response: string;
 
