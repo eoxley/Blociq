@@ -9,10 +9,12 @@ import { Bell, Settings, User, HelpCircle, ExternalLink, LogOut } from 'lucide-r
 import BlocIQLogo from './BlocIQLogo';
 import { BlocIQBadge } from '@/components/ui/blociq-badge';
 import AgencySwitcher from './AgencySwitcher';
+import LeaseNotificationBadge from './LeaseNotificationBadge';
 
 const navItems = [
   { label: "Home", icon: "🏠", href: "/home", comingSoon: false, description: "Dashboard overview", aiPowered: false },
   { label: "Inbox Overview", icon: "🧠", href: "/inbox-overview", comingSoon: false, description: "Email triage dashboard", aiPowered: true },
+  { label: "Lease Processing", icon: "📊", href: "/lease-status-dashboard", comingSoon: false, description: "Document processing status", aiPowered: true },
   { label: "Buildings", icon: "🏢", href: "/buildings", comingSoon: false, description: "Property portfolio", aiPowered: false },
   { label: "Compliance", icon: "🛡️", href: "/compliance", comingSoon: false, description: "Regulatory tracking", aiPowered: true },
   { label: "Communications", icon: "📣", href: "/communications", comingSoon: false, description: "Letter & email templates", aiPowered: false },
@@ -164,6 +166,11 @@ export default function DashboardSidebar() {
       </nav>
 
 
+
+      {/* Lease Processing Notifications */}
+      <div className="border-t border-border pt-4 mb-4">
+        <LeaseNotificationBadge />
+      </div>
 
       {/* Enhanced Logout Section */}
       <div className="border-t border-border pt-4">
