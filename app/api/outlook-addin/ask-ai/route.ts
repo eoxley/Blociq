@@ -151,36 +151,52 @@ class PropertyDatabase {
   }
 }
 
-// Response generators with proper formatting
+// Response generators with anti-hallucination safeguards
 class ResponseGenerator {
   
+  // Safety responses for uncertain information
+  static readonly SAFETY_RESPONSES = {
+    legal: "For specific legal advice, please consult your property law solicitor.",
+    emergency: "For emergencies, contact emergency services on 999.",
+    compliance: "For compliance questions, check with your building control officer.",
+    financial: "For financial advice, consult your property accountant.",
+    unknown: "I don't have reliable information about this. Please check your records or contact the relevant authority."
+  };
+
+  // Add data quality warning based on confidence and completeness
+  static addDataQualityWarning(response: string, hasData: boolean, source: string): string {
+    const sourceNote = `\n\n📊 **Source:** ${source}`;
+    
+    if (!hasData) {
+      return response + sourceNote + "\n\n💡 **Note:** If you believe this information should be available, please check your data entry or contact support.";
+    }
+    
+    return response + sourceNote;
+  }
+
   static generateLeaseholderResponse(result: any): string {
     if (!result.success) {
+      let response = `I couldn't find unit ${result.searchedUnit} in ${result.searchedBuilding} in your portfolio.`;
+      
       if (result.suggestions && result.suggestions.length > 0) {
         const unitList = [...new Set(result.suggestions.map((s: any) => s.unit_number))];
-        const buildingList = [...new Set(result.suggestions.map((s: any) => s.building_name))];
         
-        return `I couldn't find unit ${result.searchedUnit} in ${result.searchedBuilding} in your portfolio. This could mean:
-
-• The unit number might be listed differently (available units: ${unitList.slice(0, 5).join(', ')})
-• The building name might vary in your records (found: ${buildingList.slice(0, 3).join(', ')})
-• This property isn't in your database yet
-
-Would you like me to search for all units in buildings matching '${result.searchedBuilding}'?`;
-      }
-      
-      return `I couldn't find unit ${result.searchedUnit} in ${result.searchedBuilding} in your portfolio. This could mean:
+        response += ` Available units in this building: ${unitList.slice(0, 5).join(', ')}`;
+      } else {
+        response += ` This could mean:
 
 • The unit number might be listed differently (e.g., 'Flat ${result.searchedUnit}')
 • The building name might vary in your records
-• This property isn't in your database yet
+• This property isn't in your database yet`;
+      }
 
-Would you like me to search for all units in buildings matching '${result.searchedBuilding}'?`;
+      return this.addDataQualityWarning(response, false, "Leaseholder database search");
     }
 
     const leaseholder = result.data;
     let response = `**${leaseholder.leaseholder_name}** is the leaseholder of unit ${leaseholder.unit_number}, ${leaseholder.building_name}`;
     
+    // Only include verified contact information from database
     if (leaseholder.leaseholder_email) {
       response += `\n📧 ${leaseholder.leaseholder_email}`;
     }
@@ -193,25 +209,21 @@ Would you like me to search for all units in buildings matching '${result.search
       response += `\n👔 Role: ${leaseholder.director_role || 'Director'}`;
     }
 
-    return response;
+    return this.addDataQualityWarning(response, true, "Verified leaseholder records");
   }
 
   static generateAccessCodesResponse(result: any): string {
     if (!result.success) {
-      return `No access codes found for ${result.searchedBuilding} in your portfolio. You may need to:
-
-• Add this building to your database first
-• Check if the building name is spelled correctly  
-• Update the property record with current access codes
-
-Would you like me to search for similar building names or help you add this property?`;
+      const response = `No access codes found for "${result.searchedBuilding}" in your verified records.`;
+      return this.addDataQualityWarning(response, false, "Building access database");
     }
 
     const building = result.data;
-    let response = `🔐 **Access codes for ${building.name}**\n📍 ${building.address}\n`;
+    let response = `🔐 **Access information for ${building.name}**\n📍 ${building.address}`;
     
     let hasAccessInfo = false;
     
+    // CRITICAL: Only show access codes that are actually recorded in database
     if (building.entry_code) {
       response += `\n🚪 **Main entrance:** ${building.entry_code}`;
       hasAccessInfo = true;
@@ -228,7 +240,7 @@ Would you like me to search for similar building names or help you add this prop
     }
     
     if (building.notes) {
-      response += `\n📝 **Notes:** ${building.notes}`;
+      response += `\n📝 **Building notes:** ${building.notes}`;
       hasAccessInfo = true;
     }
     
@@ -237,6 +249,7 @@ Would you like me to search for similar building names or help you add this prop
       hasAccessInfo = true;
     }
 
+    // Only show building management if recorded
     if (building.building_manager_name || building.building_manager_phone) {
       response += `\n\n👤 **Building management:**`;
       if (building.building_manager_name) {
@@ -247,19 +260,25 @@ Would you like me to search for similar building names or help you add this prop
       }
     }
     
+    // SAFETY: Never generate fake codes - explicitly state when none available
     if (!hasAccessInfo) {
-      response += `\nNo access codes are currently stored for ${building.name}.\n\nYou may need to update the building record with current entry codes.`;
+      response += `\n\n⚠️ **No access codes recorded**\nPlease update the building record with current entry codes.`;
+      
+      // Add emergency guidance for safety-critical access
+      response += `\n\n🚨 **For emergencies:** Contact emergency services on 999`;
+      response += `\n💡 **Tip:** Check physical key safes or contact building management directly`;
     }
     
-    return response;
+    return this.addDataQualityWarning(response, hasAccessInfo, "Building access records database");
   }
 
   static generateBuildingsResponse(result: any): string {
     if (!result.success || !result.data || result.data.length === 0) {
-      return `You don't have any buildings in your portfolio yet. Would you like me to help you add a building?`;
+      const response = `No buildings found in your property portfolio database.`;
+      return this.addDataQualityWarning(response, false, "Property portfolio database");
     }
 
-    let response = `🏢 **Your property portfolio:**\n`;
+    let response = `🏢 **Your verified property portfolio:**\n`;
     
     result.data.forEach((building: any) => {
       response += `\n• **${building.name}** (${building.unit_count || 0} units)`;
@@ -268,17 +287,18 @@ Would you like me to search for similar building names or help you add this prop
       }
     });
 
-    response += `\n\nI can help you with specific buildings by asking about access codes, leaseholders, or other property details.`;
+    response += `\n\nI can help you with specific buildings using verified data from your records.`;
     
-    return response;
+    return this.addDataQualityWarning(response, true, "Property portfolio database");
   }
 
   static generateDocumentsResponse(result: any): string {
     if (!result.success || !result.data || result.data.length === 0) {
-      return `You don't have any recent documents uploaded. You can upload documents through the main BlocIQ platform for analysis.`;
+      const response = `No recent documents found in your document database.`;
+      return this.addDataQualityWarning(response, false, "Document management database");
     }
 
-    let response = `📄 **Your recent documents:**\n`;
+    let response = `📄 **Your recent documents (verified records):**\n`;
     
     result.data.forEach((doc: any) => {
       const date = new Date(doc.created_at).toLocaleDateString();
@@ -290,9 +310,9 @@ Would you like me to search for similar building names or help you add this prop
       response += `\n   Uploaded: ${date}`;
     });
 
-    response += `\n\nI can analyze documents if you upload them through the main platform or via email.`;
+    response += `\n\nAll document information comes from your verified upload records.`;
     
-    return response;
+    return this.addDataQualityWarning(response, true, "Document management database");
   }
 }
 
@@ -459,51 +479,78 @@ export async function POST(req: Request) {
         break;
 
       default:
-        // Enhanced general property management queries with user context
-        try {
-          const openai = getOpenAIClient();
-          const completion = await openai.chat.completions.create({
-            model: 'gpt-4o',
-            messages: [{
-              role: 'system',
-              content: `You are BlocIQ, a comprehensive UK property management assistant integrated into Outlook. You have access to the user's property portfolio and can provide specific information about their buildings, leaseholders, and documents. 
+        // ANTI-HALLUCINATION SAFEGUARD: Restrict general queries to prevent fake property data
+        console.log('⚠️ General query detected - applying anti-hallucination restrictions');
+        
+        // Check if the query could be asking for property-specific information
+        const potentiallyDangerous = /\b(code|access|leaseholder|tenant|unit|flat|building|address|phone|email|manager|contact)\b/i.test(prompt);
+        
+        if (potentiallyDangerous) {
+          // SAFETY: Prevent OpenAI from generating fake property data
+          response = ResponseGenerator.addDataQualityWarning(
+            `I can only provide verified information from your property database. For specific details about buildings, units, leaseholders, or access codes, please use these exact query formats:
 
-You can help with:
-- Property-specific questions about buildings, units, and leaseholders
-- Access codes and building information
-- Document analysis and lease reviews
+• **"Who is the leaseholder of unit [number] at [building name]?"**
+• **"What are the access codes for [building name]?"**  
+• **"Show me my buildings"**
+• **"Show me my recent documents"**
+
+${ResponseGenerator.SAFETY_RESPONSES.unknown}`,
+            false,
+            "Anti-hallucination safety system"
+          );
+        } else {
+          // Safe general property management advice only
+          try {
+            const openai = getOpenAIClient();
+            const completion = await openai.chat.completions.create({
+              model: 'gpt-4o',
+              messages: [{
+                role: 'system',
+                content: `You are BlocIQ, a UK property management assistant. 
+
+CRITICAL RESTRICTIONS - NEVER generate:
+- Fake access codes, passwords, or security information
+- Imaginary contact details (names, phones, emails)
+- Made-up building names or addresses
+- Fictional leaseholder information
+- Unverified compliance dates or certificates
+
+You can only provide:
 - General property management advice
-- Email response drafting based on current email context
-- UK property law and compliance guidance
+- UK property law guidance (with disclaimers)
+- Email drafting assistance
+- Process explanations
 
-Always provide professional, legally appropriate responses using British English. If asked about specific buildings or units that aren't found, offer to search the user's portfolio or suggest adding the property to their database.
+For ANY specific property data (buildings, units, leaseholders, access codes), you MUST direct users to use the specific database query functions.
 
-The user is currently in Outlook, so consider the email context when relevant.`
-            }, {
-              role: 'user',
-              content: contextualPrompt
-            }],
-            temperature: 0.3,
-            max_tokens: 1500
-          });
+Always include: "${ResponseGenerator.SAFETY_RESPONSES.legal}" for legal matters.`
+              }, {
+                role: 'user',
+                content: `General property management question: ${contextualPrompt}`
+              }],
+              temperature: 0.1, // Lower temperature to reduce creativity/hallucination
+              max_tokens: 800  // Shorter responses to limit hallucination risk
+            });
 
-          response = completion.choices[0].message?.content || `I can help you with your property management questions. For specific information about your properties, try asking:
+            const aiResponse = completion.choices[0].message?.content || ResponseGenerator.SAFETY_RESPONSES.unknown;
+            
+            response = ResponseGenerator.addDataQualityWarning(
+              aiResponse + `\n\n⚠️ **Note:** This is general guidance only. For specific property data, use the database query functions.`,
+              false,
+              "General property management AI (no specific property data)"
+            );
 
-• "Who is the leaseholder of unit 5 at Ashwood House?"
-• "What are the access codes for [building name]?"  
-• "Show me my buildings" or "What documents have I uploaded recently?"
+          } catch (openaiError) {
+            console.error('OpenAI error:', openaiError);
+            response = ResponseGenerator.addDataQualityWarning(
+              `I can help with general property management questions, but for specific information about your properties, buildings, or leaseholders, please use the database query functions.
 
-What would you like to know?`;
-
-        } catch (openaiError) {
-          console.error('OpenAI error:', openaiError);
-          response = `I can help with your property management questions. For specific information about your properties, try asking:
-
-• "Who is the leaseholder of unit 5 at Ashwood House?"
-• "What are the access codes for [building name]?"
-• "Show me my buildings" or "What documents have I uploaded recently?"
-
-What would you like to know?`;
+${ResponseGenerator.SAFETY_RESPONSES.unknown}`,
+              false,
+              "Error recovery system"
+            );
+          }
         }
     }
 
