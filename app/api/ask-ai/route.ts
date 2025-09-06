@@ -350,163 +350,51 @@ Notes & Instructions: ${buildingData.notes || 'No notes added yet'}
       }
     }
 
-    // 🔍 Enhanced Leaseholder Search for Specific Queries
-    if (prompt.toLowerCase().includes('leaseholder') || prompt.toLowerCase().includes('who is') || prompt.toLowerCase().includes('flat') || prompt.toLowerCase().includes('unit')) {
-      console.log('🔍 Detected leaseholder-specific query, using comprehensive search...');
+    // 🔍 COMPREHENSIVE UNIFIED AI PROCESSING
+    console.log('🤖 COMPREHENSIVE: Processing query with complete system capabilities...');
+    
+    try {
+      // Import synchronized AI processor
+      const { SynchronizedAIProcessor } = await import('../../../lib/ai/systemSynchronizer');
       
-      try {
-        // 🎯 PRIORITY 1: Use comprehensive search as primary method
-        const comprehensiveResults = await searchEntireDatabase(prompt, user?.id);
-        console.log('🔍 Comprehensive search results:', {
-          buildings: comprehensiveResults.buildings.length,
-          units: comprehensiveResults.units.length,
-          leaseholders: comprehensiveResults.leaseholders.length
+      // Process the query with full capabilities using synchronized processor
+      const unifiedResult = await SynchronizedAIProcessor.processAskBlocQuery(
+        prompt,
+        user?.id,
+        building_id,
+        contextType,
+        undefined, // emailContext
+        tone
+      );
+      
+      if (unifiedResult.success) {
+        console.log('✅ COMPREHENSIVE: Query processed successfully');
+        
+        // Return the unified result directly
+        return NextResponse.json({
+          success: true,
+          result: unifiedResult.response,
+          response: unifiedResult.response, // For backward compatibility
+          conversationId: null,
+          context_type: contextType,
+          building_id: building_id || null,
+          document_count: 0,
+          has_email_thread: false,
+          has_leaseholder: false,
+          context: unifiedResult.metadata,
+          metadata: {
+            source: unifiedResult.source,
+            comprehensive: true
+          }
         });
-        
-        if (comprehensiveResults.leaseholders.length > 0) {
-          console.log('✅ Found leaseholder data via comprehensive search');
-          
-          // Format leaseholder context from comprehensive search
-          const leaseholderContext = comprehensiveResults.leaseholders.map(lh => 
-            `👤 ${lh.name} - Unit ${lh.unit_number}
-📧 Email: ${lh.email || 'Not provided'}
-📞 Phone: ${lh.phone || 'Not provided'}
-🏢 Building: ${lh.buildings?.name || 'Unknown'}
-${lh.notes ? `📝 Notes: ${lh.notes}` : ''}`
-          ).join('\n\n');
-          
-          buildingContext += `\n\n🎯 LEASEHOLDER DATA FOUND:\n${leaseholderContext}`;
-          
-          // Update context metadata
-          contextMetadata.searchResultsFound = true;
-          contextMetadata.leaseholderFound = true;
-          contextMetadata.leaseholderCount = comprehensiveResults.leaseholders.length;
-          
-        } else if (comprehensiveResults.units.length > 0) {
-          console.log('✅ Found unit data via comprehensive search');
-          
-          // Format unit context from comprehensive search
-          const unitContext = comprehensiveResults.units.map(unit => 
-            `🏠 Unit ${unit.unit_number} - ${unit.buildings?.name || 'Unknown'}
-Floor: ${unit.floor || 'Unknown'} | Type: ${unit.type || 'Unknown'}
-${unit.leaseholders ? `👤 Leaseholder: ${unit.leaseholders.name} (${unit.leaseholders.email})` : 'No leaseholder assigned'}`
-          ).join('\n\n');
-          
-          buildingContext += `\n\n🏠 UNIT DATA FOUND:\n${unitContext}`;
-          
-          contextMetadata.searchResultsFound = true;
-          contextMetadata.unitCount = comprehensiveResults.units.length;
-          
-        } else {
-          console.log('❌ No leaseholder/unit data found via comprehensive search');
-          
-          // 🎯 PRIORITY 2: Fallback to direct building context search
-          if (building_id) {
-            console.log('🔄 Attempting direct building context search...');
-            
-            try {
-              const { data: buildingData, error: buildingError } = await supabase
-                .from('buildings')
-                .select(`
-                  id, name, address, unit_count, notes,
-                  units (
-                    id, unit_number, type, floor, leaseholder_id,
-                    leaseholders (
-                      id, name, full_name, email, phone
-                    )
-                  )
-                `)
-                .eq('id', building_id)
-                .single();
-              
-              if (buildingData && !buildingError) {
-                console.log('✅ Found building data:', buildingData.name);
-                
-                // Extract unit number from query
-                const unitMatch = prompt.match(/(\d+)/);
-                const targetUnitNumber = unitMatch ? unitMatch[1] : null;
-                
-                if (targetUnitNumber && buildingData.units) {
-                  const targetUnit = buildingData.units.find(unit => 
-                    unit.unit_number === targetUnitNumber || 
-                    unit.unit_number === `Flat ${targetUnitNumber}` ||
-                    unit.unit_number === `Unit ${targetUnitNumber}`
-                  );
-                  
-                  if (targetUnit) {
-                    console.log('✅ Found target unit:', targetUnit.unit_number);
-                    
-                    if (targetUnit.leaseholders && targetUnit.leaseholders.length > 0) {
-                      const leaseholder = targetUnit.leaseholders[0];
-                      console.log('✅ Found leaseholder:', leaseholder.name || leaseholder.full_name);
-                      
-                      buildingContext += `\n\n🎯 DIRECT BUILDING DATA FOUND:
-Building: ${buildingData.name}
-Unit: ${targetUnit.unit_number}
-Leaseholder: ${leaseholder.name || leaseholder.full_name}
-Email: ${leaseholder.email || 'Not provided'}
-Phone: ${leaseholder.phone || 'Not provided'}`;
-                      
-                      contextMetadata.searchResultsFound = true;
-                      contextMetadata.leaseholderFound = true;
-                    } else {
-                      console.log('❌ Unit found but no leaseholder assigned');
-                      buildingContext += `\n\n🏠 UNIT FOUND BUT NO LEASEHOLDER:
-Building: ${buildingData.name}
-Unit: ${targetUnit.unit_number}
-Status: No leaseholder currently assigned`;
-                    }
-                  } else {
-                    console.log('❌ Target unit not found in building');
-                    buildingContext += `\n\n🏢 BUILDING DATA AVAILABLE:
-Building: ${buildingData.name}
-Total Units: ${buildingData.units?.length || 0}
-Available Units: ${buildingData.units?.map(u => u.unit_number).join(', ')}
-Note: Unit ${targetUnitNumber} not found in this building`;
-                  }
-                } else {
-                  console.log('❌ Could not extract unit number from query');
-                  buildingContext += `\n\n🏢 BUILDING DATA AVAILABLE:
-Building: ${buildingData.name}
-Total Units: ${buildingData.units?.length || 0}
-Available Units: ${buildingData.units?.map(u => u.unit_number).join(', ')}`;
-                }
-              } else {
-                console.log('❌ Failed to fetch building data:', buildingError);
-              }
-            } catch (contextError) {
-              console.warn('Could not fetch building context data:', contextError);
-            }
-          }
-        }
-        
-      } catch (searchError) {
-        console.error('❌ Comprehensive search failed:', searchError);
-        
-        // 🎯 PRIORITY 3: Ultimate fallback to old method
-        try {
-          const searchResults = await searchLeaseholderDirect(prompt, supabase);
-          console.log('🔍 Fallback leaseholder search results:', searchResults);
-          
-          if (searchResults && searchResults.leaseholders.length > 0) {
-            console.log('✅ Found leaseholder data via fallback search');
-            buildingContext += `\n\nLEASEHOLDER SEARCH RESULTS:
-Building: ${searchResults.building?.name}
-Unit: ${searchResults.units[0]?.unit_number}
-Leaseholder: ${searchResults.leaseholders[0]?.name}
-Email: ${searchResults.leaseholders[0]?.email || 'Not provided'}
-Phone: ${searchResults.leaseholders[0]?.phone || 'Not provided'}`;
-            
-            if (searchResults.building) {
-              contextMetadata.buildingName = searchResults.building.name;
-              contextMetadata.unitCount = searchResults.units?.length || 0;
-              contextMetadata.searchResultsFound = true;
-            }
-          }
-        } catch (fallbackError) {
-          console.error('❌ All leaseholder search methods failed:', fallbackError);
-        }
+      } else {
+        console.log('❌ COMPREHENSIVE: Query processing failed, falling back to legacy system');
+        // Fall through to legacy processing
       }
+      
+    } catch (unifiedError) {
+      console.error('❌ COMPREHENSIVE: Error in unified processing:', unifiedError);
+      // Fall through to legacy processing
     }
 
     // 🔍 ALWAYS perform building search regardless of building_id

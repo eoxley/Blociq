@@ -3,6 +3,13 @@ import { createServerClient } from '@supabase/ssr';
 import { getOpenAIClient } from '@/lib/openai-client';
 import { insertAiLog } from '@/lib/supabase/ai_logs';
 import { PropertySystemLogic } from '@/lib/ai/propertySystemLogic';
+import { 
+  findLeaseholder, 
+  findBuilding, 
+  findUnitsInBuilding,
+  UnifiedResponseGenerator, 
+  UnifiedQueryParser 
+} from '@/lib/ai/unifiedDataAccess';
 
 // Property database integration for authenticated queries
 class PropertyDatabase {
@@ -435,6 +442,73 @@ export async function POST(req: Request) {
       );
     }
 
+    // 🔍 COMPREHENSIVE UNIFIED AI PROCESSING
+    console.log('🤖 COMPREHENSIVE: Processing Outlook Add-in query with complete system capabilities...');
+    
+    try {
+      // Import synchronized AI processor
+      const { SynchronizedAIProcessor } = await import('../../../lib/ai/systemSynchronizer');
+      
+      // Process the query with full capabilities using synchronized processor
+      const unifiedResult = await SynchronizedAIProcessor.processOutlookQuery(
+        prompt,
+        user.id,
+        undefined, // buildingId - not available in Outlook context
+        'outlook_addin',
+        emailContext,
+        'Professional'
+      );
+      
+      if (unifiedResult.success) {
+        console.log('✅ COMPREHENSIVE: Outlook query processed successfully');
+        
+        // Log the interaction
+        let logId = null;
+        try {
+          logId = await insertAiLog({
+            user_id: user.id,
+            question: prompt,
+            response: unifiedResult.response,
+            context_type: 'outlook_addin',
+            building_id: null,
+            document_ids: [],
+          });
+        } catch (logError) {
+          console.error('Failed to log AI interaction:', logError);
+        }
+        
+        return NextResponse.json({
+          success: true,
+          response: unifiedResult.response,
+          systemVersion: 'outlook_addin_comprehensive_v1',
+          queryType: 'comprehensive',
+          ai_log_id: logId,
+          user: {
+            id: user.id,
+            email: user.email,
+            name: user.user_metadata?.full_name || user.email
+          },
+          metadata: {
+            processingTime: Date.now(),
+            hasEmailContext: !!emailContext,
+            isOutlookAddin: true,
+            source: unifiedResult.source,
+            comprehensive: true
+          }
+        });
+      } else {
+        console.log('❌ COMPREHENSIVE: Query processing failed, falling back to legacy system');
+        // Fall through to legacy processing
+      }
+      
+    } catch (unifiedError) {
+      console.error('❌ COMPREHENSIVE: Error in unified processing:', unifiedError);
+      // Fall through to legacy processing
+    }
+
+    // LEGACY FALLBACK PROCESSING
+    console.log('🔄 LEGACY: Falling back to legacy processing...');
+    
     let response: string;
 
     // Enhanced query parsing with building/portfolio context
@@ -452,8 +526,9 @@ export async function POST(req: Request) {
     switch (queryType.type) {
       case 'leaseholder':
         if (queryType.unit && queryType.building) {
-          const result = await propertyDB.findLeaseholder(queryType.unit, queryType.building);
-          response = ResponseGenerator.generateLeaseholderResponse(result);
+          // Use unified data access for consistent results
+          const result = await findLeaseholder(queryType.unit, queryType.building, user.id);
+          response = UnifiedResponseGenerator.generateLeaseholderResponse(result);
         } else {
           response = `I need both a unit number and building name to find leaseholder information. Try: "Who is the leaseholder of unit 5 at Ashwood House?"`;
         }
@@ -461,16 +536,28 @@ export async function POST(req: Request) {
 
       case 'access_codes':
         if (queryType.building) {
-          const result = await propertyDB.findAccessCodes(queryType.building);
-          response = ResponseGenerator.generateAccessCodesResponse(result);
+          // Use unified data access for consistent results
+          const result = await findBuilding(queryType.building, user.id);
+          response = UnifiedResponseGenerator.generateBuildingResponse(result);
         } else {
           response = `I need a building name to find access codes. Try: "What are the access codes for Ashwood House?"`;
         }
         break;
 
       case 'buildings':
-        const buildingsResult = await propertyDB.getUserBuildings();
-        response = ResponseGenerator.generateBuildingsResponse(buildingsResult);
+        // Use unified data access for consistent results
+        const buildingsResult = await findBuilding('', user.id);
+        response = UnifiedResponseGenerator.generateBuildingResponse(buildingsResult);
+        break;
+
+      case 'units':
+        if (queryType.building) {
+          // Use unified data access for consistent results
+          const result = await findUnitsInBuilding(queryType.building, user.id);
+          response = UnifiedResponseGenerator.generateUnitsResponse(result);
+        } else {
+          response = `I need a building name to find units. Try: "How many units does Ashwood House have?"`;
+        }
         break;
 
       case 'documents':
@@ -479,26 +566,33 @@ export async function POST(req: Request) {
         break;
 
       default:
-        // ANTI-HALLUCINATION SAFEGUARD: Restrict general queries to prevent fake property data
-        console.log('⚠️ General query detected - applying anti-hallucination restrictions');
+        // LEGACY GENERAL QUERY HANDLING
+        console.log('🔍 General query detected - using legacy processing...');
         
-        // Check if the query could be asking for property-specific information
-        const potentiallyDangerous = /\b(code|access|leaseholder|tenant|unit|flat|building|address|phone|email|manager|contact)\b/i.test(prompt);
+        // Try to parse the query for any property-specific information
+        const { unit, building } = UnifiedQueryParser.parseLeaseholderQuery(prompt);
+        const { building: buildingFromQuery } = UnifiedQueryParser.parseBuildingQuery(prompt);
         
-        if (potentiallyDangerous) {
-          // SAFETY: Prevent OpenAI from generating fake property data
-          response = ResponseGenerator.addDataQualityWarning(
-            `I can only provide verified information from your property database. For specific details about buildings, units, leaseholders, or access codes, please use these exact query formats:
-
-• **"Who is the leaseholder of unit [number] at [building name]?"**
-• **"What are the access codes for [building name]?"**  
-• **"Show me my buildings"**
-• **"Show me my recent documents"**
-
-${ResponseGenerator.SAFETY_RESPONSES.unknown}`,
-            false,
-            "Anti-hallucination safety system"
-          );
+        // Check if this is asking for unit count
+        const isUnitCountQuery = /\b(how many|count|total|units?|flats?)\b/i.test(prompt) && 
+                                 (building || buildingFromQuery);
+        
+        if (isUnitCountQuery) {
+          const targetBuilding = building || buildingFromQuery;
+          if (targetBuilding) {
+            const result = await findUnitsInBuilding(targetBuilding, user.id);
+            response = UnifiedResponseGenerator.generateUnitsResponse(result);
+          } else {
+            response = `I need a building name to find unit count. Try: "How many units does Ashwood House have?"`;
+          }
+        } else if (unit && building) {
+          // This is actually a leaseholder query that wasn't caught by the parser
+          const result = await findLeaseholder(unit, building, user.id);
+          response = UnifiedResponseGenerator.generateLeaseholderResponse(result);
+        } else if (buildingFromQuery) {
+          // This is a building query
+          const result = await findBuilding(buildingFromQuery, user.id);
+          response = UnifiedResponseGenerator.generateBuildingResponse(result);
         } else {
           // Safe general property management advice only
           try {
@@ -524,7 +618,7 @@ You can only provide:
 
 For ANY specific property data (buildings, units, leaseholders, access codes), you MUST direct users to use the specific database query functions.
 
-Always include: "${ResponseGenerator.SAFETY_RESPONSES.legal}" for legal matters.`
+Always include: "For specific legal advice, please consult your property law solicitor." for legal matters.`
               }, {
                 role: 'user',
                 content: `General property management question: ${contextualPrompt}`
@@ -533,23 +627,13 @@ Always include: "${ResponseGenerator.SAFETY_RESPONSES.legal}" for legal matters.
               max_tokens: 800  // Shorter responses to limit hallucination risk
             });
 
-            const aiResponse = completion.choices[0].message?.content || ResponseGenerator.SAFETY_RESPONSES.unknown;
+            const aiResponse = completion.choices[0].message?.content || 'I can help with general property management questions, but for specific information about your properties, buildings, or leaseholders, please use the database query functions.';
             
-            response = ResponseGenerator.addDataQualityWarning(
-              aiResponse + `\n\n⚠️ **Note:** This is general guidance only. For specific property data, use the database query functions.`,
-              false,
-              "General property management AI (no specific property data)"
-            );
+            response = aiResponse + `\n\n⚠️ **Note:** This is general guidance only. For specific property data, use the database query functions.\n\n📊 **Source:** General property management AI (no specific property data)`;
 
           } catch (openaiError) {
             console.error('OpenAI error:', openaiError);
-            response = ResponseGenerator.addDataQualityWarning(
-              `I can help with general property management questions, but for specific information about your properties, buildings, or leaseholders, please use the database query functions.
-
-${ResponseGenerator.SAFETY_RESPONSES.unknown}`,
-              false,
-              "Error recovery system"
-            );
+            response = `I can help with general property management questions, but for specific information about your properties, buildings, or leaseholders, please use the database query functions.\n\n📊 **Source:** Error recovery system`;
           }
         }
     }
