@@ -14,8 +14,11 @@ export interface OutlookConnectionStatus {
 export async function checkOutlookConnection(): Promise<OutlookConnectionStatus> {
   
   try {
-    // Get the current user's session
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    // Get the current user's session - Safe destructuring to prevent "Right side of assignment cannot be destructured" error
+    const sessionResult = await supabase.auth.getSession();
+    const sessionData = sessionResult?.data || {}
+    const session = sessionData.session || null
+    const sessionError = sessionResult?.error || null
     
     if (sessionError || !session) {
       return { connected: false };
@@ -58,7 +61,11 @@ export async function checkOutlookConnection(): Promise<OutlookConnectionStatus>
  */
 export async function refreshOutlookToken(): Promise<boolean> {
   try {
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    // Safe destructuring to prevent "Right side of assignment cannot be destructured" error
+    const sessionResult = await supabase.auth.getSession();
+    const sessionData = sessionResult?.data || {}
+    const session = sessionData.session || null
+    const sessionError = sessionResult?.error || null
     
     if (sessionError || !session) {
       throw new Error('No active session');

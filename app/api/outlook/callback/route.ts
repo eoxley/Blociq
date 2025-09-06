@@ -6,8 +6,11 @@ import { saveUserOutlookTokens } from '@/lib/outlookAuth'
 export async function GET(request: NextRequest) {
   const supabase = createRouteHandlerClient({ cookies: () => cookies() })
   
-  // Get the current user's session
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+  // Get the current user's session - Safe destructuring to prevent "Right side of assignment cannot be destructured" error
+  const sessionResult = await supabase.auth.getSession()
+  const sessionData = sessionResult?.data || {}
+  const session = sessionData.session || null
+  const sessionError = sessionResult?.error || null
   
   if (sessionError || !session) {
     return NextResponse.redirect(new URL('/login?error=not_authenticated', request.url))

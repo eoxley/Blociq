@@ -12,8 +12,12 @@ export async function GET(req: NextRequest) {
     const cookieStore = cookies();
     const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
     
-    // Check authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    // Check authentication - Safe destructuring to prevent "Right side of assignment cannot be destructured" error
+    const authResult = await supabase.auth.getUser();
+    const authData = authResult?.data || {}
+    const user = authData.user || null
+    const authError = authResult?.error || null
+    
     if (authError || !user) {
       console.log('❌ Authentication failed for dashboard request');
       return NextResponse.json({ 
