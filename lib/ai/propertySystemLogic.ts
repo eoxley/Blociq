@@ -5,7 +5,7 @@ import { parseQueryIntent, isPropertyQuery, isDocumentQuery, type QueryIntent } 
 
 // Legacy interface for backward compatibility
 interface ProcessedQuery {
-  type: 'leaseholder' | 'access_codes' | 'service_charge' | 'building_info' | 'document_analysis' | 'general';
+  type: 'leaseholder' | 'access_codes' | 'service_charge' | 'building_info' | 'buildings' | 'documents' | 'document_analysis' | 'general';
   unit?: string;
   building?: string;
   confidence: number;
@@ -162,6 +162,9 @@ Bottom line: ${this.generateBottomLine(analysis)}`;
         break;
       case 'access_codes':
         legacyType = 'access_codes';
+        break;
+      case 'buildings_list':
+        legacyType = 'buildings'; // Map buildings_list to buildings to trigger the correct handler
         break;
       case 'building_info':
         legacyType = 'building_info';

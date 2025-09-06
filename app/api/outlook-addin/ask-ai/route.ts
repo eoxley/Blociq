@@ -12,39 +12,61 @@ class PropertyDatabase {
     try {
       console.log(`🔍 Searching for leaseholder: Unit ${unit} at ${building}`);
       
+      // First find the building ID by name
+      const { data: buildings } = await this.supabase
+        .from('buildings')
+        .select('id, name')
+        .ilike('name', `%${building}%`)
+        .limit(5);
+      
+      if (!buildings || buildings.length === 0) {
+        return { 
+          success: false, 
+          searchedUnit: unit,
+          searchedBuilding: building,
+          error: 'Building not found'
+        };
+      }
+      
+      const buildingIds = buildings.map(b => b.id);
+      console.log(`🏢 Found building IDs:`, buildingIds);
+      
       const searches = [
-        // Exact match
+        // Exact unit match in found buildings
         this.supabase
           .from('vw_units_leaseholders')
-          .select('*')
+          .select('*, building_id')
           .eq('unit_number', unit)
-          .ilike('building_name', `%${building}%`),
+          .in('building_id', buildingIds),
         
         // Alternative unit formats
         this.supabase
           .from('vw_units_leaseholders')
-          .select('*')
+          .select('*, building_id')
           .in('unit_number', [unit, `Flat ${unit}`, `Unit ${unit}`, `Apartment ${unit}`])
-          .ilike('building_name', `%${building}%`),
+          .in('building_id', buildingIds),
       ];
 
       for (const search of searches) {
         const { data, error } = await search.limit(5);
         if (!error && data && data.length > 0) {
-          return { success: true, data: data[0], allMatches: data };
+          // Add building name to the result
+          const matchedBuilding = buildings.find(b => b.id === data[0].building_id);
+          const result = { ...data[0], building_name: matchedBuilding?.name || building };
+          return { success: true, data: result, allMatches: data };
         }
       }
 
-      // If no exact matches, search for building to suggest alternatives
-      const { data: buildingMatches } = await this.supabase
+      // If no exact matches, suggest available units in the building
+      const { data: buildingUnits } = await this.supabase
         .from('vw_units_leaseholders')
-        .select('unit_number, building_name')
-        .ilike('building_name', `%${building}%`)
+        .select('unit_number, building_id')
+        .in('building_id', buildingIds)
         .limit(10);
 
       return { 
         success: false, 
-        suggestions: buildingMatches,
+        suggestions: buildingUnits,
         searchedUnit: unit,
         searchedBuilding: building
       };
@@ -64,7 +86,7 @@ class PropertyDatabase {
         .select(`
           id, name, address,
           entry_code, gate_code, 
-          access_notes, key_access_notes,
+          access_notes, key_access_notes, notes,
           building_manager_name, building_manager_phone
         `)
         .or(`name.ilike.%${building}%,address.ilike.%${building}%`)
@@ -91,7 +113,7 @@ class PropertyDatabase {
     try {
       const { data, error } = await this.supabase
         .from('buildings')
-        .select('id, name, address, total_units')
+        .select('id, name, address, unit_count')
         .order('name');
 
       if (error) {
@@ -201,7 +223,12 @@ Would you like me to search for similar building names or help you add this prop
     }
     
     if (building.access_notes) {
-      response += `\n📝 **Notes:** ${building.access_notes}`;
+      response += `\n📝 **Access notes:** ${building.access_notes}`;
+      hasAccessInfo = true;
+    }
+    
+    if (building.notes) {
+      response += `\n📝 **Notes:** ${building.notes}`;
       hasAccessInfo = true;
     }
     
@@ -235,7 +262,7 @@ Would you like me to search for similar building names or help you add this prop
     let response = `🏢 **Your property portfolio:**\n`;
     
     result.data.forEach((building: any) => {
-      response += `\n• **${building.name}** (${building.total_units || 0} units)`;
+      response += `\n• **${building.name}** (${building.unit_count || 0} units)`;
       if (building.address) {
         response += `\n  📍 ${building.address}`;
       }
