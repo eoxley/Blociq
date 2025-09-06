@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { X, FileText, Calendar, DollarSign, Shield, AlertTriangle, Edit3, CheckCircle, Link, Download } from 'lucide-react';
+import { X, FileText, Calendar, DollarSign, Shield, AlertTriangle, Edit3, CheckCircle, Link, Download, Minimize2, Maximize2 } from 'lucide-react';
 import { DocumentJob } from '../LeaseLabClient';
 
 interface AnalysisDrawerProps {
@@ -13,6 +13,7 @@ interface AnalysisDrawerProps {
 export default function AnalysisDrawer({ job, onClose, onAttachToBuilding }: AnalysisDrawerProps) {
   const [activeTab, setActiveTab] = useState('overview');
   const [isAttaching, setIsAttaching] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
 
   const summary = job.summary_json || {};
 
@@ -35,6 +36,19 @@ export default function AnalysisDrawer({ job, onClose, onAttachToBuilding }: Ana
       setIsAttaching(false);
       onClose();
     }, 1000);
+  };
+
+  const handleMinimize = () => {
+    setIsMinimized(true);
+  };
+
+  const handleRestore = () => {
+    setIsMinimized(false);
+  };
+
+  const handleClose = () => {
+    setIsMinimized(false);
+    onClose();
   };
 
   const renderOverview = () => (
@@ -123,9 +137,53 @@ export default function AnalysisDrawer({ job, onClose, onAttachToBuilding }: Ana
     }
   };
 
+  // If minimized, show a compact header at the bottom
+  if (isMinimized) {
+    return (
+      <div className="fixed bottom-4 right-4 z-50">
+        <div 
+          className="bg-white rounded-lg shadow-lg border border-gray-200 p-4 max-w-sm cursor-pointer hover:shadow-xl transition-shadow"
+          onClick={handleRestore}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center space-x-2">
+              <FileText className="h-5 w-5 text-blue-600" />
+              <span className="font-medium text-gray-900 truncate">{job.filename}</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRestore();
+                }}
+                className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                title="Restore"
+              >
+                <Maximize2 className="h-4 w-4" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleClose();
+                }}
+                className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                title="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+          <div className="text-xs text-gray-500">
+            Analysis Complete • Click to restore
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
-      <div className="absolute inset-0 bg-black bg-opacity-50" onClick={onClose}></div>
+      <div className="absolute inset-0 bg-black bg-opacity-50" onClick={handleClose}></div>
       
       <div className="absolute right-0 top-0 h-full w-full max-w-4xl bg-white shadow-xl">
         <div className="flex flex-col h-full">
@@ -147,8 +205,16 @@ export default function AnalysisDrawer({ job, onClose, onAttachToBuilding }: Ana
                 <span>{job.linked_building_id ? 'Attached' : 'Attach to Building'}</span>
               </button>
               <button
-                onClick={onClose}
+                onClick={handleMinimize}
                 className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Minimize"
+              >
+                <Minimize2 className="h-5 w-5" />
+              </button>
+              <button
+                onClick={handleClose}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Close"
               >
                 <X className="h-5 w-5" />
               </button>
