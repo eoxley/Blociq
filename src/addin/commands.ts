@@ -71,66 +71,40 @@ export function showChatPaneCompose(event: any) {
  */
 export async function onGenerateReplyFromRead(event: Office.AddinCommands.Event) {
   try {
-    console.log('Generating AI reply from read message');
-    
     const item = Office.context.mailbox.item as Office.MessageRead;
-    
-    // Extract message details
+
+    // Grab minimal context
     const context = {
       subject: item.subject,
-      from: item.from?.emailAddress?.address,
-      to: item.to?.map(t => t.emailAddress) || [],
-      cc: item.cc?.map(c => c.emailAddress) || [],
-      bodyPreview: item.bodyPreview || '',
-      intent: 'REPLY'
+      from: item.from?.emailAddress,
+      bodyPreview: item.bodyPreview,
+      intent: "REPLY",
     };
-    
-    console.log('Message context:', context);
-    
-    // Call the generate-reply API
-    const response = await fetch('/api/generate-reply', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(context)
+
+    // Call your existing Ask BlocIQ AI
+    const res = await fetch("/api/ask-ai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(context),
     });
-    
-    const result = await response.json();
-    
-    if (!result.success) {
-      throw new Error(result.message || 'Failed to generate reply');
-    }
-    
-    console.log('Generated reply:', result);
-    
-    // Display reply form with suggested subject
-    await item.displayReplyAllForm(result.subjectSuggestion || `Re: ${item.subject}`);
-    
-    // Set the reply body after a short delay to ensure the form is ready
+    const { text: draftHtml } = await res.json();
+
+    // Open a reply form and inject the draft
+    await item.displayReplyForm(""); // reply (not reply-all)
     setTimeout(() => {
-      const composeItem = Office.context.mailbox.item as Office.MessageCompose;
-      composeItem.body.setAsync(
-        result.draftHtml,
+      (Office.context.mailbox.item as Office.MessageCompose).body.setAsync(
+        draftHtml,
         { coercionType: Office.CoercionType.Html },
-        () => {
-          console.log('Reply body set successfully');
-          event.completed();
-        }
+        () => event.completed()
       );
     }, 300);
-    
-  } catch (error) {
-    console.error('Error generating reply:', error);
-    
-    // Show error notification
-    const item = Office.context.mailbox.item as Office.MessageRead;
-    item.notificationMessages.replaceAsync('bqFail', {
+  } catch (e) {
+    Office.context.mailbox.item.notificationMessages.replaceAsync("bqFail", {
       type: Office.MailboxEnums.ItemNotificationMessageType.InformationalMessage,
       message: "Couldn't generate a reply. Please try again.",
-      icon: 'icon16',
-      persistent: false
-    }, () => {
-      event.completed();
-    });
+      icon: "icon16",
+      persistent: false,
+    }, () => event.completed());
   }
 }
 
@@ -139,21 +113,9 @@ export async function onGenerateReplyFromRead(event: Office.AddinCommands.Event)
  */
 export async function onGenerateIntoCompose(event: Office.AddinCommands.Event) {
   try {
-    console.log('Generating AI reply into compose message');
-    
     const item = Office.context.mailbox.item as Office.MessageCompose;
-    
+
     // Get current compose details
-    const toRecipients = await new Promise<string[]>((resolve) => {
-      item.to.getAsync((result) => {
-        if (result.status === Office.AsyncResultStatus.Succeeded) {
-          resolve(result.value.map(r => r.emailAddress));
-        } else {
-          resolve([]);
-        }
-      });
-    });
-    
     const subject = await new Promise<string>((resolve) => {
       item.subject.getAsync((result) => {
         if (result.status === Office.AsyncResultStatus.Succeeded) {
@@ -173,37 +135,26 @@ export async function onGenerateIntoCompose(event: Office.AddinCommands.Event) {
         }
       });
     });
-    
-    // Extract compose details
+
+    // Grab minimal context
     const context = {
       subject: subject || 'New message',
       from: 'Compose message',
-      to: toRecipients,
-      cc: [],
       bodyPreview: bodyPreview,
-      intent: 'REPLY'
+      intent: "REPLY",
     };
-    
-    console.log('Compose context:', context);
-    
-    // Call the generate-reply API
-    const response = await fetch('/api/generate-reply', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(context)
+
+    // Call your existing Ask BlocIQ AI
+    const res = await fetch("/api/ask-ai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(context),
     });
-    
-    const result = await response.json();
-    
-    if (!result.success) {
-      throw new Error(result.message || 'Failed to generate reply');
-    }
-    
-    console.log('Generated reply:', result);
-    
+    const { text: draftHtml } = await res.json();
+
     // Insert the reply into the current compose body
     item.body.setAsync(
-      result.draftHtml,
+      draftHtml,
       { coercionType: Office.CoercionType.Html },
       (result: any) => {
         if (result.status === Office.AsyncResultStatus.Succeeded) {
@@ -215,19 +166,13 @@ export async function onGenerateIntoCompose(event: Office.AddinCommands.Event) {
       }
     );
     
-  } catch (error) {
-    console.error('Error generating reply:', error);
-    
-    // Show error notification
-    const item = Office.context.mailbox.item as Office.MessageCompose;
-    item.notificationMessages.replaceAsync('bqFail', {
+  } catch (e) {
+    Office.context.mailbox.item.notificationMessages.replaceAsync("bqFail", {
       type: Office.MailboxEnums.ItemNotificationMessageType.InformationalMessage,
       message: "Couldn't generate a reply. Please try again.",
-      icon: 'icon16',
-      persistent: false
-    }, () => {
-      event.completed();
-    });
+      icon: "icon16",
+      persistent: false,
+    }, () => event.completed());
   }
 }
 
