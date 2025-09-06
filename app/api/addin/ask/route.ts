@@ -1,3 +1,10 @@
+/**
+ * Outlook Add-in Ask API Route
+ * 
+ * Handles Q&A and reply generation with strict domain locking
+ * and deterministic fact-based responses.
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { parseAddinIntent } from '@/ai/intent/parseAddinIntent';
@@ -9,19 +16,21 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { 
-      prompt, 
-      contextType = 'general',
-      building_id,
-      emailContext,
+      userInput, 
+      outlookContext, 
       userSettings 
     } = body;
 
-    if (!prompt) {
-      return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
+    if (!userInput || typeof userInput !== 'string') {
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid input',
+        message: 'User input is required'
+      }, { status: 400 });
     }
 
     // Process user input for acronyms and domain validation
-    const processed = processUserInput(prompt);
+    const processed = processUserInput(userInput);
     
     // Check if out of scope
     if (processed.isOutOfScope) {
@@ -51,7 +60,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse intent
-    const intent = parseAddinIntent(processed.processedInput, emailContext);
+    const intent = parseAddinIntent(processed.processedInput, outlookContext);
     
     // Validate intent
     const validation = validateIntent(intent);
@@ -66,17 +75,17 @@ export async function POST(request: NextRequest) {
 
     // Route to appropriate handler
     if (intent.intent === 'reply') {
-      return await handleReplyIntent(processed.processedInput, emailContext, userSettings, building_id);
+      return await handleReplyIntent(processed.processedInput, outlookContext, userSettings);
     } else {
-      return await handleQAIntent(processed.processedInput, emailContext, userSettings, building_id);
+      return await handleQAIntent(processed.processedInput, outlookContext, userSettings);
     }
 
   } catch (error) {
-    console.error('[Addin Ask AI] Error:', error);
-    
+    console.error('Add-in Ask API error:', error);
     return NextResponse.json({
-      error: 'Failed to process request',
-      message: error instanceof Error ? error.message : 'Unknown error occurred'
+      success: false,
+      error: 'Internal server error',
+      message: 'An unexpected error occurred'
     }, { status: 500 });
   }
 }
@@ -86,16 +95,15 @@ export async function POST(request: NextRequest) {
  */
 async function handleQAIntent(
   userInput: string,
-  emailContext?: any,
-  userSettings?: any,
-  buildingId?: string
+  outlookContext?: any,
+  userSettings?: any
 ): Promise<NextResponse> {
   try {
     // Create Q&A adapter
     const qaAdapter = createAddinQAAdapter();
     
     // Get answer
-    const result = await qaAdapter.answerQuestion(userInput, emailContext, userSettings);
+    const result = await qaAdapter.answerQuestion(userInput, outlookContext, userSettings);
     
     return NextResponse.json({
       success: true,
@@ -128,24 +136,23 @@ async function handleQAIntent(
  */
 async function handleReplyIntent(
   userInput: string,
-  emailContext?: any,
-  userSettings?: any,
-  buildingId?: string
+  outlookContext?: any,
+  userSettings?: any
 ): Promise<NextResponse> {
   try {
     // Extract building context
-    const buildingContext = extractBuildingContext(userInput, emailContext);
+    const buildingContext = extractBuildingContext(userInput, outlookContext);
     
     // Get building ID if we have building name
-    let resolvedBuildingId: string | undefined = buildingId;
-    if (buildingContext.buildingName && !resolvedBuildingId) {
-      resolvedBuildingId = await getBuildingId(buildingContext.buildingName);
+    let buildingId: string | undefined;
+    if (buildingContext.buildingName) {
+      buildingId = await getBuildingId(buildingContext.buildingName);
     }
     
     // Get lease summary if available
     let leaseSummary = null;
-    if (resolvedBuildingId) {
-      leaseSummary = await getLeaseSummary(resolvedBuildingId);
+    if (buildingId) {
+      leaseSummary = await getLeaseSummary(buildingId);
     }
     
     // Create reply adapter
@@ -154,10 +161,10 @@ async function handleReplyIntent(
     // Generate reply
     const result = await replyAdapter.generateReply({
       userInput,
-      emailContext,
+      outlookContext,
       buildingContext: {
         ...buildingContext,
-        buildingId: resolvedBuildingId
+        buildingId
       },
       leaseSummary,
       userSettings
@@ -229,12 +236,12 @@ async function getLeaseSummary(buildingId: string): Promise<any | null> {
 }
 
 /**
- * Extract building context from input or email context
+ * Extract building context from input or Outlook context
  */
-function extractBuildingContext(input: string, emailContext?: any): {
+function extractBuildingContext(input: string, outlookContext?: any): {
   buildingName?: string;
   unitNumber?: string;
-  source: 'input' | 'email' | 'none';
+  source: 'input' | 'outlook' | 'none';
 } {
   // Try to extract from input first
   const buildingRegex = /(?:building|property|block)\s+(?:called\s+)?([A-Za-z\s]+?)(?:\s|$|,|\.)/i;
@@ -251,16 +258,16 @@ function extractBuildingContext(input: string, emailContext?: any): {
     };
   }
   
-  // Try to extract from email context
-  if (emailContext?.subject) {
-    const subjectBuildingMatch = emailContext.subject.match(buildingRegex);
-    const subjectUnitMatch = emailContext.subject.match(unitRegex);
+  // Try to extract from Outlook context
+  if (outlookContext?.subject) {
+    const subjectBuildingMatch = outlookContext.subject.match(buildingRegex);
+    const subjectUnitMatch = outlookContext.subject.match(unitRegex);
     
     if (subjectBuildingMatch || subjectUnitMatch) {
       return {
         buildingName: subjectBuildingMatch?.[1]?.trim(),
         unitNumber: subjectUnitMatch?.[1]?.trim(),
-        source: 'email'
+        source: 'outlook'
       };
     }
   }
@@ -293,17 +300,4 @@ function validateIntent(intent: any): {
     suggestions: suggestions.length > 0 ? suggestions : undefined,
     warnings: warnings.length > 0 ? warnings : undefined
   };
-}
-
-// Handle OPTIONS for CORS
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      'Access-Control-Allow-Credentials': 'true',
-    },
-  });
 }

@@ -18,6 +18,7 @@
     "test:unit": "vitest run tests/unit --reporter=dot",
     "test:integration": "vitest run tests/integration --reporter=dot",
     "test:all": "npm run test:unit && npm run test:integration && npm run test:smoke",
+    "test:addin": "node scripts/test-addin-domain-lock.js",
     "clear-cache": "node scripts/clear-cache.js",
     "seed:compliance": "tsx scripts/seedComplianceAssets.ts",
     "check:compliance": "tsx scripts/checkComplianceAssets.ts",
