@@ -1,4 +1,5 @@
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { Database } from '@/types/supabase'
 
@@ -38,4 +39,22 @@ export async function createClient(cookieStore?: any) {
   serverInstances.set(cookieKey, instance)
   
   return instance
+}
+
+// Service role client for admin operations (no auth required)
+let serviceRoleClient: ReturnType<typeof createSupabaseClient<Database>> | null = null
+
+export function getServiceRoleClient() {
+  if (!serviceRoleClient) {
+    serviceRoleClient = createSupabaseClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          persistSession: false
+        }
+      }
+    )
+  }
+  return serviceRoleClient
 }

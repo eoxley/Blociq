@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createClient } from '@/utils/supabase/server';
+import { getTimeWindow, isValidTimeRange, type TimeRange } from '@/lib/utils/timeWindow';
 import { createGraphHeadersForUser } from '@/lib/outlookAuth';
 
 export const maxDuration = 60; // 1 minute timeout for dashboard queries
@@ -9,13 +9,11 @@ export async function GET(req: NextRequest) {
   try {
     console.log('📊 Fetching inbox dashboard data...');
     
-    const supabase = createRouteHandlerClient({ cookies });
+    // Use the shared server client (renamed from 't' to 'db' to avoid shadowing)
+    const db = await createClient();
     
-    // Check authentication - Safe destructuring to prevent "Right side of assignment cannot be destructured" error
-    const authResult = await supabase.auth.getUser();
-    const authData = authResult?.data || {}
-    const user = authData.user || null
-    const authError = authResult?.error || null
+    // Check authentication
+    const { data: { user }, error: authError } = await db.auth.getUser();
     
     if (authError || !user) {
       console.log('❌ Authentication failed for dashboard request');
@@ -27,31 +25,17 @@ export async function GET(req: NextRequest) {
 
     console.log('✅ User authenticated:', user.id);
 
-    // Get query parameters
+    // Get and validate time range
     const { searchParams } = new URL(req.url);
-    const timeRange = searchParams.get('timeRange') || 'week';
+    const timeRangeParam = searchParams.get('timeRange') || 'week';
+    const timeRange: TimeRange = isValidTimeRange(timeRangeParam) ? timeRangeParam : 'week';
 
-    // Calculate date range
-    const now = new Date();
-    const startDate = new Date();
-    switch (timeRange) {
-      case 'today':
-        startDate.setHours(0, 0, 0, 0);
-        break;
-      case 'week':
-        startDate.setDate(now.getDate() - 7);
-        break;
-      case 'month':
-        startDate.setMonth(now.getMonth() - 1);
-        break;
-      default:
-        startDate.setDate(now.getDate() - 7); // Default to week
-    }
+    // Get time window
+    const { since, until } = getTimeWindow(timeRange);
+    console.log(`📅 Time window: ${since.toISOString()} to ${until?.toISOString() || 'now'}`);
 
-    console.log(`📅 Fetching emails from ${startDate.toISOString()} to ${now.toISOString()}`);
-
-    // Check agency membership first - Handle case where user might not be in agency_members table
-    const { data: agencyMember, error: agencyError } = await supabase
+    // Check agency membership
+    const { data: agencyMember, error: agencyError } = await db
       .from('agency_members')
       .select('agency_id, role')
       .eq('user_id', user.id)
@@ -59,48 +43,33 @@ export async function GET(req: NextRequest) {
     
     if (agencyError) {
       console.error('❌ Agency query error:', agencyError);
-      // If it's a "not found" error (PGRST116), that's expected for new users
+      
       if (agencyError.code === 'PGRST116') {
-        console.log('ℹ️ User not yet linked to agency - this is normal for new users');
+        console.log('ℹ️ User not yet linked to agency - returning empty dashboard');
         return NextResponse.json({
           success: true,
-          data: {
-            total: 0,
-            unread: 0,
-            handled: 0,
-            urgent: 0,
-            categories: {},
-            propertyBreakdown: {},
-            recentActivity: [],
-            smartSuggestions: [],
-            urgencyDistribution: { critical: 0, high: 0, medium: 0, low: 0 },
-            topProperties: [],
-            aiInsightsSummary: { totalInsights: 0, criticalInsights: 0, followUps: 0, recurringIssues: 0, complianceMatters: 0 }
-          },
+          data: createEmptyDashboard(),
+          timeRange,
           message: 'User not yet linked to agency - please complete setup',
           needsSetup: true
         });
       }
       
-      // For other errors, return error response
       return NextResponse.json({
         error: 'Database error',
         message: 'Failed to check agency membership',
-        details: agencyError.message
+        details: process.env.NODE_ENV === 'development' ? agencyError.message : 'Internal error'
       }, { status: 500 });
     }
 
     console.log('✅ User is member of agency:', agencyMember.agency_id);
 
-    // Fetch emails directly from Outlook via Graph API
-    console.log('🔍 Attempting to query Outlook via Microsoft Graph API...');
-    
+    // Fetch emails from Outlook via Graph API
     let emails = [];
     let emailsError = null;
     
     try {
-      // Fetch emails directly from the inbox using the well-known name
-      console.log(`📥 Fetching messages from Inbox`);
+      console.log('🔍 Querying Outlook via Microsoft Graph API...');
       
       const headers = await createGraphHeadersForUser(user.id);
       const messagesResponse = await fetch(
@@ -109,13 +78,12 @@ export async function GET(req: NextRequest) {
       );
       
       if (!messagesResponse.ok) {
-        console.error('❌ Error fetching messages: Status', messagesResponse.status);
         throw new Error(`Failed to fetch messages: ${messagesResponse.status}`);
       }
 
       const messagesData = await messagesResponse.json();
       
-      // Transform Outlook messages to match expected format
+      // Transform Outlook messages to expected format
       const outlookEmails = messagesData.value?.map((msg: any) => ({
         id: msg.id,
         subject: msg.subject || 'No Subject',
@@ -124,7 +92,7 @@ export async function GET(req: NextRequest) {
         body: msg.bodyPreview || '',
         received_at: msg.receivedDateTime,
         is_read: msg.isRead || false,
-        building_id: null, // Not available from Outlook
+        building_id: null,
         urgency_level: msg.importance === 'high' ? 'high' : 'low',
         urgency_score: msg.importance === 'high' ? 8 : 2,
         mentioned_properties: [],
@@ -134,18 +102,13 @@ export async function GET(req: NextRequest) {
         triage_category: 'General'
       })) || [];
 
-      // Filter emails by time range
+      // Filter emails by time window
       emails = outlookEmails.filter((email: any) => {
         const receivedDate = new Date(email.received_at);
-        return receivedDate >= startDate && receivedDate <= now;
+        return receivedDate >= since && (until ? receivedDate < until : true);
       });
 
-      console.log('📊 Live Outlook query result:', { 
-        totalFetched: outlookEmails.length,
-        emailCount: emails.length, 
-        hasError: false,
-        timeFiltered: `${outlookEmails.length} -> ${emails.length}`
-      });
+      console.log(`📊 Outlook query result: ${outlookEmails.length} total, ${emails.length} in time window`);
 
     } catch (error) {
       console.error('❌ Error fetching from Outlook:', error);
@@ -153,31 +116,30 @@ export async function GET(req: NextRequest) {
       
       // Check if it's a "No Outlook connection" error
       if (error instanceof Error && error.message.includes('No Outlook connection found')) {
-        console.log('📝 No Outlook connection found - user needs to connect');
         return NextResponse.json({
           success: true,
           data: createEmptyDashboard(),
           timeRange,
           message: 'Please connect your Outlook account to view email data',
           needsConnect: true,
-          outlookConnectionRequired: true,
-          generatedAt: new Date().toISOString()
+          outlookConnectionRequired: true
         });
       }
       
-      // Fallback: Try to get emails from database if Microsoft Graph fails
+      // Fallback to database
       try {
         console.log('🔄 Falling back to database emails...');
-        const { data: dbEmails, error: dbError } = await supabase
+        const { data: dbEmails, error: dbError } = await db
           .from('incoming_emails')
           .select('*')
           .eq('user_id', user.id)
           .eq('is_deleted', false)
+          .gte('received_at', since.toISOString())
           .order('received_at', { ascending: false })
           .limit(100);
         
         if (dbError) {
-          console.error('❌ Database fallback also failed:', dbError);
+          console.error('❌ Database fallback failed:', dbError);
           emails = [];
         } else {
           console.log('✅ Database fallback successful:', dbEmails?.length || 0, 'emails');
@@ -189,146 +151,32 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Use the emails directly from Outlook (they already have AI fields populated)
-    let enhancedEmails = emails;
-
-    if (emailsError) {
-      console.error('❌ Error fetching emails:', emailsError);
-      
-      // Handle specific Outlook connection errors gracefully
-      if (emailsError.message?.includes('401') || emailsError.message?.includes('403')) {
-        // Authentication error - Outlook not connected or expired
-        return NextResponse.json({
-          success: true,
-          data: createEmptyDashboard(),
-          timeRange,
-          message: 'Please connect your Outlook account to view email data',
-          outlookConnectionRequired: true,
-          generatedAt: new Date().toISOString()
-        });
-      }
-      
-      if (emailsError.message?.includes('Failed to fetch folders') || emailsError.message?.includes('Failed to fetch messages')) {
-        // Outlook API error
-        return NextResponse.json({
-          error: 'Outlook connection error',
-          message: 'Unable to fetch emails from Outlook. Please try reconnecting your account.',
-          details: emailsError.message,
-          timestamp: new Date().toISOString()
-        }, { status: 503 });
-      }
-      
-      // For other errors, throw to be caught by main catch block
-      throw emailsError;
-    }
-
-    console.log(`✅ Fetched ${enhancedEmails?.length || 0} emails for dashboard`);
-
-    // No building mapping needed for live Outlook emails
-    const buildingsMap = {};
-
-    // Process data for dashboard with enhanced triage integration
-    let dashboard;
-    try {
-      dashboard = processDashboardData(enhancedEmails || [], buildingsMap);
-      console.log('✅ Dashboard data processed:', {
-        total: dashboard.total,
-        urgent: dashboard.urgent,
-        categories: Object.keys(dashboard.categories).length,
-        properties: Object.keys(dashboard.propertyBreakdown).length,
-        suggestions: dashboard.smartSuggestions.length
-      });
-    } catch (processingError) {
-      console.error('❌ Error processing dashboard data:', processingError);
-      // Return a minimal dashboard with safe defaults
-      dashboard = {
-        total: enhancedEmails?.length || 0,
-        unread: enhancedEmails?.filter(e => e?.is_read === false).length || 0,
-        handled: 0, // handled field not available in current schema
-        urgent: enhancedEmails?.filter(e => ['critical', 'high'].includes(e?.urgency_level || 'low')).length || 0,
-        categories: {},
-        propertyBreakdown: {},
-        recentActivity: [],
-        smartSuggestions: [],
-        urgencyDistribution: {
-          critical: 0,
-          high: 0,
-          medium: 0,
-          low: 0
-        },
-        topProperties: [],
-        aiInsightsSummary: {
-          totalInsights: 0,
-          criticalInsights: 0,
-          followUps: 0,
-          recurringIssues: 0,
-          complianceMatters: 0
-        }
-      };
-    }
-
-    // Ensure all required keys are present with safe defaults
-    const safeDashboard = {
-      total: Number.isFinite(dashboard?.total) ? dashboard.total : 0,
-      unread: Number.isFinite(dashboard?.unread) ? dashboard.unread : 0,
-      handled: Number.isFinite(dashboard?.handled) ? dashboard.handled : 0,
-      urgent: Number.isFinite(dashboard?.urgent) ? dashboard.urgent : 0,
-      categories: dashboard?.categories && typeof dashboard.categories === 'object' ? dashboard.categories : {},
-      propertyBreakdown: dashboard?.propertyBreakdown && typeof dashboard.propertyBreakdown === 'object' ? dashboard.propertyBreakdown : {},
-      recentActivity: Array.isArray(dashboard?.recentActivity) ? dashboard.recentActivity : [],
-      smartSuggestions: Array.isArray(dashboard?.smartSuggestions) ? dashboard.smartSuggestions : [],
-      urgencyDistribution: dashboard?.urgencyDistribution && typeof dashboard.urgencyDistribution === 'object' ? dashboard.urgencyDistribution : {
-        critical: 0, high: 0, medium: 0, low: 0
-      },
-      topProperties: Array.isArray(dashboard?.topProperties) ? dashboard.topProperties : [],
-      aiInsightsSummary: dashboard?.aiInsightsSummary && typeof dashboard.aiInsightsSummary === 'object' ? dashboard.aiInsightsSummary : {
-        totalInsights: 0, criticalInsights: 0, followUps: 0, recurringIssues: 0, complianceMatters: 0
-      }
-    };
+    // Process dashboard data
+    const dashboard = processDashboardData(emails, {});
 
     return NextResponse.json({
       success: true,
-      data: safeDashboard,
+      data: dashboard,
       timeRange,
       generatedAt: new Date().toISOString()
     });
 
   } catch (error) {
     console.error('❌ Dashboard API error:', error);
-    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack available');
-    
-    // Provide more specific error information for debugging
-    let errorMessage = 'An unexpected error occurred. Please try again.';
-    let errorDetails = 'Unknown error';
-    
-    if (error instanceof Error) {
-      errorDetails = error.message;
-      
-      // Check for specific error types
-      if (error.message.includes('column') || error.message.includes('table')) {
-        errorMessage = 'Database schema error - please contact support.';
-      } else if (error.message.includes('timeout') || error.message.includes('ETIMEDOUT')) {
-        errorMessage = 'Database connection timeout - please try again.';
-      } else if (error.message.includes('permission') || error.message.includes('auth')) {
-        errorMessage = 'Database permissions error - please log in again.';
-      }
-    }
     
     return NextResponse.json({
       success: false,
       error: 'Failed to fetch dashboard data',
-      message: errorMessage,
-      details: errorDetails,
-      data: createEmptyDashboard(), // Always provide fallback data structure
+      message: 'An unexpected error occurred. Please try again.',
+      details: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : 'Unknown error') : undefined,
+      data: createEmptyDashboard(),
       timestamp: new Date().toISOString()
     }, { status: 500 });
   }
 }
 
 function processDashboardData(emails: any[], buildingsMap: any) {
-  // Ensure inputs are safe arrays/objects
   const safeEmails = Array.isArray(emails) ? emails.filter(e => e && typeof e === 'object') : [];
-  const safeBuildingsMap = buildingsMap && typeof buildingsMap === 'object' ? buildingsMap : {};
   
   const dashboard = {
     total: safeEmails.length,
@@ -355,21 +203,17 @@ function processDashboardData(emails: any[], buildingsMap: any) {
     }
   };
 
-  // Group by categories using enhanced AI tags with safe fallbacks
+  // Group by categories
   const categoryGroups: { [key: string]: any[] } = {};
   safeEmails.forEach(email => {
-    try {
-      const category = email?.ai_tag || email?.triage_category || 'General';
-      if (!categoryGroups[category]) {
-        categoryGroups[category] = [];
-      }
-      categoryGroups[category].push(email);
-    } catch (error) {
-      console.warn('Error processing email for categories:', error, email?.id);
+    const category = email?.ai_tag || email?.triage_category || 'General';
+    if (!categoryGroups[category]) {
+      categoryGroups[category] = [];
     }
+    categoryGroups[category].push(email);
   });
 
-  // Build enhanced category summary
+  // Build category summary
   Object.entries(categoryGroups).forEach(([category, categoryEmails]) => {
     const properties = new Set<string>();
     const urgencyScores = categoryEmails.map(e => e.urgency_score || 0);
@@ -377,68 +221,40 @@ function processDashboardData(emails: any[], buildingsMap: any) {
       ? urgencyScores.reduce((a, b) => a + b, 0) / urgencyScores.length 
       : 0;
 
-    // Extract properties from various sources with safe fallbacks
-    categoryEmails.forEach(email => {
-      try {
-        // From building relationship
-        if (email?.building_id && safeBuildingsMap?.[email.building_id]?.name) {
-          properties.add(safeBuildingsMap[email.building_id].name);
-        }
-        
-        // From mentioned_properties array (with safe array check)
-        if (email?.mentioned_properties && Array.isArray(email.mentioned_properties)) {
-          email.mentioned_properties.forEach((prop: any) => {
-            if (prop && typeof prop === 'string' && prop.trim()) {
-              properties.add(prop.trim());
-            }
-          });
-        }
-      } catch (error) {
-        console.warn('Error extracting properties from email:', error, email?.id);
-      }
-    });
-
     dashboard.categories[category] = {
       count: categoryEmails.length,
       urgent: categoryEmails.filter(e => ['critical', 'high'].includes(e.urgency_level || 'low')).length,
       unread: categoryEmails.filter(e => e.is_read === false).length,
-      handled: 0, // handled field not available in current schema
+      handled: 0,
       avgUrgencyScore: Math.round(avgUrgencyScore * 10) / 10,
-      properties: Array.from(properties).slice(0, 5), // Show top 5
+      properties: Array.from(properties).slice(0, 5),
       samples: categoryEmails.slice(0, 3).map(e => ({
         subject: e.subject || 'No Subject',
         urgencyLevel: e.urgency_level || 'low',
         received: e.received_at
       })),
-      trend: calculateCategoryTrend(categoryEmails)
+      trend: 'stable'
     };
   });
 
-  // Enhanced property breakdown using building relationships and mentions
+  // Property breakdown
   const propertyGroups: { [key: string]: any[] } = {};
   safeEmails.forEach(email => {
-    try {
-      let propertyName = 'Unknown Property';
-      
-      // Primary: Use building relationship
-      if (email?.building_id && safeBuildingsMap?.[email.building_id]?.name) {
-        propertyName = safeBuildingsMap[email.building_id].name;
+    let propertyName = 'Unknown Property';
+    
+    if (email?.building_id && buildingsMap?.[email.building_id]?.name) {
+      propertyName = buildingsMap[email.building_id].name;
+    } else if (email?.mentioned_properties && Array.isArray(email.mentioned_properties) && email.mentioned_properties.length > 0) {
+      const firstProperty = email.mentioned_properties[0];
+      if (firstProperty && typeof firstProperty === 'string' && firstProperty.trim()) {
+        propertyName = firstProperty.trim();
       }
-      // Secondary: Use first mentioned property (with safe array check)
-      else if (email?.mentioned_properties && Array.isArray(email.mentioned_properties) && email.mentioned_properties.length > 0) {
-        const firstProperty = email.mentioned_properties[0];
-        if (firstProperty && typeof firstProperty === 'string' && firstProperty.trim()) {
-          propertyName = firstProperty.trim();
-        }
-      }
-      
-      if (!propertyGroups[propertyName]) {
-        propertyGroups[propertyName] = [];
-      }
-      propertyGroups[propertyName].push(email);
-    } catch (error) {
-      console.warn('Error processing email for property groups:', error, email?.id);
     }
+    
+    if (!propertyGroups[propertyName]) {
+      propertyGroups[propertyName] = [];
+    }
+    propertyGroups[propertyName].push(email);
   });
 
   Object.entries(propertyGroups).forEach(([property, propertyEmails]) => {
@@ -464,144 +280,57 @@ function processDashboardData(emails: any[], buildingsMap: any) {
   // Sort properties by urgency and volume for top properties
   dashboard.topProperties = Object.entries(dashboard.propertyBreakdown)
     .sort(([, a]: [string, any], [, b]: [string, any]) => {
-      // Sort by urgent count first, then total count
       if (b.urgent !== a.urgent) return b.urgent - a.urgent;
       return b.count - a.count;
     })
     .slice(0, 5)
     .map(([name, data]) => ({ name, ...data }));
 
-  // Enhanced recent activity with AI context and safe fallbacks
+  // Recent activity
   dashboard.recentActivity = safeEmails.slice(0, 15).map(email => {
-    try {
-      let propertyName = 'Unknown';
-      
-      if (email?.building_id && safeBuildingsMap?.[email.building_id]?.name) {
-        propertyName = safeBuildingsMap[email.building_id].name;
-      } else if (email?.mentioned_properties && Array.isArray(email.mentioned_properties) && email.mentioned_properties.length > 0) {
-        const firstProp = email.mentioned_properties[0];
-        if (firstProp && typeof firstProp === 'string' && firstProp.trim()) {
-          propertyName = firstProp.trim();
-        }
+    let propertyName = 'Unknown';
+    
+    if (email?.building_id && buildingsMap?.[email.building_id]?.name) {
+      propertyName = buildingsMap[email.building_id].name;
+    } else if (email?.mentioned_properties && Array.isArray(email.mentioned_properties) && email.mentioned_properties.length > 0) {
+      const firstProp = email.mentioned_properties[0];
+      if (firstProp && typeof firstProp === 'string' && firstProp.trim()) {
+        propertyName = firstProp.trim();
       }
-
-      return {
-        id: email?.id || 'unknown',
-        time: formatTimeAgo(email?.received_at || new Date().toISOString()),
-        type: getActivityType(email),
-        subject: email?.subject || 'No Subject',
-        property: propertyName,
-        urgencyLevel: email?.urgency_level || 'low',
-        urgencyScore: email?.urgency_score || 0,
-        aiTag: email?.ai_tag || null,
-        category: email?.triage_category || null,
-        unread: email?.is_read === false,
-        handled: false // handled field not available in current schema
-      };
-    } catch (error) {
-      console.warn('Error processing recent activity for email:', error, email?.id);
-      return {
-        id: email?.id || 'error',
-        time: 'Unknown',
-        type: 'general',
-        subject: 'Error processing email',
-        property: 'Unknown',
-        urgencyLevel: 'low',
-        urgencyScore: 0,
-        aiTag: null,
-        category: null,
-        unread: false,
-        handled: false
-      };
     }
+
+    return {
+      id: email?.id || 'unknown',
+      time: formatTimeAgo(email?.received_at || new Date().toISOString()),
+      type: getActivityType(email),
+      subject: email?.subject || 'No Subject',
+      property: propertyName,
+      urgencyLevel: email?.urgency_level || 'low',
+      urgencyScore: email?.urgency_score || 0,
+      aiTag: email?.ai_tag || null,
+      category: email?.triage_category || null,
+      unread: email?.is_read === false,
+      handled: false
+    };
   });
 
-  // Process AI insights summary with safe fallbacks
-  safeEmails.forEach(email => {
-    try {
-      if (email?.ai_insights && Array.isArray(email.ai_insights)) {
-        dashboard.aiInsightsSummary.totalInsights += email.ai_insights.length;
-        
-        email.ai_insights.forEach((insight: any) => {
-          try {
-            if (insight && typeof insight === 'object') {
-              if (insight.priority === 'critical') {
-                dashboard.aiInsightsSummary.criticalInsights++;
-              }
-              if (insight.type === 'follow_up') {
-                dashboard.aiInsightsSummary.followUps++;
-              }
-              if (insight.type === 'recurring') {
-                dashboard.aiInsightsSummary.recurringIssues++;
-              }
-              if (insight.type === 'compliance') {
-                dashboard.aiInsightsSummary.complianceMatters++;
-              }
-            }
-          } catch (insightError) {
-            console.warn('Error processing insight:', insightError);
-          }
-        });
-      }
-    } catch (error) {
-      console.warn('Error processing AI insights for email:', error, email?.id);
-    }
-  });
-
-  // Generate enhanced smart suggestions
-  try {
-    dashboard.smartSuggestions = generateSmartSuggestions(safeEmails, dashboard);
-  } catch (error) {
-    console.warn('Error generating smart suggestions:', error);
-    dashboard.smartSuggestions = [];
-  }
+  // Generate smart suggestions
+  dashboard.smartSuggestions = generateSmartSuggestions(safeEmails, dashboard);
 
   return dashboard;
 }
 
 function getActivityType(email: any): string {
-  try {
-    const urgencyLevel = email?.urgency_level || 'low';
-    if (urgencyLevel === 'critical') return 'critical';
-    if (urgencyLevel === 'high') return 'urgent';
-    if (email?.ai_tag && typeof email.ai_tag === 'string') {
-      return email.ai_tag.toLowerCase().replace(/\s+/g, '_');
-    }
-    if (email?.triage_category && typeof email.triage_category === 'string') {
-      return email.triage_category.toLowerCase().replace(/\s+/g, '_');
-    }
-    return 'general';
-  } catch (error) {
-    console.warn('Error getting activity type:', error);
-    return 'general';
+  const urgencyLevel = email?.urgency_level || 'low';
+  if (urgencyLevel === 'critical') return 'critical';
+  if (urgencyLevel === 'high') return 'urgent';
+  if (email?.ai_tag && typeof email.ai_tag === 'string') {
+    return email.ai_tag.toLowerCase().replace(/\s+/g, '_');
   }
-}
-
-function calculateCategoryTrend(categoryEmails: any[]): 'up' | 'down' | 'stable' {
-  try {
-    if (!categoryEmails || categoryEmails.length === 0) return 'stable';
-    
-    // Simple trend calculation based on recent vs older emails
-    const now = Date.now();
-    const oneDayAgo = now - (24 * 60 * 60 * 1000);
-    
-    const recentCount = categoryEmails.filter(e => {
-      try {
-        return e?.received_at && new Date(e.received_at).getTime() > oneDayAgo;
-      } catch {
-        return false;
-      }
-    }).length;
-    
-    const olderCount = categoryEmails.length - recentCount;
-    
-    if (recentCount > olderCount * 1.5) return 'up';
-    if (recentCount < olderCount * 0.5) return 'down';
-    return 'stable';
-  } catch (error) {
-    console.warn('Error calculating category trend:', error);
-    return 'stable';
+  if (email?.triage_category && typeof email.triage_category === 'string') {
+    return email.triage_category.toLowerCase().replace(/\s+/g, '_');
   }
+  return 'general';
 }
 
 function generateSmartSuggestions(emails: any[], dashboard: any) {
@@ -631,23 +360,7 @@ function generateSmartSuggestions(emails: any[], dashboard: any) {
     });
   }
 
-  // Batch processing opportunities
-  const batchableCategories = ['service_charge', 'payment', 'maintenance'];
-  batchableCategories.forEach(category => {
-    const count = dashboard.categories[category]?.count || 0;
-    if (count > 4) {
-      suggestions.push({
-        type: 'batch_process',
-        title: 'Batch Processing Opportunity',
-        message: `${count} ${category.replace('_', ' ')} emails can be processed efficiently with templates`,
-        action: `Process ${category} batch`,
-        priority: 'medium',
-        icon: '📦'
-      });
-    }
-  });
-
-  // Follow-up needed suggestion with enhanced logic
+  // Follow-up needed suggestion
   const unreadOldCount = emails.filter(e => 
     e.is_read === false && 
     new Date(e.received_at) < new Date(Date.now() - 24 * 60 * 60 * 1000)
@@ -664,44 +377,7 @@ function generateSmartSuggestions(emails: any[], dashboard: any) {
     });
   }
 
-  // Compliance/legal priority suggestion
-  if (dashboard.aiInsightsSummary.complianceMatters > 0) {
-    suggestions.push({
-      type: 'compliance_priority',
-      title: 'Compliance Matters Detected',
-      message: `${dashboard.aiInsightsSummary.complianceMatters} compliance-related emails require attention`,
-      action: 'Review compliance items',
-      priority: 'high',
-      icon: '📋'
-    });
-  }
-
-  // Recurring issues pattern
-  if (dashboard.aiInsightsSummary.recurringIssues > 2) {
-    suggestions.push({
-      type: 'recurring_pattern',
-      title: 'Recurring Issues Pattern',
-      message: `${dashboard.aiInsightsSummary.recurringIssues} recurring issues detected - may need systematic review`,
-      action: 'Analyze patterns',
-      priority: 'medium',
-      icon: '🔄'
-    });
-  }
-
-  // Property hotspot suggestion
-  const hotspotProperty = dashboard.topProperties[0];
-  if (hotspotProperty && hotspotProperty.urgent > 2) {
-    suggestions.push({
-      type: 'property_hotspot',
-      title: 'Property Requiring Attention',
-      message: `${hotspotProperty.name} has ${hotspotProperty.urgent} urgent matters`,
-      action: `Review ${hotspotProperty.name}`,
-      priority: 'medium',
-      icon: '🏢'
-    });
-  }
-
-  return suggestions.slice(0, 6); // Limit to top 6 suggestions
+  return suggestions.slice(0, 6);
 }
 
 function createEmptyDashboard() {
