@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import { makeGraphRequest } from '@/lib/outlookAuth';
+import { createGraphHeadersForUser } from '@/lib/outlookAuth';
 
 export const maxDuration = 60; // 1 minute timeout for dashboard queries
 
@@ -103,8 +103,10 @@ export async function GET(req: NextRequest) {
       // Fetch emails directly from the inbox using the well-known name
       console.log(`📥 Fetching messages from Inbox`);
       
-      const messagesResponse = await makeGraphRequest(
-        `/me/mailFolders/inbox/messages?$select=id,subject,from,bodyPreview,receivedDateTime,isRead,importance&$orderby=receivedDateTime desc&$top=100`
+      const headers = await createGraphHeadersForUser(user.id);
+      const messagesResponse = await fetch(
+        `https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$select=id,subject,from,bodyPreview,receivedDateTime,isRead,importance&$orderby=receivedDateTime desc&$top=100`,
+        { headers }
       );
       
       if (!messagesResponse.ok) {
@@ -164,7 +166,28 @@ export async function GET(req: NextRequest) {
         });
       }
       
-      emails = [];
+      // Fallback: Try to get emails from database if Microsoft Graph fails
+      try {
+        console.log('🔄 Falling back to database emails...');
+        const { data: dbEmails, error: dbError } = await supabase
+          .from('incoming_emails')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('is_deleted', false)
+          .order('received_at', { ascending: false })
+          .limit(100);
+        
+        if (dbError) {
+          console.error('❌ Database fallback also failed:', dbError);
+          emails = [];
+        } else {
+          console.log('✅ Database fallback successful:', dbEmails?.length || 0, 'emails');
+          emails = dbEmails || [];
+        }
+      } catch (fallbackError) {
+        console.error('❌ Database fallback error:', fallbackError);
+        emails = [];
+      }
     }
 
     // Use the emails directly from Outlook (they already have AI fields populated)
