@@ -54,7 +54,8 @@ export async function exchangeCodeForTokens(code: string) {
 
   console.log("🚀 Sending token exchange with:", params.toString());
 
-  const res = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+  const tenantId = process.env.AZURE_TENANT_ID || 'common';
+  const res = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',

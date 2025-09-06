@@ -39,7 +39,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Exchange code for tokens
-    const tokenResponse = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+    const tenantId = process.env.AZURE_TENANT_ID || 'common';
+    const tokenResponse = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',

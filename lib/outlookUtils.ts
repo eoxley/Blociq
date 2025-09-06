@@ -169,7 +169,8 @@ export function getOutlookAuthUrl(): string {
     response_mode: 'query'
   });
 
-  return `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?${params.toString()}`;
+  const tenantId = process.env.OUTLOOK_TENANT_ID || 'common';
+  return `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize?${params.toString()}`;
 }
 
 /**

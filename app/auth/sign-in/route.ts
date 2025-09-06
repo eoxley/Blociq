@@ -7,7 +7,8 @@ const SCOPES = encodeURIComponent(
 );
 
 export async function GET(req: NextRequest) {
-  const url = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${CLIENT_ID}&response_type=code&redirect_uri=${REDIRECT_URI}&response_mode=query&scope=${SCOPES}&prompt=select_account`;
+  const tenantId = process.env.AZURE_TENANT_ID || 'common';
+  const url = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize?client_id=${CLIENT_ID}&response_type=code&redirect_uri=${REDIRECT_URI}&response_mode=query&scope=${SCOPES}&prompt=select_account`;
 
   return NextResponse.redirect(url);
 } 

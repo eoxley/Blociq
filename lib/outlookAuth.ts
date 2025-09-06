@@ -149,7 +149,8 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
     throw new Error('Microsoft OAuth configuration missing')
   }
 
-  const response = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+  const tenantId = process.env.AZURE_TENANT_ID || 'common';
+  const response = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',

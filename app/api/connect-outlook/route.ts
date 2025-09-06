@@ -58,7 +58,8 @@ export async function POST(req: NextRequest) {
 
     const state = Math.random().toString(36).substring(2, 15);
     
-    const authUrl = new URL('https://login.microsoftonline.com/common/oauth2/v2.0/authorize');
+    const tenantId = process.env.AZURE_TENANT_ID || 'common';
+    const authUrl = new URL(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize`);
     authUrl.searchParams.set('client_id', clientId);
     authUrl.searchParams.set('response_type', 'code');
     authUrl.searchParams.set('redirect_uri', redirectUri);
