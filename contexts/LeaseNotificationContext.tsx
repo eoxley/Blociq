@@ -60,36 +60,20 @@ export function LeaseNotificationProvider({ children }: LeaseNotificationProvide
   // Calculate unread count
   const unreadCount = notifications.filter(n => !n.isViewed).length;
 
-  // Fetch notifications from the database
+  // Fetch notifications from the server API
   const fetchNotifications = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      // Use API route instead of direct database calls
+      const response = await fetch('/api/lease-jobs?type=notifications&limit=50');
+      const result = await response.json().catch(() => ({ data: [] }));
+      const jobs = Array.isArray(result.data) ? result.data : [];
 
-      // Query completed and failed jobs for the current user
-      const { data: jobs, error } = await supabase
-        .from('lease_processing_jobs')
-        .select(`
-          id,
-          filename,
-          status,
-          processing_completed_at,
-          error_message,
-          results,
-          lease_analysis,
-          created_at
-        `)
-        .eq('user_id', user.id)
-        .in('status', ['completed', 'failed'])
-        .order('processing_completed_at', { ascending: false })
-        .limit(50);
-
-      if (error) {
-        console.error('Error fetching lease notifications:', error);
+      if (!response.ok) {
+        console.error('Error fetching lease notifications:', response.status);
         return;
       }
 
-      if (jobs) {
+      if (jobs && jobs.length > 0) {
         // Get stored notification states from localStorage
         const storedStates = JSON.parse(localStorage.getItem('lease_notifications_state') || '{}');
         

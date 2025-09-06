@@ -23,12 +23,15 @@ export async function GET(req: NextRequest) {
       }, { status: 401, headers });
     }
 
-    // Get the user's Outlook tokens
-    const { data: tokens, error: tokenError } = await supabase
+    // Get the user's latest Outlook token (prevents 406 responses from multiple tokens)
+    const { data: tokenArray, error: tokenError } = await supabase
       .from('outlook_tokens')
       .select('email, expires_at, created_at, updated_at')
       .eq('user_id', session.user.id)
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    const tokens = tokenArray?.[0] || null;
 
     if (tokenError) {
       // Handle specific error cases

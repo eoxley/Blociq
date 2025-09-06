@@ -121,7 +121,11 @@ const EnhancedInboxOverview: React.FC = () => {
 
       // Check if user is authenticated before making the request
       console.log('🔐 Checking authentication...');
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      const sessionResult = await supabase.auth.getSession();
+      // Safe destructuring to prevent "Right side of assignment cannot be destructured" error
+      const sessionData = sessionResult?.data || {};
+      const session = sessionData.session || null;
+      const sessionError = sessionResult?.error || null;
       
       if (sessionError) {
         console.error('❌ Session error:', sessionError);
@@ -147,22 +151,39 @@ const EnhancedInboxOverview: React.FC = () => {
       
       console.log('📊 Dashboard API response status:', response.status, response.statusText);
       
+      // Safe coercion as specified in requirements
+      const raw = await response.json().catch(() => ({} as any));
+      const data = raw && typeof raw === 'object' ? raw : {};
+      
       if (!response.ok) {
         if (response.status === 401) {
           throw new Error('Authentication required - please log in again');
         }
-        const errorData = await response.json().catch(() => ({}));
-        console.error('❌ Dashboard API error response:', errorData);
-        throw new Error(errorData.message || errorData.details || `Failed to fetch dashboard data: ${response.status}`);
+        console.error('❌ Dashboard API error response:', data);
+        throw new Error(data.message || data.details || `Failed to fetch dashboard data: ${response.status}`);
       }
 
-      const result = await response.json();
+      // Safe data extraction with defaults
+      const dashboardData = data.data && typeof data.data === 'object' ? data.data : {};
+      const safeDashboard = {
+        total: Number.isFinite(dashboardData.total) ? dashboardData.total : 0,
+        unread: Number.isFinite(dashboardData.unread) ? dashboardData.unread : 0,
+        handled: Number.isFinite(dashboardData.handled) ? dashboardData.handled : 0,
+        urgent: Number.isFinite(dashboardData.urgent) ? dashboardData.urgent : 0,
+        categories: dashboardData.categories && typeof dashboardData.categories === 'object' ? dashboardData.categories : {},
+        propertyBreakdown: dashboardData.propertyBreakdown && typeof dashboardData.propertyBreakdown === 'object' ? dashboardData.propertyBreakdown : {},
+        recentActivity: Array.isArray(dashboardData.recentActivity) ? dashboardData.recentActivity : [],
+        smartSuggestions: Array.isArray(dashboardData.smartSuggestions) ? dashboardData.smartSuggestions : [],
+        urgencyDistribution: dashboardData.urgencyDistribution && typeof dashboardData.urgencyDistribution === 'object' ? dashboardData.urgencyDistribution : {
+          critical: 0, high: 0, medium: 0, low: 0
+        },
+        topProperties: Array.isArray(dashboardData.topProperties) ? dashboardData.topProperties : [],
+        aiInsightsSummary: dashboardData.aiInsightsSummary && typeof dashboardData.aiInsightsSummary === 'object' ? dashboardData.aiInsightsSummary : {
+          totalInsights: 0, criticalInsights: 0, followUps: 0, recurringIssues: 0, complianceMatters: 0
+        }
+      };
       
-      if (result.success) {
-        setDashboardData(result.data);
-      } else {
-        throw new Error(result.message || 'Failed to fetch dashboard data');
-      }
+      setDashboardData(safeDashboard);
     } catch (error) {
       console.error('Dashboard fetch error:', error);
       setError(error instanceof Error ? error.message : 'Unknown error');
@@ -392,8 +413,35 @@ const EnhancedInboxOverview: React.FC = () => {
 
         <div className="max-w-7xl mx-auto px-4 lg:px-6 py-8 lg:py-12">
 
-          {/* Additional Metrics */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          {/* Empty state check as specified in requirements */}
+          {dashboardData.total === 0 && Object.keys(dashboardData.categories).length === 0 && dashboardData.recentActivity.length === 0 ? (
+            <div className="text-center py-12">
+              <Mail className="h-16 w-16 text-gray-300 mx-auto mb-6" />
+              <h3 className="text-xl font-semibold text-gray-700 mb-2">No inbox activity for the selected period</h3>
+              <p className="text-gray-500 text-sm opacity-70">
+                No emails found for the selected time range. Try selecting a different time period or check your Outlook connection.
+              </p>
+              <div className="mt-6">
+                <Button 
+                  onClick={() => fetchDashboardData(false)}
+                  variant="outline"
+                  className="mr-3"
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                  Refresh Data
+                </Button>
+                <Button 
+                  onClick={() => setTimeRange('month')}
+                  variant="secondary"
+                >
+                  View Last Month
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Additional Metrics */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
             <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
@@ -742,8 +790,8 @@ const EnhancedInboxOverview: React.FC = () => {
             </Card>
           )}
 
-          {/* Enhanced Footer */}
-          <div className="mt-12 bg-white/40 backdrop-blur-sm rounded-2xl p-8 border border-white/50">
+              {/* Enhanced Footer */}
+              <div className="mt-12 bg-white/40 backdrop-blur-sm rounded-2xl p-8 border border-white/50">
             <div className="text-center">
               <div className="flex justify-center mb-4">
                 <div className="bg-blue-100 rounded-full p-3">
@@ -774,7 +822,9 @@ const EnhancedInboxOverview: React.FC = () => {
                 </Button>
               </div>
             </div>
-          </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </>

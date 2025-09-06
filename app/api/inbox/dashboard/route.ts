@@ -217,9 +217,28 @@ export async function GET(req: NextRequest) {
       };
     }
 
+    // Ensure all required keys are present with safe defaults
+    const safeDashboard = {
+      total: Number.isFinite(dashboard?.total) ? dashboard.total : 0,
+      unread: Number.isFinite(dashboard?.unread) ? dashboard.unread : 0,
+      handled: Number.isFinite(dashboard?.handled) ? dashboard.handled : 0,
+      urgent: Number.isFinite(dashboard?.urgent) ? dashboard.urgent : 0,
+      categories: dashboard?.categories && typeof dashboard.categories === 'object' ? dashboard.categories : {},
+      propertyBreakdown: dashboard?.propertyBreakdown && typeof dashboard.propertyBreakdown === 'object' ? dashboard.propertyBreakdown : {},
+      recentActivity: Array.isArray(dashboard?.recentActivity) ? dashboard.recentActivity : [],
+      smartSuggestions: Array.isArray(dashboard?.smartSuggestions) ? dashboard.smartSuggestions : [],
+      urgencyDistribution: dashboard?.urgencyDistribution && typeof dashboard.urgencyDistribution === 'object' ? dashboard.urgencyDistribution : {
+        critical: 0, high: 0, medium: 0, low: 0
+      },
+      topProperties: Array.isArray(dashboard?.topProperties) ? dashboard.topProperties : [],
+      aiInsightsSummary: dashboard?.aiInsightsSummary && typeof dashboard.aiInsightsSummary === 'object' ? dashboard.aiInsightsSummary : {
+        totalInsights: 0, criticalInsights: 0, followUps: 0, recurringIssues: 0, complianceMatters: 0
+      }
+    };
+
     return NextResponse.json({
       success: true,
-      data: dashboard,
+      data: safeDashboard,
       timeRange,
       generatedAt: new Date().toISOString()
     });
@@ -246,9 +265,11 @@ export async function GET(req: NextRequest) {
     }
     
     return NextResponse.json({
+      success: false,
       error: 'Failed to fetch dashboard data',
       message: errorMessage,
       details: errorDetails,
+      data: createEmptyDashboard(), // Always provide fallback data structure
       timestamp: new Date().toISOString()
     }, { status: 500 });
   }
