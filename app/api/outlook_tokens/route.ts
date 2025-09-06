@@ -93,12 +93,15 @@ export async function GET(req: NextRequest) {
     }, { headers });
 
   } catch (error) {
-    console.error('Outlook tokens API error:', error);
+    // Only log in development to reduce noise
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Outlook tokens API error:', error);
+    }
     return NextResponse.json({
       connected: false,
       error: 'Server error',
       message: 'An unexpected error occurred',
-      details: error instanceof Error ? error.message : 'Unknown error',
+      details: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : 'Unknown error') : undefined,
       timestamp: new Date().toISOString()
     }, { status: 500, headers });
   }

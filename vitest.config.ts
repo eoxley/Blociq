@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config';
+import path from 'path';
 
 export default defineConfig({
   test: {
@@ -11,7 +12,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': '/Users/ellie/Desktop/blociq-frontend',
+      '@': path.resolve(__dirname, '.'),
     },
   },
+  css: false, // Disable CSS processing for tests
 });
