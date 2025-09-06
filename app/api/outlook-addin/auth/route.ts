@@ -90,19 +90,19 @@ export async function POST(req: Request) {
         process.env.SUPABASE_SERVICE_ROLE_KEY!
       );
       
-      console.log('🔍 Using profiles table for user lookup');
+      console.log('🔍 Using users table for user lookup');
       
-      // Look up user by email in Supabase
+      // Look up user by email in Supabase users table
       const { data: user, error: userError } = await supabase
-        .from('profiles')
-        .select('id, full_name, email')
+        .from('users')
+        .select('id, full_name, email, first_name, last_name')
         .eq('email', body.email.toLowerCase())
         .single();
       
       if (userError || !user) {
-        // User not found in profiles table - check if this might be a valid user
-        console.log('❌ User not found in profiles for email:', body.email);
-        console.log('Profile lookup error:', userError?.message);
+        // User not found in users table
+        console.log('❌ User not found in users table for email:', body.email);
+        console.log('User lookup error:', userError?.message);
         
         // Instead of using admin API, return appropriate response for unknown users
         return NextResponse.json({ 
@@ -126,7 +126,7 @@ export async function POST(req: Request) {
           user: {
             id: user.id,
             email: user.email,
-            name: user.full_name || body.display_name || user.email.split('@')[0]
+            name: user.full_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || body.display_name || user.email.split('@')[0]
           }
         });
       }
