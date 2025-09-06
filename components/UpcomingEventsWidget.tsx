@@ -1,17 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from '@/lib/supabaseClient';
 import { Calendar, MapPin, Clock, Building, Loader2, RefreshCw, Plus, AlertCircle, CheckCircle2, CalendarDays } from "lucide-react";
 import { BlocIQButton } from "@/components/ui/blociq-button";
 import { BlocIQBadge } from "@/components/ui/blociq-badge";
 import ManualDiaryInput from "./ManualDiaryInput";
 import { formatEventRangeUK, formatEventTimeUK, formatEventDateUK } from "@/utils/date";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 type Event = {
   id: string;
@@ -161,10 +156,11 @@ export default function UpcomingEventsWidget() {
       // Simulate AI matching delay
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Mock AI match result
+      // Mock AI match result - using deterministic values for SSR compatibility
+      const buildingIndex = event.id.length % (buildings.length || 1);
       const mockMatch: AIMatch = {
-        buildingName: buildings[Math.floor(Math.random() * buildings.length)]?.name || 'Unknown Building',
-        confidence: 0.7 + Math.random() * 0.3,
+        buildingName: buildings[buildingIndex]?.name || 'Unknown Building',
+        confidence: 0.8, // Fixed confidence instead of random
         reasoning: 'Location and context analysis'
       };
       

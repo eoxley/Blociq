@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Bell, FileText, AlertCircle, CheckCircle, Clock, X, Eye } from 'lucide-react';
 import { useLeaseNotifications } from '@/contexts/LeaseNotificationContext';
 import { formatDistanceToNow } from 'date-fns';
+import ClientOnly from './ClientOnly';
 
 interface NotificationDropdownProps {
   isOpen: boolean;
@@ -11,6 +12,7 @@ interface NotificationDropdownProps {
 }
 
 function NotificationDropdown({ isOpen, onClose }: NotificationDropdownProps) {
+  // Safe hook usage - will return defaults if outside provider context
   const { notifications, markAsRead, markAllAsRead, clearNotification, getNotificationsByStatus } = useLeaseNotifications();
   
   if (!isOpen) return null;
@@ -22,7 +24,9 @@ function NotificationDropdown({ isOpen, onClose }: NotificationDropdownProps) {
   const handleViewResults = (jobId: string, notificationId: string) => {
     markAsRead(notificationId);
     // Navigate to results page
-    window.location.href = `/lease-analysis/${jobId}`;
+    if (typeof window !== 'undefined') {
+      window.location.href = `/lease-analysis/${jobId}`;
+    }
   };
 
   const getStatusIcon = (status: string) => {
@@ -178,14 +182,22 @@ function NotificationDropdown({ isOpen, onClose }: NotificationDropdownProps) {
       <div className="p-3 border-t border-gray-100 bg-gray-50 space-y-2">
         {notifications.length > 0 && (
           <button
-            onClick={() => window.location.href = '/lease-processing-history'}
+            onClick={() => {
+              if (typeof window !== 'undefined') {
+                window.location.href = '/lease-processing-history';
+              }
+            }}
             className="w-full text-center text-sm text-blue-600 hover:text-blue-700 font-medium"
           >
             View All Processing History
           </button>
         )}
         <button
-          onClick={() => window.location.href = '/lease-status-dashboard'}
+          onClick={() => {
+            if (typeof window !== 'undefined') {
+              window.location.href = '/lease-status-dashboard';
+            }
+          }}
           className="w-full text-center text-sm text-purple-600 hover:text-purple-700 font-medium"
         >
           Open Status Dashboard
@@ -196,6 +208,7 @@ function NotificationDropdown({ isOpen, onClose }: NotificationDropdownProps) {
 }
 
 export default function LeaseNotificationBadge() {
+  // Safe hook usage - will return defaults if outside provider context
   const { unreadCount, isLoading } = useLeaseNotifications();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -204,6 +217,8 @@ export default function LeaseNotificationBadge() {
 
   // Close dropdown when clicking outside
   React.useEffect(() => {
+    if (typeof document === 'undefined') return;
+    
     const handleClickOutside = (event: MouseEvent) => {
       if (isOpen && !(event.target as Element).closest('.notification-dropdown')) {
         closeDropdown();

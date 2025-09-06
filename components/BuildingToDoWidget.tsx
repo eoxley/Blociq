@@ -36,7 +36,7 @@ export default function BuildingToDoWidget() {
   const addTask = () => {
     if (newTaskText.trim()) {
       const newTask: Task = {
-        id: Date.now(),
+        id: Math.floor(Math.random() * 1000000), // Use random instead of Date.now() for SSR compatibility
         text: newTaskText.trim(),
         done: false,
       };

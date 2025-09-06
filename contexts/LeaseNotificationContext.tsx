@@ -74,8 +74,10 @@ export function LeaseNotificationProvider({ children }: LeaseNotificationProvide
       }
 
       if (jobs && jobs.length > 0) {
-        // Get stored notification states from localStorage
-        const storedStates = JSON.parse(localStorage.getItem('lease_notifications_state') || '{}');
+        // Get stored notification states from localStorage (client-side only)
+        const storedStates = typeof window !== 'undefined' 
+          ? JSON.parse(localStorage.getItem('lease_notifications_state') || '{}')
+          : {};
         
         const processedNotifications: LeaseProcessingNotification[] = jobs.map(job => ({
           id: `job-${job.id}`,
@@ -104,35 +106,41 @@ export function LeaseNotificationProvider({ children }: LeaseNotificationProvide
       n.id === notificationId ? { ...n, isViewed: true } : n
     ));
     
-    // Update localStorage
-    const jobId = notificationId.replace('job-', '');
-    const storedStates = JSON.parse(localStorage.getItem('lease_notifications_state') || '{}');
-    storedStates[jobId] = { isViewed: true };
-    localStorage.setItem('lease_notifications_state', JSON.stringify(storedStates));
+    // Update localStorage (client-side only)
+    if (typeof window !== 'undefined') {
+      const jobId = notificationId.replace('job-', '');
+      const storedStates = JSON.parse(localStorage.getItem('lease_notifications_state') || '{}');
+      storedStates[jobId] = { isViewed: true };
+      localStorage.setItem('lease_notifications_state', JSON.stringify(storedStates));
+    }
   };
 
   // Mark all notifications as read
   const markAllAsRead = () => {
     setNotifications(prev => prev.map(n => ({ ...n, isViewed: true })));
     
-    // Update localStorage for all notifications
-    const storedStates = JSON.parse(localStorage.getItem('lease_notifications_state') || '{}');
-    notifications.forEach(n => {
-      const jobId = n.jobId;
-      storedStates[jobId] = { isViewed: true };
-    });
-    localStorage.setItem('lease_notifications_state', JSON.stringify(storedStates));
+    // Update localStorage for all notifications (client-side only)
+    if (typeof window !== 'undefined') {
+      const storedStates = JSON.parse(localStorage.getItem('lease_notifications_state') || '{}');
+      notifications.forEach(n => {
+        const jobId = n.jobId;
+        storedStates[jobId] = { isViewed: true };
+      });
+      localStorage.setItem('lease_notifications_state', JSON.stringify(storedStates));
+    }
   };
 
   // Clear specific notification
   const clearNotification = (notificationId: string) => {
     setNotifications(prev => prev.filter(n => n.id !== notificationId));
     
-    // Remove from localStorage
-    const jobId = notificationId.replace('job-', '');
-    const storedStates = JSON.parse(localStorage.getItem('lease_notifications_state') || '{}');
-    delete storedStates[jobId];
-    localStorage.setItem('lease_notifications_state', JSON.stringify(storedStates));
+    // Remove from localStorage (client-side only)
+    if (typeof window !== 'undefined') {
+      const jobId = notificationId.replace('job-', '');
+      const storedStates = JSON.parse(localStorage.getItem('lease_notifications_state') || '{}');
+      delete storedStates[jobId];
+      localStorage.setItem('lease_notifications_state', JSON.stringify(storedStates));
+    }
   };
 
   // Get notifications by status

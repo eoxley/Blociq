@@ -3,7 +3,7 @@
 // Trigger Vercel build - compliance page updated
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabaseClient'
 import { 
   Shield, 
   AlertTriangle, 
@@ -86,7 +86,6 @@ interface ComplianceSummary {
 
 export default function CompliancePage() {
   const router = useRouter()
-  const supabase = createClientComponentClient()
   
   const [buildings, setBuildings] = useState<Building[]>([])
   const [complianceData, setComplianceData] = useState<BuildingComplianceAsset[]>([])

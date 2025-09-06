@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabaseClient'
 import {
   X,
   Calendar,
@@ -66,7 +66,6 @@ const EnhancedEditAssetModal: React.FC<EnhancedEditAssetModalProps> = ({
   asset,
   onSave
 }) => {
-  const supabase = createClientComponentClient()
   
   const [formData, setFormData] = useState<AssetData>({
     compliance_asset_id: '',

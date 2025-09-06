@@ -14,6 +14,7 @@ export interface LeaseProcessingOptions {
 export function useLeaseProcessing() {
   const [isProcessing, setIsProcessing] = useState(false);
   const { showProcessingStarted, showProcessingFailed } = useToast();
+  // Safe hook usage - will return defaults if outside provider context
   const { refreshNotifications } = useLeaseNotifications();
 
   const processLeaseDocument = async (

@@ -344,7 +344,7 @@ export default function BuildingTodoList({
     loadData()
   }, [maxItems, includeCompliance])
 
-  // Fake placeholder data for demo purposes
+  // Fake placeholder data for demo purposes - using fixed dates for SSR compatibility
   const fakeTodos: Todo[] = [
     {
       id: 'fake-1',
@@ -353,12 +353,12 @@ export default function BuildingTodoList({
       description: 'Arrange for qualified inspector to conduct fire safety assessment',
       status: 'pending',
       is_complete: false,
-      due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      due_date: '2024-08-15T00:00:00.000Z', // Fixed date instead of Date.now()
       priority: 'High',
       assigned_to: 'John Smith',
       created_by: 'admin',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      created_at: '2024-08-01T00:00:00.000Z', // Fixed date instead of new Date()
+      updated_at: '2024-08-01T00:00:00.000Z', // Fixed date instead of new Date()
       building: { name: 'Ashwood House' }
     },
     {
@@ -368,12 +368,12 @@ export default function BuildingTodoList({
       description: 'Window frame damaged, needs replacement',
       status: 'in_progress',
       is_complete: false,
-      due_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+      due_date: '2024-08-10T00:00:00.000Z', // Fixed date instead of Date.now()
       priority: 'Medium',
       assigned_to: 'Maintenance Team',
       created_by: 'admin',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      created_at: '2024-08-01T00:00:00.000Z', // Fixed date instead of new Date()
+      updated_at: '2024-08-01T00:00:00.000Z', // Fixed date instead of new Date()
       building: { name: 'Ashwood House' }
     },
     {
@@ -383,12 +383,12 @@ export default function BuildingTodoList({
       description: 'Annual service charge review and distribution',
       status: 'pending',
       is_complete: false,
-      due_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+      due_date: '2024-08-20T00:00:00.000Z', // Fixed date instead of Date.now()
       priority: 'Medium',
       assigned_to: 'Finance Team',
       created_by: 'admin',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      created_at: '2024-08-01T00:00:00.000Z', // Fixed date instead of new Date()
+      updated_at: '2024-08-01T00:00:00.000Z', // Fixed date instead of new Date()
       building: { name: 'Riverside Court' }
     }
   ]

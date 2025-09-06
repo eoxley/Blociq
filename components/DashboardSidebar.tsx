@@ -10,6 +10,7 @@ import BlocIQLogo from './BlocIQLogo';
 import { BlocIQBadge } from '@/components/ui/blociq-badge';
 import AgencySwitcher from './AgencySwitcher';
 import LeaseNotificationBadge from './LeaseNotificationBadge';
+import ClientOnly from './ClientOnly';
 
 const navItems = [
   { label: "Home", icon: "🏠", href: "/home", comingSoon: false, description: "Dashboard overview", aiPowered: false },
@@ -170,9 +171,11 @@ export default function DashboardSidebar() {
 
 
 
-      {/* Lease Processing Notifications */}
+      {/* Lease Processing Notifications - Only show in dashboard context */}
       <div className="border-t border-border pt-4 mb-4">
-        <LeaseNotificationBadge />
+        <ClientOnly>
+          <LeaseNotificationBadge />
+        </ClientOnly>
       </div>
 
       {/* Enhanced Logout Section */}

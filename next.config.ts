@@ -15,6 +15,11 @@ const nextConfig: NextConfig = {
   
   // Completely disable source maps in all environments
   productionBrowserSourceMaps: false,
+  // Disable source maps in development too to prevent 404 errors
+  devIndicators: {
+    buildActivity: false,
+    buildActivityPosition: 'bottom-right',
+  },
   generateBuildId: async () => {
     return 'build-' + Date.now()
   },

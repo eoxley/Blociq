@@ -3,7 +3,7 @@
 // Trigger Vercel build - compliance routing and setup modal placement verified
 import React, { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabaseClient'
 import { 
   Shield, 
   AlertTriangle, 
@@ -86,7 +86,6 @@ interface ComplianceSummary {
 export default function BuildingCompliancePage() {
   const params = useParams()
   const router = useRouter()
-  const supabase = createClientComponentClient()
   const buildingId = params.id as string
   
   const [building, setBuilding] = useState<Building | null>(null)
