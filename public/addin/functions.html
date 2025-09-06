@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BlocIQ Assistant Functions</title>
+    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+</head>
+<body>
+    <script>
+        // Load the command handlers
+        import('./commands.js').then(module => {
+            // Make functions available globally for Office.js
+            window.showChatPane = module.showChatPane;
+            window.showChatPaneCompose = module.showChatPaneCompose;
+            window.onGenerateReplyFromRead = module.onGenerateReplyFromRead;
+            window.onGenerateIntoCompose = module.onGenerateIntoCompose;
+            
+            console.log('BlocIQ Assistant command handlers loaded');
+        }).catch(error => {
+            console.error('Failed to load command handlers:', error);
+        });
+    </script>
+</body>
+</html>
