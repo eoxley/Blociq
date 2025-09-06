@@ -5,13 +5,13 @@ import { Database } from '@/types/supabase'
 // Cache for server-side instances to prevent multiple GoTrueClient instances
 const serverInstances = new Map<string, ReturnType<typeof createServerComponentClient<Database>>>()
 
-export function createClient(cookieStore = cookies()) {
+export async function createClient(cookieStore = await cookies()) {
   // Create a unique key based on the cookie store
   // Handle both cookie store types safely
   let cookieKey = 'default';
   try {
     if (cookieStore && typeof cookieStore.getAll === 'function') {
-      cookieKey = JSON.stringify(cookieStore.getAll());
+      cookieKey = JSON.stringify(await cookieStore.getAll());
     } else if (cookieStore && typeof cookieStore.toString === 'function') {
       cookieKey = cookieStore.toString();
     }
