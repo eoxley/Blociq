@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = await createClient(await cookies());
+    const supabase = await createClient();
     
     // Get the current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -67,7 +67,7 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = await createClient(await cookies());
+    const supabase = await createClient();
     
     // Get the current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();

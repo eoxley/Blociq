@@ -9,8 +9,7 @@ export async function GET(req: NextRequest) {
   try {
     console.log('📊 Fetching inbox dashboard data...');
     
-    const cookieStore = await cookies();
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+    const supabase = createRouteHandlerClient({ cookies });
     
     // Check authentication - Safe destructuring to prevent "Right side of assignment cannot be destructured" error
     const authResult = await supabase.auth.getUser();
