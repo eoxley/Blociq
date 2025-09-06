@@ -322,11 +322,16 @@ Provide a focused, helpful answer to their question based on the lease content. 
       formData.append('priority', '1'); // High priority for Ask AI requests
       
       console.log('📤 Creating background job...');
+      
+      // Get the API key - ensure we're using the environment variable properly
+      const apiKey = process.env.NEXT_PUBLIC_BACKGROUND_PROCESSOR_API_KEY || 'blociq-secure-background-processor-key-2025';
+      console.log('🔑 Using API key for background processing:', { hasKey: !!apiKey, keyPrefix: apiKey ? apiKey.substring(0, 8) + '...' : 'none' });
+      
       const response = await fetch('/api/lease-processing/upload', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
-          'x-api-key': process.env.NEXT_PUBLIC_BACKGROUND_PROCESSOR_API_KEY || 'blociq-secure-background-processor-key-2025'
+          'x-api-key': apiKey
         },
         body: formData
       });
