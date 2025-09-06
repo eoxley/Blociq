@@ -102,7 +102,7 @@ export default function CompactLeaseProcessingWidget({
           </div>
           {leaseSystemReady ? (
             <Link
-              href="/lease-status-dashboard"
+              href="/lease-lab"
               className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
             >
               View All
@@ -183,7 +183,7 @@ export default function CompactLeaseProcessingWidget({
             ))}
             {activeJobs.length > 2 && (
               <Link 
-                href="/lease-status-dashboard"
+                href="/lease-lab"
                 className="block text-xs text-blue-600 hover:text-blue-700 text-center py-1"
               >
                 +{activeJobs.length - 2} more processing
@@ -205,7 +205,7 @@ export default function CompactLeaseProcessingWidget({
               leaseSystemReady ? (
                 <Link
                   key={job.id}
-                  href={`/lease-analysis/${job.id}`}
+                  href={`/lease-lab`}
                   className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg transition-colors group"
                 >
                   <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />

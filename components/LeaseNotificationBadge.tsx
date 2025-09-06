@@ -27,7 +27,7 @@ function NotificationDropdown({ isOpen, onClose }: NotificationDropdownProps) {
     markAsRead(notificationId);
     // Navigate to results page
     if (typeof window !== 'undefined') {
-      window.location.href = `/lease-analysis/${jobId}`;
+      window.location.href = `/lease-lab`;
     }
   };
 
@@ -186,7 +186,7 @@ function NotificationDropdown({ isOpen, onClose }: NotificationDropdownProps) {
           <button
             onClick={() => {
               if (typeof window !== 'undefined' && leaseSystemReady) {
-                window.location.href = '/lease-processing-history';
+                window.location.href = '/lease-lab';
               }
             }}
             disabled={!leaseSystemReady}
@@ -204,7 +204,7 @@ function NotificationDropdown({ isOpen, onClose }: NotificationDropdownProps) {
         <button
           onClick={() => {
             if (typeof window !== 'undefined' && leaseSystemReady) {
-              window.location.href = '/lease-status-dashboard';
+              window.location.href = '/lease-lab';
             }
           }}
           disabled={!leaseSystemReady}
