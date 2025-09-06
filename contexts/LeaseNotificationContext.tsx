@@ -159,10 +159,14 @@ export function LeaseNotificationProvider({ children }: LeaseNotificationProvide
 
   // Real-time subscription to job updates
   useEffect(() => {
-    const { data: { user } } = supabase.auth.getUser();
+    // Safe destructuring to prevent "Right side of assignment cannot be destructured" error
+    const authResult = supabase.auth.getUser();
     
-    user.then(({ data: userData }) => {
-      if (!userData?.user) return;
+    authResult.then((result) => {
+      const userData = result?.data || {}
+      const user = userData.user || null
+      
+      if (!user) return;
 
       const subscription = supabase
         .channel('lease_job_updates')

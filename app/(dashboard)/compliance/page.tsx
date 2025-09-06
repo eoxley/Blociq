@@ -129,7 +129,6 @@ export default function CompliancePage() {
       
       if (detailedData.success && detailedData.data) {
         console.log('✅ Detailed compliance data fetched:', detailedData.data.length, 'assets')
-        console.log('📋 Sample asset data:', detailedData.data[0])
         setComplianceData(detailedData.data)
       } else if (detailedData.debug && detailedData.assets) {
         console.log('🔧 Debug mode - processing assets without authentication')
@@ -151,70 +150,7 @@ export default function CompliancePage() {
       }
     } catch (err) {
       console.warn('Could not fetch detailed compliance data:', err)
-      // Fallback: try to fetch assets directly from Supabase for existing buildings
-      await fetchFallbackComplianceData()
-    }
-  }
-
-  const fetchFallbackComplianceData = async () => {
-    try {
-      console.log('🔄 Attempting fallback compliance data fetch...')
-      
-      if (buildings.length === 0) {
-        console.log('⚠️ No buildings available for fallback fetch')
-        return
-      }
-
-      const buildingIds = buildings.map(b => b.id)
-      console.log('🏢 Fetching assets for buildings:', buildingIds)
-
-      const { data: complianceAssets, error } = await supabase
-        .from('building_compliance_assets')
-        .select(`
-          id,
-          building_id,
-          compliance_asset_id,
-          due_date,
-          document_id,
-          status,
-          last_renewed_date,
-          next_due_date,
-          notes,
-          contractor,
-          created_at,
-          updated_at,
-          compliance_assets (
-            id,
-            name,
-            category,
-            description,
-            frequency_months
-          ),
-          compliance_documents (
-            id,
-            document_url,
-            created_at
-          )
-        `)
-        .in('building_id', buildingIds)
-        .order('next_due_date', { ascending: true })
-
-      if (error) {
-        console.error('❌ Fallback fetch failed:', error)
-        return
-      }
-
-      // Add building info to each asset
-      const assetsWithBuildings = (complianceAssets || []).map(asset => ({
-        ...asset,
-        buildings: buildings.find(b => b.id === asset.building_id) || null
-      }))
-
-      console.log('✅ Fallback compliance data fetched:', assetsWithBuildings.length, 'assets')
-      setComplianceData(assetsWithBuildings)
-      
-    } catch (error) {
-      console.error('❌ Fallback compliance fetch error:', error)
+      // Don't throw error - continue with overview data only
     }
   }
 
@@ -223,8 +159,12 @@ export default function CompliancePage() {
       setLoading(true)
       setError(null)
 
-      // Check authentication
-      const { data: { session }, error: authError } = await supabase.auth.getSession()
+      // Check authentication - Safe destructuring to prevent "Right side of assignment cannot be destructured" error
+      const sessionResult = await supabase.auth.getSession()
+      const sessionData = sessionResult?.data || {}
+      const session = sessionData.session || null
+      const authError = sessionResult?.error || null
+      
       if (authError || !session) {
         throw new Error('Authentication required. Please log in.')
       }

@@ -8,7 +8,10 @@ export default function DebugUserId() {
 
   useEffect(() => {
     const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      // Safe destructuring to prevent "Right side of assignment cannot be destructured" error
+      const sessionResult = await supabase.auth.getSession();
+      const sessionData = sessionResult?.data || {}
+      const session = sessionData.session || null
       setUserId(session?.user?.id ?? null);
       console.log('👉 SESSION USER ID:', session?.user?.id);
     };

@@ -38,8 +38,11 @@ export default function OutlookConnectButton({
 
   const checkConnectionStatus = async () => {
     try {
-      // Check if user has Microsoft OAuth tokens
-      const { data: { user } } = await supabase.auth.getUser()
+      // Check if user has Microsoft OAuth tokens - Safe destructuring to prevent "Right side of assignment cannot be destructured" error
+      const authResult = await supabase.auth.getUser()
+      const authData = authResult?.data || {}
+      const user = authData.user || null
+      
       if (!user) {
         setConnectionStatus('disconnected')
         return

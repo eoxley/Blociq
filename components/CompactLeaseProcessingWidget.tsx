@@ -40,7 +40,11 @@ export default function CompactLeaseProcessingWidget({
 
   const fetchRecentJobs = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      // Safe destructuring to prevent "Right side of assignment cannot be destructured" error
+      const authResult = await supabase.auth.getUser();
+      const authData = authResult?.data || {}
+      const user = authData.user || null
+      
       if (!user) return;
 
       const { data, error } = await supabase
