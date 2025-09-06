@@ -73,15 +73,18 @@ export async function onGenerateReplyFromRead(event: Office.AddinCommands.Event)
   try {
     const item = Office.context.mailbox.item as Office.MessageRead;
 
-    // Grab minimal context
+    // Collect thread context
     const context = {
       subject: item.subject,
       from: item.from?.emailAddress,
-      bodyPreview: item.bodyPreview,
+      to: item.to?.map(t => t.emailAddress) || [],
+      cc: item.cc?.map(c => c.emailAddress) || [],
+      bodyPreview: item.bodyPreview, // short preview
+      internetMessageId: item.internetMessageId, // unique thread ID
       intent: "REPLY",
     };
 
-    // Call your existing Ask BlocIQ AI
+    // Send to existing Ask AI endpoint
     const res = await fetch("/api/ask-ai", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -89,8 +92,8 @@ export async function onGenerateReplyFromRead(event: Office.AddinCommands.Event)
     });
     const { text: draftHtml } = await res.json();
 
-    // Open a reply form and inject the draft
-    await item.displayReplyForm(""); // reply (not reply-all)
+    // Open reply form + inject draft
+    await item.displayReplyForm(""); // reply only (swap for replyAll if needed)
     setTimeout(() => {
       (Office.context.mailbox.item as Office.MessageCompose).body.setAsync(
         draftHtml,
@@ -98,7 +101,7 @@ export async function onGenerateReplyFromRead(event: Office.AddinCommands.Event)
         () => event.completed()
       );
     }, 300);
-  } catch (e) {
+  } catch (err) {
     Office.context.mailbox.item.notificationMessages.replaceAsync("bqFail", {
       type: Office.MailboxEnums.ItemNotificationMessageType.InformationalMessage,
       message: "Couldn't generate a reply. Please try again.",
@@ -126,6 +129,26 @@ export async function onGenerateIntoCompose(event: Office.AddinCommands.Event) {
       });
     });
     
+    const toRecipients = await new Promise<string[]>((resolve) => {
+      item.to.getAsync((result) => {
+        if (result.status === Office.AsyncResultStatus.Succeeded) {
+          resolve(result.value.map(r => r.emailAddress));
+        } else {
+          resolve([]);
+        }
+      });
+    });
+    
+    const ccRecipients = await new Promise<string[]>((resolve) => {
+      item.cc.getAsync((result) => {
+        if (result.status === Office.AsyncResultStatus.Succeeded) {
+          resolve(result.value.map(r => r.emailAddress));
+        } else {
+          resolve([]);
+        }
+      });
+    });
+    
     const bodyPreview = await new Promise<string>((resolve) => {
       item.body.getAsync(Office.CoercionType.Text, (result) => {
         if (result.status === Office.AsyncResultStatus.Succeeded) {
@@ -136,15 +159,18 @@ export async function onGenerateIntoCompose(event: Office.AddinCommands.Event) {
       });
     });
 
-    // Grab minimal context
+    // Collect thread context for compose
     const context = {
       subject: subject || 'New message',
       from: 'Compose message',
+      to: toRecipients,
+      cc: ccRecipients,
       bodyPreview: bodyPreview,
+      internetMessageId: null, // No thread ID for new compose
       intent: "REPLY",
     };
 
-    // Call your existing Ask BlocIQ AI
+    // Send to existing Ask AI endpoint
     const res = await fetch("/api/ask-ai", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -166,7 +192,7 @@ export async function onGenerateIntoCompose(event: Office.AddinCommands.Event) {
       }
     );
     
-  } catch (e) {
+  } catch (err) {
     Office.context.mailbox.item.notificationMessages.replaceAsync("bqFail", {
       type: Office.MailboxEnums.ItemNotificationMessageType.InformationalMessage,
       message: "Couldn't generate a reply. Please try again.",
