@@ -66,8 +66,22 @@ export default function LeaseProcessingHistoryPage() {
       const authResult = await supabase.auth.getUser();
       const authData = authResult?.data || {}
       const user = authData.user || null
+      const authError = authResult?.error || null
+      
+      console.log('🔐 Lease processing auth check:', { 
+        hasUser: !!user, 
+        userId: user?.id, 
+        authError: authError?.message 
+      });
+      
+      if (authError) {
+        console.error('❌ Auth error in lease processing:', authError);
+        setError('Authentication error. Please try logging in again.');
+        return;
+      }
       
       if (!user) {
+        console.log('⚠️ No user found, redirecting to login');
         router.push('/login');
         return;
       }

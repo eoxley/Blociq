@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
 
     console.log(`📅 Fetching emails from ${startDate.toISOString()} to ${now.toISOString()}`);
 
-    // Check agency membership first
+    // Check agency membership first - Handle case where user might not be in agency_members table
     const { data: agencyMember, error: agencyError } = await supabase
       .from('agency_members')
       .select('agency_id, role')
@@ -60,11 +60,35 @@ export async function GET(req: NextRequest) {
     
     if (agencyError) {
       console.error('❌ Agency query error:', agencyError);
+      // If it's a "not found" error (PGRST116), that's expected for new users
+      if (agencyError.code === 'PGRST116') {
+        console.log('ℹ️ User not yet linked to agency - this is normal for new users');
+        return NextResponse.json({
+          success: true,
+          data: {
+            total: 0,
+            unread: 0,
+            handled: 0,
+            urgent: 0,
+            categories: {},
+            propertyBreakdown: {},
+            recentActivity: [],
+            smartSuggestions: [],
+            urgencyDistribution: { critical: 0, high: 0, medium: 0, low: 0 },
+            topProperties: [],
+            aiInsightsSummary: { totalInsights: 0, criticalInsights: 0, followUps: 0, recurringIssues: 0, complianceMatters: 0 }
+          },
+          message: 'User not yet linked to agency - please complete setup',
+          needsSetup: true
+        });
+      }
+      
+      // For other errors, return error response
       return NextResponse.json({
-        error: 'User not linked to agency',
-        fallback: { emails: [], calendar: [], stats: { total: 0, unread: 0 } },
-        needsSetup: true
-      }, { status: 200 });
+        error: 'Database error',
+        message: 'Failed to check agency membership',
+        details: agencyError.message
+      }, { status: 500 });
     }
 
     console.log('✅ User is member of agency:', agencyMember.agency_id);

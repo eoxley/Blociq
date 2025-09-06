@@ -12,14 +12,9 @@ import {
   ChevronRight,
   Loader2
 } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabaseClient';
 import { useLeaseNotifications } from '@/contexts/LeaseNotificationContext';
 import { calculateJobStats, type ProcessingJob } from '@/components/LeaseProcessingStatus';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 interface CompactLeaseProcessingWidgetProps {
   className?: string;
@@ -30,6 +25,7 @@ export default function CompactLeaseProcessingWidget({
   className = '', 
   showTitle = true 
 }: CompactLeaseProcessingWidgetProps) {
+  // Safe hook usage - will return defaults if outside provider context
   const { unreadCount, isLoading } = useLeaseNotifications();
   const [recentJobs, setRecentJobs] = useState<ProcessingJob[]>([]);
   const [loading, setLoading] = useState(true);
