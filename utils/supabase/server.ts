@@ -16,7 +16,8 @@ export async function createClient(cookieStore?: any) {
   let cookieKey = 'default';
   try {
     if (cookieStore && typeof cookieStore.getAll === 'function') {
-      cookieKey = JSON.stringify(await cookieStore.getAll());
+      const allCookies = await cookieStore.getAll();
+      cookieKey = JSON.stringify(allCookies);
     } else if (cookieStore && typeof cookieStore.toString === 'function') {
       cookieKey = cookieStore.toString();
     }
