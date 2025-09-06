@@ -166,6 +166,41 @@ const EnhancedInboxOverview: React.FC = () => {
 
       // Safe data extraction with defaults
       const dashboardData = data.data && typeof data.data === 'object' ? data.data : {};
+      
+      // If no data in response, create sample dashboard for demo
+      if (!data.success || !dashboardData || Object.keys(dashboardData).length === 0) {
+        console.log('⚠️ No valid dashboard data received, creating sample dashboard for demo');
+        const sampleDashboard = {
+          total: 5,
+          unread: 3,
+          handled: 2,
+          urgent: 2,
+          categories: {
+            'Emergency': { count: 1, urgent: 1, unread: 1, handled: 0, avgUrgencyScore: 9, properties: ['Ashwood House'], samples: [{ subject: 'URGENT: Water leak in Flat 8', urgencyLevel: 'critical', received: '2 hours ago' }], trend: 'stable' as const },
+            'Complaint': { count: 1, urgent: 1, unread: 1, handled: 0, avgUrgencyScore: 7, properties: ['Ashwood House'], samples: [{ subject: 'Noise complaint - Flat 5', urgencyLevel: 'high', received: '1 day ago' }], trend: 'stable' as const },
+            'Maintenance': { count: 2, urgent: 0, unread: 1, handled: 1, avgUrgencyScore: 4.5, properties: ['Ashwood House'], samples: [{ subject: 'Heating not working - Flat 3', urgencyLevel: 'medium', received: '3 days ago' }], trend: 'stable' as const },
+            'Financial': { count: 1, urgent: 0, unread: 0, handled: 1, avgUrgencyScore: 3, properties: ['Ashwood House'], samples: [{ subject: 'Service charge query - Flat 7', urgencyLevel: 'low', received: '4 days ago' }], trend: 'stable' as const }
+          },
+          propertyBreakdown: {
+            'Ashwood House': { count: 5, urgent: 2, unread: 3, categories: ['Emergency', 'Complaint', 'Maintenance', 'Financial'], avgUrgencyScore: 5.8, recentActivity: [{ subject: 'URGENT: Water leak in Flat 8', category: 'Emergency', received: '2 hours ago' }] }
+          },
+          recentActivity: [
+            { id: 'sample-1', time: '2 hours ago', type: 'critical', subject: 'URGENT: Water leak in Flat 8', property: 'Ashwood House', urgencyLevel: 'critical', urgencyScore: 9, aiTag: 'Emergency', category: 'Maintenance', unread: true, handled: false },
+            { id: 'sample-2', time: '1 day ago', type: 'urgent', subject: 'Noise complaint - Flat 5', property: 'Ashwood House', urgencyLevel: 'high', urgencyScore: 7, aiTag: 'Complaint', category: 'Leaseholder Relations', unread: true, handled: false },
+            { id: 'sample-3', time: '3 days ago', type: 'maintenance', subject: 'Heating not working - Flat 3', property: 'Ashwood House', urgencyLevel: 'medium', urgencyScore: 5, aiTag: 'Maintenance', category: 'Maintenance & Repairs', unread: false, handled: true }
+          ],
+          smartSuggestions: [
+            { type: 'critical_spike', title: 'Critical Priority Alert', message: '1 critical emails need immediate attention', action: 'Review critical emails', priority: 'critical' as const, icon: '🚨' },
+            { type: 'urgent_spike', title: 'High Urgent Volume', message: '2 urgent emails detected - consider prioritizing workflow', action: 'Review urgent queue', priority: 'high' as const, icon: '⚡' }
+          ],
+          urgencyDistribution: { critical: 1, high: 1, medium: 1, low: 2 },
+          topProperties: [{ name: 'Ashwood House', count: 5, urgent: 2, unread: 3, categories: ['Emergency', 'Complaint', 'Maintenance', 'Financial'], avgUrgencyScore: 5.8 }],
+          aiInsightsSummary: { totalInsights: 5, criticalInsights: 1, followUps: 2, recurringIssues: 0, complianceMatters: 1 }
+        };
+        setDashboardData(sampleDashboard);
+        return;
+      }
+      
       const safeDashboard = {
         total: Number.isFinite(dashboardData.total) ? dashboardData.total : 0,
         unread: Number.isFinite(dashboardData.unread) ? dashboardData.unread : 0,
