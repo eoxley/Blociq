@@ -338,16 +338,7 @@ What can I help you with today?`;
 
 // Add welcome message
 function addWelcomeMessage() {
-  const welcomeMessage = `Hi ${currentUser.name}! I'm your BlocIQ Assistant with full access to your property portfolio. I can help you with:
-
-• **Property Information**: "Who is the leaseholder of unit 5 at Ashwood House?"
-• **Access Codes**: "What are the access codes for Oak Court?"
-• **Portfolio Overview**: "Show me my buildings" or "What documents have I uploaded?"
-• **Email Responses**: I can help draft replies based on your current email context
-
-What would you like to know?`;
-  
-  addMessage(welcomeMessage, 'assistant');
+  // No welcome message - start with empty chat
 }
 
 // Handle demo mode messages

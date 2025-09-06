@@ -225,8 +225,13 @@ export default function AskBlocIQ({
       return false;
     }
     
-    if (file.size > maxFileSize) {
-      toast.error(`File too large. Please upload files smaller than 10MB.`);
+    // Strict file size limit for Ask Bloc AI - reject large files completely
+    const maxAskAISize = 5 * 1024 * 1024; // 5MB hard limit
+    if (file.size > maxAskAISize) {
+      toast.error(`File too large for Ask Bloc AI. Please use Lease Lab for documents larger than 5MB.`, {
+        description: "For large documents, please go to Lease Lab in the sidebar for proper processing.",
+        duration: 6000,
+      });
       return false;
     }
     
@@ -258,34 +263,16 @@ export default function AskBlocIQ({
         setUploadedFiles(prev => [...prev, { ...fileData, status: 'processing' } as any]);
         setProcessingFiles(prev => [...prev, fileData.id]);
 
-        // Show appropriate message based on file type
-        const isImage = file.type.startsWith('image/');
-        const isPDF = file.type === 'application/pdf';
-        
-        if (isImage) {
-          toast.success(`✅ ${file.name} uploaded successfully!`, {
-            description: "Image will be processed with Google Vision OCR for text extraction.",
-            duration: 4000,
-          });
-        } else if (isPDF) {
-          toast.success(`✅ ${file.name} uploaded successfully!`, {
-            description: "PDF will be processed with OCR for text extraction and AI analysis.",
-            duration: 4000,
-          });
-        } else {
-          toast.success(`✅ ${file.name} uploaded successfully!`, {
-            description: "Document will be processed with OCR for text extraction.",
-            duration: 4000,
-          });
-        }
+        // Simple success message without processing details
+        toast.success(`✅ ${file.name} ready for analysis`, {
+          duration: 3000,
+        });
 
-        // Simulate processing completion after 2 seconds
-        setTimeout(() => {
-          setUploadedFiles(prev => prev.map(f => 
-            f.id === fileData.id ? { ...f, status: 'completed' } : f
-          ));
-          setProcessingFiles(prev => prev.filter(id => id !== fileData.id));
-        }, 2000);
+        // Mark as completed immediately - no fake processing
+        setUploadedFiles(prev => prev.map(f => 
+          f.id === fileData.id ? { ...f, status: 'completed' } : f
+        ));
+        setProcessingFiles(prev => prev.filter(id => id !== fileData.id));
       }
     }
   };

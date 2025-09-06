@@ -680,17 +680,9 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
             const fileSize = formatFileSize(uploadedFile.file.size)
             console.log(`📤 Uploading file: ${uploadedFile.name} (${fileSize})`)
             
-            // Update status with intelligent processing message
+            // Simple status message - no processing details
             const fileSizeMB = uploadedFile.file.size / (1024 * 1024);
-            const isLargeFile = uploadedFile.file.size > 5 * 1024 * 1024; // 5MB threshold
-            
-            if (isLargeFile) {
-              setUploadStatus(`🚀 Large file detected (${fileSizeMB.toFixed(1)}MB) - using background processing for ${uploadedFile.name}...`);
-            } else if (uploadedFile.file.size > 2 * 1024 * 1024) {
-              setUploadStatus(`⚡ Trying quick processing for ${uploadedFile.name} (${fileSizeMB.toFixed(1)}MB)...`);
-            } else {
-              setUploadStatus(`⚡ Quick processing ${uploadedFile.name} (${fileSizeMB.toFixed(1)}MB)...`);
-            }
+            setUploadStatus(`📄 Processing ${uploadedFile.name} (${fileSizeMB.toFixed(1)}MB)...`);
             
             const uploadData = await uploadToAskAI(uploadedFile.file)
             console.log('🔍 Upload response data:', uploadData)
@@ -701,54 +693,15 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
               data: uploadData
             })
             
-            if (uploadData.textLength > 0 || uploadData.metadata?.processingType === 'background') {
+            if (uploadData.textLength > 0) {
               const source = uploadData.ocrSource || 'OCR'
+              console.log(`✅ File processed successfully via ${source}: ${uploadedFile.name} - ${uploadData.textLength} characters extracted`)
+              setUploadStatus(`✅ ${uploadedFile.name} processed - ${uploadData.textLength} characters extracted`)
               
-              if (uploadData.metadata?.processingType === 'background') {
-                console.log(`📋 Background processing initiated for: ${uploadedFile.name}`)
-                setUploadStatus(`📋 ${uploadedFile.name} is being analyzed in the background (${uploadData.metadata.estimatedTime || '5-10 minutes'}) - you'll receive an email notification when complete`)
-              } else if (uploadData.metadata?.processingType === 'quick') {
-                console.log(`⚡ Quick processing successful for: ${uploadedFile.name} - ${uploadData.textLength} characters extracted`)
-                setUploadStatus(`⚡ ${uploadedFile.name} processed quickly - ${uploadData.textLength} characters extracted`)
-              } else {
-                console.log(`✅ File processed successfully via ${source}: ${uploadedFile.name} - ${uploadData.textLength} characters extracted`)
-                setUploadStatus(`✅ ${uploadedFile.name} processed via ${source} - ${uploadData.textLength} characters extracted`)
-              }
-              
-              // Handle different processing types
+              // Process the extracted text normally
               const extractedText = uploadData.extractedText || '';
               
-              if (uploadData.metadata?.processingType === 'background') {
-                // Add background processing message to chat
-                const backgroundMessage = {
-                  sender: 'ai' as const,
-                  text: uploadData.analysis || 'Your lease document is being processed in the background.',
-                  timestamp: new Date(),
-                  type: 'background_processing' as const,
-                  metadata: {
-                    jobId: uploadData.metadata.jobId,
-                    filename: uploadedFile.name,
-                    alternatives: uploadData.metadata.alternatives,
-                    estimatedTime: uploadData.metadata.estimatedTime
-                  }
-                };
-                
-                setMessages(prev => [...prev, backgroundMessage]);
-                console.log('📋 Added background processing message to chat');
-                
-                // If there are alternatives, show them
-                if (uploadData.metadata.alternatives && uploadData.metadata.alternatives.length > 0) {
-                  const alternativesMessage = {
-                    sender: 'ai' as const,
-                    text: `In the meantime, I can help with:\n${uploadData.metadata.alternatives.map((alt: string, i: number) => `${i + 1}. ${alt}`).join('\n')}`,
-                    timestamp: new Date(),
-                    type: 'alternatives' as const
-                  };
-                  
-                  setMessages(prev => [...prev, alternativesMessage]);
-                }
-                
-              } else if (isLeaseDocument(uploadedFile.name, extractedText)) {
+              if (isLeaseDocument(uploadedFile.name, extractedText)) {
                 console.log('🏠 Detected lease document, generating enhanced analysis...');
                 
                 // Generate lease analysis using LeaseDocumentParser
@@ -1059,89 +1012,56 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
   // Hybrid lease processing function - attempts quick processing first, falls back to background processing
   const uploadToAskAI = async (file: File, buildingId?: string) => {
-    console.log('🎯 [DEPLOY] Hybrid lease processing with full backend support:', file.name);
+    console.log('📄 Processing file for Ask Bloc AI:', file.name);
     console.log(`📊 File details: ${(file.size / (1024 * 1024)).toFixed(2)} MB, type: ${file.type}`);
     
-    // Use the user's current question as context for processing
-    const userQuestion = askInput.trim() || 'Please analyze this lease document and provide key information.';
-    
     try {
-      // Use hybrid processor for intelligent processing
-      const result = await HybridLeaseProcessor.processLease(file, userQuestion, {
-        buildingId,
-        userId: userData?.id,
-        userQuestion: userQuestion
+      // Simple file upload to Ask AI endpoint - no background processing
+      const formData = new FormData();
+      formData.append('file', file);
+      if (buildingId) formData.append('buildingId', buildingId);
+      
+      const response = await fetch('/api/ask-ai/upload', {
+        method: 'POST',
+        body: formData
       });
 
-      if (result.success) {
-        if (result.type === 'quick') {
-          // Quick processing succeeded - return immediate results
-          console.log('⚡ Quick processing successful');
-          return {
-            success: true,
-            documentType: 'lease',
-            summary: 'Lease analysis completed',
-            analysis: result.data?.analysis || 'Analysis completed successfully',
-            filename: file.name,
-            textLength: result.data?.extractedText?.length || 0,
-            extractedText: result.data?.extractedText || '',
-            ocrSource: result.data?.ocrSource || 'hybrid-quick',
-            metadata: {
-              processingType: 'quick',
-              processingTime: result.data?.processingTime,
-              ...result.data?.metadata
-            }
-          };
-        } else if (result.type === 'background') {
-          // Background processing initiated - return status message
-          console.log('📋 Background processing initiated');
-          return {
-            success: true,
-            documentType: 'lease',
-            summary: 'Background processing started',
-            analysis: result.message || 'Document queued for comprehensive analysis. You will receive an email notification when complete.',
-            filename: file.name,
-            textLength: 0,
-            extractedText: '',
-            ocrSource: 'hybrid-background',
-            metadata: {
-              processingType: 'background',
-              jobId: result.jobId,
-              alternatives: result.alternatives,
-              estimatedTime: '5-10 minutes'
-            }
-          };
-        }
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.status}`);
       }
 
-      // Processing failed - return error with helpful message
-      console.error('❌ Hybrid processing failed:', result.error);
+      const result = await response.json();
+      
+      if (result.success) {
+        console.log('✅ File processed successfully');
+        return {
+          success: true,
+          documentType: result.documentType || 'document',
+          summary: result.summary || 'Document processed successfully',
+          analysis: result.analysis || 'Document analysis completed',
+          filename: file.name,
+          textLength: result.textLength || 0,
+          extractedText: result.extractedText || '',
+          ocrSource: result.ocrSource || 'ask-ai',
+          metadata: {
+            processingType: 'immediate'
+          }
+        };
+      } else {
+        throw new Error(result.error || 'Processing failed');
+      }
+
+    } catch (error) {
+      console.error('❌ File processing error:', error);
       return {
         success: false,
         documentType: 'document',
         summary: 'Processing failed',
-        analysis: result.message || 'Document processing encountered an issue. Please try again or contact support.',
+        analysis: `Failed to process ${file.name}. Please try again or use Lease Lab for large documents.`,
         filename: file.name,
         textLength: 0,
         extractedText: '',
-        ocrSource: 'hybrid-failed',
-        metadata: {
-          processingType: 'error',
-          alternatives: result.alternatives
-        }
-      };
-
-    } catch (error) {
-      console.error('❌ Hybrid processing error:', error);
-      return {
-        success: false,
-        documentType: 'document',
-        summary: 'Processing error',
-        analysis: `Failed to process ${file.name}. Please try again or contact support if the issue persists.`,
-        filename: file.name,
-        textLength: 0,
-        extractedText: '',
-        ocrSource: 'hybrid-error',
+        ocrSource: 'error',
         error: error instanceof Error ? error.message : 'Unknown error'
       };
     }

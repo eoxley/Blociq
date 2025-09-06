@@ -78,9 +78,18 @@ export async function POST(req: NextRequest) {
 
     if (jobError) {
       console.error('Error creating job:', jobError);
+      console.error('Job data attempted:', {
+        filename: file.name,
+        status: 'QUEUED',
+        size_bytes: file.size,
+        mime: file.type,
+        user_id: user.id,
+        agency_id: agencyMember.agency_id
+      });
       return NextResponse.json({ 
         error: 'Failed to create job',
-        message: 'Unable to create processing job. Please try again.'
+        message: 'Unable to create processing job. Please try again.',
+        details: process.env.NODE_ENV === 'development' ? jobError.message : undefined
       }, { status: 500 });
     }
 

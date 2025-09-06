@@ -1,5 +1,11 @@
--- Create document_jobs table for Lease Lab
-CREATE TABLE IF NOT EXISTS public.document_jobs (
+-- Fix document_jobs table for Lease Lab
+-- This ensures the table has all required constraints and foreign keys
+
+-- First, drop the table if it exists (since we created it without proper constraints)
+DROP TABLE IF EXISTS public.document_jobs CASCADE;
+
+-- Create the document_jobs table with proper structure
+CREATE TABLE public.document_jobs (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   filename character varying(255) NOT NULL,
   status character varying(50) NOT NULL DEFAULT 'QUEUED',
@@ -21,12 +27,26 @@ CREATE TABLE IF NOT EXISTS public.document_jobs (
   user_id uuid NOT NULL,
   agency_id uuid NOT NULL,
   CONSTRAINT document_jobs_pkey PRIMARY KEY (id),
-  CONSTRAINT document_jobs_status_check CHECK (status IN ('QUEUED', 'OCR', 'EXTRACT', 'SUMMARISE', 'READY', 'FAILED')),
-  CONSTRAINT document_jobs_linked_building_id_fkey FOREIGN KEY (linked_building_id) REFERENCES public.buildings(id) ON DELETE SET NULL,
-  CONSTRAINT document_jobs_linked_unit_id_fkey FOREIGN KEY (linked_unit_id) REFERENCES public.units(id) ON DELETE SET NULL,
-  CONSTRAINT document_jobs_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE,
-  CONSTRAINT document_jobs_agency_id_fkey FOREIGN KEY (agency_id) REFERENCES public.agencies(id) ON DELETE CASCADE
+  CONSTRAINT document_jobs_status_check CHECK (status IN ('QUEUED', 'OCR', 'EXTRACT', 'SUMMARISE', 'READY', 'FAILED'))
 );
+
+-- Add foreign key constraints
+ALTER TABLE public.document_jobs 
+ADD CONSTRAINT document_jobs_user_id_fkey 
+FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+
+ALTER TABLE public.document_jobs 
+ADD CONSTRAINT document_jobs_agency_id_fkey 
+FOREIGN KEY (agency_id) REFERENCES public.agencies(id) ON DELETE CASCADE;
+
+-- Add optional foreign keys for buildings and units
+ALTER TABLE public.document_jobs 
+ADD CONSTRAINT document_jobs_linked_building_id_fkey 
+FOREIGN KEY (linked_building_id) REFERENCES public.buildings(id) ON DELETE SET NULL;
+
+ALTER TABLE public.document_jobs 
+ADD CONSTRAINT document_jobs_linked_unit_id_fkey 
+FOREIGN KEY (linked_unit_id) REFERENCES public.units(id) ON DELETE SET NULL;
 
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_document_jobs_agency_id ON public.document_jobs USING btree (agency_id);
@@ -37,6 +57,14 @@ CREATE INDEX IF NOT EXISTS idx_document_jobs_linked_building_id ON public.docume
 CREATE INDEX IF NOT EXISTS idx_document_jobs_linked_unit_id ON public.document_jobs USING btree (linked_unit_id);
 
 -- Create trigger for updated_at
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
 CREATE TRIGGER update_document_jobs_updated_at
   BEFORE UPDATE ON public.document_jobs
   FOR EACH ROW
