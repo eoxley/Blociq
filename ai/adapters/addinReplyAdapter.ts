@@ -95,6 +95,57 @@ export function createAddinReplyAdapter() {
 }
 
 /**
+ * Simple reply adapter function for the generate-reply endpoint
+ */
+export async function addinReplyAdapter(params: {
+  userInput: string;
+  outlookContext: any;
+  buildingContext?: any;
+  userId: string;
+}): Promise<{
+  success: boolean;
+  bodyHtml?: string;
+  subjectSuggestion?: string;
+  usedFacts?: string[];
+  sources?: string[];
+  message?: string;
+}> {
+  try {
+    const { userInput, outlookContext, buildingContext, userId } = params;
+    
+    // Create reply context
+    const context: ReplyContext = {
+      userInput,
+      outlookContext,
+      buildingContext,
+      userSettings: {
+        signature: 'BlocIQ Property Management',
+        tone: 'professional'
+      }
+    };
+    
+    // Generate reply using the existing adapter
+    const adapter = createAddinReplyAdapter();
+    const result = await adapter.generateReply(context);
+    
+    return {
+      success: true,
+      bodyHtml: result.bodyHtml,
+      subjectSuggestion: result.subjectSuggestion,
+      usedFacts: result.usedFacts,
+      sources: result.sources
+    };
+    
+  } catch (error) {
+    console.error('Addin Reply Adapter error:', error);
+    return {
+      success: false,
+      message: 'Failed to generate reply'
+    };
+  }
+}
+
+/**
  * Generate subject suggestion for reply
  */
 function generateSubjectSuggestion(context: ReplyContext): string {
