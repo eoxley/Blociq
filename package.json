@@ -10,6 +10,11 @@
     "start": "next start",
     "lint": "next lint",
     "test": "echo \"No tests configured yet. Run 'npm run lint' to check code quality.\"",
+    "test:smoke:ocr": "vitest run tests/smoke/ocr.inline.test.ts --reporter=dot",
+    "test:smoke:dashboard": "vitest run tests/smoke/dashboard.test.ts --reporter=dot",
+    "test:smoke:db": "vitest run tests/smoke/db.textPresence.test.ts --reporter=dot",
+    "test:smoke": "pnpm -s test:smoke:ocr && pnpm -s test:smoke:dashboard && pnpm -s test:smoke:db",
+    "test:smoke:simple": "node test-smoke-runner.js",
     "clear-cache": "node scripts/clear-cache.js",
     "seed:compliance": "tsx scripts/seedComplianceAssets.ts",
     "check:compliance": "tsx scripts/checkComplianceAssets.ts",
@@ -112,9 +117,12 @@
     "@types/uuid": "^10.0.0",
     "eslint": "9.31.0",
     "eslint-config-next": "15.4.1",
+    "pdfkit": "^0.15.0",
     "tailwindcss": "^4",
     "terser-webpack-plugin": "^5.3.14",
+    "tsx": "^4.7.0",
     "tw-animate-css": "^1.3.4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^2.0.0"
   }
 }
