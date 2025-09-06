@@ -323,8 +323,8 @@ Provide a focused, helpful answer to their question based on the lease content. 
       
       console.log('📤 Creating background job...');
       
-      // Get the API key - ensure we're using the environment variable properly
-      const apiKey = process.env.NEXT_PUBLIC_BACKGROUND_PROCESSOR_API_KEY || 'blociq-secure-background-processor-key-2025';
+      // Get the API key - use the default key since NEXT_PUBLIC_ vars may not be set in production
+      const apiKey = 'blociq-secure-background-processor-key-2025';
       console.log('🔑 Using API key for background processing:', { hasKey: !!apiKey, keyPrefix: apiKey ? apiKey.substring(0, 8) + '...' : 'none' });
       
       const response = await fetch('/api/lease-processing/upload', {

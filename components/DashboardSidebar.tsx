@@ -5,12 +5,13 @@ import { usePathname } from "next/navigation";
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Bell, Settings, User, HelpCircle, ExternalLink, LogOut } from 'lucide-react';
+import { Bell, Settings, User, HelpCircle, ExternalLink, LogOut, Lock } from 'lucide-react';
 import BlocIQLogo from './BlocIQLogo';
 import { BlocIQBadge } from '@/components/ui/blociq-badge';
 import AgencySwitcher from './AgencySwitcher';
 import LeaseNotificationBadge from './LeaseNotificationBadge';
 import ClientOnly from './ClientOnly';
+import { useLeaseSystemReadiness } from '@/hooks/useLeaseSystemReadiness';
 
 const navItems = [
   { label: "Home", icon: "🏠", href: "/home", comingSoon: false, description: "Dashboard overview", aiPowered: false },
@@ -31,6 +32,7 @@ export default function DashboardSidebar() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [notifications, setNotifications] = useState(3); // Mock notification count
+  const { isReady: leaseSystemReady, isLoading: leaseSystemLoading } = useLeaseSystemReadiness();
 
   useEffect(() => {
     const getUser = async () => {
@@ -80,6 +82,8 @@ export default function DashboardSidebar() {
         
         {navItems.map(({ label, icon, href, comingSoon, description, aiPowered }) => {
           const isActive = !comingSoon && (pathname === href || (pathname && pathname.startsWith(href + '/')));
+          const isLeaseProcessing = label === "Lease Processing";
+          const isDisabled = isLeaseProcessing && !leaseSystemReady && !leaseSystemLoading;
           
           if (comingSoon) {
             return (
@@ -103,6 +107,39 @@ export default function DashboardSidebar() {
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500 border border-gray-200">Coming Soon</span>
                     </div>
                     <p className="text-sm text-text-muted mt-1 leading-tight">{description}</p>
+                  </div>
+                </button>
+              </div>
+            );
+          }
+
+          if (isDisabled) {
+            return (
+              <div key={label} className="w-full group">
+                <button
+                  className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-text-secondary cursor-not-allowed opacity-60 transition-all relative group"
+                  disabled
+                  title="Lease processing system is being set up. Please contact your administrator."
+                >
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 bg-[#f1f5f9] relative">
+                    <span
+                      className="text-base opacity-60"
+                      style={{ fontFamily: "'Apple Color Emoji', 'Segoe UI Emoji', sans-serif" }}
+                    >
+                      {icon}
+                    </span>
+                    <Lock className="h-3 w-3 absolute -top-1 -right-1 text-gray-400" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-text-secondary text-sm">{label}</span>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-600 border border-yellow-200">
+                        {leaseSystemLoading ? 'Checking...' : 'Setup Required'}
+                      </span>
+                    </div>
+                    <p className="text-sm text-text-muted mt-1 leading-tight">
+                      {leaseSystemLoading ? 'Checking system status...' : 'System setup in progress'}
+                    </p>
                   </div>
                 </button>
               </div>

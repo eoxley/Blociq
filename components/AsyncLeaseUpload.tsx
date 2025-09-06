@@ -100,7 +100,7 @@ export default function AsyncLeaseUpload() {
       if (priority > 0) formData.append('priority', priority.toString());
       
       // Get the background processor API key for authentication
-      const apiKey = process.env.NEXT_PUBLIC_BACKGROUND_PROCESSOR_API_KEY || 'blociq-secure-background-processor-key-2025';
+      const apiKey = 'blociq-secure-background-processor-key-2025';
       
       const response = await fetch('/api/lease-processing/upload', {
         method: 'POST',

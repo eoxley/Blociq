@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Bell, FileText, AlertCircle, CheckCircle, Clock, X, Eye } from 'lucide-react';
+import { Bell, FileText, AlertCircle, CheckCircle, Clock, X, Eye, Lock } from 'lucide-react';
 import { useLeaseNotifications } from '@/contexts/LeaseNotificationContext';
+import { useLeaseSystemReadiness } from '@/hooks/useLeaseSystemReadiness';
 import { formatDistanceToNow } from 'date-fns';
 import ClientOnly from './ClientOnly';
 
@@ -14,6 +15,7 @@ interface NotificationDropdownProps {
 function NotificationDropdown({ isOpen, onClose }: NotificationDropdownProps) {
   // Safe hook usage - will return defaults if outside provider context
   const { notifications, markAsRead, markAllAsRead, clearNotification, getNotificationsByStatus } = useLeaseNotifications();
+  const { isReady: leaseSystemReady, isLoading: leaseSystemLoading } = useLeaseSystemReadiness();
   
   if (!isOpen) return null;
 
@@ -183,23 +185,37 @@ function NotificationDropdown({ isOpen, onClose }: NotificationDropdownProps) {
         {notifications.length > 0 && (
           <button
             onClick={() => {
-              if (typeof window !== 'undefined') {
+              if (typeof window !== 'undefined' && leaseSystemReady) {
                 window.location.href = '/lease-processing-history';
               }
             }}
-            className="w-full text-center text-sm text-blue-600 hover:text-blue-700 font-medium"
+            disabled={!leaseSystemReady}
+            className={`w-full text-center text-sm font-medium flex items-center justify-center gap-2 ${
+              leaseSystemReady 
+                ? 'text-blue-600 hover:text-blue-700' 
+                : 'text-gray-400 cursor-not-allowed'
+            }`}
+            title={leaseSystemReady ? 'View processing history' : 'Lease processing system not ready'}
           >
+            {!leaseSystemReady && <Lock className="h-3 w-3" />}
             View All Processing History
           </button>
         )}
         <button
           onClick={() => {
-            if (typeof window !== 'undefined') {
+            if (typeof window !== 'undefined' && leaseSystemReady) {
               window.location.href = '/lease-status-dashboard';
             }
           }}
-          className="w-full text-center text-sm text-purple-600 hover:text-purple-700 font-medium"
+          disabled={!leaseSystemReady}
+          className={`w-full text-center text-sm font-medium flex items-center justify-center gap-2 ${
+            leaseSystemReady 
+              ? 'text-purple-600 hover:text-purple-700' 
+              : 'text-gray-400 cursor-not-allowed'
+          }`}
+          title={leaseSystemReady ? 'Open status dashboard' : 'Lease processing system not ready'}
         >
+          {!leaseSystemReady && <Lock className="h-3 w-3" />}
           Open Status Dashboard
         </button>
       </div>
