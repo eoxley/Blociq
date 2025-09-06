@@ -58,7 +58,7 @@ export default function UpcomingEventsWidget() {
     setLoading(true);
     try {
       // Load buildings and events in parallel
-      const [buildingsResponse, outlookEventsResponse, manualEventsResponse] = await Promise.all([
+      const responses = await Promise.all([
         supabase.from("buildings").select("id, name, address"),
         supabase
           .from("calendar_events")
@@ -73,6 +73,9 @@ export default function UpcomingEventsWidget() {
           .order("start_time", { ascending: true })
           .limit(10)
       ]);
+
+      // Safe destructuring with fallback
+      const [buildingsResponse, outlookEventsResponse, manualEventsResponse] = responses || [{}, {}, {}];
 
       setBuildings(buildingsResponse.data || []);
       

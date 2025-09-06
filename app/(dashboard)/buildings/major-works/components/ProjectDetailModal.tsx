@@ -111,11 +111,14 @@ export default function ProjectDetailModal({
     if (!project) return
 
     try {
-      const [logsResult, documentsResult, observationsResult] = await Promise.all([
+      const responses = await Promise.all([
         supabase.from('major_works_logs').select('*').eq('project_id', project.id).order('created_at', { ascending: false }),
         supabase.from('major_works_documents').select('*').eq('project_id', project.id).order('uploaded_at', { ascending: false }),
         supabase.from('major_works_observations').select('*').eq('project_id', project.id).order('created_at', { ascending: false })
       ])
+
+      // Safe destructuring with fallback
+      const [logsResult, documentsResult, observationsResult] = responses || [{}, {}, {}]
 
       setLogs(logsResult.data || [])
       setDocuments(documentsResult.data || [])

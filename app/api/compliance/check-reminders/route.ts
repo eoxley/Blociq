@@ -273,10 +273,13 @@ export async function POST(req: NextRequest) {
       docsQuery = docsQuery.in('building_id', buildingIds);
     }
 
-    const [assetsResult, docsResult] = await Promise.all([
+    const responses = await Promise.all([
       assetsQuery.order('next_due_date', { ascending: true }),
       docsQuery.order('expiry_date', { ascending: true })
     ]);
+
+    // Safe destructuring with fallback
+    const [assetsResult, docsResult] = responses || [{}, {}];
 
     if (assetsResult.error) {
       throw new Error(`Assets query error: ${assetsResult.error.message}`);

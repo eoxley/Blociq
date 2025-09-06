@@ -158,11 +158,14 @@ export default function MajorWorksPortfolio({ userData, filters }: MajorWorksPor
       const processedProjects = await Promise.all(
         (data || []).map(async (project) => {
           // Fetch related data for statistics
-          const [documentsResult, logsResult, observationsResult] = await Promise.all([
+          const responses = await Promise.all([
             supabase.from('major_works_documents').select('id', { count: 'exact' }).eq('project_id', project.id),
             supabase.from('major_works_logs').select('id', { count: 'exact' }).eq('project_id', project.id),
             supabase.from('major_works_observations').select('id', { count: 'exact' }).eq('project_id', project.id)
           ])
+
+          // Safe destructuring with fallback
+          const [documentsResult, logsResult, observationsResult] = responses || [{}, {}, {}]
 
           const statistics = {
             total_documents: documentsResult.count || 0,

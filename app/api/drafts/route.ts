@@ -15,7 +15,7 @@ export async function GET() {
     const userId = session.user.id
 
     // Fetch all drafts for the user (both email drafts and reply drafts)
-    const [emailDraftsResult, replyDraftsResult] = await Promise.all([
+    const responses = await Promise.all([
       supabase
         .from('email_drafts')
         .select(`
@@ -47,6 +47,9 @@ export async function GET() {
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
     ])
+
+    // Safe destructuring with fallback
+    const [emailDraftsResult, replyDraftsResult] = responses || [{}, {}];
 
     if (emailDraftsResult.error) {
       console.error('Error fetching email drafts:', emailDraftsResult.error)

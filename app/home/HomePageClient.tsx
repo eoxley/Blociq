@@ -338,7 +338,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   const fetchEvents = async () => {
     try {
       // Fetch from both property_events and manual_events tables
-      const [propertyEventsResponse, manualEventsResponse] = await Promise.all([
+      const responses = await Promise.all([
         supabase
           .from('property_events')
           .select('*')
@@ -352,6 +352,9 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
           .order('start_time', { ascending: true })
           .limit(5)
       ])
+
+      // Safe destructuring with fallback
+      const [propertyEventsResponse, manualEventsResponse] = responses || [{}, {}]
 
       if (propertyEventsResponse.error) {
         console.error('Error fetching property events:', propertyEventsResponse.error)
