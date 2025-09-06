@@ -7,7 +7,18 @@ const serverInstances = new Map<string, ReturnType<typeof createServerComponentC
 
 export function createClient(cookieStore = cookies()) {
   // Create a unique key based on the cookie store
-  const cookieKey = JSON.stringify(cookieStore.getAll())
+  // Handle both cookie store types safely
+  let cookieKey = 'default';
+  try {
+    if (cookieStore && typeof cookieStore.getAll === 'function') {
+      cookieKey = JSON.stringify(cookieStore.getAll());
+    } else if (cookieStore && typeof cookieStore.toString === 'function') {
+      cookieKey = cookieStore.toString();
+    }
+  } catch (error) {
+    console.warn('Error creating cookie key:', error);
+    cookieKey = 'fallback';
+  }
   
   // Check if we already have an instance for this cookie store
   if (serverInstances.has(cookieKey)) {
