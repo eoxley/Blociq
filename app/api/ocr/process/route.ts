@@ -109,13 +109,27 @@ export async function POST(req: NextRequest) {
     
     let renderResponse: Response;
     try {
+      // Use FormData for the new endpoint format
+      const formData = new FormData();
+      
+      if (payload.storageKey) {
+        // StorageKey flow - send as form data
+        formData.append('storage_key', payload.storageKey);
+        formData.append('filename', payload.filename);
+        formData.append('mime', payload.mime);
+        formData.append('use_google_vision', 'true'); // Use Google Vision for better results
+      } else if (payload.file) {
+        // Direct file upload flow
+        formData.append('file', payload.file);
+        formData.append('use_google_vision', 'true');
+      }
+      
       renderResponse = await fetch(ocrUrl, {
         method: "POST",
         headers: { 
-          "Content-Type": "application/json", 
           "Authorization": `Bearer ${token}` 
         },
-        body: JSON.stringify(payload),
+        body: formData,
       });
       
       console.log('📨 Render service response status:', renderResponse.status);
@@ -176,10 +190,21 @@ export async function POST(req: NextRequest) {
     console.log('✅ Render OCR service responded:', {
       success: result.success,
       source: result.source,
-      textLength: result.textLength || 0
+      textLength: result.text_length || 0,
+      processingMode: result.processing_mode
     });
     
-    return NextResponse.json(result);
+    // Transform response to match expected format
+    const transformedResult = {
+      success: result.success || true,
+      text: result.text || '',
+      source: result.source || 'unknown',
+      filename: result.filename || 'unknown',
+      textLength: result.text_length || 0,
+      processingMode: result.processing_mode || 'unknown'
+    };
+    
+    return NextResponse.json(transformedResult);
 
   } catch (error) {
     console.error('❌ OCR proxy error:', error);
