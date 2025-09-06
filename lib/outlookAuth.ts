@@ -305,10 +305,7 @@ async function refreshAccessTokenForUser(userId: string, refreshToken: string): 
   }
 
   // Save the new tokens using service role
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+  const supabase = createClient()
 
   const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
 
