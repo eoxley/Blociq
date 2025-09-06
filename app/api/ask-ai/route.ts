@@ -401,6 +401,77 @@ Notes & Instructions: ${buildingData.notes || 'No notes added yet'}
       // Fall through to legacy processing
     }
 
+    // 🏠 LEASE SUMMARY INTEGRATION
+    // Check if there's a linked lease analysis for this building
+    if (building_id) {
+      try {
+        console.log('🏠 Checking for lease analysis for building:', building_id);
+        
+        const { data: leaseSummary } = await supabase
+          .from('lease_summaries_v')
+          .select('*')
+          .eq('linked_building_id', building_id)
+          .eq('doc_type', 'lease')
+          .eq('status', 'READY')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (leaseSummary && leaseSummary.full_summary) {
+          console.log('✅ Found lease analysis, using contract-based response');
+          
+          // Import lease summary adapter
+          const { createLeaseSummaryAdapter } = await import('../../../ai/adapters/leaseSummaryToAnswer');
+          
+          // Create adapter and get answer
+          const adapter = createLeaseSummaryAdapter(leaseSummary.full_summary);
+          const leaseAnswer = adapter.answerQuestion(prompt);
+          
+          if (leaseAnswer.confidence === 'high' || leaseAnswer.confidence === 'medium') {
+            console.log('✅ Lease analysis provided confident answer');
+            
+            // Format response with source verification
+            let response = leaseAnswer.answer;
+            if (leaseAnswer.keyFacts.length > 0) {
+              response += '\n\nKey facts:';
+              leaseAnswer.keyFacts.forEach(fact => {
+                response += `\n- ${fact.label}: ${fact.value} (Lease Lab, p.${fact.source.page})`;
+              });
+            }
+            
+            if (leaseAnswer.requiresReview) {
+              response += '\n\n⚠️ Please review the original lease document for complete details.';
+            }
+            
+            return NextResponse.json({
+              success: true,
+              result: response,
+              response: response,
+              conversationId: null,
+              context_type: 'lease_analysis',
+              building_id: building_id,
+              document_count: 1,
+              has_email_thread: false,
+              has_leaseholder: false,
+              context: {
+                source: 'lease_analysis',
+                confidence: leaseAnswer.confidence,
+                sources: leaseAnswer.sources
+              },
+              metadata: {
+                source: 'lease_analysis',
+                contract_based: true,
+                quality_score: leaseAnswer.confidence === 'high' ? 95 : 75
+              }
+            });
+          }
+        }
+      } catch (leaseError) {
+        console.warn('Lease analysis check failed:', leaseError);
+        // Continue with normal processing
+      }
+    }
+
     // 🔍 ALWAYS perform building search regardless of building_id
     // This ensures we can find leaseholder information from queries like "who is the leaseholder of 5 ashwood house"
     try {

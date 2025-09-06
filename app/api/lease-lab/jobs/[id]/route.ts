@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { cookies } from 'next/headers';
+import { validateLeaseDocument } from '@/ai/contracts/validateLeaseSummary';
 
 export async function GET(
   req: NextRequest,
@@ -48,9 +49,28 @@ export async function GET(
       }, { status: 404 });
     }
 
+    // Validate summary_json if present
+    let validationResult = null;
+    if (job.summary_json && job.status === 'READY') {
+      try {
+        validationResult = validateLeaseDocument(job.summary_json);
+      } catch (validationError) {
+        console.warn('Summary validation failed:', validationError);
+        validationResult = {
+          isValid: false,
+          errors: [{ field: 'summary_json', message: 'Invalid contract format', severity: 'error' as const }],
+          warnings: [],
+          qualityScore: 0
+        };
+      }
+    }
+
     return NextResponse.json({ 
       success: true,
-      job
+      job: {
+        ...job,
+        validation: validationResult
+      }
     });
 
   } catch (error) {
