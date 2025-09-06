@@ -154,6 +154,8 @@ const EnhancedInboxOverview: React.FC = () => {
       const raw = await response.json().catch(() => ({} as any));
       const data = raw && typeof raw === 'object' ? raw : {};
       
+      console.log('📊 Raw API response:', JSON.stringify(data, null, 2));
+      
       if (!response.ok) {
         if (response.status === 401) {
           throw new Error('Authentication required - please log in again');
@@ -182,6 +184,7 @@ const EnhancedInboxOverview: React.FC = () => {
         }
       };
       
+      console.log('📊 Processed dashboard data:', JSON.stringify(safeDashboard, null, 2));
       setDashboardData(safeDashboard);
     } catch (error) {
       console.error('Dashboard fetch error:', error);
