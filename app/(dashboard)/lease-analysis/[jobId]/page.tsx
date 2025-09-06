@@ -72,13 +72,45 @@ export default function LeaseAnalysisPage() {
   
   const [analysisData, setAnalysisData] = useState<LeaseAnalysisData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [systemReady, setSystemReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'clauses' | 'document'>('overview');
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    fetchAnalysisData();
+    checkSystemReadiness();
   }, [jobId]);
+
+  const checkSystemReadiness = async () => {
+    try {
+      // Check if user is authenticated
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        router.push('/login');
+        return;
+      }
+
+      // Check if lease_processing_jobs table exists
+      const { error: tableError } = await supabase
+        .from('lease_processing_jobs')
+        .select('id')
+        .limit(1);
+
+      if (tableError) {
+        setError('Lease processing system is not configured. Please contact your administrator.');
+        setSystemReady(false);
+        return;
+      }
+
+      setSystemReady(true);
+      fetchAnalysisData();
+      
+    } catch (error) {
+      console.error('System readiness check failed:', error);
+      setError('Failed to check system status. Please try again.');
+      setSystemReady(false);
+    }
+  };
 
   const fetchAnalysisData = async () => {
     try {
@@ -208,6 +240,33 @@ ${clauses.map((clause, i) => `${i + 1}. ${clause.title}\n   ${clause.content}`).
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  if (!systemReady) {
+    return (
+      <div className="max-w-2xl mx-auto p-6">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-8">
+          <div className="flex items-center mb-4">
+            <AlertCircle className="h-8 w-8 text-yellow-600 mr-3" />
+            <h2 className="text-2xl font-bold text-yellow-800">Lease Processing System Not Available</h2>
+          </div>
+          <p className="text-yellow-700 mb-4">
+            The lease processing system is currently being set up. This feature requires:
+          </p>
+          <ul className="list-disc list-inside text-yellow-700 mb-6 space-y-2">
+            <li>Database tables for job processing</li>
+            <li>Background OCR processing service</li>
+            <li>Email notification system</li>
+            <li>File storage configuration</li>
+          </ul>
+          <div className="bg-yellow-100 border border-yellow-300 rounded-lg p-4">
+            <p className="text-yellow-800 font-medium">
+              Please contact your administrator to enable lease processing functionality.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
