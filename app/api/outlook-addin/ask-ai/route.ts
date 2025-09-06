@@ -447,7 +447,7 @@ export async function POST(req: Request) {
     
     try {
       // Import synchronized AI processor
-      const { SynchronizedAIProcessor } = await import('../../../lib/ai/systemSynchronizer');
+      const { SynchronizedAIProcessor } = await import('@/lib/ai/systemSynchronizer');
       
       // Process the query with full capabilities using synchronized processor
       const unifiedResult = await SynchronizedAIProcessor.processOutlookQuery(
