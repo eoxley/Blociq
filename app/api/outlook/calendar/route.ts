@@ -62,7 +62,7 @@ async function refreshOutlookToken(supabase: any, userId: string, refreshToken: 
 
 export async function GET(req: NextRequest) {
   try {
-    const supabase = createClient(cookies());
+    const supabase = createClient(await cookies());
     
     // Get the current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();

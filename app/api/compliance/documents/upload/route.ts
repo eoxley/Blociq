@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
   try {
     console.log("📎 Uploading compliance document with AI processing...");
     
-    const supabase = createClient(cookies());
+    const supabase = createClient(await cookies());
     
     // Get the current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -257,7 +257,7 @@ function classifyDocumentByFilename(filename: string, assetCategory?: string): {
 }
 
 async function processDocumentWithAI(document: any, file: File, assetInfo: any): Promise<void> {
-  const supabase = createClient(cookies());
+  const supabase = createClient(await cookies());
   
   try {
     console.log(`🧠 Starting AI processing for document ${document.id}`);

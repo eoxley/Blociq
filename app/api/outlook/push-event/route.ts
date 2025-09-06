@@ -39,7 +39,7 @@ async function refreshOutlookToken(tokens: any) {
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = createClient(cookies());
+    const supabase = createClient(await cookies());
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     if (sessionError || !session) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });

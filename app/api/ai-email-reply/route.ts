@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
   try {
     console.log('🔄 AI Email Reply: Processing email analysis request...');
 
-    const supabase = createClient(cookies());
+    const supabase = createClient(await cookies());
     
     // Get the current user (optional for Outlook add-in)
     const { data: { user }, error: userError } = await supabase.auth.getUser();
