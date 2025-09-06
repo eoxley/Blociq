@@ -268,36 +268,93 @@ export class ComprehensiveQueryParser {
   static parseLeaseholderQuery(prompt: string): { unit?: string; building?: string } {
     const promptLower = prompt.toLowerCase();
     
-    // Extract unit number - multiple formats
+    // Extract unit number - multiple formats with smart conversion
     const unitPatterns = [
+      // Explicit unit/flat/apartment references
       /(?:unit|flat|apartment|apt)\s*([0-9]+[a-zA-Z]?)/,
-      /(?:^|\s)([0-9]+[a-zA-Z]?)(?:\s+(?:at|in|of))/,
+      // Just a number (common when user says "unit 8" or "flat 8")
+      /(?:^|\s)([0-9]+[a-zA-Z]?)(?:\s+(?:at|in|of|in|at))/,
+      // Number at end of sentence
       /(?:^|\s)([0-9]+[a-zA-Z]?)(?:\s|$|,|\?)/
     ];
     
     let unit: string | undefined;
+    let unitNumber: string | undefined;
+    
     for (const pattern of unitPatterns) {
       const match = promptLower.match(pattern);
       if (match) {
-        unit = match[1];
+        unitNumber = match[1];
         break;
+      }
+    }
+    
+    // Smart unit format conversion
+    if (unitNumber) {
+      // Check if the prompt explicitly mentions "unit" or "flat"
+      const hasExplicitUnit = /\b(unit|flat|apartment|apt)\b/i.test(prompt);
+      
+      if (hasExplicitUnit) {
+        // If user says "unit 8" or "flat 8", keep the format
+        if (/\bunit\b/i.test(prompt)) {
+          unit = `Unit ${unitNumber}`;
+        } else if (/\bflat\b/i.test(prompt)) {
+          unit = `Flat ${unitNumber}`;
+        } else if (/\bapartment\b/i.test(prompt) || /\bapt\b/i.test(prompt)) {
+          unit = `Apartment ${unitNumber}`;
+        } else {
+          // Default to "Flat" format (most common in UK property management)
+          unit = `Flat ${unitNumber}`;
+        }
+      } else {
+        // If user just says "8" without specifying, assume they mean "Flat 8"
+        // This is the key rule you mentioned!
+        unit = `Flat ${unitNumber}`;
       }
     }
     
     // Extract building name - multiple patterns
     let building: string | undefined;
+    const buildingKeywords = ['house', 'court', 'building', 'apartment', 'residence', 'manor', 'gardens', 'heights', 'view', 'plaza'];
     
-    // Look for "at [Building Name]" pattern
-    const atMatch = prompt.match(/at\s+([a-zA-Z0-9\s]+?)(?:\s|$|,|\?)/i);
+    // Look for "at [Building Name]" pattern - improved regex to match full building names
+    const atMatch = prompt.match(/at\s+([a-zA-Z][a-zA-Z0-9\s]*?)(?:\s|$|,|\?|\.|!)/i);
     if (atMatch) {
-      building = atMatch[1].trim();
+      let potentialBuilding = atMatch[1].trim();
+      // Check if the next word after the match is part of the building name
+      const fullMatch = prompt.match(new RegExp(`at\\s+${potentialBuilding.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s+([a-zA-Z]+)`, 'i'));
+      if (fullMatch) {
+        potentialBuilding = `${potentialBuilding} ${fullMatch[1]}`;
+      }
+      building = potentialBuilding;
+      console.log('🔍 LEASEHOLDER PARSER DEBUG: Found building from "at" pattern:', building);
     } else {
       // Look for building name with common suffixes
       const buildingMatch = prompt.match(/([a-zA-Z]+(?:\s+[a-zA-Z]+)*)\s+(?:house|court|place|tower|manor|lodge|building)\b/i);
       if (buildingMatch) {
         building = buildingMatch[1].trim();
+        console.log('🔍 LEASEHOLDER PARSER DEBUG: Found building from suffix pattern:', building);
+      } else {
+        // Try to extract building name from the end of the sentence
+        const endMatch = prompt.match(/([a-zA-Z]+(?:\s+[a-zA-Z]+)*)\s*$/i);
+        if (endMatch) {
+          const potentialBuilding = endMatch[1].trim();
+          // Check if it contains building keywords
+          if (buildingKeywords.some(keyword => potentialBuilding.toLowerCase().includes(keyword))) {
+            building = potentialBuilding;
+            console.log('🔍 LEASEHOLDER PARSER DEBUG: Found building from end pattern:', building);
+          }
+        }
       }
     }
+    
+    console.log('🔍 PARSER DEBUG:', { 
+      prompt, 
+      unitNumber, 
+      unit, 
+      building, 
+      hasExplicitUnit: unitNumber ? /\b(unit|flat|apartment|apt)\b/i.test(prompt) : false 
+    });
     
     return { unit, building };
   }
@@ -311,17 +368,40 @@ export class ComprehensiveQueryParser {
       return { building: unitCountMatch[1].trim() };
     }
     
-    // Look for building-related keywords
+    // Look for building-related keywords with better pattern matching
     const buildingKeywords = ['house', 'court', 'building', 'apartment', 'residence', 'manor', 'gardens', 'heights', 'view', 'plaza'];
     const words = promptLower.split(/\s+/);
     
-    for (let i = 0; i < words.length - 1; i++) {
-      const potentialName = words.slice(i, i + 2).join(' ');
-      if (buildingKeywords.some(keyword => potentialName.includes(keyword))) {
-        return { building: potentialName };
+    // Try different combinations of words, but prioritize longer matches
+    for (let wordCount = 3; wordCount >= 1; wordCount--) {
+      for (let i = 0; i <= words.length - wordCount; i++) {
+        const potentialName = words.slice(i, i + wordCount).join(' ');
+        if (buildingKeywords.some(keyword => potentialName.includes(keyword))) {
+          console.log('🔍 BUILDING PARSER DEBUG: Found building name:', potentialName);
+          return { building: potentialName };
+        }
       }
     }
     
+    // Also try to extract building names from common patterns
+    const patterns = [
+      /(?:tell me about|show me|information about|details about)\s+([a-zA-Z0-9\s]+?)(?:\s+building|\s+property|\s+$)/i,
+      /(?:address of|units in|units does)\s+([a-zA-Z0-9\s]+?)(?:\s+have|\s+$)/i,
+      /([a-zA-Z0-9\s]+?)\s+(?:building|property|house|court|place|tower|manor|lodge)/i
+    ];
+    
+    for (const pattern of patterns) {
+      const match = prompt.match(pattern);
+      if (match) {
+        const buildingName = match[1].trim();
+        if (buildingName.length > 2) { // Avoid very short matches
+          console.log('🔍 BUILDING PARSER DEBUG: Pattern match found:', buildingName);
+          return { building: buildingName };
+        }
+      }
+    }
+    
+    console.log('🔍 BUILDING PARSER DEBUG: No building found in:', prompt);
     return {};
   }
 
@@ -687,70 +767,114 @@ export class ComprehensiveUnifiedAIProcessor {
     try {
       console.log(`🔍 COMPREHENSIVE: Searching for leaseholder - Unit ${unit} at ${building}`);
       
-      // Try comprehensive search first
-      const comprehensiveResults = await searchEntireDatabase(
-        `leaseholder unit ${unit} ${building}`, 
-        userId
-      );
+      // First, try to find the building by name
+      console.log('🔄 COMPREHENSIVE: Searching for building...');
+      const { data: buildings, error: buildingError } = await supabase
+        .from('buildings')
+        .select('id, name, address')
+        .ilike('name', `%${building}%`)
+        .limit(5);
       
-      if (comprehensiveResults.leaseholders.length > 0) {
-        console.log('✅ COMPREHENSIVE: Found via comprehensive search');
+      if (buildingError) {
+        console.error('❌ COMPREHENSIVE: Building search error:', buildingError);
+        return {
+          success: false,
+          error: 'Database error occurred',
+          suggestions: []
+        };
+      }
+      
+      if (!buildings || buildings.length === 0) {
+        console.log('❌ COMPREHENSIVE: No buildings found matching:', building);
+        return {
+          success: false,
+          error: `No building found matching "${building}"`,
+          suggestions: []
+        };
+      }
+      
+      console.log(`✅ COMPREHENSIVE: Found ${buildings.length} buildings matching "${building}"`);
+      
+      // Try to find the unit in each building
+      for (const buildingData of buildings) {
+        console.log(`🔄 COMPREHENSIVE: Searching for unit ${unit} in building ${buildingData.name}...`);
         
-        const bestMatch = comprehensiveResults.leaseholders.find(lh => 
-          lh.units && lh.units.some((u: any) => 
-            u.unit_number === unit || 
-            u.unit_number === `Flat ${unit}` ||
-            u.unit_number === `Unit ${unit}`
-          ) &&
-          lh.buildings && lh.buildings.some((b: any) => 
-            b.name.toLowerCase().includes(building.toLowerCase())
-          )
-        );
+        // Try different unit number formats - extract just the number if needed
+        const unitNumber = unit.replace(/^(flat|unit|apartment|apt)\s*/i, '');
+        const unitFormats = [
+          unit, // Original format
+          unitNumber, // Just the number
+          `Flat ${unitNumber}`, // Flat format
+          `Unit ${unitNumber}`, // Unit format
+          `Apartment ${unitNumber}`, // Apartment format
+          `#${unitNumber}`, // Hash format
+          `Flat ${unitNumber}`, // Default UK format
+          `Unit ${unitNumber}` // Alternative format
+        ];
         
-        if (bestMatch) {
-          const unitData = bestMatch.units.find((u: any) => 
-            u.unit_number === unit || 
-            u.unit_number === `Flat ${unit}` ||
-            u.unit_number === `Unit ${unit}`
-          );
+        for (const unitFormat of unitFormats) {
+          const { data: units, error: unitsError } = await supabase
+            .from('units')
+            .select(`
+              id, unit_number, building_id,
+              leaseholders(id, name, email, phone, is_director, director_role)
+            `)
+            .eq('building_id', buildingData.id)
+            .eq('unit_number', unitFormat);
           
-          const buildingData = bestMatch.buildings.find((b: any) => 
-            b.name.toLowerCase().includes(building.toLowerCase())
-          );
+          if (unitsError) {
+            console.error('❌ COMPREHENSIVE: Units search error:', unitsError);
+            continue;
+          }
           
-          return {
-            success: true,
-            data: {
-              name: bestMatch.name,
-              email: bestMatch.email,
-              phone: bestMatch.phone,
-              unit_number: unitData?.unit_number || unit,
-              building_name: buildingData?.name || building,
-              building_id: buildingData?.id || '',
-              is_director: bestMatch.is_director,
-              director_role: bestMatch.director_role
+          if (units && units.length > 0) {
+            const unitData = units[0];
+            const leaseholder = unitData.leaseholders;
+            
+            if (leaseholder) {
+              console.log('✅ COMPREHENSIVE: Found leaseholder via direct table query');
+              
+              return {
+                success: true,
+                data: {
+                  name: leaseholder.name,
+                  email: leaseholder.email,
+                  phone: leaseholder.phone,
+                  unit_number: unitData.unit_number,
+                  building_name: buildingData.name,
+                  building_id: buildingData.id,
+                  is_director: leaseholder.is_director,
+                  director_role: leaseholder.director_role
+                }
+              };
             }
-          };
+          }
         }
       }
       
-      // Try vw_units_leaseholders view directly
+      // Try vw_units_leaseholders view as fallback
       console.log('🔄 COMPREHENSIVE: Trying vw_units_leaseholders view...');
       
       const searches = [
-        // Exact unit match with building name
+        // Exact unit match with building name (using join)
         supabase
           .from('vw_units_leaseholders')
-          .select('*')
+          .select(`
+            *,
+            buildings!inner(name, address)
+          `)
           .eq('unit_number', unit)
-          .ilike('building_name', `%${building}%`),
+          .ilike('buildings.name', `%${building}%`),
         
-        // Alternative unit formats with building name
+        // Alternative unit formats with building name (using join)
         supabase
           .from('vw_units_leaseholders')
-          .select('*')
+          .select(`
+            *,
+            buildings!inner(name, address)
+          `)
           .in('unit_number', [unit, `Flat ${unit}`, `Unit ${unit}`, `Apartment ${unit}`])
-          .ilike('building_name', `%${building}%`)
+          .ilike('buildings.name', `%${building}%`)
       ];
       
       for (const search of searches) {
@@ -765,7 +889,7 @@ export class ComprehensiveUnifiedAIProcessor {
               email: data[0].leaseholder_email,
               phone: data[0].leaseholder_phone,
               unit_number: data[0].unit_number,
-              building_name: data[0].building_name,
+              building_name: data[0].buildings?.name || 'Unknown Building',
               building_id: data[0].building_id,
               is_director: data[0].is_director,
               director_role: data[0].director_role
@@ -774,13 +898,24 @@ export class ComprehensiveUnifiedAIProcessor {
         }
       }
       
-      // No data found
-      console.log('❌ COMPREHENSIVE: No leaseholder data found');
+      // No data found - get suggestions
+      console.log('❌ COMPREHENSIVE: No leaseholder data found, getting suggestions...');
+      
+      // Get available units in the building for suggestions
+      let suggestions: any[] = [];
+      if (buildings.length > 0) {
+        const { data: availableUnits } = await supabase
+          .from('units')
+          .select('unit_number')
+          .eq('building_id', buildings[0].id)
+          .limit(10);
+        suggestions = availableUnits || [];
+      }
       
       return {
         success: false,
         error: `No leaseholder found for unit ${unit} at ${building}`,
-        suggestions: []
+        suggestions: suggestions.map(s => ({ unit_number: s.unit_number }))
       };
       
     } catch (error) {
@@ -800,55 +935,77 @@ export class ComprehensiveUnifiedAIProcessor {
     try {
       console.log(`🔍 COMPREHENSIVE: Searching for units in building - ${buildingName}`);
       
-      // Try comprehensive search first
-      const comprehensiveResults = await searchEntireDatabase(
-        `units ${buildingName}`, 
-        userId
-      );
+      // First, find the building by name
+      console.log('🔄 COMPREHENSIVE: Searching for building...');
+      const { data: buildings, error: buildingError } = await supabase
+        .from('buildings')
+        .select('id, name, address')
+        .ilike('name', `%${buildingName}%`)
+        .limit(5);
       
-      if (comprehensiveResults.units.length > 0) {
-        console.log('✅ COMPREHENSIVE: Found units via comprehensive search');
-        
-        const units = comprehensiveResults.units.map(unit => ({
-          unit_number: unit.unit_number,
-          building_name: unit.buildings?.name || buildingName,
-          leaseholder_name: unit.leaseholders?.name,
-          leaseholder_email: unit.leaseholders?.email,
-          leaseholder_phone: unit.leaseholders?.phone
-        }));
-        
-        return {
-          success: true,
-          data: units
-        };
-      }
-      
-      // Fallback to direct query - search by building name in the view
-      const { data: units, error } = await supabase
-        .from('vw_units_leaseholders')
-        .select('unit_number, building_name, leaseholder_name, leaseholder_email, leaseholder_phone')
-        .ilike('building_name', `%${buildingName}%`)
-        .order('unit_number');
-      
-      if (error) {
+      if (buildingError) {
+        console.error('❌ COMPREHENSIVE: Building search error:', buildingError);
         return {
           success: false,
-          error: 'Failed to fetch units'
+          error: 'Database error occurred'
         };
       }
       
-      if (!units || units.length === 0) {
+      if (!buildings || buildings.length === 0) {
+        console.log('❌ COMPREHENSIVE: No buildings found matching:', buildingName);
         return {
           success: false,
-          error: `Building "${buildingName}" not found`
+          error: `No building found matching "${buildingName}"`
         };
       }
       
-      console.log('✅ COMPREHENSIVE: Found units via direct query');
+      console.log(`✅ COMPREHENSIVE: Found ${buildings.length} buildings matching "${buildingName}"`);
+      
+      // Get units for each building found
+      let allUnits: any[] = [];
+      
+      for (const buildingData of buildings) {
+        console.log(`🔄 COMPREHENSIVE: Getting units for building ${buildingData.name}...`);
+        
+        const { data: units, error: unitsError } = await supabase
+          .from('units')
+          .select(`
+            id, unit_number, building_id,
+            leaseholders(id, name, email, phone)
+          `)
+          .eq('building_id', buildingData.id)
+          .order('unit_number');
+        
+        if (unitsError) {
+          console.error('❌ COMPREHENSIVE: Units search error:', unitsError);
+          continue;
+        }
+        
+        if (units && units.length > 0) {
+          const unitsWithBuilding = units.map(unit => ({
+            unit_number: unit.unit_number,
+            building_name: buildingData.name,
+            leaseholder_name: unit.leaseholders?.name,
+            leaseholder_email: unit.leaseholders?.email,
+            leaseholder_phone: unit.leaseholders?.phone
+          }));
+          
+          allUnits = allUnits.concat(unitsWithBuilding);
+        }
+      }
+      
+      if (allUnits.length === 0) {
+        return {
+          success: false,
+          error: `No units found in building "${buildingName}"`
+        };
+      }
+      
+      console.log(`✅ COMPREHENSIVE: Found ${allUnits.length} units via direct table query`);
       
       return {
         success: true,
-        data: units
+        data: allUnits
       };
       
     } catch (error) {
@@ -867,36 +1024,67 @@ export class ComprehensiveUnifiedAIProcessor {
     try {
       console.log(`🔍 COMPREHENSIVE: Searching for building - ${buildingName}`);
       
-      // Try comprehensive search first
-      const comprehensiveResults = await searchEntireDatabase(
-        `building ${buildingName}`, 
-        userId
-      );
+      // Search for building by name
+      const { data: buildings, error: buildingError } = await supabase
+        .from('buildings')
+        .select(`
+          id, name, address, unit_count, 
+          building_manager_name, building_manager_email, building_manager_phone,
+          entry_code, gate_code, access_notes, notes,
+          emergency_contact_name, emergency_contact_phone,
+          fire_safety_status, asbestos_status, energy_rating
+        `)
+        .ilike('name', `%${buildingName}%`)
+        .limit(5);
       
-      if (comprehensiveResults.buildings.length > 0) {
-        const building = comprehensiveResults.buildings[0];
-        console.log('✅ COMPREHENSIVE: Found building via comprehensive search');
-        
+      if (buildingError) {
+        console.error('❌ COMPREHENSIVE: Building search error:', buildingError);
         return {
-          success: true,
-          data: {
-            name: building.name,
-            address: building.address,
-            unit_count: building.unit_count,
-            building_manager_name: building.building_manager_name,
-            building_manager_email: building.building_manager_email,
-            building_manager_phone: building.building_manager_phone,
-            entry_code: building.entry_code,
-            gate_code: building.gate_code,
-            access_notes: building.access_notes,
-            notes: building.notes
-          }
+          success: false,
+          error: 'Database error occurred'
         };
       }
       
+      if (!buildings || buildings.length === 0) {
+        console.log('❌ COMPREHENSIVE: No buildings found matching:', buildingName);
+        return {
+          success: false,
+          error: `No building found matching "${buildingName}"`
+        };
+      }
+      
+      const building = buildings[0];
+      console.log('✅ COMPREHENSIVE: Found building via direct table query');
+      
+      // Get unit count if not already available
+      let unitCount = building.unit_count;
+      if (!unitCount) {
+        const { data: units } = await supabase
+          .from('units')
+          .select('id')
+          .eq('building_id', building.id);
+        unitCount = units?.length || 0;
+      }
+      
       return {
-        success: false,
-        error: `Building "${buildingName}" not found`
+        success: true,
+        data: {
+          name: building.name,
+          address: building.address,
+          unit_count: unitCount,
+          building_manager_name: building.building_manager_name,
+          building_manager_email: building.building_manager_email,
+          building_manager_phone: building.building_manager_phone,
+          entry_code: building.entry_code,
+          gate_code: building.gate_code,
+          access_notes: building.access_notes,
+          notes: building.notes,
+          emergency_contact_name: building.emergency_contact_name,
+          emergency_contact_phone: building.emergency_contact_phone,
+          fire_safety_status: building.fire_safety_status,
+          asbestos_status: building.asbestos_status,
+          energy_rating: building.energy_rating
+        }
       };
       
     } catch (error) {

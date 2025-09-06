@@ -222,28 +222,32 @@ export async function POST(req: NextRequest) {
     if (!building_id) {
       console.log('🔍 Auto-detecting building from prompt...');
       
-      // Extract potential building names from the question
+      // Extract potential building names from the question with improved logic
       const buildingKeywords = ['house', 'court', 'building', 'apartment', 'residence', 'manor', 'gardens', 'heights', 'view', 'plaza'];
       const words = prompt.toLowerCase().split(/\s+/);
       
-      for (let i = 0; i < words.length - 1; i++) {
-        const potentialName = words.slice(i, i + 2).join(' '); // Check 2-word combinations
-        if (buildingKeywords.some(keyword => potentialName.includes(keyword))) {
-          console.log('🔍 Searching for building:', potentialName);
-          
-          const { data: building } = await supabase
-            .from('buildings')
-            .select('id, name, address, unit_count')
-            .ilike('name', `%${potentialName}%`)
-            .limit(1)
-            .single();
-          
-          if (building) {
-            building_id = building.id;
-            console.log('✅ Auto-detected building:', building.name);
-            break;
+      // Try different combinations of words (1-3 words)
+      for (let wordCount = 1; wordCount <= 3; wordCount++) {
+        for (let i = 0; i <= words.length - wordCount; i++) {
+          const potentialName = words.slice(i, i + wordCount).join(' ');
+          if (buildingKeywords.some(keyword => potentialName.includes(keyword))) {
+            console.log('🔍 Searching for building:', potentialName);
+            
+            const { data: building } = await supabase
+              .from('buildings')
+              .select('id, name, address, unit_count')
+              .ilike('name', `%${potentialName}%`)
+              .limit(1)
+              .single();
+            
+            if (building) {
+              building_id = building.id;
+              console.log('✅ Auto-detected building:', building.name);
+              break;
+            }
           }
         }
+        if (building_id) break;
       }
     }
 
