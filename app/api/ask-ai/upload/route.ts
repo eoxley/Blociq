@@ -91,7 +91,22 @@ export async function POST(req: NextRequest) {
 
     // Use the comprehensive text extraction system
     console.log('🔍 Starting comprehensive text extraction...');
-    const extractionResult = await extractText(file);
+    let extractionResult;
+    
+    try {
+      extractionResult = await extractText(file);
+    } catch (extractionError) {
+      console.error('❌ Text extraction failed:', extractionError);
+      extractionResult = {
+        extractedText: '',
+        textLength: 0,
+        source: 'failed',
+        confidence: 0,
+        metadata: {
+          errorDetails: extractionError instanceof Error ? extractionError.message : 'Unknown extraction error'
+        }
+      };
+    }
     
     const { extractedText, textLength, source, confidence, metadata: extractionMetadata } = extractionResult;
     
@@ -118,9 +133,24 @@ export async function POST(req: NextRequest) {
       
       summary = `Document processing failed. All OCR methods failed to extract text from this document.`;
     } else {
-      analysis = `Unable to extract text from ${file.name}. ${extractionMetadata?.errorDetails || 'The file may be corrupted, encrypted, or in an unsupported format.'} All OCR methods failed.`;
+      // Provide helpful information even when OCR fails
+      const fileInfo = `File: ${file.name} (${(file.size / 1024).toFixed(2)} KB, ${file.type})`;
+      const errorInfo = extractionMetadata?.errorDetails || 'The file may be corrupted, encrypted, or in an unsupported format.';
       
-      summary = 'Document processing failed. No text could be extracted from this file.';
+      analysis = `Unable to extract text from ${file.name}. ${errorInfo} 
+
+File Details:
+- ${fileInfo}
+- All OCR methods (PDF.js, OpenAI Vision, Google Vision, Tesseract) were attempted
+- This may be a scanned document, encrypted PDF, or corrupted file
+
+Suggestions:
+- Try a different PDF file
+- Ensure the PDF contains selectable text (not just images)
+- Check if the file is password-protected or corrupted
+- For scanned documents, try Lease Lab which has advanced OCR processing`;
+
+      summary = `Document processing failed for ${file.name}. No text could be extracted. Please try a different file or use Lease Lab for scanned documents.`;
     }
 
     // Detect document type based on content (for PDFs and legal documents)
