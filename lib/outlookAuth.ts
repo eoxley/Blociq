@@ -28,10 +28,7 @@ export async function getUserOutlookTokens(): Promise<OutlookToken | null> {
   // Check if we're in a server-side context
   if (typeof window === 'undefined') {
     // Server-side: use service role key for direct database access
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
+    const supabase = createClient()
     
     // For server-side, we need to get the user ID from the request context
     // This function should be called with a user ID parameter in server contexts
@@ -39,7 +36,7 @@ export async function getUserOutlookTokens(): Promise<OutlookToken | null> {
   }
   
   // Client-side: use cookies for authentication
-  const supabase = createClient(cookies())
+  const supabase = await createClient()
   
   const { data: { session }, error: sessionError } = await supabase.auth.getSession()
   if (sessionError || !session) {
@@ -67,10 +64,7 @@ export async function getUserOutlookTokens(): Promise<OutlookToken | null> {
  * Get Outlook tokens for a specific user (server-side)
  */
 export async function getUserOutlookTokensForUser(userId: string): Promise<OutlookToken | null> {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+  const supabase = createClient()
 
   const { data: tokens, error } = await supabase
     .from('outlook_tokens' as any)
@@ -98,7 +92,7 @@ export async function saveUserOutlookTokens(
   refreshToken: string,
   expiresIn: number
 ): Promise<void> {
-  const supabase = createClient(cookies())
+  const supabase = await createClient()
   
   const { data: { session }, error: sessionError } = await supabase.auth.getSession()
   if (sessionError || !session) {
@@ -128,7 +122,7 @@ export async function saveUserOutlookTokens(
  * Delete Outlook tokens for the current user
  */
 export async function deleteUserOutlookTokens(): Promise<void> {
-  const supabase = createClient(cookies())
+  const supabase = await createClient()
   
   const { data: { session }, error: sessionError } = await supabase.auth.getSession()
   if (sessionError || !session) {
@@ -243,7 +237,7 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
   const tokenData: TokenResponse = await response.json()
 
   // Get current user info to save tokens
-  const supabase = createClient(cookies())
+  const supabase = await createClient()
   const { data: { session } } = await supabase.auth.getSession()
   
   if (!session) {
