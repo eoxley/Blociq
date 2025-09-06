@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronLeft, Home, Menu, X } from 'lucide-react';
+import { ChevronLeft, Home, Menu, X, Inbox, Building2, Shield, Megaphone, Wrench } from 'lucide-react';
 import { BlocIQButton } from '@/components/ui/blociq-button';
 
 interface MobilePageNavigationProps {
@@ -21,12 +21,12 @@ export default function MobilePageNavigation({
   const pathname = usePathname();
 
   const quickNavItems = [
-    { label: "Home", href: "/home", icon: "🏠" },
-    { label: "Inbox Overview", href: "/inbox-overview", icon: "📥" },
-          { label: "Buildings", href: "/buildings", icon: "🏢" },
-    { label: "Compliance", href: "/compliance", icon: "🛡️" },
-    { label: "Communications", href: "/communications", icon: "📣" },
-    { label: "Major Works", href: "/major-works", icon: "🔧" },
+    { label: "Home", href: "/home", icon: Home },
+    { label: "Inbox Overview", href: "/inbox-overview", icon: Inbox },
+    { label: "Buildings", href: "/buildings", icon: Building2 },
+    { label: "Compliance", href: "/compliance", icon: Shield },
+    { label: "Communications", href: "/communications", icon: Megaphone },
+    { label: "Major Works", href: "/major-works", icon: Wrench },
   ];
 
   return (
@@ -103,7 +103,11 @@ export default function MobilePageNavigation({
                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
                         isActive ? 'bg-white/20' : 'bg-gray-100'
                       }`}>
-                        <span className="text-lg">{icon}</span>
+                        {React.createElement(icon, { 
+                          className: `h-5 w-5 ${
+                            isActive ? 'text-white' : 'text-gray-600'
+                          }`
+                        })}
                       </div>
                       <span className="font-medium">{label}</span>
                       {isActive && (

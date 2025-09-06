@@ -1,23 +1,23 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
-import { Menu, X, Bell, Settings, User, HelpCircle, LogOut } from 'lucide-react';
+import { Menu, X, Bell, Settings, User, HelpCircle, LogOut, Home, Inbox, Building2, Shield, Megaphone, Wrench, Brain } from 'lucide-react';
 import BlocIQLogo from './BlocIQLogo';
 import { BlocIQButton } from '@/components/ui/blociq-button';
 import { BlocIQBadge } from '@/components/ui/blociq-badge';
 
 const navItems = [
-  { label: "Home", icon: "🏠", href: "/home", comingSoon: false, description: "Dashboard overview" },
-  { label: "Inbox Overview", icon: "📥", href: "/inbox-overview", comingSoon: false, description: "Email triage dashboard" },
-      { label: "Buildings", icon: "🏢", href: "/buildings", comingSoon: false, description: "Property portfolio" },
-  { label: "Compliance", icon: "🛡️", href: "/compliance", comingSoon: false, description: "Regulatory tracking" },
-  { label: "Communications", icon: "📣", href: "/communications", comingSoon: false, description: "Letter & email templates" },
-  { label: "Major Works", icon: "🔧", href: "/major-works", comingSoon: false, description: "Project management" },
-  { label: "AI History", icon: "🧠", href: "/ai-history", comingSoon: false, description: "Search past AI interactions" },
+  { label: "Home", icon: Home, href: "/home", comingSoon: false, description: "Dashboard overview" },
+  { label: "Inbox Overview", icon: Inbox, href: "/inbox-overview", comingSoon: false, description: "Email triage dashboard" },
+  { label: "Buildings", icon: Building2, href: "/buildings", comingSoon: false, description: "Property portfolio" },
+  { label: "Compliance", icon: Shield, href: "/compliance", comingSoon: false, description: "Regulatory tracking" },
+  { label: "Communications", icon: Megaphone, href: "/communications", comingSoon: false, description: "Letter & email templates" },
+  { label: "Major Works", icon: Wrench, href: "/major-works", comingSoon: false, description: "Project management" },
+  { label: "AI History", icon: Brain, href: "/ai-history", comingSoon: false, description: "Search past AI interactions" },
 ];
 
 export default function MobileNavigation() {
@@ -117,7 +117,7 @@ export default function MobileNavigation() {
                             disabled
                           >
                                                           <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl flex items-center justify-center bg-gray-100">
-                              <span className="text-lg lg:text-xl opacity-60">{icon}</span>
+                              {React.createElement(icon, { className: "h-5 w-5 lg:h-6 lg:w-6 text-gray-500 opacity-60" })}
                             </div>
                             <div className="flex-1 text-left">
                               <div className="flex items-center gap-2 lg:gap-3">
@@ -145,7 +145,11 @@ export default function MobileNavigation() {
                         <div className={`w-10 h-10 lg:w-12 lg:h-12 rounded-xl flex items-center justify-center ${
                           isActive ? 'bg-white/20' : 'bg-gray-100'
                         }`}>
-                          <span className="text-lg lg:text-xl">{icon}</span>
+                          {React.createElement(icon, { 
+                            className: `h-5 w-5 lg:h-6 lg:w-6 ${
+                              isActive ? 'text-white' : 'text-gray-600'
+                            }`
+                          })}
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-2 lg:gap-3">

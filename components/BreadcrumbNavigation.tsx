@@ -2,13 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronRight, Home } from 'lucide-react';
+import { ChevronRight, Home, Inbox, Building2, Shield, Megaphone, Bot, FileText, BarChart3, Settings, TrendingUp, Edit3, Plus, Upload, MapPin, Users, DollarSign, AlertTriangle, CheckCircle, Clock, Paperclip, MessageSquare, Download, Trash2, Archive, Folder, Star, Flag, MoreVertical, Reply, ReplyAll, Forward, Filter, RefreshCw, Sparkles, Zap, Wand2, Loader2, Send, File, Building, AlertCircle, CheckCircle2, Construction, History, ArrowRight, Save, Edit, Info } from 'lucide-react';
 import { BlocIQBadge } from '@/components/ui/blociq-badge';
 
 interface BreadcrumbItem {
   label: string;
   href?: string;
-  icon?: string;
+  icon?: React.ComponentType<{ className?: string }>;
 }
 
 export default function BreadcrumbNavigation() {
@@ -22,7 +22,7 @@ export default function BreadcrumbNavigation() {
     breadcrumbs.push({
       label: 'Home',
       href: '/home',
-      icon: '🏠'
+      icon: Home
     });
     
     // Build breadcrumbs from path segments
@@ -37,74 +37,65 @@ export default function BreadcrumbNavigation() {
         .join(' ');
       
       // Add icon for specific pages
-      let icon = '';
+      let icon: React.ComponentType<{ className?: string }> | undefined;
       switch (segment) {
         case 'inbox':
-          icon = '📥';
+          icon = Inbox;
           break;
         case 'buildings':
-          icon = '🏢';
+          icon = Building2;
           break;
         case 'compliance':
-          icon = '🛡️';
+          icon = Shield;
           break;
         case 'communications':
-          icon = '📣';
+          icon = Megaphone;
           break;
         case 'ai-assistant':
-          icon = '🤖';
+          icon = Bot;
           break;
         case 'major-works':
-          icon = '🔧';
-          break;
-        case 'ai-assistant':
-          icon = '🧠';
+          icon = Wrench;
           break;
         case 'documents':
-          icon = '📄';
+          icon = FileText;
           break;
         case 'templates':
-          icon = '📋';
+          icon = FileText;
           break;
         case 'log':
-          icon = '📊';
+          icon = BarChart3;
           break;
         case 'setup':
-          icon = '⚙️';
+          icon = Settings;
           break;
         case 'reports':
-          icon = '📈';
+          icon = TrendingUp;
           break;
         case 'units':
-          icon = '🏠';
+          icon = Home;
           break;
         case 'amendments':
-          icon = '📝';
-          break;
-        case 'major-works':
-          icon = '🔧';
-          break;
-        case 'compliance':
-          icon = '🛡️';
+          icon = Edit3;
           break;
         case 'tracker':
-          icon = '📊';
+          icon = BarChart3;
           break;
         case 'new':
-          icon = '➕';
+          icon = Plus;
           break;
         case 'upload':
-          icon = '📤';
+          icon = Upload;
           break;
         case 'send':
-          icon = '📤';
+          icon = Send;
           break;
         default:
           // Check if it's a UUID (building ID, etc.)
           if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(segment)) {
-            icon = '🏢';
+            icon = Building2;
           } else {
-            icon = '📄';
+            icon = FileText;
           }
       }
       
@@ -141,24 +132,14 @@ export default function BreadcrumbNavigation() {
                 className="flex items-center gap-2 px-3 py-2 rounded-lg text-text-secondary hover:text-[#14b8a6] hover:bg-[#f0fdfa] transition-all duration-200 group"
               >
                 {item.icon && (
-                  <span 
-                    className="text-sm group-hover:scale-110 transition-transform"
-                    style={{ fontFamily: "'Apple Color Emoji', 'Segoe UI Emoji', sans-serif" }}
-                  >
-                    {item.icon}
-                  </span>
+                  <item.icon className="h-4 w-4 text-gray-500 group-hover:scale-110 transition-transform" />
                 )}
                 <span className="font-medium">{item.label}</span>
               </Link>
             ) : (
               <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-[#14b8a6] to-[#8b5cf6] text-white">
                 {item.icon && (
-                  <span 
-                    className="text-sm"
-                    style={{ fontFamily: "'Apple Color Emoji', 'Segoe UI Emoji', sans-serif" }}
-                  >
-                    {item.icon}
-                  </span>
+                  <item.icon className="h-4 w-4 text-white" />
                 )}
                 <span className="font-semibold">{item.label}</span>
                 <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-white/20 text-white border border-white/30">

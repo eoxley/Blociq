@@ -1,11 +1,12 @@
 "use client";
 
+import React from 'react';
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Bell, Settings, User, HelpCircle, ExternalLink, LogOut, Lock } from 'lucide-react';
+import { Bell, Settings, User, HelpCircle, ExternalLink, LogOut, Lock, Home, Brain, Microscope, Building2, Shield, Megaphone, Wrench, PoundSterling, HardHat, ClipboardList, Monitor } from 'lucide-react';
 import BlocIQLogo from './BlocIQLogo';
 import { BlocIQBadge } from '@/components/ui/blociq-badge';
 import AgencySwitcher from './AgencySwitcher';
@@ -14,17 +15,17 @@ import ClientOnly from './ClientOnly';
 import { useLeaseSystemReadiness } from '@/hooks/useLeaseSystemReadiness';
 
 const navItems = [
-  { label: "Home", icon: "🏠", href: "/home", comingSoon: false, description: "Dashboard overview", aiPowered: false },
-  { label: "Inbox Overview", icon: "🧠", href: "/inbox-overview", comingSoon: false, description: "Email triage dashboard", aiPowered: true },
-  { label: "Lease Lab", icon: "🔬", href: "/lease-lab", comingSoon: false, description: "Deep document analysis", aiPowered: true },
-  { label: "Buildings", icon: "🏢", href: "/buildings", comingSoon: false, description: "Property portfolio", aiPowered: false },
-  { label: "Compliance", icon: "🛡️", href: "/compliance", comingSoon: false, description: "Regulatory tracking", aiPowered: true },
-  { label: "Communications", icon: "📣", href: "/communications", comingSoon: false, description: "Letter & email templates", aiPowered: false },
-  { label: "Major Works", icon: "🔧", href: "/major-works", comingSoon: false, description: "Project management", aiPowered: false },
-  { label: "Finances", icon: "💷", href: "#", comingSoon: true, description: "Financial tracking", aiPowered: false },
-  { label: "Contractors", icon: "👷", href: "#", comingSoon: true, description: "Vendor management", aiPowered: false },
-  { label: "Work Orders", icon: "📋", href: "#", comingSoon: true, description: "Maintenance requests", aiPowered: false },
-  { label: "Client Portal", icon: "🧑‍💻", href: "#", comingSoon: true, description: "Tenant access", aiPowered: false },
+  { label: "Home", icon: Home, href: "/home", comingSoon: false, description: "Dashboard overview", aiPowered: false },
+  { label: "Inbox Overview", icon: Brain, href: "/inbox-overview", comingSoon: false, description: "Email triage dashboard", aiPowered: true },
+  { label: "Lease Lab", icon: Microscope, href: "/lease-lab", comingSoon: false, description: "Deep document analysis", aiPowered: true },
+  { label: "Buildings", icon: Building2, href: "/buildings", comingSoon: false, description: "Property portfolio", aiPowered: false },
+  { label: "Compliance", icon: Shield, href: "/compliance", comingSoon: false, description: "Regulatory tracking", aiPowered: true },
+  { label: "Communications", icon: Megaphone, href: "/communications", comingSoon: false, description: "Letter & email templates", aiPowered: false },
+  { label: "Major Works", icon: Wrench, href: "/major-works", comingSoon: false, description: "Project management", aiPowered: false },
+  { label: "Finances", icon: PoundSterling, href: "#", comingSoon: true, description: "Financial tracking", aiPowered: false },
+  { label: "Contractors", icon: HardHat, href: "#", comingSoon: true, description: "Vendor management", aiPowered: false },
+  { label: "Work Orders", icon: ClipboardList, href: "#", comingSoon: true, description: "Maintenance requests", aiPowered: false },
+  { label: "Client Portal", icon: Monitor, href: "#", comingSoon: true, description: "Tenant access", aiPowered: false },
 ];
 
 export default function DashboardSidebar() {
@@ -93,12 +94,7 @@ export default function DashboardSidebar() {
                   disabled
                 >
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 bg-[#f1f5f9] group-hover:bg-[#e2e8f0] relative">
-                    <span
-                      className="text-base opacity-60"
-                      style={{ fontFamily: "'Apple Color Emoji', 'Segoe UI Emoji', sans-serif" }}
-                    >
-                      {icon}
-                    </span>
+                    {React.createElement(icon, { className: "h-5 w-5 text-gray-500 opacity-60" })}
                     <div className="absolute inset-0 bg-gradient-to-br from-transparent to-white/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
                   </div>
                   <div className="flex-1 text-left">
@@ -122,12 +118,7 @@ export default function DashboardSidebar() {
                   title="Lease processing system is being set up. Please contact your administrator."
                 >
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 bg-[#f1f5f9] relative">
-                    <span
-                      className="text-base opacity-60"
-                      style={{ fontFamily: "'Apple Color Emoji', 'Segoe UI Emoji', sans-serif" }}
-                    >
-                      {icon}
-                    </span>
+                    {React.createElement(icon, { className: "h-5 w-5 text-gray-500 opacity-60" })}
                     <Lock className="h-3 w-3 absolute -top-1 -right-1 text-gray-400" />
                   </div>
                   <div className="flex-1 text-left">
@@ -166,22 +157,13 @@ export default function DashboardSidebar() {
                     ? 'bg-white/20 shadow-md'
                     : 'bg-gray-50 group-hover:bg-gray-100'
                 }`}>
-                  {!isActive && (
-                    <span
-                      className="text-base transition-all duration-300 group-hover:scale-110"
-                      style={{ fontFamily: "'Apple Color Emoji', 'Segoe UI Emoji', sans-serif" }}
-                    >
-                      {icon}
-                    </span>
-                  )}
-                  {isActive && (
-                    <span
-                      className="text-base text-white scale-110 transition-all duration-300"
-                      style={{ fontFamily: "'Apple Color Emoji', 'Segoe UI Emoji', sans-serif" }}
-                    >
-                      {icon}
-                    </span>
-                  )}
+                  {React.createElement(icon, { 
+                    className: `h-5 w-5 transition-all duration-300 ${
+                      isActive 
+                        ? 'text-white scale-110' 
+                        : 'text-gray-600 group-hover:scale-110 group-hover:text-[#8b5cf6]'
+                    }`
+                  })}
                   <div className={`absolute inset-0 bg-gradient-to-br from-transparent to-white/20 rounded-xl opacity-0 ${
                     isActive ? 'opacity-100' : 'group-hover:opacity-100'
                   } transition-opacity`}></div>
