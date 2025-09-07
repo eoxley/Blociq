@@ -18,6 +18,25 @@ import { insertAiLog } from '../../../lib/supabase/ai_logs';
 
 export const runtime = "nodejs";
 
+// CORS headers for Outlook Add-in compatibility
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept',
+  'Access-Control-Max-Age': '86400',
+  'Cache-Control': 'no-cache, no-store, must-revalidate',
+  'Pragma': 'no-cache',
+  'Expires': '0'
+};
+
+// Helper function to create response with CORS headers
+function createResponse(data: any, status: number = 200) {
+  return NextResponse.json(data, { 
+    status, 
+    headers: CORS_HEADERS 
+  });
+}
+
 // Pinned FAQs for common UK property management questions
 const FAQS = [
   { 
@@ -96,22 +115,30 @@ When preparing an email to the reporting leaseholder and (if relevant) the upsta
 - Mention insurance-excess option when likely beneficial.
 `;
 
+export async function OPTIONS(req: NextRequest) {
+  // Handle preflight requests for Outlook Add-in
+  return new NextResponse(null, {
+    status: 200,
+    headers: CORS_HEADERS
+  });
+}
+
 export async function POST(req: NextRequest) {
   try {
     // Check if Supabase is configured
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
       console.error('❌ Supabase not configured');
-      return NextResponse.json({ 
+      return createResponse({ 
         error: 'Service not configured. Please check environment variables.' 
-      }, { status: 500 });
+      }, 500);
     }
 
     // Check if OpenAI is configured
     if (!process.env.OPENAI_API_KEY) {
       console.error('❌ OpenAI not configured');
-      return NextResponse.json({ 
+      return createResponse({ 
         error: 'AI service not configured. Please check environment variables.' 
-      }, { status: 500 });
+      }, 500);
     }
 
     // Dynamic imports to prevent build-time execution

@@ -3,23 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BlocIQ Assistant Functions</title>
-    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+    <title>BlocIQ Add-in Functions</title>
 </head>
 <body>
     <script>
-        // Load the command handlers
-        import('./commands.js').then(module => {
-            // Make functions available globally for Office.js
-            window.showChatPane = module.showChatPane;
-            window.showChatPaneCompose = module.showChatPaneCompose;
-            window.onGenerateReplyFromRead = module.onGenerateReplyFromRead;
-            window.onGenerateIntoCompose = module.onGenerateIntoCompose;
+        // Global error trap for add-in functions
+        window.onerror = (message, source, line, column, error) => {
+            console.error('[BlocIQ Add-in Error]', {
+                message,
+                source,
+                line,
+                column,
+                error
+            });
             
-            console.log('BlocIQ Assistant command handlers loaded');
-        }).catch(error => {
-            console.error('Failed to load command handlers:', error);
+            // Try to report error to parent if possible
+            try {
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage({
+                        type: 'addin-error',
+                        error: {
+                            message: String(message),
+                            source: String(source),
+                            line: line || 0,
+                            column: column || 0,
+                            timestamp: new Date().toISOString()
+                        }
+                    }, '*');
+                }
+            } catch (e) {
+                // Ignore postMessage errors
+            }
+        };
+
+        // Unhandled promise rejection handler
+        window.addEventListener('unhandledrejection', (event) => {
+            console.error('[BlocIQ Add-in Promise Error]', event.reason);
+            
+            try {
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage({
+                        type: 'addin-promise-error',
+                        error: {
+                            message: `Unhandled Promise Rejection: ${event.reason}`,
+                            timestamp: new Date().toISOString()
+                        }
+                    }, '*');
+                }
+            } catch (e) {
+                // Ignore postMessage errors
+            }
         });
+
+        // Load the commands script
+        (function() {
+            const script = document.createElement('script');
+            script.src = 'https://www.blociq.co.uk/addin/commands.js';
+            script.onload = function() {
+                console.log('[BlocIQ Add-in] Commands script loaded successfully');
+            };
+            script.onerror = function() {
+                console.error('[BlocIQ Add-in] Failed to load commands script');
+            };
+            document.head.appendChild(script);
+        })();
+
+        // Add-in initialization
+        console.log('[BlocIQ Add-in] Functions page loaded');
+        console.log('[BlocIQ Add-in] User Agent:', navigator.userAgent);
+        console.log('[BlocIQ Add-in] Location:', window.location.href);
     </script>
 </body>
 </html>
