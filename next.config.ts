@@ -28,7 +28,6 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
     turbo: {},
-    serverComponentsExternalPackages: ['tesseract.js', '@google-cloud/documentai', '@google-cloud/vision'],
     optimizeServerReact: true,
   },
   // Configure webpack for faster builds
