@@ -235,6 +235,128 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // 🔍 Check for document intent
+    if (!isPublic && user) {
+      try {
+        const { detectDocumentIntent } = await import('../../../ai/intent/document');
+        const { getLatestDocument, formatDocumentDate, extractSummarySnippet } = await import('../../../lib/docs/getLatestDocument');
+        const { resolveBuildingContext } = await import('../../../lib/buildings/resolveContext');
+        const { getDocumentTypeDisplayName } = await import('../../../ai/intent/document');
+        
+        const documentIntent = detectDocumentIntent(prompt, building_id);
+        
+        if (documentIntent) {
+          console.log('📄 Document intent detected:', documentIntent);
+          
+          // Get user's agency
+          const { data: userProfile } = await supabase
+            .from('profiles')
+            .select('agency_id')
+            .eq('id', user.id)
+            .single();
+          
+          if (!userProfile?.agency_id) {
+            return NextResponse.json({
+              success: false,
+              error: 'User not linked to agency',
+              message: 'Please complete your profile setup'
+            }, { status: 400 });
+          }
+          
+          // Resolve building context
+          const buildingContext = resolveBuildingContext(prompt, { buildingId: building_id });
+          
+          if (!buildingContext.buildingId && !buildingContext.buildingName) {
+            return NextResponse.json({
+              success: false,
+              error: 'Building context required',
+              message: 'Please specify which building you\'re asking about, or select a building first.',
+              suggestions: ['Try: "latest insurance for Ashwood House"', 'Or select a building from the dashboard']
+            });
+          }
+          
+          // Get available buildings for fuzzy matching
+          const { data: buildings } = await supabase
+            .from('buildings')
+            .select('id, name')
+            .eq('agency_id', userProfile.agency_id);
+          
+          // Resolve building ID if we have a name
+          let resolvedBuildingId = buildingContext.buildingId;
+          if (!resolvedBuildingId && buildingContext.buildingName && buildings) {
+            const building = buildings.find(b => 
+              b.name.toLowerCase().includes(buildingContext.buildingName!.toLowerCase()) ||
+              buildingContext.buildingName!.toLowerCase().includes(b.name.toLowerCase())
+            );
+            if (building) {
+              resolvedBuildingId = building.id;
+            }
+          }
+          
+          if (!resolvedBuildingId) {
+            return NextResponse.json({
+              success: false,
+              error: 'Building not found',
+              message: `I couldn't find a building matching "${buildingContext.buildingName}". Please check the building name or select a building first.`,
+              suggestions: buildings?.map(b => `"latest ${documentIntent.docType.toLowerCase()} for ${b.name}"`) || []
+            });
+          }
+          
+          // Fetch the latest document
+          const document = await getLatestDocument({
+            docType: documentIntent.docType,
+            buildingId: resolvedBuildingId,
+            unitId: buildingContext.unitId,
+            agencyId: userProfile.agency_id,
+            userId: user.id
+          });
+          
+          if (!document) {
+            const displayName = getDocumentTypeDisplayName(documentIntent.docType);
+            return NextResponse.json({
+              success: false,
+              error: 'Document not found',
+              message: `I couldn't find a current ${displayName.toLowerCase()} document for this building.`,
+              suggestions: [
+                'Upload it via Lease Lab',
+                'Check if the document has been uploaded',
+                'Ask me to search all documents'
+              ]
+            });
+          }
+          
+          // Format the response
+          const docDate = formatDocumentDate(document.doc_date);
+          const summarySnippet = extractSummarySnippet(document.summary_json, document.doc_type);
+          const displayName = getDocumentTypeDisplayName(document.doc_type);
+          
+          const response = {
+            success: true,
+            answer: `**Latest ${displayName} — ${buildingContext.buildingName || 'Building'}**\n\n**Date:** ${docDate} • **File:** ${document.filename}\n\n[Open document](${document.signed_url})\n\n${summarySnippet ? `(${summarySnippet})` : ''}`,
+            confidence: 95,
+            route: "document_lookup",
+            result: {
+              type: 'document',
+              docType: document.doc_type,
+              displayName,
+              filename: document.filename,
+              docDate,
+              signedUrl: document.signed_url,
+              summarySnippet,
+              buildingName: buildingContext.buildingName
+            },
+            response: `**Latest ${displayName} — ${buildingContext.buildingName || 'Building'}**\n\n**Date:** ${docDate} • **File:** ${document.filename}\n\n[Open document](${document.signed_url})\n\n${summarySnippet ? `(${summarySnippet})` : ''}`
+          };
+          
+          console.log('✅ Document found and returned:', document.filename);
+          return NextResponse.json(response);
+        }
+      } catch (error) {
+        console.error('❌ Document intent processing failed:', error);
+        // Continue with normal AI processing
+      }
+    }
+
     // 🔍 Smart Building Detection from Prompt
     if (!building_id) {
       console.log('🔍 Auto-detecting building from prompt...');
