@@ -34,7 +34,17 @@ const FAQS = [
 const SYSTEM_PROMPTS = {
   general: `You are BlocIQ, a UK property management AI assistant. You help property managers with building management, compliance, leaseholder relations, and operational tasks.`,
   
-  email_reply: `You are BlocIQ, a UK property management AI assistant specializing in professional email communication. Generate clear, professional email responses that are appropriate for property management.`,
+  email_reply: `You are BlocIQ, a UK property management AI assistant specializing in professional email communication. Generate clear, professional email responses that are appropriate for property management.
+
+IMPORTANT EMAIL REPLY RULES:
+- Always produce a professional, British-English draft reply
+- Use only verified building/lease facts from the provided context
+- If information is unknown, write "Not specified in the records"
+- Do not auto-send - the draft is always editable by the user
+- Be concise but comprehensive
+- Address the specific points raised in the original email
+- Use appropriate property management terminology
+- Maintain a helpful but professional tone`,
   
   major_works: `You are BlocIQ, a UK property management AI assistant specializing in major works projects. Help with project planning, cost analysis, leaseholder consultation, and Section 20 processes.`,
   
@@ -172,6 +182,13 @@ export async function POST(req: NextRequest) {
       leaseholderId = body.leaseholder_id || body.leaseholderId || '';
       emailThreadId = body.email_thread_id || body.emailThreadId || '';
       manualContext = body.manual_context || body.manualContext || '';
+      
+      // Handle intent for Outlook Add-in reply generation
+      const intent = body.intent || 'general';
+      if (intent === 'REPLY') {
+        contextType = 'email_reply';
+        console.log('📧 Outlook Add-in reply intent detected');
+      }
     }
     
     // 🔍 NEW: Auto-detect building from request context
@@ -797,8 +814,23 @@ ${chunk.content.substring(0, 400)}...`
     // 🧠 Build AI Prompt
     let fullPrompt = prompt;
     
+    // Add thread context for email replies
+    if (contextType === 'email_reply' && body) {
+      const threadContext = [];
+      if (body.subject) threadContext.push(`Subject: ${body.subject}`);
+      if (body.from) threadContext.push(`From: ${body.from}`);
+      if (body.to && body.to.length > 0) threadContext.push(`To: ${body.to.join(', ')}`);
+      if (body.cc && body.cc.length > 0) threadContext.push(`CC: ${body.cc.join(', ')}`);
+      if (body.bodyPreview) threadContext.push(`Message Preview: ${body.bodyPreview}`);
+      if (body.internetMessageId) threadContext.push(`Thread ID: ${body.internetMessageId}`);
+      
+      if (threadContext.length > 0) {
+        fullPrompt = `Email Thread Context:\n${threadContext.join('\n')}\n\nPlease draft a professional reply to this email:\n\n${prompt}`;
+      }
+    }
+    
     if (buildingContext) {
-      fullPrompt = `Building Context:\n${buildingContext}\n\nQuestion: ${prompt}`;
+      fullPrompt = `Building Context:\n${buildingContext}\n\nQuestion: ${fullPrompt}`;
     }
     
     if (documentContext) {

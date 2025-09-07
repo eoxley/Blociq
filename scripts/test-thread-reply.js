@@ -1,78 +1,55 @@
-#!/usr/bin/env node
-
-/**
- * Test script for the thread-based generate reply functionality
- */
-
-const testThreadContext = {
-  subject: "Service Charge Query - Ashwood House",
-  from: "tenant@example.com",
-  to: ["manager@blociq.co.uk", "admin@blociq.co.uk"],
-  cc: ["accountant@blociq.co.uk"],
-  bodyPreview: "I have a question about the service charge increase for this year. Can you please explain the breakdown?",
-  internetMessageId: "<thread-12345@example.com>", // unique thread ID
-  intent: "REPLY"
-};
-
-const testComposeContext = {
-  subject: "New message",
-  from: "Compose message",
-  to: ["recipient@example.com"],
-  cc: [],
-  bodyPreview: "This is a new compose message",
-  internetMessageId: null, // No thread ID for new compose
-  intent: "REPLY"
-};
+const fetch = require('node-fetch');
 
 async function testThreadReply() {
-  console.log('🧪 Testing thread-based generate reply with /api/ask-ai...\n');
-  
   try {
-    console.log('📧 Testing read message context:');
-    const readResponse = await fetch('http://localhost:3000/api/ask-ai', {
+    console.log('🧪 Testing Outlook Add-in thread reply functionality...');
+    
+    // Simulate the context that would be sent from the Outlook Add-in
+    const context = {
+      subject: "URGENT: Water leak in Flat 8",
+      from: "tenant@example.com",
+      to: ["manager@blociq.co.uk"],
+      cc: [],
+      bodyPreview: "There is a significant water leak coming from the ceiling in Flat 8. Water is dripping onto electrical outlets. This needs immediate attention.",
+      internetMessageId: "thread-12345@outlook.com",
+      intent: "REPLY"
+    };
+
+    console.log('📧 Sending thread context to /api/ask-ai...');
+    console.log('Context:', JSON.stringify(context, null, 2));
+
+    const response = await fetch('http://localhost:3000/api/ask-ai', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(testThreadContext)
+      body: JSON.stringify(context),
     });
 
-    console.log('Read response status:', readResponse.status);
-    const readResult = await readResponse.json();
-    console.log('Read response body:', JSON.stringify(readResult, null, 2));
-    
-    if (readResult.text) {
-      console.log('✅ Read message reply working correctly!');
-      console.log('📝 Draft HTML preview:', readResult.text.substring(0, 200) + '...');
-    } else {
-      console.log('❌ No text returned from /api/ask-ai for read message');
-    }
-    
-    console.log('\n📝 Testing compose message context:');
-    const composeResponse = await fetch('http://localhost:3000/api/ask-ai', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(testComposeContext)
-    });
+    console.log('📊 Response status:', response.status);
+    console.log('📊 Response headers:', Object.fromEntries(response.headers.entries()));
 
-    console.log('Compose response status:', composeResponse.status);
-    const composeResult = await composeResponse.json();
-    console.log('Compose response body:', JSON.stringify(composeResult, null, 2));
-    
-    if (composeResult.text) {
-      console.log('✅ Compose message reply working correctly!');
-      console.log('📝 Draft HTML preview:', composeResult.text.substring(0, 200) + '...');
+    const data = await response.json();
+    console.log('📊 Response data:', JSON.stringify(data, null, 2));
+
+    if (response.ok && data.text) {
+      console.log('✅ Thread reply generation working');
+      console.log('📝 Generated reply preview:', data.text.substring(0, 200) + '...');
+      
+      // Check if the reply contains expected elements
+      const replyText = data.text.toLowerCase();
+      if (replyText.includes('dear') || replyText.includes('thank you') || replyText.includes('regards')) {
+        console.log('✅ Reply appears to be properly formatted');
+      } else {
+        console.log('⚠️ Reply format may need adjustment');
+      }
     } else {
-      console.log('❌ No text returned from /api/ask-ai for compose message');
+      console.log('❌ Thread reply generation failed:', data.message || 'Unknown error');
     }
-    
+
   } catch (error) {
-    console.error('❌ Error testing thread reply:', error.message);
-    console.log('\n💡 Make sure the development server is running: npm run dev');
+    console.error('❌ Test failed:', error.message);
   }
 }
 
-// Run the test
 testThreadReply();
