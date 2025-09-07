@@ -10,11 +10,6 @@ const serverInstances = new Map<string, ReturnType<typeof createServerComponentC
 let globalClient: ReturnType<typeof createServerComponentClient<Database>> | null = null
 
 export async function createClient(cookieStore?: any) {
-  // Use global client to prevent multiple instances
-  if (globalClient) {
-    return globalClient;
-  }
-
   // If no cookieStore provided, get it from cookies()
   if (!cookieStore) {
     try {
@@ -26,10 +21,27 @@ export async function createClient(cookieStore?: any) {
     }
   }
   
-  // Create new instance
-  globalClient = createServerComponentClient<Database>({ cookies: () => cookieStore })
+  // Create a unique key for this cookie store
+  let cookieKey = 'default';
+  try {
+    if (cookieStore && typeof cookieStore.getAll === 'function') {
+      const allCookies = await cookieStore.getAll();
+      cookieKey = JSON.stringify(allCookies);
+    }
+  } catch (error) {
+    cookieKey = 'fallback';
+  }
   
-  return globalClient
+  // Check if we already have an instance for this cookie store
+  if (serverInstances.has(cookieKey)) {
+    return serverInstances.get(cookieKey)!;
+  }
+  
+  // Create new instance
+  const instance = createServerComponentClient<Database>({ cookies: () => cookieStore });
+  serverInstances.set(cookieKey, instance);
+  
+  return instance;
 }
 
 // Service role client for admin operations (no auth required)
