@@ -6,88 +6,16 @@ on:
       - 'manifest*.xml'
       - 'src/addin/**'
       - 'public/icons/**'
-      - 'public/addin/**'
   push:
-    branches: [ main, develop ]
-  workflow_dispatch:
+    branches: [ main ]
 
 jobs:
   validate:
     runs-on: ubuntu-latest
-    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          
-      - name: Install dependencies
-        run: npm ci
-        
-      - name: Validate production manifest
-        run: npm run addin:manifest:validate
-        
-      - name: Lint production manifest
-        run: npm run addin:manifest:lint
-        
-      - name: Run custom manifest checks
-        run: node scripts/check-manifest-custom.js
-        
-      - name: Validate development manifest
-        run: npm run addin:manifest:validate:dev
-        
-      - name: Lint development manifest
-        run: npm run addin:manifest:lint:dev
-        
-      - name: Check command handlers exist
-        run: |
-          echo "Checking command handlers in src/addin/commands.ts..."
-          if [ ! -f "src/addin/commands.ts" ]; then
-            echo "❌ Commands file not found: src/addin/commands.ts"
-            exit 1
-          fi
-          
-          # Check for required function exports
-          REQUIRED_FUNCTIONS=("showChatPane" "showChatPaneCompose" "onGenerateReplyFromRead" "onGenerateIntoCompose")
-          for func in "${REQUIRED_FUNCTIONS[@]}"; do
-            if ! grep -q "export function $func" src/addin/commands.ts; then
-              echo "❌ Required function not found: $func"
-              exit 1
-            else
-              echo "✅ Found function: $func"
-            fi
-          done
-          
-      - name: Check icon files exist
-        run: |
-          echo "Checking icon files..."
-          REQUIRED_ICONS=("icon-16.png" "icon-32.png" "icon-80.png" "reply-icon-16.png" "reply-icon-32.png" "reply-icon-80.png")
-          for icon in "${REQUIRED_ICONS[@]}"; do
-            if [ ! -f "public/icons/$icon" ]; then
-              echo "❌ Icon file not found: public/icons/$icon"
-              exit 1
-            else
-              echo "✅ Found icon: $icon"
-            fi
-          done
-          
-      - name: Check function file exists
-        run: |
-          echo "Checking function file..."
-          if [ ! -f "public/addin/functions.html" ]; then
-            echo "❌ Function file not found: public/addin/functions.html"
-            exit 1
-          else
-            echo "✅ Found function file: public/addin/functions.html"
-          fi
-          
-      - name: Summary
-        run: |
-          echo "✅ All manifest validation checks passed!"
-          echo "📊 Validated both production and development manifests"
-          echo "🔍 Checked command handlers and icon files"
-          echo "🚀 Ready for deployment"
+      - run: npm ci
+      - run: npm run addin:manifest:check
