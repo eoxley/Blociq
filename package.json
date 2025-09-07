@@ -26,6 +26,8 @@
     "addin:manifest:check": "npm run addin:manifest:validate && npm run addin:manifest:validate:dev",
     "addin:runtime:probe": "node scripts/check-functionfile-runtime.js",
     "prebuild:dev": "npm run addin:manifest:check && npm run addin:runtime:probe",
+    "test:reporting": "node scripts/test-reporting-system.js",
+    "validate:reporting": "node scripts/validate-reporting-setup.js",
     "build:fast": "next build",
     "clear-cache": "node scripts/clear-cache.js",
     "seed:compliance": "tsx scripts/seedComplianceAssets.ts",

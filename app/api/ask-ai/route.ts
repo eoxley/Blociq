@@ -384,6 +384,86 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // 🔍 Check for report intent
+    if (!isPublic && user) {
+      try {
+        const { detectReportIntent } = await import('../../../ai/intent/report');
+        const { executeReport } = await import('../../../ai/reports/engine');
+        const { formatReportResponse, generateDownloadActions, generateReportSummary } = await import('../../../ai/reports/format');
+        const { registerAllHandlers } = await import('../../../ai/reports/handlers');
+        
+        // Register report handlers
+        registerAllHandlers();
+        
+        const reportIntent = detectReportIntent(prompt, building_id);
+        
+        if (reportIntent) {
+          console.log('📊 Report intent detected:', reportIntent);
+          
+          // Get user's agency
+          const { data: userProfile } = await supabase
+            .from('profiles')
+            .select('agency_id')
+            .eq('id', user.id)
+            .single();
+          
+          if (!userProfile?.agency_id) {
+            return NextResponse.json({
+              success: false,
+              error: 'User not linked to agency',
+              message: 'Please complete your profile setup'
+            }, { status: 400 });
+          }
+          
+          // Execute the report
+          const reportResult = await executeReport(reportIntent, userProfile.agency_id);
+          
+          if (!reportResult.success) {
+            return NextResponse.json({
+              success: false,
+              error: reportResult.error || 'Failed to generate report',
+              message: 'Please try rephrasing your request or contact support if the issue persists'
+            }, { status: 500 });
+          }
+          
+          if (!reportResult.result) {
+            return NextResponse.json({
+              success: false,
+              error: 'No report data generated',
+              message: 'Please try a different report request'
+            }, { status: 500 });
+          }
+          
+          // Format the response
+          const response = formatReportResponse(
+            reportResult.result,
+            reportIntent.format,
+            reportResult.result.meta?.title || 'Report',
+            reportResult.result.meta?.period || 'N/A',
+            reportIntent.format === 'csv' ? generateDownloadActions('report', reportResult.result.meta?.title || 'Report', ['csv']) : undefined
+          );
+          
+          // Generate summary text for the AI response
+          const summaryText = generateReportSummary(reportResult.result, reportResult.result.meta?.title || 'Report');
+          
+          const aiResponse = {
+            success: true,
+            answer: `**${response.title}**\n\n${summaryText}\n\n${response.table ? `**Data:**\n${JSON.stringify(response.table, null, 2)}` : ''}`,
+            confidence: 95,
+            route: "report_generation",
+            result: response,
+            response: `**${response.title}**\n\n${summaryText}`
+          };
+          
+          console.log('✅ Report generated successfully:', reportResult.result.meta?.title);
+          return NextResponse.json(aiResponse);
+        }
+      } catch (error) {
+        console.error('❌ Report intent processing failed:', error);
+        // Continue with normal AI processing
+      }
+    }
+
     // 🔍 Smart Building Detection from Prompt
     if (!building_id) {
       console.log('🔍 Auto-detecting building from prompt...');
