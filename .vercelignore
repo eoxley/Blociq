@@ -1,0 +1,19 @@
+# Cache files for faster builds
+.next/cache
+node_modules/.cache
+.eslintcache
+
+# Test files
+tests/
+*.test.ts
+*.test.js
+
+# Development files
+.env.local
+.env.development
+
+# Scripts not needed for build
+scripts/test-*
+scripts/cleanup-*
+scripts/fix-*
+worker/

@@ -24,12 +24,23 @@ const nextConfig: NextConfig = {
     return 'build-' + Date.now()
   },
   
-  // Temporarily disabled to fix Next.js 15.4.2 webpack minification bug
-  // experimental: {
-  //   optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
-  // },
-  // Configure webpack to handle chunk loading better and OCR dependencies
+  // Enable experimental features for faster builds
+  experimental: {
+    optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
+    turbo: {},
+    serverComponentsExternalPackages: ['tesseract.js', '@google-cloud/documentai', '@google-cloud/vision'],
+    optimizeServerReact: true,
+  },
+  // Configure webpack for faster builds
   webpack: (config, { dev, isServer }) => {
+    // Enable webpack caching for faster rebuilds
+    config.cache = {
+      type: 'filesystem',
+      buildDependencies: {
+        config: [__filename],
+      },
+    };
+
     // Handle OCR dependencies that might not be available during build
     config.resolve.fallback = {
       ...config.resolve.fallback,
@@ -38,47 +49,35 @@ const nextConfig: NextConfig = {
       canvas: false,
     };
 
-    // Make OCR packages external for server-side builds to handle dynamic imports
+    // Externalize heavy packages that aren't used in API routes
     if (isServer) {
-      config.externals = [...(config.externals || []), 'tesseract.js', 'pdfjs-dist', 'google-auth-library'];
+      config.externals = [
+        ...(config.externals || []), 
+        'tesseract.js', 
+        'google-auth-library',
+        '@google-cloud/documentai',
+        '@google-cloud/vision'
+      ];
     }
     
-    // Fix for Next.js 15 webpack minification compatibility
+    // Optimized chunk splitting for faster builds
     if (!dev && !isServer) {
-      try {
-        // Use terser plugin instead of default minification to avoid WebpackError constructor issue
-        const TerserPlugin = require('terser-webpack-plugin');
-        
-        config.optimization.minimize = true;
-        config.optimization.minimizer = [
-          new TerserPlugin({
-            terserOptions: {
-              compress: {
-                drop_console: true,
-                drop_debugger: true,
-              },
-              mangle: true,
-              format: {
-                comments: false,
-              },
-            },
-            extractComments: false,
-          }),
-        ];
-      } catch (error) {
-        console.warn('TerserPlugin not available, falling back to default minification');
-        // Fallback: disable minification if terser plugin fails
-        config.optimization.minimize = false;
-      }
-      
-      // Keep chunk splitting for performance
       config.optimization.splitChunks = {
         chunks: 'all',
+        maxInitialRequests: 25,
+        maxAsyncRequests: 25,
         cacheGroups: {
           vendor: {
             test: /[\\/]node_modules[\\/]/,
             name: 'vendors',
             chunks: 'all',
+            priority: 10,
+          },
+          ocr: {
+            test: /[\\/]node_modules[\\/](tesseract\.js|pdfjs-dist|@google-cloud)[\\/]/,
+            name: 'ocr-libs',
+            chunks: 'async',
+            priority: 20,
           },
         },
       };
@@ -242,7 +241,13 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   
   // Enhanced external packages (updated for Next.js 15+)
-  serverExternalPackages: ['tesseract.js', 'pdf-parse', 'mammoth'],
+  serverExternalPackages: [
+    'tesseract.js', 
+    '@google-cloud/documentai',
+    '@google-cloud/vision',
+    'google-auth-library',
+    'sharp'
+  ],
 };
 
 export default nextConfig;
