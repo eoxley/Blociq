@@ -5,21 +5,21 @@ Office.onReady(() => {
   console.log('🔌 BlocIQ function handlers loaded');
   
   try {
-    // Register the functions with Office.js - must match manifest.xml function names
-    Office.actions.associate("generateAIReply", generateAIReply);
-    Office.actions.associate("showInboxTriage", showInboxTriage);
+    // Register the functions with Office.js - must match manifest.xml function names exactly
+    Office.actions.associate("onGenerateReplyFromRead", onGenerateReplyFromRead);
+    Office.actions.associate("onGenerateIntoCompose", onGenerateIntoCompose);
     
-    console.log('✅ Functions registered: generateAIReply, showInboxTriage');
+    console.log('✅ Functions registered: onGenerateReplyFromRead, onGenerateIntoCompose');
   } catch (error) {
     console.error('❌ Error registering functions:', error);
   }
 });
 
 /**
- * Opens the AI Reply Generation modal
- * Called when user clicks the "AI Reply" button
+ * Opens the AI Reply Generation modal from read mode
+ * Called when user clicks the "Generate Reply" button in read mode
  */
-function generateAIReply(event) {
+function onGenerateReplyFromRead(event) {
   console.log('🚀 Opening AI Reply modal...');
   
   try {
@@ -91,16 +91,16 @@ function generateAIReply(event) {
 }
 
 /**
- * Opens the Inbox Triage modal
- * Called when user clicks the "Inbox Triage" button
+ * Opens the AI Reply Generation modal from compose mode  
+ * Called when user clicks the "Generate Reply" button in compose mode
  */
-function showInboxTriage(event) {
-  console.log('🚀 Opening Inbox Triage modal...');
+function onGenerateIntoCompose(event) {
+  console.log('🚀 Opening AI Reply modal for compose...');
   
   try {
-    // Display the inbox triage modal in a dialog
+    // Display the AI reply modal in a dialog
     Office.context.ui.displayDialogAsync(
-      "https://www.blociq.co.uk/outlook-addin/ai-triage-modal.html",
+      "https://www.blociq.co.uk/outlook-addin/ai-reply-modal.html",
       {
         height: 700, 
         width: 900, 
@@ -111,7 +111,7 @@ function showInboxTriage(event) {
           console.error('❌ Failed to open Inbox Triage modal:', result.error);
           showError('Failed to open Inbox Triage modal: ' + (result.error?.message || 'Unknown error'));
         } else {
-          console.log('✅ Inbox Triage modal opened successfully');
+          console.log('✅ AI Reply modal opened successfully (compose mode)');
           
           const dialog = result.value;
           
@@ -121,8 +121,8 @@ function showInboxTriage(event) {
               const data = JSON.parse(arg.message);
               
               switch (data.action) {
-                case 'triageComplete':
-                  showSuccess(`Triage complete! Generated ${data.count || 0} draft replies.`);
+                case 'insertReply':
+                  insertGeneratedReply(data.content);
                   dialog.close();
                   break;
                   
@@ -135,20 +135,20 @@ function showInboxTriage(event) {
                   break;
                   
                 default:
-                  console.log('Unknown action from triage dialog:', data.action);
+                  console.log('Unknown action from compose dialog:', data.action);
               }
             } catch (error) {
-              console.error('Error handling triage dialog message:', error);
-              showError('Error handling triage dialog response');
+              console.error('Error handling compose dialog message:', error);
+              showError('Error handling compose dialog response');
             }
           });
 
           // Handle dialog errors
           dialog.addEventHandler(Office.EventType.DialogEventReceived, (arg) => {
-            console.log('Triage dialog event received:', arg);
+            console.log('Compose dialog event received:', arg);
             if (arg.error) {
-              console.error('Triage dialog error:', arg.error);
-              showError('Triage dialog error occurred');
+              console.error('Compose dialog error:', arg.error);
+              showError('Compose dialog error occurred');
             }
           });
         }

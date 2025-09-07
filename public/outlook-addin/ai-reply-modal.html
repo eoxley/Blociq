@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BlocIQ AI Reply Generator</title>
+    <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .modal-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        
+        .modal-header {
+            background: linear-gradient(135deg, #6A00F5, #8A2BE2);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .modal-header h1 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        
+        .modal-header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .modal-content {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+        
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+        
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #6A00F5;
+        }
+        
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .generated-reply {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            min-height: 200px;
+            font-size: 14px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+        
+        .modal-footer {
+            border-top: 1px solid #e5e7eb;
+            padding: 20px;
+            background: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #6A00F5, #8A2BE2);
+            color: white;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            background: linear-gradient(135deg, #5A00E5, #7A1BD2);
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondary {
+            background: white;
+            color: #6b7280;
+            border-color: #d1d5db;
+        }
+        
+        .btn-secondary:hover:not(:disabled) {
+            background: #f9fafb;
+            border-color: #6b7280;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top: 2px solid white;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .status-message {
+            flex: 1;
+            font-size: 14px;
+            color: #6b7280;
+        }
+        
+        .status-message.error {
+            color: #ef4444;
+        }
+        
+        .status-message.success {
+            color: #10b981;
+        }
+    </style>
+</head>
+<body>
+    <div class="modal-container">
+        <div class="modal-header">
+            <h1>🤖 AI Reply Generator</h1>
+            <p>Generate intelligent email replies with BlocIQ AI</p>
+        </div>
+        
+        <div class="modal-content">
+            <div class="form-group">
+                <label for="replyType">Reply Type</label>
+                <select id="replyType">
+                    <option value="helpful">Helpful & Professional</option>
+                    <option value="brief">Brief & Direct</option>
+                    <option value="detailed">Detailed Response</option>
+                    <option value="friendly">Friendly & Personal</option>
+                    <option value="formal">Formal & Business</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="tone">Tone</label>
+                <select id="tone">
+                    <option value="professional">Professional</option>
+                    <option value="friendly">Friendly</option>
+                    <option value="formal">Formal</option>
+                    <option value="casual">Casual</option>
+                    <option value="apologetic">Apologetic</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="additionalContext">Additional Context (Optional)</label>
+                <textarea id="additionalContext" placeholder="Add any specific points you want to include in the reply..."></textarea>
+            </div>
+            
+            <div id="generatedReplySection" style="display: none;">
+                <h3 style="margin-bottom: 16px; color: #374151; font-size: 16px; font-weight: 600;">Generated Reply:</h3>
+                <div id="generatedReply" class="generated-reply"></div>
+            </div>
+        </div>
+        
+        <div class="modal-footer">
+            <div id="statusMessage" class="status-message"></div>
+            <div style="display: flex; gap: 12px;">
+                <button id="generateBtn" class="btn btn-primary">
+                    <span id="generateBtnText">Generate Reply</span>
+                </button>
+                <button id="insertBtn" class="btn btn-primary" style="display: none;">
+                    Insert Reply
+                </button>
+                <button id="cancelBtn" class="btn btn-secondary">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        Office.onReady(() => {
+            console.log('🔌 AI Reply Modal loaded');
+            
+            const generateBtn = document.getElementById('generateBtn');
+            const insertBtn = document.getElementById('insertBtn');
+            const cancelBtn = document.getElementById('cancelBtn');
+            const statusMessage = document.getElementById('statusMessage');
+            const generatedReplySection = document.getElementById('generatedReplySection');
+            const generatedReply = document.getElementById('generatedReply');
+            const generateBtnText = document.getElementById('generateBtnText');
+            
+            let currentReply = '';
+            
+            generateBtn.addEventListener('click', generateReply);
+            insertBtn.addEventListener('click', insertReply);
+            cancelBtn.addEventListener('click', closeModal);
+            
+            async function generateReply() {
+                try {
+                    setLoading(true);
+                    setStatus('Generating AI reply...', false);
+                    
+                    // Get form values
+                    const replyType = document.getElementById('replyType').value;
+                    const tone = document.getElementById('tone').value;
+                    const additionalContext = document.getElementById('additionalContext').value;
+                    
+                    // Get current email content
+                    const emailContent = await getCurrentEmailContent();
+                    
+                    // Call AI reply API
+                    const response = await fetch('/api/ai-email-reply', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            originalEmail: emailContent.body,
+                            subject: emailContent.subject,
+                            from: emailContent.from,
+                            replyType,
+                            tone,
+                            additionalContext
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok && data.reply) {
+                        currentReply = data.reply;
+                        generatedReply.textContent = currentReply;
+                        generatedReplySection.style.display = 'block';
+                        insertBtn.style.display = 'inline-block';
+                        setStatus('Reply generated successfully!', false);
+                    } else {
+                        throw new Error(data.error || 'Failed to generate reply');
+                    }
+                } catch (error) {
+                    console.error('Generate reply error:', error);
+                    setStatus('Error: ' + error.message, true);
+                } finally {
+                    setLoading(false);
+                }
+            }
+            
+            function insertReply() {
+                if (currentReply) {
+                    // Send message back to parent with the reply content
+                    Office.context.ui.messageParent(JSON.stringify({
+                        action: 'insertReply',
+                        content: currentReply
+                    }));
+                }
+            }
+            
+            function closeModal() {
+                Office.context.ui.messageParent(JSON.stringify({
+                    action: 'close'
+                }));
+            }
+            
+            function setLoading(isLoading) {
+                generateBtn.disabled = isLoading;
+                insertBtn.disabled = isLoading;
+                
+                if (isLoading) {
+                    generateBtnText.innerHTML = '<div class="loading-spinner"></div>Generating...';
+                } else {
+                    generateBtnText.textContent = 'Generate Reply';
+                }
+            }
+            
+            function setStatus(message, isError) {
+                statusMessage.textContent = message;
+                statusMessage.className = 'status-message ' + (isError ? 'error' : 'success');
+            }
+            
+            async function getCurrentEmailContent() {
+                return new Promise((resolve) => {
+                    Office.context.mailbox.item.body.getAsync('text', (result) => {
+                        const body = result.status === Office.AsyncResultStatus.Succeeded ? result.value : '';
+                        
+                        resolve({
+                            subject: Office.context.mailbox.item.subject || '',
+                            from: Office.context.mailbox.item.from?.emailAddress || '',
+                            body: body
+                        });
+                    });
+                });
+            }
+        });
+    </script>
+</body>
+</html>

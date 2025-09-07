@@ -4,8 +4,8 @@ import { join } from 'path';
 
 export async function GET(request: NextRequest) {
   try {
-    // Read the manifest.xml file from the public directory
-    const manifestPath = join(process.cwd(), 'public', 'outlook-addin', 'manifest.xml');
+    // Read the correct manifest.xml file from the root directory (has AI reply buttons)
+    const manifestPath = join(process.cwd(), 'manifest.xml');
     const manifestContent = readFileSync(manifestPath, 'utf8');
 
     // Return the manifest with proper headers for download
