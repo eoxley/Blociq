@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase/server';
 import { validateComplianceFile, getFileTypeError, isValidMimeType, getMimeTypeFromFilename } from '@/lib/validation/mime';
-import { extractTextFromPdf } from '@/lib/compliance/pdf-extractor';
-import { parseEICR } from '@/lib/compliance/eicr-parser';
+import { extractTextFromPdfWithPageMap } from '@/lib/compliance/pdf-extractor';
+import { 
+  detectDocType, 
+  extractFields, 
+  computeDueDates, 
+  toSummaryJson, 
+  toCompliancePatch 
+} from '@/lib/compliance/regexMap';
 
 export async function POST(req: NextRequest) {
   try {
@@ -151,21 +157,52 @@ export async function POST(req: NextRequest) {
 
     // Process file based on type
     let extractedText = '';
+    let pageMap: Array<{ page: number; text: string }> = [];
     let summaryJson: any = null;
+    let detectedDocType = docType; // Default to user-selected type
+    let detectionScore = 0;
 
     if (mimeType === 'application/pdf') {
       try {
         console.log('📖 Extracting text from PDF...');
-        extractedText = await extractTextFromPdf(Buffer.from(fileBuffer));
+        const extractionResult = await extractTextFromPdfWithPageMap(Buffer.from(fileBuffer));
+        extractedText = extractionResult.fullText;
+        pageMap = extractionResult.pageMap;
         
         if (extractedText.trim()) {
           console.log(`✅ Extracted ${extractedText.length} characters from PDF`);
           
-          // Parse EICR if it's an EICR document
-          if (docType === 'EICR') {
-            console.log('🔍 Parsing EICR document...');
-            summaryJson = parseEICR(extractedText);
-            console.log('✅ EICR parsed:', summaryJson);
+          // Detect document type using regex map
+          console.log('🔍 Detecting document type...');
+          const detection = detectDocType(pageMap);
+          detectedDocType = detection.type;
+          detectionScore = detection.score;
+          
+          console.log(`📋 Detected type: ${detectedDocType} (score: ${detectionScore})`);
+          
+          if (detection.type !== 'Unknown' && detection.score > 0.5) {
+            // Extract fields using regex map
+            console.log('🔍 Extracting fields...');
+            const fields = extractFields(detection.type, pageMap);
+            console.log('📊 Extracted fields:', fields);
+            
+            // Compute due dates
+            console.log('📅 Computing due dates...');
+            const due = computeDueDates(detection.type, fields);
+            console.log('📅 Due dates:', due);
+            
+            // Generate summary JSON
+            console.log('📋 Generating summary...');
+            summaryJson = toSummaryJson(detection.type, fields, due);
+            console.log('✅ Summary generated:', summaryJson);
+          } else {
+            console.log('⚠️ Could not determine document type automatically');
+            summaryJson = {
+              doc_type: 'assessment',
+              assessment_type: docType,
+              source_pages: pageMap.map(p => p.page),
+              detection_failed: true
+            };
           }
         } else {
           console.log('⚠️ No text extracted from PDF');
@@ -181,11 +218,17 @@ export async function POST(req: NextRequest) {
     // Update job with results
     const updateData: any = {
       status: extractedText ? 'READY' : 'FAILED',
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
+      doc_type: detectedDocType, // Update with detected type
+      detection_score: detectionScore
     };
 
     if (extractedText) {
       updateData.extracted_text = extractedText;
+    }
+
+    if (pageMap.length > 0) {
+      updateData.page_map = pageMap;
     }
 
     if (summaryJson) {
@@ -207,29 +250,42 @@ export async function POST(req: NextRequest) {
       console.log('✅ Job updated with results');
     }
 
-    // If EICR was parsed, update compliance assets
-    if (summaryJson && docType === 'EICR') {
+    // Update compliance assets if document was successfully parsed
+    if (summaryJson && detectedDocType !== 'Unknown' && !summaryJson.detection_failed) {
       try {
         console.log('📋 Updating compliance assets...');
         
-        const { error: assetError } = await supabase
-          .from('building_compliance_assets')
-          .upsert({
-            building_id: buildingId,
-            asset_type: 'EICR',
-            last_inspected_at: summaryJson.inspection_date,
-            next_due_date: summaryJson.next_due_date,
-            status: summaryJson.result === 'satisfactory' ? 'compliant' : 'non_compliant',
-            document_job_id: job.id,
-            updated_at: new Date().toISOString()
-          }, {
-            onConflict: 'building_id,asset_type'
-          });
+        // Generate compliance patch using regex map
+        const fields = extractFields(detectedDocType, pageMap);
+        const due = computeDueDates(detectedDocType, fields);
+        const patch = toCompliancePatch(detectedDocType, fields, due);
+        
+        console.log('📋 Compliance patch:', patch);
+        
+        // Only update if we have an assessment type (not insurance)
+        if (patch.assessment_type) {
+          const { error: assetError } = await supabase
+            .from('building_compliance_assets')
+            .upsert({
+              building_id: buildingId,
+              asset_type: patch.assessment_type,
+              last_inspected_at: patch.last_inspected_at,
+              next_due_date: patch.next_due_date,
+              status: patch.status || 'compliant',
+              document_job_id: job.id,
+              updated_at: new Date().toISOString(),
+              ...patch // Include any additional fields from the patch
+            }, {
+              onConflict: 'building_id,asset_type'
+            });
 
-        if (assetError) {
-          console.error('❌ Asset update failed:', assetError);
+          if (assetError) {
+            console.error('❌ Asset update failed:', assetError);
+          } else {
+            console.log('✅ Compliance asset updated');
+          }
         } else {
-          console.log('✅ Compliance asset updated');
+          console.log('ℹ️ No compliance asset update needed (insurance or other non-assessment document)');
         }
       } catch (error) {
         console.error('❌ Asset update error:', error);
@@ -242,11 +298,17 @@ export async function POST(req: NextRequest) {
         id: job.id,
         status: updateData.status,
         filename: file.name,
-        doc_type: docType,
+        doc_type: detectedDocType,
+        original_doc_type: docType,
+        detection_score: detectionScore,
         building_id: buildingId,
         summary_json: summaryJson
       },
-      message: summaryJson ? 'Document processed and compliance data updated' : 'Document uploaded successfully'
+      message: summaryJson && !summaryJson.detection_failed 
+        ? `Document processed as ${detectedDocType} and compliance data updated` 
+        : summaryJson?.detection_failed 
+          ? 'Document uploaded but type could not be determined automatically'
+          : 'Document uploaded successfully'
     });
 
   } catch (error) {

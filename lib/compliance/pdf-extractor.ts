@@ -11,8 +11,13 @@ export interface ExtractedText {
   pages: { [pageNumber: number]: string };
 }
 
+export interface ExtractedTextResult {
+  fullText: string;
+  pageMap: Array<{ page: number; text: string }>;
+}
+
 /**
- * Extract text from PDF buffer
+ * Extract text from PDF buffer (legacy function for backward compatibility)
  */
 export async function extractTextFromPdf(buffer: Buffer): Promise<string> {
   try {
@@ -29,6 +34,43 @@ export async function extractTextFromPdf(buffer: Buffer): Promise<string> {
     return data.text;
   } catch (error) {
     console.error('❌ PDF text extraction failed:', error);
+    throw new Error('Failed to extract text from PDF');
+  }
+}
+
+/**
+ * Extract text from PDF buffer with page mapping (new function for regex map integration)
+ */
+export async function extractTextFromPdfWithPageMap(buffer: Buffer): Promise<ExtractedTextResult> {
+  try {
+    console.log('📖 Starting PDF text extraction with page mapping...');
+    
+    const data = await pdf(buffer, {
+      normalizeWhitespace: true,
+      disableCombineTextItems: false
+    });
+
+    // Create page mapping (simplified - pdf-parse doesn't provide per-page text)
+    const pageMap: Array<{ page: number; text: string }> = [];
+    const textPerPage = Math.ceil(data.text.length / data.numpages);
+    
+    for (let i = 0; i < data.numpages; i++) {
+      const start = i * textPerPage;
+      const end = Math.min(start + textPerPage, data.text.length);
+      pageMap.push({
+        page: i + 1,
+        text: data.text.substring(start, end)
+      });
+    }
+
+    console.log(`✅ Extracted text: ${data.text.length} characters from ${data.numpages} pages`);
+
+    return {
+      fullText: data.text,
+      pageMap
+    };
+  } catch (error) {
+    console.error('❌ PDF text extraction with page mapping failed:', error);
     throw new Error('Failed to extract text from PDF');
   }
 }

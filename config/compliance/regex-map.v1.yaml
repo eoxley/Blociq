@@ -1,0 +1,200 @@
+version: 1
+defaults:
+  flags: "gim"                # global, case-insensitive, multiline
+  uk_date_patterns:
+    - "(\\d{1,2})[\\-/](\\d{1,2})[\\-/](\\d{2,4})"
+    - "(\\d{1,2})\\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\\.?\\s+(\\d{4})"
+    - "(\\d{1,2})\\s+([A-Za-z]+)\\s+(\\d{4})"
+  currency_patterns:
+    - "£\\s?\\d{1,3}(,\\d{3})*(\\.\\d{2})?"
+
+types:
+  EICR:
+    detect:
+      - "Electrical\\s+Installation\\s+Condition\\s+Report"
+      - "\\bEICR\\b"
+      - "BS\\s*7671"
+    fields:
+      inspection_date:
+        patterns: "*uk_date_patterns"
+      result:
+        patterns:
+          - "\\bSatisfactory\\b"
+          - "\\bUnsatisfactory\\b"
+      classification_counts:
+        C1: "\\bC1\\b"
+        C2: "\\bC2\\b"
+        C3: "\\bC3\\b"
+        FI: "\\bFI\\b"
+      standard:
+        patterns:
+          - "BS\\s*7671(?::2018)?(?:\\s*A2:?\\s*2022)?"
+    compute:
+      next_due_years: 5
+    map:
+      assessment_type: "EICR"
+      status_rules:
+        - when: "result==Satisfactory && C1==0"
+          status: "Compliant"
+        - when: "result==Unsatisfactory || C1>0"
+          status: "ActionRequired"
+
+  FRA:
+    detect:
+      - "\\bFire\\s+Risk\\s+Assessment\\b(?!.*External\\s+Wall)"
+      - "\\bFRA\\b(?!EW)"
+    fields:
+      inspection_date: "*uk_date_patterns"
+      risk_rating:
+        patterns:
+          - "\\bTolerable\\b|\\bModerate\\b|\\bSubstantial\\b|\\bIntolerable\\b"
+      review_due:
+        patterns:
+          - "review(?:\\s+by|\\s+due)?[:\\s]+(.*)$"
+    compute:
+      next_due_years: 1
+    map:
+      assessment_type: "FRA"
+      status_rules:
+        - when: "risk_rating in ['Intolerable','Substantial']"
+          status: "ActionRequired"
+        - when: "true"
+          status: "Compliant"
+
+  FRAEW_EWS1:
+    detect:
+      - "\\bEWS1\\b"
+      - "External\\s+Wall\\s+(System|Assessment)|\\bFRAEW\\b"
+    fields:
+      class:
+        patterns: "\\bA1\\b|\\bA2\\b|\\bB1\\b|\\bB2\\b"
+      inspection_date: "*uk_date_patterns"
+    compute:
+      next_due_years: 5
+    map:
+      assessment_type: "FRAEW"
+      status_rules:
+        - when: "class=='B2'"
+          status: "ActionRequired"
+        - when: "true"
+          status: "Compliant"
+
+  EmergencyLighting:
+    detect:
+      - "Emergency\\s+Lighting"
+      - "Monthly\\s+Function\\s+Test|Annual\\s+Duration\\s+Test"
+    fields:
+      inspection_date: "*uk_date_patterns"
+      test_type:
+        patterns: "Monthly\\s+Function|Annual\\s+Duration"
+    compute:
+      next_due_rule:
+        when: "test_type=='Annual Duration'"
+        years: 1
+        else_months: 1
+    map:
+      assessment_type: "EmergencyLighting"
+
+  FireAlarm:
+    detect:
+      - "Fire\\s+(Alarm|Detection)"
+      - "BS\\s*5839"
+    fields:
+      inspection_date: "*uk_date_patterns"
+      frequency:
+        patterns: "weekly|monthly|quarterly|6\\s*monthly|annual"
+    compute:
+      next_due_hint: "frequency"
+    map:
+      assessment_type: "FireAlarm"
+
+  FireDoors:
+    detect:
+      - "Fire\\s+Door"
+      - "Door\\s+Inspection"
+    fields:
+      inspection_date: "*uk_date_patterns"
+      defects:
+        patterns: "defect(s)?\\s*:\\s*(\\d+)"
+    compute:
+      next_due_months: 6
+    map:
+      assessment_type: "FireDoors"
+
+  Asbestos:
+    detect:
+      - "Asbestos\\s+(Survey|Register)"
+      - "Management\\s+Survey|Refurbishment\\s+Survey"
+    fields:
+      inspection_date: "*uk_date_patterns"
+      survey_type:
+        patterns: "Management|Refurbishment|Demolition"
+    compute:
+      next_due_years: 1
+    map:
+      assessment_type: "Asbestos"
+
+  WaterRisk:
+    detect:
+      - "Legionella|Water\\s+Risk\\s+Assessment|HSG274|L8"
+    fields:
+      inspection_date: "*uk_date_patterns"
+      review:
+        patterns: "review\\s+(?:within|by)\\s+(\\d+)\\s+year"
+    compute:
+      next_due_rule:
+        when: "reviewYears"
+        yearsFromField: true
+        else_years: 2
+    map:
+      assessment_type: "WaterRisk"
+
+  LightningProtection:
+    detect:
+      - "Lightning\\s+Protection"
+      - "BS\\s*EN\\s*62305"
+    fields:
+      inspection_date: "*uk_date_patterns"
+    compute:
+      next_due_years: 1
+    map:
+      assessment_type: "LightningProtection"
+
+  LiftLOLER:
+    detect:
+      - "LOLER|Thorough\\s+Examination"
+    fields:
+      inspection_date: "*uk_date_patterns"
+      lift_type:
+        patterns: "passenger|goods"
+    compute:
+      next_due_rule:
+        when: "lift_type=='passenger'"
+        months: 6
+        else_months: 12
+    map:
+      assessment_type: "LiftLOLER"
+
+  Sprinkler:
+    detect:
+      - "\\bSprinkler\\b"
+      - "BS\\s*EN\\s*12845"
+    fields:
+      inspection_date: "*uk_date_patterns"
+    compute:
+      next_due_years: 1
+    map:
+      assessment_type: "Sprinkler"
+
+  Insurance:
+    detect:
+      - "Policy\\s+Number|Schedule\\s+of\\s+Insurance|Insured\\s+By"
+    fields:
+      period_from: "*uk_date_patterns"
+      period_to: "*uk_date_patterns"
+      policy_number:
+        patterns: "Policy\\s*No\\.?[:\\s]+([A-Za-z0-9\\-\\/]+)"
+      buildings_sum_insured:
+        patterns: "*currency_patterns"
+    map:
+      doc_type: "insurance"
