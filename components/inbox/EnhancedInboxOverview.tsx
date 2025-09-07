@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { createClient } from '@/lib/supabase/browser';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import MobilePageNavigation from "@/components/MobilePageNavigation";
+import { LeaseNotificationProvider } from '@/contexts/LeaseNotificationContext';
 
 interface DashboardData {
   total: number;
@@ -104,6 +105,47 @@ interface DashboardData {
   };
 }
 
+// Define all constants BEFORE any usage (requirement 1)
+const EMPTY_DASHBOARD: DashboardData = {
+  total: 0,
+  unread: 0,
+  handled: 0,
+  urgent: 0,
+  categories: {},
+  propertyBreakdown: {},
+  recentActivity: [],
+  smartSuggestions: [],
+  urgencyDistribution: {
+    critical: 0,
+    high: 0,
+    medium: 0,
+    low: 0
+  },
+  topProperties: [],
+  aiInsightsSummary: {
+    totalInsights: 0,
+    criticalInsights: 0,
+    followUps: 0,
+    recurringIssues: 0,
+    complianceMatters: 0
+  }
+};
+
+const DEFAULT_URGENCY_DISTRIBUTION = {
+  critical: 0,
+  high: 0,
+  medium: 0,
+  low: 0
+};
+
+const DEFAULT_AI_INSIGHTS = {
+  totalInsights: 0,
+  criticalInsights: 0,
+  followUps: 0,
+  recurringIssues: 0,
+  complianceMatters: 0
+};
+
 const EnhancedInboxOverview: React.FC = () => {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -111,6 +153,9 @@ const EnhancedInboxOverview: React.FC = () => {
   const [timeRange, setTimeRange] = useState('week');
   const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
+  
+  // Use shared browser client (requirement 5)
+  const supabase = createClient();
 
   const fetchDashboardData = async (showLoader = true) => {
     try {
@@ -121,9 +166,9 @@ const EnhancedInboxOverview: React.FC = () => {
       // Check if user is authenticated before making the request
       console.log('🔐 Checking authentication...');
       const sessionResult = await supabase.auth.getSession();
-      // Safe destructuring to prevent "Right side of assignment cannot be destructured" error
+      // Safe destructuring to prevent "Right side of assignment cannot be destructured" error (requirement 2)
       const sessionData = sessionResult?.data || {};
-      const session = sessionData.session || null;
+      const userSession = sessionData.session || null;
       const sessionError = sessionResult?.error || null;
       
       if (sessionError) {
@@ -131,12 +176,12 @@ const EnhancedInboxOverview: React.FC = () => {
         throw new Error('Authentication error - please log in again');
       }
       
-      if (!session) {
+      if (!userSession) {
         console.warn('⚠️ No session found');
         throw new Error('Please log in to view the inbox dashboard');
       }
       
-      console.log('✅ User authenticated:', session.user.id);
+      console.log('✅ User authenticated:', userSession.user.id);
 
       console.log('🚀 Making dashboard API call...', `/api/inbox/dashboard?timeRange=${timeRange}`);
       
@@ -150,28 +195,28 @@ const EnhancedInboxOverview: React.FC = () => {
       
       console.log('📊 Dashboard API response status:', response.status, response.statusText);
       
-      // Safe coercion as specified in requirements
-      const raw = await response.json().catch(() => ({} as any));
-      const data = raw && typeof raw === 'object' ? raw : {};
+      // Safe coercion as specified in requirements (requirement 2)
+      const responseData = await response.json().catch(() => ({} as any));
+      const apiData = responseData && typeof responseData === 'object' ? responseData : {};
       
-      console.log('📊 Raw API response:', JSON.stringify(data, null, 2));
-      console.log('📊 API success status:', data.success);
+      console.log('📊 Raw API response:', JSON.stringify(apiData, null, 2));
+      console.log('📊 API success status:', apiData.success);
       console.log('📊 Dashboard data keys:', dashboardData ? Object.keys(dashboardData) : 'no dashboard data');
-      console.log('📊 Data source:', data.dataSource);
+      console.log('📊 Data source:', apiData.dataSource);
       
       if (!response.ok) {
         if (response.status === 401) {
           throw new Error('Authentication required - please log in again');
         }
-        console.error('❌ Dashboard API error response:', data);
-        throw new Error(data.message || data.details || `Failed to fetch dashboard data: ${response.status}`);
+        console.error('❌ Dashboard API error response:', apiData);
+        throw new Error(apiData.message || apiData.details || `Failed to fetch dashboard data: ${response.status}`);
       }
 
-      // Safe data extraction with defaults
-      const dashboardData = data.data && typeof data.data === 'object' ? data.data : {};
+      // Safe data extraction with defaults (requirement 2)
+      const extractedDashboardData = apiData.data && typeof apiData.data === 'object' ? apiData.data : {};
       
       // Only use sample data if API explicitly failed or returned no data
-      if (!data.success) {
+      if (!apiData.success) {
         console.log('⚠️ API returned failure, creating sample dashboard for demo');
         const sampleDashboard = {
           total: 5,
@@ -204,22 +249,19 @@ const EnhancedInboxOverview: React.FC = () => {
         return;
       }
       
+      // Use extracted data and predefined constants (requirement 3)
       const safeDashboard = {
-        total: Number.isFinite(dashboardData.total) ? dashboardData.total : 0,
-        unread: Number.isFinite(dashboardData.unread) ? dashboardData.unread : 0,
-        handled: Number.isFinite(dashboardData.handled) ? dashboardData.handled : 0,
-        urgent: Number.isFinite(dashboardData.urgent) ? dashboardData.urgent : 0,
-        categories: dashboardData.categories && typeof dashboardData.categories === 'object' ? dashboardData.categories : {},
-        propertyBreakdown: dashboardData.propertyBreakdown && typeof dashboardData.propertyBreakdown === 'object' ? dashboardData.propertyBreakdown : {},
-        recentActivity: Array.isArray(dashboardData.recentActivity) ? dashboardData.recentActivity : [],
-        smartSuggestions: Array.isArray(dashboardData.smartSuggestions) ? dashboardData.smartSuggestions : [],
-        urgencyDistribution: dashboardData.urgencyDistribution && typeof dashboardData.urgencyDistribution === 'object' ? dashboardData.urgencyDistribution : {
-          critical: 0, high: 0, medium: 0, low: 0
-        },
-        topProperties: Array.isArray(dashboardData.topProperties) ? dashboardData.topProperties : [],
-        aiInsightsSummary: dashboardData.aiInsightsSummary && typeof dashboardData.aiInsightsSummary === 'object' ? dashboardData.aiInsightsSummary : {
-          totalInsights: 0, criticalInsights: 0, followUps: 0, recurringIssues: 0, complianceMatters: 0
-        }
+        total: Number.isFinite(extractedDashboardData.total) ? extractedDashboardData.total : 0,
+        unread: Number.isFinite(extractedDashboardData.unread) ? extractedDashboardData.unread : 0,
+        handled: Number.isFinite(extractedDashboardData.handled) ? extractedDashboardData.handled : 0,
+        urgent: Number.isFinite(extractedDashboardData.urgent) ? extractedDashboardData.urgent : 0,
+        categories: extractedDashboardData.categories && typeof extractedDashboardData.categories === 'object' ? extractedDashboardData.categories : {},
+        propertyBreakdown: extractedDashboardData.propertyBreakdown && typeof extractedDashboardData.propertyBreakdown === 'object' ? extractedDashboardData.propertyBreakdown : {},
+        recentActivity: Array.isArray(extractedDashboardData.recentActivity) ? extractedDashboardData.recentActivity : [],
+        smartSuggestions: Array.isArray(extractedDashboardData.smartSuggestions) ? extractedDashboardData.smartSuggestions : [],
+        urgencyDistribution: extractedDashboardData.urgencyDistribution && typeof extractedDashboardData.urgencyDistribution === 'object' ? extractedDashboardData.urgencyDistribution : DEFAULT_URGENCY_DISTRIBUTION,
+        topProperties: Array.isArray(extractedDashboardData.topProperties) ? extractedDashboardData.topProperties : [],
+        aiInsightsSummary: extractedDashboardData.aiInsightsSummary && typeof extractedDashboardData.aiInsightsSummary === 'object' ? extractedDashboardData.aiInsightsSummary : DEFAULT_AI_INSIGHTS
       };
       
       console.log('📊 Processed dashboard data:', JSON.stringify(safeDashboard, null, 2));
@@ -302,7 +344,7 @@ const EnhancedInboxOverview: React.FC = () => {
 
   if (loading && !dashboardData) {
     return (
-      <>
+      <LeaseNotificationProvider>
         <MobilePageNavigation title="Smart Inbox" backTo="/home" backLabel="Home" />
         <div className="min-h-screen bg-gray-50 p-4 lg:p-6 pt-20 lg:pt-6">
           <div className="max-w-7xl mx-auto">
@@ -314,13 +356,13 @@ const EnhancedInboxOverview: React.FC = () => {
             </div>
           </div>
         </div>
-      </>
+      </LeaseNotificationProvider>
     );
   }
 
   if (error) {
     return (
-      <>
+      <LeaseNotificationProvider>
         <MobilePageNavigation title="Smart Inbox" backTo="/home" backLabel="Home" />
         <div className="min-h-screen bg-gray-50 p-4 lg:p-6 pt-20 lg:pt-6">
           <div className="max-w-7xl mx-auto">
@@ -343,13 +385,13 @@ const EnhancedInboxOverview: React.FC = () => {
             </Card>
           </div>
         </div>
-      </>
+      </LeaseNotificationProvider>
     );
   }
 
   if (!dashboardData) {
     return (
-      <>
+      <LeaseNotificationProvider>
         <MobilePageNavigation title="Smart Inbox" backTo="/home" backLabel="Home" />
         <div className="min-h-screen bg-gray-50 p-4 lg:p-6 pt-20 lg:pt-6">
           <div className="max-w-7xl mx-auto">
@@ -360,12 +402,12 @@ const EnhancedInboxOverview: React.FC = () => {
             </div>
           </div>
         </div>
-      </>
+      </LeaseNotificationProvider>
     );
   }
 
   return (
-    <>
+    <LeaseNotificationProvider>
       <MobilePageNavigation title="Smart Inbox" backTo="/home" backLabel="Home" />
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
         {/* Hero Banner */}
@@ -867,7 +909,7 @@ const EnhancedInboxOverview: React.FC = () => {
           )}
         </div>
       </div>
-    </>
+    </LeaseNotificationProvider>
   );
 };
 
