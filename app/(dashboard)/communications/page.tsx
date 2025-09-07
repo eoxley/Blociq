@@ -33,6 +33,7 @@ import { toast } from 'sonner'
 import { supabase } from '@/lib/supabaseClient'
 import AIGenerateModal from '@/components/communications/AIGenerateModal'
 import BatchGroupModal from '@/components/communications/BatchGroupModal'
+import MailMergeModal from './components/MailMergeModal'
 
 interface Building {
   id: string
@@ -82,6 +83,7 @@ export default function CommunicationsPage() {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [showAIModal, setShowAIModal] = useState(false)
   const [showBatchGroupModal, setShowBatchGroupModal] = useState(false)
+  const [showMailMerge, setShowMailMerge] = useState(false)
 
   // Message composer state
   const [selectedBuilding, setSelectedBuilding] = useState<string>('')
