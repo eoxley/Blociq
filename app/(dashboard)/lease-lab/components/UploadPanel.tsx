@@ -37,9 +37,6 @@ export default function UploadPanel({ onUploadSuccess }: UploadPanelProps) {
       };
     }
 
-    // Note: Page count and password detection would need to be done server-side
-    // as they require more complex analysis
-
     return null;
   };
 
