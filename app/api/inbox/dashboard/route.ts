@@ -80,8 +80,12 @@ export async function GET(req: NextRequest) {
         },
       });
       
+      console.log('📧 Outlook API response status:', outlookResponse.status);
+      
       if (!outlookResponse.ok) {
         const errorData = await outlookResponse.json();
+        console.log('❌ Outlook API error data:', errorData);
+        
         if (errorData.code === 'OUTLOOK_NOT_CONNECTED') {
           throw new Error('Outlook not connected');
         } else if (errorData.code === 'AUTH_FAILED' || errorData.code === 'TOKEN_REFRESH_FAILED') {
@@ -92,6 +96,8 @@ export async function GET(req: NextRequest) {
       }
 
       const outlookData = await outlookResponse.json();
+      console.log('📧 Outlook API success:', outlookData.success);
+      console.log('📧 Outlook emails count:', outlookData.data?.emails?.length || 0);
       
       if (outlookData.success && outlookData.data?.emails) {
         const outlookEmails = outlookData.data.emails;
@@ -105,6 +111,7 @@ export async function GET(req: NextRequest) {
         dataSource = 'outlook';
         console.log(`✅ Outlook data: ${outlookEmails.length} total, ${emails.length} in time window`);
       } else {
+        console.log('⚠️ Outlook API returned no emails or invalid response');
         throw new Error('Invalid response from Outlook API');
       }
 
@@ -150,11 +157,21 @@ export async function GET(req: NextRequest) {
     // Process dashboard data
     const dashboard = processDashboardData(emails, {});
 
+    console.log('📊 Final dashboard stats:', {
+      total: dashboard.total,
+      unread: dashboard.unread,
+      urgent: dashboard.urgent,
+      dataSource,
+      emailCount: emails.length
+    });
+
     return NextResponse.json({
       success: true,
       data: dashboard,
       timeRange,
       dataSource,
+      emailCount: emails.length,
+      outlookError: outlookError ? outlookError.message : null,
       generatedAt: new Date().toISOString()
     });
 

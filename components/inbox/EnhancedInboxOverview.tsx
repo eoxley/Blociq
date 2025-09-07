@@ -155,6 +155,9 @@ const EnhancedInboxOverview: React.FC = () => {
       const data = raw && typeof raw === 'object' ? raw : {};
       
       console.log('📊 Raw API response:', JSON.stringify(data, null, 2));
+      console.log('📊 API success status:', data.success);
+      console.log('📊 Dashboard data keys:', dashboardData ? Object.keys(dashboardData) : 'no dashboard data');
+      console.log('📊 Data source:', data.dataSource);
       
       if (!response.ok) {
         if (response.status === 401) {
@@ -167,9 +170,9 @@ const EnhancedInboxOverview: React.FC = () => {
       // Safe data extraction with defaults
       const dashboardData = data.data && typeof data.data === 'object' ? data.data : {};
       
-      // If no data in response, create sample dashboard for demo
-      if (!data.success || !dashboardData || Object.keys(dashboardData).length === 0) {
-        console.log('⚠️ No valid dashboard data received, creating sample dashboard for demo');
+      // Only use sample data if API explicitly failed or returned no data
+      if (!data.success) {
+        console.log('⚠️ API returned failure, creating sample dashboard for demo');
         const sampleDashboard = {
           total: 5,
           unread: 3,
