@@ -282,6 +282,14 @@ export default function CommunicationsPage() {
     console.log('Created batch group:', { groupName, recipients })
   }
 
+  const handleMailMergeCampaign = (campaignData: any) => {
+    console.log('[CommunicationsPage] Mail-merge campaign created:', campaignData);
+    toast.success(`Mail-merge campaign "${campaignData.name}" created successfully`);
+    setShowMailMerge(false);
+    // Refresh the communications log to show the new campaign
+    loadCommunicationLogs();
+  }
+
   const handleSendMessage = async () => {
     if (!subject.trim() || !content.trim()) {
       toast.error('Please fill in subject and content')
@@ -748,6 +756,18 @@ export default function CommunicationsPage() {
                     Generate with AI
                   </button>
 
+                  {/* Mail-Merge Button */}
+                  <button
+                    onClick={() => {
+                      console.log('[CommunicationsPage] Opening Mail-Merge Modal');
+                      setShowMailMerge(true);
+                    }}
+                    className="w-full bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700 text-white py-3 px-6 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2"
+                  >
+                    <FileText className="h-5 w-5" />
+                    Mail-Merge Campaign
+                  </button>
+
                   {/* Subject */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1046,6 +1066,13 @@ export default function CommunicationsPage() {
         onClose={() => setShowBatchGroupModal(false)}
         onGroupCreated={handleBatchGroupCreated}
         buildings={buildings}
+      />
+
+      {/* Mail-Merge Modal */}
+      <MailMergeModal
+        open={showMailMerge}
+        onClose={() => setShowMailMerge(false)}
+        onCampaignCreated={handleMailMergeCampaign}
       />
     </div>
   )
