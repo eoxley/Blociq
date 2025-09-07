@@ -102,11 +102,11 @@ export async function refreshOutlookToken(): Promise<boolean> {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: new URLSearchParams({
-        client_id: process.env.MICROSOFT_CLIENT_ID!,
-        client_secret: process.env.MICROSOFT_CLIENT_SECRET!,
+        client_id: process.env.OUTLOOK_CLIENT_ID!,
+        client_secret: process.env.OUTLOOK_CLIENT_SECRET!,
         grant_type: 'refresh_token',
         refresh_token: tokens.refresh_token,
-        redirect_uri: process.env.MICROSOFT_REDIRECT_URI!,
+        redirect_uri: process.env.OUTLOOK_REDIRECT_URI!,
       }),
     });
 
@@ -147,11 +147,11 @@ export async function refreshOutlookToken(): Promise<boolean> {
  * Get the Microsoft OAuth URL for connecting Outlook
  */
 export function getOutlookAuthUrl(): string {
-  const clientId = process.env.NEXT_PUBLIC_MICROSOFT_CLIENT_ID;
-  const redirectUri = process.env.NEXT_PUBLIC_MICROSOFT_REDIRECT_URI;
+  const clientId = process.env.NEXT_PUBLIC_OUTLOOK_CLIENT_ID;
+  const redirectUri = process.env.NEXT_PUBLIC_OUTLOOK_REDIRECT_URI;
   
   if (!clientId || !redirectUri) {
-    throw new Error('Microsoft OAuth configuration missing. Please check NEXT_PUBLIC_MICROSOFT_CLIENT_ID and NEXT_PUBLIC_MICROSOFT_REDIRECT_URI environment variables.');
+    throw new Error('Outlook OAuth configuration missing. Please check NEXT_PUBLIC_OUTLOOK_CLIENT_ID and NEXT_PUBLIC_OUTLOOK_REDIRECT_URI environment variables.');
   }
 
   const scopes = [
@@ -184,7 +184,7 @@ export async function fetchOutlookEvents() {
       throw new Error('Your Outlook session has expired. Please reconnect your account.');
     }
 
-    const response = await fetch('/api/outlook/calendar');
+    const response = await fetch('/api/outlook/calendar-v2');
     
     if (!response.ok) {
       const errorData = await response.json();

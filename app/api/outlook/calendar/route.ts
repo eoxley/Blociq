@@ -7,13 +7,13 @@ async function refreshOutlookToken(supabase: any, userId: string, refreshToken: 
     const params = new URLSearchParams({
       grant_type: 'refresh_token',
       refresh_token: refreshToken,
-      client_id: process.env.MICROSOFT_CLIENT_ID!,
-      client_secret: process.env.MICROSOFT_CLIENT_SECRET!,
-      redirect_uri: process.env.MICROSOFT_REDIRECT_URI!
+      client_id: process.env.OUTLOOK_CLIENT_ID!,
+      client_secret: process.env.OUTLOOK_CLIENT_SECRET!,
+      redirect_uri: process.env.OUTLOOK_REDIRECT_URI!
     });
 
-    const tenantId = process.env.AZURE_TENANT_ID || 'common';
-    const tokenUrl = process.env.MICROSOFT_TOKEN_URL || `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`;
+    const tenantId = process.env.OUTLOOK_TENANT_ID || 'common';
+    const tokenUrl = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`;
     const response = await fetch(tokenUrl, {
       method: 'POST',
       headers: {
@@ -96,7 +96,7 @@ export async function GET(req: NextRequest) {
     if (isExpired) {
       try {
         console.log('Outlook token expired, attempting to refresh...');
-        const refreshedTokens = await refreshOutlookToken(supabase, session.user.id, tokens.refresh_token);
+        const refreshedTokens = await refreshOutlookToken(supabase, user.id, tokens.refresh_token);
         accessToken = refreshedTokens.access_token;
         expiresAt = refreshedTokens.expires_at;
         console.log('Token refreshed successfully');
