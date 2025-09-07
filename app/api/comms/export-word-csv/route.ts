@@ -1,350 +1,220 @@
-/**
- * Word CSV Export API
- * Exports recipient data as CSV for Microsoft Word Mail Merge
- */
-
 import { NextRequest, NextResponse } from 'next/server';
-import { getServiceClient } from '@/lib/supabase/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { getServerClient } from '@/lib/supabase/server';
+import { z } from 'zod';
+
+const ExportRequestSchema = z.object({
+  audience: z.enum(['all_buildings', 'specific_buildings', 'specific_units']),
+  buildingIds: z.array(z.string()).optional(),
+  unitIds: z.array(z.string()).optional(),
+  templateId: z.string(),
+  includeTestData: z.boolean().default(false),
+});
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
-    
-    // Get current user
+    const body = await req.json();
+    const { audience, buildingIds, unitIds, templateId, includeTestData } = ExportRequestSchema.parse(body);
+
+    const supabase = getServerClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
-    // Get user's agency
+
+    // Get agency ID
     const { data: profile } = await supabase
-      .from('profiles')
+      .from('user_profiles')
       .select('agency_id')
-      .eq('id', user.id)
+      .eq('user_id', user.id)
       .single();
-    
+
     if (!profile?.agency_id) {
-      return NextResponse.json({ error: 'User not linked to agency' }, { status: 400 });
+      return NextResponse.json({ error: 'Agency not found' }, { status: 400 });
     }
-    
-    const { buildingId, templateId } = await req.json();
-    
-    if (!buildingId) {
-      return NextResponse.json({ 
-        error: 'Missing required fields',
-        message: 'buildingId is required'
-      }, { status: 400 });
+
+    // Get template
+    const { data: template, error: templateError } = await supabase
+      .from('communication_templates')
+      .select('*')
+      .eq('id', templateId)
+      .eq('agency_id', profile.agency_id)
+      .single();
+
+    if (templateError || !template) {
+      return NextResponse.json({ error: 'Template not found' }, { status: 404 });
     }
-    
-    // Get recipients for the building
-    const { data: recipients, error: recipientsError } = await supabase
+
+    // Build query based on audience
+    let query = supabase
       .from('v_building_recipients')
       .select('*')
-      .eq('building_id', buildingId)
       .eq('agency_id', profile.agency_id);
-    
+
+    if (audience === 'specific_buildings' && buildingIds?.length) {
+      query = query.in('building_id', buildingIds);
+    } else if (audience === 'specific_units' && unitIds?.length) {
+      query = query.in('unit_id', unitIds);
+    }
+
+    const { data: recipients, error: recipientsError } = await query;
+
     if (recipientsError) {
-      return NextResponse.json({ 
-        error: 'Failed to fetch recipients',
-        message: recipientsError.message
-      }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to fetch recipients' }, { status: 500 });
     }
-    
-    if (!recipients || recipients.length === 0) {
-      return NextResponse.json({ 
-        error: 'No recipients found',
-        message: 'No active leaseholders found for this building'
-      }, { status: 404 });
+
+    if (!recipients?.length) {
+      return NextResponse.json({ error: 'No recipients found' }, { status: 404 });
     }
-    
-    // Group recipients by lease for joint letters
-    const recipientsByLease = groupRecipientsByLease(recipients);
-    
+
     // Generate CSV content
-    const csvContent = generateWordCSV(recipientsByLease);
-    
-    // Save to storage
-    const storagePath = await saveCSVToStorage(
-      csvContent,
-      buildingId,
-      templateId,
-      profile.agency_id
-    );
-    
-    // Generate signed URL
-    const signedUrl = await generateSignedUrl(storagePath);
-    
+    const csvHeaders = [
+      'Title',
+      'First Name',
+      'Last Name',
+      'Email',
+      'Address Line 1',
+      'Address Line 2',
+      'City',
+      'Postcode',
+      'Building Name',
+      'Unit Number',
+      'Agency Name',
+      'Agency Address',
+      'Agency Phone',
+      'Agency Email',
+      'Current Date',
+      'Template Name',
+      'Subject Line',
+      'Body Text',
+      'Body HTML'
+    ];
+
+    const csvRows = recipients.map(recipient => {
+      const currentDate = new Date().toLocaleDateString('en-GB');
+      
+      // Generate subject and body using template
+      const subject = template.subject_template
+        .replace(/\{\{title\}\}/g, recipient.title || '')
+        .replace(/\{\{first_name\}\}/g, recipient.first_name || '')
+        .replace(/\{\{last_name\}\}/g, recipient.last_name || '')
+        .replace(/\{\{building_name\}\}/g, recipient.building_name || '')
+        .replace(/\{\{unit_number\}\}/g, recipient.unit_number || '')
+        .replace(/\{\{agency_name\}\}/g, recipient.agency_name || '')
+        .replace(/\{\{current_date\}\}/g, currentDate);
+
+      const bodyText = template.body_text
+        .replace(/\{\{title\}\}/g, recipient.title || '')
+        .replace(/\{\{first_name\}\}/g, recipient.first_name || '')
+        .replace(/\{\{last_name\}\}/g, recipient.last_name || '')
+        .replace(/\{\{building_name\}\}/g, recipient.building_name || '')
+        .replace(/\{\{unit_number\}\}/g, recipient.unit_number || '')
+        .replace(/\{\{agency_name\}\}/g, recipient.agency_name || '')
+        .replace(/\{\{agency_address\}\}/g, recipient.agency_address || '')
+        .replace(/\{\{agency_phone\}\}/g, recipient.agency_phone || '')
+        .replace(/\{\{agency_email\}\}/g, recipient.agency_email || '')
+        .replace(/\{\{current_date\}\}/g, currentDate);
+
+      const bodyHtml = template.body_html
+        .replace(/\{\{title\}\}/g, recipient.title || '')
+        .replace(/\{\{first_name\}\}/g, recipient.first_name || '')
+        .replace(/\{\{last_name\}\}/g, recipient.last_name || '')
+        .replace(/\{\{building_name\}\}/g, recipient.building_name || '')
+        .replace(/\{\{unit_number\}\}/g, recipient.unit_number || '')
+        .replace(/\{\{agency_name\}\}/g, recipient.agency_name || '')
+        .replace(/\{\{agency_address\}\}/g, recipient.agency_address || '')
+        .replace(/\{\{agency_phone\}\}/g, recipient.agency_phone || '')
+        .replace(/\{\{agency_email\}\}/g, recipient.agency_email || '')
+        .replace(/\{\{current_date\}\}/g, currentDate);
+
+      return [
+        recipient.title || '',
+        recipient.first_name || '',
+        recipient.last_name || '',
+        recipient.email || '',
+        recipient.address_line_1 || '',
+        recipient.address_line_2 || '',
+        recipient.city || '',
+        recipient.postcode || '',
+        recipient.building_name || '',
+        recipient.unit_number || '',
+        recipient.agency_name || '',
+        recipient.agency_address || '',
+        recipient.agency_phone || '',
+        recipient.agency_email || '',
+        currentDate,
+        template.name,
+        subject,
+        bodyText,
+        bodyHtml
+      ];
+    });
+
+    // Add test data if requested
+    if (includeTestData) {
+      const testRow = [
+        'Mr',
+        'Test',
+        'User',
+        'test@example.com',
+        '123 Test Street',
+        'Test Area',
+        'Test City',
+        'TE1 1ST',
+        'Test Building',
+        '1A',
+        recipient.agency_name || '',
+        recipient.agency_address || '',
+        recipient.agency_phone || '',
+        recipient.agency_email || '',
+        new Date().toLocaleDateString('en-GB'),
+        template.name,
+        `Test ${template.subject_template}`,
+        `Test ${template.body_text}`,
+        `Test ${template.body_html}`
+      ];
+      csvRows.unshift(testRow);
+    }
+
+    // Create CSV content
+    const csvContent = [
+      csvHeaders.join(','),
+      ...csvRows.map(row => 
+        row.map(field => 
+          typeof field === 'string' && (field.includes(',') || field.includes('"') || field.includes('\n'))
+            ? `"${field.replace(/"/g, '""')}"`
+            : field
+        ).join(',')
+      )
+    ].join('\n');
+
     // Log the export
-    await logCommunication({
-      agencyId: profile.agency_id,
-      buildingId,
-      type: 'letter',
-      status: 'generated',
-      templateId,
-      storagePath,
-      subject: 'Word CSV Export',
-      metadata: {
-        export_type: 'word_csv',
-        recipient_count: recipientsByLease.size,
-        fields_included: getCSVFields()
-      },
-      userId: user.id
+    await supabase
+      .from('communications_log')
+      .insert({
+        agency_id: profile.agency_id,
+        type: 'word_csv_export',
+        template_id: templateId,
+        recipient_count: recipients.length,
+        status: 'completed',
+        metadata: {
+          audience,
+          building_ids: buildingIds,
+          unit_ids: unitIds,
+          include_test_data: includeTestData
+        }
+      });
+
+    return new NextResponse(csvContent, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/csv',
+        'Content-Disposition': `attachment; filename="mail-merge-${template.name.replace(/[^a-zA-Z0-9]/g, '-')}-${new Date().toISOString().split('T')[0]}.csv"`
+      }
     });
-    
-    return NextResponse.json({
-      success: true,
-      downloadUrl: signedUrl,
-      filename: `word_merge_${buildingId}_${new Date().toISOString().split('T')[0]}.csv`,
-      recipientCount: recipientsByLease.size,
-      fields: getCSVFields()
-    });
-    
+
   } catch (error) {
     console.error('Word CSV export error:', error);
-    return NextResponse.json({ 
-      error: 'Internal server error',
-      message: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
-  }
-}
-
-/**
- * Group recipients by lease for joint letters
- */
-function groupRecipientsByLease(recipients: any[]): Map<string, any[]> {
-  const groups = new Map<string, any[]>();
-  
-  for (const recipient of recipients) {
-    const leaseId = recipient.lease_id;
-    if (!groups.has(leaseId)) {
-      groups.set(leaseId, []);
-    }
-    groups.get(leaseId)!.push(recipient);
-  }
-  
-  return groups;
-}
-
-/**
- * Generate CSV content optimized for Word Mail Merge
- */
-function generateWordCSV(recipientsByLease: Map<string, any[]>): string {
-  const fields = getCSVFields();
-  const rows: string[] = [];
-  
-  // Add header row
-  rows.push(fields.map(field => escapeCSV(field)).join(','));
-  
-  // Add data rows
-  for (const [leaseId, leaseRecipients] of recipientsByLease) {
-    const primaryRecipient = leaseRecipients[0];
-    const row = generateCSVRow(primaryRecipient, leaseRecipients);
-    rows.push(row);
-  }
-  
-  return rows.join('\n');
-}
-
-/**
- * Get CSV field names
- */
-function getCSVFields(): string[] {
-  return [
-    'Salutation',
-    'FirstName',
-    'LastName',
-    'FullName',
-    'AddressLine1',
-    'AddressLine2',
-    'AddressLine3',
-    'AddressLine4',
-    'Postcode',
-    'Email',
-    'UnitLabel',
-    'UnitNumber',
-    'UnitType',
-    'BuildingName',
-    'BuildingAddress1',
-    'BuildingAddress2',
-    'BuildingTown',
-    'BuildingCounty',
-    'BuildingPostcode',
-    'LeaseStartDate',
-    'LeaseEndDate',
-    'ServiceChargePercent',
-    'RentAmount',
-    'DepositAmount',
-    'LeaseType',
-    'Today',
-    'UsesUnitAsPostal',
-    'LeaseholderCount',
-    'JointLeaseholders'
-  ];
-}
-
-/**
- * Generate CSV row for a lease group
- */
-function generateCSVRow(primaryRecipient: any, allRecipients: any[]): string {
-  const fields = getCSVFields();
-  const values: string[] = [];
-  
-  // Salutation
-  values.push(primaryRecipient.salutation || primaryRecipient.salutation_fallback || '');
-  
-  // Name fields
-  const fullName = primaryRecipient.leaseholder_name || '';
-  const nameParts = fullName.split(' ');
-  const firstName = nameParts[0] || '';
-  const lastName = nameParts.slice(1).join(' ') || '';
-  
-  values.push(firstName);
-  values.push(lastName);
-  values.push(fullName);
-  
-  // Address fields
-  const address = primaryRecipient.postal_address || '';
-  const addressLines = address.split(',').map(line => line.trim());
-  
-  values.push(addressLines[0] || ''); // AddressLine1
-  values.push(addressLines[1] || ''); // AddressLine2
-  values.push(addressLines[2] || ''); // AddressLine3
-  values.push(addressLines[3] || ''); // AddressLine4
-  values.push(primaryRecipient.postcode || ''); // Postcode
-  
-  // Email
-  values.push(primaryRecipient.email || '');
-  
-  // Unit fields
-  values.push(primaryRecipient.unit_label || '');
-  values.push(primaryRecipient.unit_number || '');
-  values.push(primaryRecipient.unit_type || '');
-  
-  // Building fields
-  values.push(primaryRecipient.building_name || '');
-  values.push(primaryRecipient.address_line_1 || '');
-  values.push(primaryRecipient.address_line_2 || '');
-  values.push(primaryRecipient.town || '');
-  values.push(primaryRecipient.county || '');
-  values.push(primaryRecipient.postcode || '');
-  
-  // Lease fields
-  values.push(primaryRecipient.lease_start_date || '');
-  values.push(primaryRecipient.lease_end_date || '');
-  values.push(primaryRecipient.service_charge_percent?.toString() || '');
-  values.push(primaryRecipient.rent_amount?.toString() || '');
-  values.push(primaryRecipient.deposit_amount?.toString() || '');
-  values.push(primaryRecipient.lease_type || '');
-  
-  // System fields
-  values.push(primaryRecipient.today || '');
-  values.push(primaryRecipient.uses_unit_as_postal ? 'Yes' : 'No');
-  
-  // Joint leaseholder fields
-  values.push(allRecipients.length.toString());
-  values.push(allRecipients.map(r => r.leaseholder_name).join(', '));
-  
-  return values.map(value => escapeCSV(value)).join(',');
-}
-
-/**
- * Escape CSV value
- */
-function escapeCSV(value: any): string {
-  if (value === null || value === undefined) {
-    return '';
-  }
-  
-  const str = String(value);
-  
-  // If the value contains comma, newline, or quote, wrap in quotes and escape quotes
-  if (str.includes(',') || str.includes('\n') || str.includes('"')) {
-    return `"${str.replace(/"/g, '""')}"`;
-  }
-  
-  return str;
-}
-
-/**
- * Save CSV to Supabase Storage
- */
-async function saveCSVToStorage(
-  csvContent: string,
-  buildingId: string,
-  templateId: string | undefined,
-  agencyId: string
-): Promise<string> {
-  const supabase = getServiceClient();
-  
-  const date = new Date().toISOString().split('T')[0];
-  const filename = `word_merge_${buildingId}_${date}.csv`;
-  const storagePath = `exports/word_csv/${agencyId}/${date}/${filename}`;
-  
-  const { error } = await supabase.storage
-    .from('communications')
-    .upload(storagePath, csvContent, {
-      contentType: 'text/csv',
-      cacheControl: '3600'
-    });
-  
-  if (error) {
-    throw new Error(`Failed to save CSV: ${error.message}`);
-  }
-  
-  return storagePath;
-}
-
-/**
- * Generate signed URL for download
- */
-async function generateSignedUrl(storagePath: string): Promise<string> {
-  const supabase = getServiceClient();
-  
-  const { data, error } = await supabase.storage
-    .from('communications')
-    .createSignedUrl(storagePath, 3600); // 1 hour expiry
-  
-  if (error) {
-    throw new Error(`Failed to generate signed URL: ${error.message}`);
-  }
-  
-  return data.signedUrl;
-}
-
-/**
- * Log communication to database
- */
-async function logCommunication(data: {
-  agencyId: string;
-  buildingId: string;
-  type: 'letter' | 'email';
-  status: 'generated' | 'queued' | 'sent' | 'failed' | 'delivered' | 'bounced';
-  templateId?: string;
-  storagePath: string;
-  subject: string;
-  metadata?: any;
-  userId: string;
-}): Promise<void> {
-  const supabase = getServiceClient();
-  
-  const { error } = await supabase
-    .from('communications_log')
-    .insert({
-      agency_id: data.agencyId,
-      building_id: data.buildingId,
-      type: data.type,
-      status: data.status,
-      template_id: data.templateId,
-      storage_path: data.storagePath,
-      subject: data.subject,
-      metadata: data.metadata,
-      created_by: data.userId
-    });
-  
-  if (error) {
-    console.error('Failed to log communication:', error);
-    // Don't throw here as it's not critical
+    return NextResponse.json({ error: 'Export failed' }, { status: 500 });
   }
 }
