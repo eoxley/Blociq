@@ -2,13 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase/server';
 import { validateComplianceFile, getFileTypeError, isValidMimeType, getMimeTypeFromFilename } from '@/lib/validation/mime';
 import { extractTextFromPdfWithPageMap } from '@/lib/compliance/pdf-extractor';
-import { 
-  detectDocType, 
-  extractFields, 
-  computeDueDates, 
-  toSummaryJson, 
-  toCompliancePatch 
-} from '@/lib/compliance/regexMap';
+
+// Force dynamic route to prevent build-time execution
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   try {
@@ -172,6 +169,14 @@ export async function POST(req: NextRequest) {
         if (extractedText.trim()) {
           console.log(`✅ Extracted ${extractedText.length} characters from PDF`);
           
+          // Dynamically import regex map functions to avoid build-time execution
+          const { 
+            detectDocType, 
+            extractFields, 
+            computeDueDates, 
+            toSummaryJson 
+          } = await import('@/lib/compliance/regexMap');
+
           // Detect document type using regex map
           console.log('🔍 Detecting document type...');
           const detection = detectDocType(pageMap);
@@ -255,6 +260,13 @@ export async function POST(req: NextRequest) {
       try {
         console.log('📋 Updating compliance assets...');
         
+        // Dynamically import regex map functions for compliance patch
+        const { 
+          extractFields, 
+          computeDueDates, 
+          toCompliancePatch 
+        } = await import('@/lib/compliance/regexMap');
+
         // Generate compliance patch using regex map
         const fields = extractFields(detectedDocType, pageMap);
         const due = computeDueDates(detectedDocType, fields);

@@ -40,6 +40,17 @@ const nextConfig: NextConfig = {
       },
     };
 
+    // Ignore test files in production builds
+    if (!dev) {
+      const webpack = require('webpack');
+      config.plugins.push(
+        new webpack.IgnorePlugin({
+          resourceRegExp: /^\.\/test\/data\/.*$/,
+          contextRegExp: /.*/,
+        })
+      );
+    }
+
     // Handle OCR dependencies that might not be available during build
     config.resolve.fallback = {
       ...config.resolve.fallback,
