@@ -4,5 +4,5 @@ export { createServerClient, createApiClient, getServiceClient as getServiceRole
 // Legacy compatibility
 export async function createClient(cookieStore?: any) {
   const { createApiClient } = await import('@/lib/supabase/server')
-  return createApiClient()
+  return await createApiClient()
 }
