@@ -34,35 +34,9 @@ export async function GET(req: NextRequest) {
     const { since, until } = getTimeWindow(timeRange);
     console.log(`📅 Time window: ${since.toISOString()} to ${until?.toISOString() || 'now'}`);
 
-    // Check agency membership
-    const { data: agencyMember, error: agencyError } = await db
-      .from('agency_members')
-      .select('agency_id, role')
-      .eq('user_id', user.id)
-      .single();
-    
-    if (agencyError) {
-      console.error('❌ Agency query error:', agencyError);
-      
-      if (agencyError.code === 'PGRST116') {
-        console.log('ℹ️ User not yet linked to agency - returning empty dashboard');
-        return NextResponse.json({
-          success: true,
-          data: createEmptyDashboard(),
-          timeRange,
-          message: 'User not yet linked to agency - please complete setup',
-          needsSetup: true
-        });
-      }
-      
-      return NextResponse.json({
-        error: 'Database error',
-        message: 'Failed to check agency membership',
-        details: process.env.NODE_ENV === 'development' ? agencyError.message : 'Internal error'
-      }, { status: 500 });
-    }
-
-    console.log('✅ User is member of agency:', agencyMember.agency_id);
+    // For inbox v2, we don't need agency membership checks
+    // The system works directly with Outlook API
+    console.log('✅ User authenticated for inbox v2 dashboard');
 
     // Fetch emails using the working v2 approach
     let emails = [];
@@ -73,18 +47,18 @@ export async function GET(req: NextRequest) {
     try {
       console.log('🔍 Attempting Outlook connection via v2 API...');
       
-      const outlookResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/fetch-outlook-emails`, {
-        method: 'POST',
+      const outlookResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/outlook/v2/messages/list?folderId=inbox`, {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
       });
       
-      console.log('📧 Outlook API response status:', outlookResponse.status);
+      console.log('📧 Outlook v2 API response status:', outlookResponse.status);
       
       if (!outlookResponse.ok) {
         const errorData = await outlookResponse.json();
-        console.log('❌ Outlook API error data:', errorData);
+        console.log('❌ Outlook v2 API error data:', errorData);
         
         if (errorData.code === 'OUTLOOK_NOT_CONNECTED') {
           throw new Error('Outlook not connected');
@@ -96,61 +70,50 @@ export async function GET(req: NextRequest) {
       }
 
       const outlookData = await outlookResponse.json();
-      console.log('📧 Outlook API success:', outlookData.success);
-      console.log('📧 Outlook emails count:', outlookData.data?.emails?.length || 0);
+      console.log('📧 Outlook v2 API success:', outlookData.ok);
+      console.log('📧 Outlook v2 emails count:', outlookData.items?.length || 0);
       
-      if (outlookData.success && outlookData.data?.emails) {
-        const outlookEmails = outlookData.data.emails;
+      if (outlookData.ok && outlookData.items) {
+        const outlookEmails = outlookData.items;
+        
+        // Convert Outlook v2 format to dashboard format
+        const convertedEmails = outlookEmails.map((email: any) => ({
+          id: email.id,
+          subject: email.subject || 'No Subject',
+          from_email: email.from?.emailAddress?.address || 'unknown@example.com',
+          from_name: email.from?.emailAddress?.name || 'Unknown Sender',
+          body_preview: email.bodyPreview || '',
+          received_at: email.receivedDateTime || email.createdDateTime,
+          is_read: email.isRead || false,
+          urgency_level: email.importance === 'high' ? 'high' : 'low',
+          ai_tag: email.ai_tag || 'General',
+          triage_category: email.triage_category || 'General',
+          building_id: email.building_id || null,
+          mentioned_properties: email.mentioned_properties || []
+        }));
         
         // Filter emails by time window
-        emails = outlookEmails.filter((email: any) => {
+        emails = convertedEmails.filter((email: any) => {
           const receivedDate = new Date(email.received_at);
           return receivedDate >= since && (until ? receivedDate < until : true);
         });
 
-        dataSource = 'outlook';
-        console.log(`✅ Outlook data: ${outlookEmails.length} total, ${emails.length} in time window`);
+        dataSource = 'outlook_v2';
+        console.log(`✅ Outlook v2 data: ${outlookEmails.length} total, ${emails.length} in time window`);
       } else {
-        console.log('⚠️ Outlook API returned no emails or invalid response');
-        throw new Error('Invalid response from Outlook API');
+        console.log('⚠️ Outlook v2 API returned no emails or invalid response');
+        throw new Error('Invalid response from Outlook v2 API');
       }
 
     } catch (error) {
-      console.warn('⚠️ Outlook connection failed:', error);
+      console.warn('⚠️ Outlook v2 connection failed:', error);
       outlookError = error;
-      dataSource = 'database_fallback';
-    }
-    
-    // If Outlook failed or returned no data, try database
-    if (emails.length === 0) {
-      try {
-        console.log('🔄 Fetching from database...');
-        const { data: dbEmails, error: dbError } = await db
-          .from('incoming_emails')
-          .select('*')
-          .eq('is_deleted', false)
-          .gte('received_at', since.toISOString())
-          .order('received_at', { ascending: false })
-          .limit(100);
-        
-        if (dbError) {
-          console.error('❌ Database query failed:', dbError);
-          // If database also fails, create some sample data for demo
-          emails = createSampleEmails(timeRange);
-          dataSource = 'sample';
-          console.log('📝 Using sample data for demo');
-        } else {
-          emails = dbEmails || [];
-          dataSource = 'database';
-          console.log(`✅ Database data: ${emails.length} emails`);
-        }
-      } catch (fallbackError) {
-        console.error('❌ Database fallback error:', fallbackError);
-        // Create sample data as last resort
-        emails = createSampleEmails(timeRange);
-        dataSource = 'sample';
-        console.log('📝 Using sample data as last resort');
-      }
+      dataSource = 'outlook_failed';
+      
+      // For inbox v2, we don't fall back to Supabase - just return empty data
+      // This ensures the system works as designed with Outlook API only
+      emails = [];
+      console.log('📝 No fallback to database - using empty data as inbox v2 is Outlook-only');
     }
 
     // Process dashboard data
