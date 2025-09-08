@@ -1,12 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { useSupabase } from '@/components/SupabaseProvider';
 
-// Set up your Supabase client (or import it from a shared utility)
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Type for the email objects
 type Email = {
@@ -39,6 +35,7 @@ interface EmailSyncState {
 }
 
 export function useEmailSync(): [Email[], number, EmailSyncState] {
+  const { supabase } = useSupabase();
   const [state, setState] = useState<EmailSyncState>({
     emails: [],
     newCount: 0,

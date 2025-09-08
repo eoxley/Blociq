@@ -9,127 +9,32 @@
 <body>
     <script>
         Office.onReady(() => {
-            // Office is ready
+            console.log('Office.js loaded successfully');
         });
 
         function generateAIReply(event) {
+            console.log('Generate AI Reply clicked!');
+            
             try {
-                // Get the current email item
-                const item = Office.context.mailbox.item;
-                
-                // Check if we're in read or compose mode
-                if (item.itemType === Office.MailboxEnums.ItemType.Message) {
-                    if (item.subject && item.body) {
-                        // Read mode - generate reply based on current email
-                        generateReplyFromReadMode(item, event);
-                    } else {
-                        // Compose mode - enhance current draft
-                        generateReplyFromComposeMode(item, event);
+                // Simple test - just show an alert for now
+                Office.context.ui.displayDialogAsync(
+                    'data:text/html,<html><body><h2>AI Reply Feature</h2><p>This will generate an AI reply!</p><button onclick="window.close()">Close</button></body></html>',
+                    { height: 30, width: 50 },
+                    function(result) {
+                        console.log('Dialog result:', result);
+                        event.completed();
                     }
-                } else {
-                    event.completed({ allowEvent: true });
-                }
+                );
             } catch (error) {
-                console.error('Error in generateAIReply:', error);
-                event.completed({ allowEvent: true });
+                console.error('Error:', error);
+                alert('AI Reply feature activated! (Check console for details)');
+                event.completed();
             }
         }
 
-        function generateReplyFromReadMode(item, event) {
-            // Get email content for AI processing
-            item.body.getAsync("text", function(result) {
-                if (result.status === Office.AsyncResultStatus.Succeeded) {
-                    const emailBody = result.value;
-                    const subject = item.subject;
-                    const sender = item.from ? item.from.displayName : 'Unknown';
-                    
-                    // Call your AI service to generate reply
-                    callAIService({
-                        mode: 'reply',
-                        subject: subject,
-                        body: emailBody,
-                        sender: sender
-                    }).then(aiReply => {
-                        // Create a new reply
-                        item.displayReplyForm({
-                            htmlBody: aiReply.htmlContent || aiReply.textContent,
-                            attachments: []
-                        });
-                        event.completed({ allowEvent: true });
-                    }).catch(error => {
-                        console.error('AI service error:', error);
-                        // Fallback - open normal reply
-                        item.displayReplyForm({});
-                        event.completed({ allowEvent: true });
-                    });
-                } else {
-                    console.error('Error reading email body:', result.error);
-                    event.completed({ allowEvent: true });
-                }
-            });
-        }
-
-        function generateReplyFromComposeMode(item, event) {
-            // Get current draft content
-            item.body.getAsync("html", function(result) {
-                if (result.status === Office.AsyncResultStatus.Succeeded) {
-                    const currentBody = result.value;
-                    
-                    // Get subject
-                    item.subject.getAsync(function(subjectResult) {
-                        const subject = subjectResult.status === Office.AsyncResultStatus.Succeeded ? 
-                            subjectResult.value : '';
-                        
-                        // Call AI service to enhance/complete the draft
-                        callAIService({
-                            mode: 'enhance',
-                            subject: subject,
-                            currentBody: currentBody
-                        }).then(aiContent => {
-                            // Update the email body with AI-generated content
-                            item.body.setAsync(aiContent.htmlContent || aiContent.textContent, 
-                                { coercionType: Office.CoercionType.Html }, 
-                                function(setResult) {
-                                    if (setResult.status === Office.AsyncResultStatus.Failed) {
-                                        console.error('Error setting email body:', setResult.error);
-                                    }
-                                    event.completed({ allowEvent: true });
-                                }
-                            );
-                        }).catch(error => {
-                            console.error('AI service error:', error);
-                            event.completed({ allowEvent: true });
-                        });
-                    });
-                } else {
-                    console.error('Error reading current email body:', result.error);
-                    event.completed({ allowEvent: true });
-                }
-            });
-        }
-
-        async function callAIService(emailData) {
-            // Replace this with your actual AI service endpoint
-            const response = await fetch('https://www.blociq.co.uk/api/ai/generate-reply', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    // Add authentication headers as needed
-                },
-                body: JSON.stringify(emailData)
-            });
-
-            if (!response.ok) {
-                throw new Error(`AI service error: ${response.status}`);
-            }
-
-            return await response.json();
-        }
-
-        // Register functions
-        Office.actions = {
-            generateAIReply: generateAIReply
-        };
+        // Register the function - this is crucial!
+        Office.actions = Office.actions || {};
+        Office.actions.generateAIReply = generateAIReply;
     </script>
 </body>
 </html>

@@ -150,9 +150,9 @@
 
     <Resources>
       <bt:Images>
-        <bt:Image id="Icon.16x16" DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-16.png"/>
-        <bt:Image id="Icon.32x32" DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-32.png"/>
-        <bt:Image id="Icon.80x80" DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-80.png"/>
+        <bt:Image id="Icon.16x16" DefaultValue="https://www.blociq.co.uk/outlook-addin/icons/icon-16.png"/>
+        <bt:Image id="Icon.32x32" DefaultValue="https://www.blociq.co.uk/outlook-addin/icons/icon-32.png"/>
+        <bt:Image id="Icon.80x80" DefaultValue="https://www.blociq.co.uk/outlook-addin/icons/icon-80.png"/>
       </bt:Images>
 
       <bt:Urls>

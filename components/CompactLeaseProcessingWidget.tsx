@@ -13,7 +13,7 @@ import {
   Loader2,
   Lock
 } from 'lucide-react';
-import { supabase } from '@/lib/supabase/client';
+import { useSupabase } from '@/components/SupabaseProvider';
 import { useLeaseSystemReadiness } from '@/hooks/useLeaseSystemReadiness';
 import { useLeaseNotifications } from '@/contexts/LeaseNotificationContext';
 import { calculateJobStats, type ProcessingJob } from '@/components/LeaseProcessingStatus';
@@ -27,6 +27,7 @@ export default function CompactLeaseProcessingWidget({
   className = '', 
   showTitle = true 
 }: CompactLeaseProcessingWidgetProps) {
+  const { supabase } = useSupabase();
   // Safe hook usage - will return defaults if outside provider context
   const { unreadCount, isLoading } = useLeaseNotifications();
   const { isReady: leaseSystemReady, isLoading: leaseSystemLoading } = useLeaseSystemReadiness();

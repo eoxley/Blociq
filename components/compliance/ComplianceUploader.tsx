@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import { Upload, FileText, CheckCircle, AlertCircle, X, Calendar, Building, User } from 'lucide-react';
 import { validateComplianceFile, getFileInputAccept } from '@/lib/validation/mime';
-import { supabase } from '@/lib/supabase/client';
+import { useSupabase } from '@/components/SupabaseProvider';
 
 interface ComplianceUploaderProps {
   buildingId: string;
@@ -25,6 +25,7 @@ interface UploadResult {
 }
 
 export default function ComplianceUploader({ buildingId, buildingName, onUploadSuccess, onClose }: ComplianceUploaderProps) {
+  const { supabase } = useSupabase();
   const [isDragActive, setIsDragActive] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);

@@ -1,11 +1,5 @@
 import { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
-
-// Initialize Supabase
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { useSupabase } from '@/components/SupabaseProvider';
 
 interface LeaseSystemReadiness {
   isReady: boolean;
@@ -19,6 +13,7 @@ interface LeaseSystemReadiness {
 }
 
 export function useLeaseSystemReadiness(): LeaseSystemReadiness {
+  const { supabase } = useSupabase();
   const [isReady, setIsReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

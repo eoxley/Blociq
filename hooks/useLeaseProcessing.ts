@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { supabase } from '@/lib/supabase/client';
+import { useSupabase } from '@/components/SupabaseProvider';
 import { useToast } from '@/components/ToastNotifications';
 import { useLeaseNotifications } from '@/contexts/LeaseNotificationContext';
 
@@ -12,6 +12,7 @@ export interface LeaseProcessingOptions {
 }
 
 export function useLeaseProcessing() {
+  const { supabase } = useSupabase();
   const [isProcessing, setIsProcessing] = useState(false);
   const { showProcessingStarted, showProcessingFailed } = useToast();
   // Safe hook usage - will return defaults if outside provider context
