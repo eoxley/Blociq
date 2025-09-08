@@ -1,0 +1,103 @@
+require('dotenv').config({ path: '.env.local' });
+const { createClient } = require('@supabase/supabase-js');
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl || !supabaseServiceRoleKey) {
+  console.error('❌ Missing Supabase environment variables');
+  process.exit(1);
+}
+
+const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+async function createDocumentJobsTable() {
+  console.log('🔧 Creating document_jobs table...');
+  
+  const createTableSQL = `
+    CREATE TABLE IF NOT EXISTS public.document_jobs (
+      id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+      filename text NOT NULL,
+      status text NOT NULL DEFAULT 'QUEUED',
+      size_bytes bigint,
+      mime text,
+      user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+      agency_id uuid REFERENCES public.agencies(id) ON DELETE SET NULL,
+      linked_building_id uuid REFERENCES public.buildings(id) ON DELETE SET NULL,
+      linked_unit_id uuid REFERENCES public.units(id) ON DELETE SET NULL,
+      extracted_text text,
+      summary_json jsonb,
+      error_message text,
+      created_at timestamp with time zone DEFAULT now(),
+      updated_at timestamp with time zone DEFAULT now()
+    );
+  `;
+  
+  try {
+    const { error } = await supabase.rpc('exec_sql', { sql: createTableSQL });
+    
+    if (error) {
+      console.error('❌ Error creating table:', error);
+      return;
+    }
+    
+    console.log('✅ document_jobs table created');
+    
+    // Enable RLS
+    const { error: rlsError } = await supabase.rpc('exec_sql', { 
+      sql: 'ALTER TABLE public.document_jobs ENABLE ROW LEVEL SECURITY;' 
+    });
+    
+    if (rlsError) {
+      console.error('❌ Error enabling RLS:', rlsError);
+    } else {
+      console.log('✅ RLS enabled');
+    }
+    
+    // Create RLS policies
+    const policiesSQL = `
+      -- Allow users to view their own jobs
+      CREATE POLICY "Users can view their own jobs" ON public.document_jobs
+        FOR SELECT USING (auth.uid() = user_id);
+      
+      -- Allow users to insert their own jobs
+      CREATE POLICY "Users can insert their own jobs" ON public.document_jobs
+        FOR INSERT WITH CHECK (auth.uid() = user_id);
+      
+      -- Allow users to update their own jobs
+      CREATE POLICY "Users can update their own jobs" ON public.document_jobs
+        FOR UPDATE USING (auth.uid() = user_id);
+    `;
+    
+    const { error: policiesError } = await supabase.rpc('exec_sql', { sql: policiesSQL });
+    
+    if (policiesError) {
+      console.error('❌ Error creating policies:', policiesError);
+    } else {
+      console.log('✅ RLS policies created');
+    }
+    
+    // Create indexes
+    const indexesSQL = `
+      CREATE INDEX IF NOT EXISTS idx_document_jobs_user_id ON public.document_jobs(user_id);
+      CREATE INDEX IF NOT EXISTS idx_document_jobs_agency_id ON public.document_jobs(agency_id);
+      CREATE INDEX IF NOT EXISTS idx_document_jobs_status ON public.document_jobs(status);
+      CREATE INDEX IF NOT EXISTS idx_document_jobs_created_at ON public.document_jobs(created_at);
+    `;
+    
+    const { error: indexesError } = await supabase.rpc('exec_sql', { sql: indexesSQL });
+    
+    if (indexesError) {
+      console.error('❌ Error creating indexes:', indexesError);
+    } else {
+      console.log('✅ Indexes created');
+    }
+    
+    console.log('🎉 document_jobs table setup complete!');
+    
+  } catch (err) {
+    console.error('❌ Exception:', err);
+  }
+}
+
+createDocumentJobsTable();
