@@ -5,17 +5,16 @@
 // - Used in building list components
 // ✅ UPDATED [2025-01-27] - Dynamic unit count calculation
 
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    const supabase = createClient()
     
     // Test authentication
-    const { data: { session }, error: authError } = await supabase.auth.getSession()
-    if (authError || !session) {
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 

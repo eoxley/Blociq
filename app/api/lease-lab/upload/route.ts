@@ -16,18 +16,42 @@ export async function POST(req: NextRequest) {
       }, { status: 401 });
     }
 
-    // Get the user's agency
-    const { data: agencyMember } = await supabase
-      .from('agency_members')
-      .select('agency_id')
-      .eq('user_id', user.id)
+    // Get or create a default agency for the user
+    console.log('🔧 Setting up agency for user...');
+    
+    // First, check if there's a default agency
+    let { data: defaultAgency } = await supabase
+      .from('agencies')
+      .select('id')
+      .eq('slug', 'default')
       .single();
 
-    if (!agencyMember) {
-      return NextResponse.json({ 
-        error: 'Agency membership required',
-        message: 'Please join an agency to upload documents'
-      }, { status: 403 });
+    let agencyId = defaultAgency?.id;
+
+    if (!defaultAgency) {
+      // Create a default agency
+      const { data: newAgency, error: agencyError } = await supabase
+        .from('agencies')
+        .insert({
+          name: 'Default Agency',
+          slug: 'default',
+          status: 'active'
+        })
+        .select('id')
+        .single();
+
+      if (agencyError) {
+        console.error('Error creating default agency:', agencyError);
+        return NextResponse.json({ 
+          error: 'Failed to create default agency',
+          message: 'Unable to set up your account. Please try again.'
+        }, { status: 500 });
+      }
+
+      agencyId = newAgency.id;
+      console.log('✅ Created default agency');
+    } else {
+      console.log('✅ Found existing default agency');
     }
 
     const formData = await req.formData();
@@ -61,18 +85,24 @@ export async function POST(req: NextRequest) {
     }
 
     // Create job record
+    const jobData = {
+      filename: file.name,
+      status: 'QUEUED',
+      size_bytes: file.size,
+      mime: file.type,
+      user_id: user.id,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    // Only add agency_id if we have one
+    if (agencyId) {
+      jobData.agency_id = agencyId;
+    }
+
     const { data: job, error: jobError } = await supabase
       .from('document_jobs')
-      .insert({
-        filename: file.name,
-        status: 'QUEUED',
-        size_bytes: file.size,
-        mime: file.type,
-        user_id: user.id,
-        agency_id: agencyMember.agency_id,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
+      .insert(jobData)
       .select()
       .single();
 
@@ -84,7 +114,7 @@ export async function POST(req: NextRequest) {
         size_bytes: file.size,
         mime: file.type,
         user_id: user.id,
-        agency_id: agencyMember.agency_id
+        agency_id: agencyId
       });
       return NextResponse.json({ 
         error: 'Failed to create job',

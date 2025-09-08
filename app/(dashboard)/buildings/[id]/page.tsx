@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers'
-import { createClient } from '@/utils/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import { AlertTriangle } from 'lucide-react'
 import BuildingDetailClient from './components/BuildingDetailClient'

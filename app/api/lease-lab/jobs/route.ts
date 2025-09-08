@@ -16,18 +16,50 @@ export async function GET(req: NextRequest) {
       }, { status: 401 });
     }
 
-    // Get the user's agency
-    const { data: agencyMember } = await supabase
+    // Get or create a default agency for the user
+    let { data: agencyMember } = await supabase
       .from('agency_members')
       .select('agency_id')
       .eq('user_id', user.id)
       .single();
 
+    let agencyId = agencyMember?.agency_id;
+
+    // If no agency membership, create a default agency for the user
     if (!agencyMember) {
-      return NextResponse.json({ 
-        error: 'Agency membership required',
-        message: 'Please join an agency to view jobs'
-      }, { status: 403 });
+      console.log('🔧 No agency membership found, creating default agency...');
+      
+      // First, check if there's a default agency
+      const { data: defaultAgency } = await supabase
+        .from('agencies')
+        .select('id')
+        .eq('slug', 'default')
+        .single();
+
+      if (defaultAgency) {
+        agencyId = defaultAgency.id;
+      } else {
+        // Create a default agency
+        const { data: newAgency, error: agencyError } = await supabase
+          .from('agencies')
+          .insert({
+            name: 'Default Agency',
+            slug: 'default',
+            status: 'active'
+          })
+          .select('id')
+          .single();
+
+        if (agencyError) {
+          console.error('Error creating default agency:', agencyError);
+          return NextResponse.json({ 
+            error: 'Failed to create default agency',
+            message: 'Unable to set up your account. Please try again.'
+          }, { status: 500 });
+        }
+
+        agencyId = newAgency.id;
+      }
     }
 
     // Get query parameters
@@ -36,13 +68,20 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20');
     const offset = (page - 1) * limit;
 
-    // Fetch jobs for the user's agency
-    const { data: jobs, error: jobsError } = await supabase
+    // Fetch jobs for the user's agency (or all jobs if no agency)
+    let query = supabase
       .from('document_jobs')
       .select('*')
-      .eq('agency_id', agencyMember.agency_id)
+      .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
+
+    // Only filter by agency if we have one
+    if (agencyId) {
+      query = query.eq('agency_id', agencyId);
+    }
+
+    const { data: jobs, error: jobsError } = await query;
 
     if (jobsError) {
       console.error('Error fetching jobs:', jobsError);
