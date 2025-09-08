@@ -1,35 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
-import { Session } from "@supabase/supabase-js";
+import { useAuth } from "@/lib/auth/client";
 
 export default function Auth({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
+  const { user, loading } = useAuth();
 
-  useEffect(() => {
-    // Check existing session on mount
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-    });
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        </div>
+      </div>
+    );
+  }
 
-    // Subscribe to auth state changes
-    const {
-      data: { subscription }
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  if (!session) {
+  if (!user) {
     return (
       <div className="p-6">
         <h2 className="text-lg font-semibold">Please sign in</h2>
-        {/* You can replace this with your real login UI */}
+        <p className="text-gray-600 mt-2">You need to be signed in to access this content.</p>
       </div>
     );
   }

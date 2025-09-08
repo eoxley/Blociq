@@ -1,17 +1,11 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
-// import type { Database } from '@/types/supabase';
+import { createClient } from '@/lib/supabase/server';
 
 /**
  * Unified authentication helper for server-side routes
  * Provides consistent authentication patterns across all AI endpoints
  */
 export async function createAuthenticatedSupabaseClient() {
-  const supabase = createRouteHandlerClient({ 
-    cookies 
-  });
-  
-  return supabase;
+  return createClient();
 }
 
 /**

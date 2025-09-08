@@ -7,8 +7,7 @@ import { AgencyProvider } from '@/hooks/useAgency'
 import { LeaseNotificationProvider } from '@/contexts/LeaseNotificationContext'
 import { ToastProvider } from '@/components/ToastNotifications'
 import ErrorBoundary from '@/components/ErrorBoundary'
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createClient } from '@/lib/supabase/server'
 
 interface DashboardLayoutProps {
   children: ReactNode
@@ -17,12 +16,8 @@ interface DashboardLayoutProps {
 export default async function DashboardLayout({ 
   children 
 }: DashboardLayoutProps) {
-  const cookieStore = cookies()
-  const supabase = createServerComponentClient({ cookies: () => cookieStore })
-  // Safe destructuring to prevent "Right side of assignment cannot be destructured" error
-  const authResult = await supabase.auth.getUser()
-  const authData = authResult?.data || {}
-  const user = authData.user || null
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
   // Redirect to login if user is not authenticated
   if (!user) {

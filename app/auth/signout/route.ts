@@ -1,19 +1,19 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
-import type { Database } from '@/lib/database.types';
-import { NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server'
+import { NextResponse } from 'next/server'
+
+export const dynamic = 'force-dynamic'
 
 export async function POST() {
-  const cookieStore = cookies();
-  const supabase = createRouteHandlerClient<Database>({
-    cookies: () => cookieStore,
-  });
+  const supabase = createClient()
 
-  const { error } = await supabase.auth.signOut();
+  // Check if we have a session to remove
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (user) {
+    await supabase.auth.signOut()
   }
 
-  return NextResponse.json({ message: 'Signed out successfully' });
+  return NextResponse.redirect(new URL('/login', process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'))
 }
