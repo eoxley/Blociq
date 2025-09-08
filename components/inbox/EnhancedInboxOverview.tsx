@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/browser';
+import { supabase } from '@/lib/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -155,7 +155,6 @@ const EnhancedInboxOverview: React.FC = () => {
   const router = useRouter();
   
   // Use shared browser client (requirement 5)
-  const supabase = createClient();
 
   const fetchDashboardData = async (showLoader = true) => {
     try {

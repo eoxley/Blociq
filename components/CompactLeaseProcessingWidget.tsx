@@ -13,7 +13,7 @@ import {
   Loader2,
   Lock
 } from 'lucide-react';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 import { useLeaseSystemReadiness } from '@/hooks/useLeaseSystemReadiness';
 import { useLeaseNotifications } from '@/contexts/LeaseNotificationContext';
 import { calculateJobStats, type ProcessingJob } from '@/components/LeaseProcessingStatus';

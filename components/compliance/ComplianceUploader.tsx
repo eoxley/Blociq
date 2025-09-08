@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import { Upload, FileText, CheckCircle, AlertCircle, X, Calendar, Building, User } from 'lucide-react';
 import { validateComplianceFile, getFileInputAccept } from '@/lib/validation/mime';
-import { supabase } from '@/lib/supabase/browser';
+import { supabase } from '@/lib/supabase/client';
 
 interface ComplianceUploaderProps {
   buildingId: string;

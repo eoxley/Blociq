@@ -1,8 +1,20 @@
 import { createBrowserClient } from '@supabase/ssr'
 
+// Singleton Supabase client to prevent multiple instances
+let supabaseInstance: ReturnType<typeof createBrowserClient> | null = null
+
 export function createClient() {
-  return createBrowserClient(
+  if (supabaseInstance) {
+    return supabaseInstance
+  }
+
+  supabaseInstance = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
+
+  return supabaseInstance
 }
+
+// Export the singleton client for direct use
+export const supabase = createClient()

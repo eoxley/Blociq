@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import { SuggestedAction as AISuggestedAction, DocumentAnalysis } from '@/types/ai';
 

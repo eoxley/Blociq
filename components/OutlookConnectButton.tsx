@@ -16,7 +16,7 @@ import {
   Building
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/browser'
+import { supabase } from '@/lib/supabase/client'
 
 interface OutlookConnectButtonProps {
   className?: string;
@@ -32,7 +32,6 @@ export default function OutlookConnectButton({
   const router = useRouter()
   
   // Use shared browser client
-  const supabase = createClient()
 
   // Check connection status on mount
   useEffect(() => {
