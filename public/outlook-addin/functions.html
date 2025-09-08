@@ -9,30 +9,22 @@
 <body>
     <script>
         Office.onReady(() => {
-            console.log('Office.js loaded successfully');
+            console.log('BlocIQ Functions loaded');
         });
 
         function generateAIReply(event) {
-            console.log('Generate AI Reply clicked!');
+            console.log('Generate AI Reply function called');
             
             try {
-                // Simple test - just show an alert for now
-                Office.context.ui.displayDialogAsync(
-                    'data:text/html,<html><body><h2>AI Reply Feature</h2><p>This will generate an AI reply!</p><button onclick="window.close()">Close</button></body></html>',
-                    { height: 30, width: 50 },
-                    function(result) {
-                        console.log('Dialog result:', result);
-                        event.completed();
-                    }
-                );
+                alert('BlocIQ AI Reply feature activated!');
+                event.completed();
             } catch (error) {
-                console.error('Error:', error);
-                alert('AI Reply feature activated! (Check console for details)');
+                console.error('Error in generateAIReply:', error);
                 event.completed();
             }
         }
 
-        // Register the function - this is crucial!
+        // Register the function for Office
         Office.actions = Office.actions || {};
         Office.actions.generateAIReply = generateAIReply;
     </script>
