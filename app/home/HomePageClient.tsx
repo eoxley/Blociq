@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { Calendar, Plus, X, Building, Clock, AlertCircle, CheckCircle, Loader2, ExternalLink, RefreshCw, MessageCircle, MessageSquare, Sparkles, Upload, FileText, Send, Bot, ArrowRight, HelpCircle, Brain, X as XIcon, ChevronDown, ChevronUp, Minimize2, Move, CornerDownRight, MapPin, User, Hash, Scale } from 'lucide-react'
-import { supabase } from '@/lib/supabase/client'
+import { useSupabase } from '@/components/SupabaseProvider'
 
 
 
@@ -95,6 +95,8 @@ interface HomePageClientProps {
 }
 
 export default function HomePageClient({ userData }: HomePageClientProps) {
+  const { supabase } = useSupabase();
+  
   // Add CSS animation for message fade-in
   useEffect(() => {
     const style = document.createElement('style')

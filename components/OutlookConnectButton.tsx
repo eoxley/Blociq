@@ -16,7 +16,7 @@ import {
   Building
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase/client'
+import { useSupabase } from '@/components/SupabaseProvider'
 
 interface OutlookConnectButtonProps {
   className?: string;
@@ -27,6 +27,7 @@ export default function OutlookConnectButton({
   className = "", 
   onSyncComplete 
 }: OutlookConnectButtonProps) {
+  const { supabase } = useSupabase();
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'checking' | 'disconnected'>('checking')
   const [userEmail, setUserEmail] = useState<string>('')
   const router = useRouter()

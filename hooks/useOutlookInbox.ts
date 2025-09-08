@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { supabase } from '@/lib/supabase/client';
+import { useSupabase } from '@/components/SupabaseProvider';
 import { useSession } from '@/lib/auth';
 import { toast } from 'sonner';
 
@@ -63,6 +63,7 @@ interface UseOutlookInboxReturn {
 }
 
 export function useOutlookInbox(): UseOutlookInboxReturn {
+  const { supabase } = useSupabase();
   const { user, loading: sessionLoading } = useSession();
   const [emails, setEmails] = useState<Email[]>([]);
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);

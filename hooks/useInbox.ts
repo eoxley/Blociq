@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { supabase } from '@/lib/supabase/client'
+import { useSupabase } from '@/components/SupabaseProvider'
 import { toast } from 'sonner'
 
 // Define the Email type based on the database schema
@@ -39,6 +39,7 @@ type Folder = {
 }
 
 export function useInbox() {
+  const { supabase } = useSupabase();
   const [emails, setEmails] = useState<Email[]>([])
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null)
   const [loading, setLoading] = useState(true)
