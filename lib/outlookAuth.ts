@@ -1,6 +1,6 @@
 // /lib/outlookAuth.ts
 
-import { createClient } from '@/utils/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
 
 interface OutlookToken {
