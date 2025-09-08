@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase/client';
+import { useSupabase } from '@/components/SupabaseProvider';
 import { Bell, Settings, User, HelpCircle, ExternalLink, LogOut, Lock, Home, Brain, Microscope, Building2, Shield, Megaphone, Wrench, PoundSterling, HardHat, ClipboardList, Monitor } from 'lucide-react';
 import BlocIQLogo from './BlocIQLogo';
 import { BlocIQBadge } from '@/components/ui/blociq-badge';
@@ -29,22 +29,11 @@ const navItems = [
 ];
 
 export default function DashboardSidebar() {
+  const { supabase, user } = useSupabase();
   const pathname = usePathname();
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
   const [notifications, setNotifications] = useState(3); // Mock notification count
   const { isReady: leaseSystemReady, isLoading: leaseSystemLoading } = useLeaseSystemReadiness();
-
-  useEffect(() => {
-    const getUser = async () => {
-      // Safe destructuring to prevent "Right side of assignment cannot be destructured" error
-      const authResult = await supabase.auth.getUser();
-      const authData = authResult?.data || {}
-      const user = authData.user || null
-      setUser(user);
-    };
-    getUser();
-  }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();

@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
-import { supabase } from '@/lib/supabase/client';
+import { useSupabase } from '@/components/SupabaseProvider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Plus, Calendar, Loader2, Send, Upload, FileText, X, Check, Sparkles, File, FileText as FileTextIcon, Building2, AlertTriangle, Brain, Building, AlertCircle, CheckCircle, Clock, Paperclip } from 'lucide-react';
@@ -157,8 +157,11 @@ export default function AskBlocIQ({
   const maxFileSize = 10 * 1024 * 1024; // 10MB
   const maxFiles = 5;
 
+  const { supabase } = useSupabase();
+  
   useEffect(() => {
     const getSession = async () => {
+      if (!supabase) return;
       // Safe destructuring to prevent "Right side of assignment cannot be destructured" error
       const sessionResult = await supabase.auth.getSession();
       const sessionData = sessionResult?.data || {}
@@ -166,7 +169,7 @@ export default function AskBlocIQ({
       setUserId(session?.user?.id ?? null);
     };
     getSession();
-  }, []);
+  }, [supabase]);
 
   // Auto-focus input field on mount
   useEffect(() => {

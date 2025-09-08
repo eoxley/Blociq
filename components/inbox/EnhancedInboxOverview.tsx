@@ -147,13 +147,22 @@ const DEFAULT_AI_INSIGHTS = {
 };
 
 const EnhancedInboxOverview: React.FC = () => {
-  const { supabase } = useSupabase();
+  const { supabase, loading: supabaseLoading } = useSupabase();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [timeRange, setTimeRange] = useState('week');
   const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
+
+  // Don't render until Supabase is ready
+  if (supabaseLoading || !supabase) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
   
   // Use shared browser client (requirement 5)
 

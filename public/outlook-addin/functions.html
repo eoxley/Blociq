@@ -1,12 +1,135 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <title>BlocIQ Functions</title>
     <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
 </head>
 <body>
-    <script src="functions.js"></script>
+    <script>
+        Office.onReady(() => {
+            // Office is ready
+        });
+
+        function generateAIReply(event) {
+            try {
+                // Get the current email item
+                const item = Office.context.mailbox.item;
+                
+                // Check if we're in read or compose mode
+                if (item.itemType === Office.MailboxEnums.ItemType.Message) {
+                    if (item.subject && item.body) {
+                        // Read mode - generate reply based on current email
+                        generateReplyFromReadMode(item, event);
+                    } else {
+                        // Compose mode - enhance current draft
+                        generateReplyFromComposeMode(item, event);
+                    }
+                } else {
+                    event.completed({ allowEvent: true });
+                }
+            } catch (error) {
+                console.error('Error in generateAIReply:', error);
+                event.completed({ allowEvent: true });
+            }
+        }
+
+        function generateReplyFromReadMode(item, event) {
+            // Get email content for AI processing
+            item.body.getAsync("text", function(result) {
+                if (result.status === Office.AsyncResultStatus.Succeeded) {
+                    const emailBody = result.value;
+                    const subject = item.subject;
+                    const sender = item.from ? item.from.displayName : 'Unknown';
+                    
+                    // Call your AI service to generate reply
+                    callAIService({
+                        mode: 'reply',
+                        subject: subject,
+                        body: emailBody,
+                        sender: sender
+                    }).then(aiReply => {
+                        // Create a new reply
+                        item.displayReplyForm({
+                            htmlBody: aiReply.htmlContent || aiReply.textContent,
+                            attachments: []
+                        });
+                        event.completed({ allowEvent: true });
+                    }).catch(error => {
+                        console.error('AI service error:', error);
+                        // Fallback - open normal reply
+                        item.displayReplyForm({});
+                        event.completed({ allowEvent: true });
+                    });
+                } else {
+                    console.error('Error reading email body:', result.error);
+                    event.completed({ allowEvent: true });
+                }
+            });
+        }
+
+        function generateReplyFromComposeMode(item, event) {
+            // Get current draft content
+            item.body.getAsync("html", function(result) {
+                if (result.status === Office.AsyncResultStatus.Succeeded) {
+                    const currentBody = result.value;
+                    
+                    // Get subject
+                    item.subject.getAsync(function(subjectResult) {
+                        const subject = subjectResult.status === Office.AsyncResultStatus.Succeeded ? 
+                            subjectResult.value : '';
+                        
+                        // Call AI service to enhance/complete the draft
+                        callAIService({
+                            mode: 'enhance',
+                            subject: subject,
+                            currentBody: currentBody
+                        }).then(aiContent => {
+                            // Update the email body with AI-generated content
+                            item.body.setAsync(aiContent.htmlContent || aiContent.textContent, 
+                                { coercionType: Office.CoercionType.Html }, 
+                                function(setResult) {
+                                    if (setResult.status === Office.AsyncResultStatus.Failed) {
+                                        console.error('Error setting email body:', setResult.error);
+                                    }
+                                    event.completed({ allowEvent: true });
+                                }
+                            );
+                        }).catch(error => {
+                            console.error('AI service error:', error);
+                            event.completed({ allowEvent: true });
+                        });
+                    });
+                } else {
+                    console.error('Error reading current email body:', result.error);
+                    event.completed({ allowEvent: true });
+                }
+            });
+        }
+
+        async function callAIService(emailData) {
+            // Replace this with your actual AI service endpoint
+            const response = await fetch('https://www.blociq.co.uk/api/ai/generate-reply', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    // Add authentication headers as needed
+                },
+                body: JSON.stringify(emailData)
+            });
+
+            if (!response.ok) {
+                throw new Error(`AI service error: ${response.status}`);
+            }
+
+            return await response.json();
+        }
+
+        // Register functions
+        Office.actions = {
+            generateAIReply: generateAIReply
+        };
+    </script>
 </body>
 </html>
