@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from '@/lib/supabase/client';
+import { useSupabase } from '@/components/SupabaseProvider';
 import { useToast } from '@/components/ToastNotifications';
 
 interface LeaseProcessingNotification {
@@ -56,6 +56,7 @@ export function LeaseNotificationProvider({ children }: LeaseNotificationProvide
   const [notifications, setNotifications] = useState<LeaseProcessingNotification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { showProcessingComplete, showProcessingFailed } = useToast();
+  const { supabase, user } = useSupabase();
 
   // Calculate unread count
   const unreadCount = notifications.filter(n => !n.isViewed).length;
@@ -167,51 +168,43 @@ export function LeaseNotificationProvider({ children }: LeaseNotificationProvide
 
   // Real-time subscription to job updates
   useEffect(() => {
-    // Safe destructuring to prevent "Right side of assignment cannot be destructured" error
-    const authResult = supabase.auth.getUser();
-    
-    authResult.then((result) => {
-      const userData = result?.data || {}
-      const user = userData.user || null
-      
-      if (!user) return;
+    if (!supabase || !user) return;
 
-      const subscription = supabase
-        .channel('lease_job_updates')
-        .on('postgres_changes', {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'lease_processing_jobs',
-          filter: `user_id=eq.${userData.user.id}`
-        }, (payload) => {
-          console.log('Real-time job update:', payload);
+    const subscription = supabase
+      .channel('lease_job_updates')
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'lease_processing_jobs',
+        filter: `user_id=eq.${user.id}`
+      }, (payload) => {
+        console.log('Real-time job update:', payload);
+        
+        // Only refresh if status changed to completed or failed
+        const newJob = payload.new as any;
+        const oldJob = payload.old as any;
+        
+        // Check if status just changed to completed or failed
+        if (newJob.status !== oldJob.status && 
+            (newJob.status === 'completed' || newJob.status === 'failed')) {
           
-          // Only refresh if status changed to completed or failed
-          const newJob = payload.new as any;
-          const oldJob = payload.old as any;
-          
-          // Check if status just changed to completed or failed
-          if (newJob.status !== oldJob.status && 
-              (newJob.status === 'completed' || newJob.status === 'failed')) {
-            
-            // Show toast notification for status change
-            if (newJob.status === 'completed') {
-              showProcessingComplete(newJob.filename, newJob.id);
-            } else if (newJob.status === 'failed') {
-              showProcessingFailed(newJob.filename, newJob.error_message, newJob.id);
-            }
-            
-            // Refresh notifications
-            fetchNotifications();
+          // Show toast notification for status change
+          if (newJob.status === 'completed') {
+            showProcessingComplete(newJob.filename, newJob.id);
+          } else if (newJob.status === 'failed') {
+            showProcessingFailed(newJob.filename, newJob.error_message, newJob.id);
           }
-        })
-        .subscribe();
+          
+          // Refresh notifications
+          fetchNotifications();
+        }
+      })
+      .subscribe();
 
-      return () => {
-        subscription.unsubscribe();
-      };
-    });
-  }, []);
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [supabase, user]);
 
   const contextValue: NotificationContextType = {
     notifications,

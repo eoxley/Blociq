@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 import { getTimeWindow, isValidTimeRange, type TimeRange } from '@/lib/utils/timeWindow';
 import { createGraphHeadersForUser } from '@/lib/outlookAuth';
 
@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
     console.log('📊 Fetching inbox dashboard data...');
     
     // Use the shared server client (renamed from 't' to 'db' to avoid shadowing)
-    const db = await createClient();
+    const db = createClient();
     
     // Check authentication
     const { data: { user }, error: authError } = await db.auth.getUser();
