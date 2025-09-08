@@ -128,7 +128,6 @@ export async function GET(req: NextRequest) {
         const { data: dbEmails, error: dbError } = await db
           .from('incoming_emails')
           .select('*')
-          .eq('user_id', user.id)
           .eq('is_deleted', false)
           .gte('received_at', since.toISOString())
           .order('received_at', { ascending: false })
