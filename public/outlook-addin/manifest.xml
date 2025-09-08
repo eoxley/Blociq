@@ -1,14 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<OfficeApp 
-  xmlns="http://schemas.microsoft.com/office/appforoffice/1.1" 
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-  xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0" 
-  xmlns:mailappor="http://schemas.microsoft.com/office/mailappversionoverrides" 
-  xsi:type="MailApp">
+<OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1" 
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+           xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0" 
+           xsi:type="MailApp">
 
   <Id>85e47bf9-847d-4fa6-ab0b-7d73531345db</Id>
-  <AlternateId>BlocIQ_AI_Assistant</AlternateId>
-  <Version>1.0.4.0</Version>
+  <Version>1.0.0.0</Version>
   <ProviderName>BlocIQ</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="BlocIQ AI Assistant"/>
@@ -67,148 +64,85 @@
     <Hosts>
       <Host xsi:type="MailHost">
         <DesktopFormFactor>
-          <FunctionFile resid="functionFileUrl"/>
-
-          <!-- Task Panes with Pinning Support -->
-          <ExtensionPoint xsi:type="PrimaryCommandSurface">
-            <OfficeTab id="TabDefault">
-              <Group id="msgReadGroup">
-                <Label resid="groupLabel"/>
-
-                <!-- Chat Pane Button -->
-                <Control xsi:type="Button" id="msgReadOpenPaneButton">
-                  <Label resid="paneButtonLabel"/>
-                  <Supertip>
-                    <Title resid="paneSuperTipTitle"/>
-                    <Description resid="paneSuperTipDescription"/>
-                  </Supertip>
-                  <Icon>
-                    <bt:Image size="16" resid="icon16"/>
-                    <bt:Image size="32" resid="icon32"/>
-                    <bt:Image size="80" resid="icon80"/>
-                  </Icon>
-                  <Action xsi:type="ShowTaskpane">
-                    <TaskpaneId>taskpaneChat</TaskpaneId>
-                    <SourceLocation resid="taskpaneUrl"/>
-                  </Action>
-                </Control>
-
-                <!-- Generate Reply Button -->
-                <Control xsi:type="Button" id="generateReplyButton">
-                  <Label resid="replyButtonLabel"/>
-                  <Supertip>
-                    <Title resid="replySuperTipTitle"/>
-                    <Description resid="replySuperTipDescription"/>
-                  </Supertip>
-                  <Icon>
-                    <bt:Image size="16" resid="icon16"/>
-                    <bt:Image size="32" resid="icon32"/>
-                    <bt:Image size="80" resid="icon80"/>
-                  </Icon>
-                  <Action xsi:type="ExecuteFunction">
-                    <FunctionName>generateAIReply</FunctionName>
-                  </Action>
-                </Control>
-
-              </Group>
-            </OfficeTab>
-          </ExtensionPoint>
-
-          <!-- Read Surface -->
+          <FunctionFile resid="Commands.Url"/>
+          
           <ExtensionPoint xsi:type="MessageReadCommandSurface">
             <OfficeTab id="TabDefault">
-              <Group id="msgReadGroup2">
-                <Label resid="groupLabel"/>
-
-                <!-- Chat Pane Button -->
-                <Control xsi:type="Button" id="msgReadOpenPaneButton2">
-                  <Label resid="paneButtonLabel"/>
+              <Group id="CommandsGroup">
+                <Label resid="GroupLabel"/>
+                <Control xsi:type="Button" id="TaskPaneButton">
+                  <Label resid="TaskPaneButton.Label"/>
                   <Supertip>
-                    <Title resid="paneSuperTipTitle"/>
-                    <Description resid="paneSuperTipDescription"/>
+                    <Title resid="TaskPaneButton.Label"/>
+                    <Description resid="TaskPaneButton.Tooltip"/>
                   </Supertip>
                   <Icon>
-                    <bt:Image size="16" resid="icon16"/>
-                    <bt:Image size="32" resid="icon32"/>
-                    <bt:Image size="80" resid="icon80"/>
+                    <bt:Image size="16" resid="Icon.16x16"/>
+                    <bt:Image size="32" resid="Icon.32x32"/>
+                    <bt:Image size="80" resid="Icon.80x80"/>
                   </Icon>
                   <Action xsi:type="ShowTaskpane">
-                    <TaskpaneId>taskpaneChat</TaskpaneId>
-                    <SourceLocation resid="taskpaneUrl"/>
+                    <TaskpaneId>ButtonId1</TaskpaneId>
+                    <SourceLocation resid="Taskpane.Url"/>
                   </Action>
                 </Control>
-
-                <!-- Generate Reply Button -->
-                <Control xsi:type="Button" id="generateReplyReadButton">
-                  <Label resid="replyButtonLabel"/>
+                <Control xsi:type="Button" id="ActionButton">
+                  <Label resid="ActionButton.Label"/>
                   <Supertip>
-                    <Title resid="replySuperTipTitle"/>
-                    <Description resid="replySuperTipDescription"/>
+                    <Title resid="ActionButton.Label"/>
+                    <Description resid="ActionButton.Tooltip"/>
                   </Supertip>
                   <Icon>
-                    <bt:Image size="16" resid="icon16"/>
-                    <bt:Image size="32" resid="icon32"/>
-                    <bt:Image size="80" resid="icon80"/>
+                    <bt:Image size="16" resid="Icon.16x16"/>
+                    <bt:Image size="32" resid="Icon.32x32"/>
+                    <bt:Image size="80" resid="Icon.80x80"/>
                   </Icon>
                   <Action xsi:type="ExecuteFunction">
                     <FunctionName>generateAIReply</FunctionName>
                   </Action>
                 </Control>
-
               </Group>
             </OfficeTab>
           </ExtensionPoint>
 
-          <!-- Compose Surface -->
           <ExtensionPoint xsi:type="MessageComposeCommandSurface">
             <OfficeTab id="TabDefault">
-              <Group id="msgComposeGroup">
-                <Label resid="groupLabel"/>
-
-                <!-- Chat Pane Button -->
-                <Control xsi:type="Button" id="msgComposeOpenPaneButton">
-                  <Label resid="paneButtonLabel"/>
+              <Group id="CommandsGroup2">
+                <Label resid="GroupLabel"/>
+                <Control xsi:type="Button" id="TaskPaneButton2">
+                  <Label resid="TaskPaneButton.Label"/>
                   <Supertip>
-                    <Title resid="paneSuperTipTitle"/>
-                    <Description resid="paneSuperTipDescription"/>
+                    <Title resid="TaskPaneButton.Label"/>
+                    <Description resid="TaskPaneButton.Tooltip"/>
                   </Supertip>
                   <Icon>
-                    <bt:Image size="16" resid="icon16"/>
-                    <bt:Image size="32" resid="icon32"/>
-                    <bt:Image size="80" resid="icon80"/>
+                    <bt:Image size="16" resid="Icon.16x16"/>
+                    <bt:Image size="32" resid="Icon.32x32"/>
+                    <bt:Image size="80" resid="Icon.80x80"/>
                   </Icon>
                   <Action xsi:type="ShowTaskpane">
-                    <TaskpaneId>taskpaneChat</TaskpaneId>
-                    <SourceLocation resid="taskpaneUrl"/>
+                    <TaskpaneId>ButtonId2</TaskpaneId>
+                    <SourceLocation resid="Taskpane.Url"/>
                   </Action>
                 </Control>
-
-                <!-- Generate Reply Button -->
-                <Control xsi:type="Button" id="generateReplyComposeButton">
-                  <Label resid="replyButtonLabel"/>
+                <Control xsi:type="Button" id="ActionButton2">
+                  <Label resid="ActionButton.Label"/>
                   <Supertip>
-                    <Title resid="replySuperTipTitle"/>
-                    <Description resid="replySuperTipDescription"/>
+                    <Title resid="ActionButton.Label"/>
+                    <Description resid="ActionButton.Tooltip"/>
                   </Supertip>
                   <Icon>
-                    <bt:Image size="16" resid="icon16"/>
-                    <bt:Image size="32" resid="icon32"/>
-                    <bt:Image size="80" resid="icon80"/>
+                    <bt:Image size="16" resid="Icon.16x16"/>
+                    <bt:Image size="32" resid="Icon.32x32"/>
+                    <bt:Image size="80" resid="Icon.80x80"/>
                   </Icon>
                   <Action xsi:type="ExecuteFunction">
                     <FunctionName>generateAIReply</FunctionName>
                   </Action>
                 </Control>
-
               </Group>
             </OfficeTab>
           </ExtensionPoint>
-
-          <!-- Define Task Panes -->
-          <TaskPane id="taskpaneChat">
-            <SourceLocation resid="taskpaneUrl"/>
-            <SupportsPinning>true</SupportsPinning>
-          </TaskPane>
 
         </DesktopFormFactor>
       </Host>
@@ -216,29 +150,27 @@
 
     <Resources>
       <bt:Images>
-        <!-- Main Icons - Using existing paths -->
-        <bt:Image id="icon16" DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-16.png"/>
-        <bt:Image id="icon32" DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-32.png"/>
-        <bt:Image id="icon80" DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-80.png"/>
+        <bt:Image id="Icon.16x16" DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-16.png"/>
+        <bt:Image id="Icon.32x32" DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-32.png"/>
+        <bt:Image id="Icon.80x80" DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-80.png"/>
       </bt:Images>
 
       <bt:Urls>
-        <bt:Url id="taskpaneUrl" DefaultValue="https://www.blociq.co.uk/outlook-addin/taskpane.html"/>
-        <bt:Url id="functionFileUrl" DefaultValue="https://www.blociq.co.uk/outlook-addin/functions.html"/>
+        <bt:Url id="Commands.Url" DefaultValue="https://www.blociq.co.uk/outlook-addin/functions.html"/>
+        <bt:Url id="Taskpane.Url" DefaultValue="https://www.blociq.co.uk/outlook-addin/taskpane.html"/>
       </bt:Urls>
 
       <bt:ShortStrings>
-        <bt:String id="groupLabel" DefaultValue="BlocIQ Assistant"/>
-        <bt:String id="paneButtonLabel" DefaultValue="Open Assistant"/>
-        <bt:String id="paneSuperTipTitle" DefaultValue="BlocIQ Assistant"/>
-        <bt:String id="replyButtonLabel" DefaultValue="Generate Reply"/>
-        <bt:String id="replySuperTipTitle" DefaultValue="Generate AI Reply"/>
+        <bt:String id="GroupLabel" DefaultValue="BlocIQ"/>
+        <bt:String id="TaskPaneButton.Label" DefaultValue="Open Assistant"/>
+        <bt:String id="ActionButton.Label" DefaultValue="Generate Reply"/>
       </bt:ShortStrings>
 
       <bt:LongStrings>
-        <bt:String id="paneSuperTipDescription" DefaultValue="Open BlocIQ Assistant with chat and draft reply functionality."/>
-        <bt:String id="replySuperTipDescription" DefaultValue="Generate an AI-powered reply using property management knowledge and lease data."/>
+        <bt:String id="TaskPaneButton.Tooltip" DefaultValue="Open BlocIQ AI Assistant"/>
+        <bt:String id="ActionButton.Tooltip" DefaultValue="Generate AI-powered reply"/>
       </bt:LongStrings>
     </Resources>
+
   </VersionOverrides>
 </OfficeApp>
