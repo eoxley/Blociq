@@ -215,6 +215,11 @@ const EnhancedInboxOverview: React.FC = () => {
       console.log('📊 Email count:', apiData.emailCount);
       console.log('📊 Outlook error:', apiData.outlookError);
       
+      // Additional debug info
+      console.log('🔍 DEBUG - Dashboard total emails:', apiData.data?.total);
+      console.log('🔍 DEBUG - Dashboard categories:', apiData.data?.categories);
+      console.log('🔍 DEBUG - Dashboard recent activity:', apiData.data?.recentActivity);
+      
       if (!response.ok) {
         if (response.status === 401) {
           throw new Error('Authentication required - please log in again');
@@ -485,9 +490,35 @@ const EnhancedInboxOverview: React.FC = () => {
             <div className="text-center py-12">
               <Mail className="h-16 w-16 text-gray-300 mx-auto mb-6" />
               <h3 className="text-xl font-semibold text-gray-700 mb-2">No inbox activity for the selected period</h3>
-              <p className="text-gray-500 text-sm opacity-70">
+              <p className="text-gray-500 text-sm opacity-70 mb-4">
                 No emails found for the selected time range. Try selecting a different time period or check your Outlook connection.
               </p>
+              
+              {/* Debug Information */}
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 max-w-2xl mx-auto">
+                <h4 className="text-sm font-semibold text-yellow-800 mb-2">🔍 Debug Information:</h4>
+                <div className="text-xs text-yellow-700 space-y-1">
+                  <p>• Dashboard Data: {dashboardData ? 'Loaded' : 'Not loaded'}</p>
+                  <p>• Total Emails: {dashboardData?.total || 0}</p>
+                  <p>• Categories: {Object.keys(dashboardData?.categories || {}).length}</p>
+                  <p>• Recent Activity: {dashboardData?.recentActivity?.length || 0}</p>
+                  <p>• Time Range: {timeRange}</p>
+                  <p>• Error: {error || 'None'}</p>
+                  <p>• Data Source: outlook_failed</p>
+                  <p>• Outlook Error: Invalid response from Outlook v2 API</p>
+                </div>
+              </div>
+              
+              {/* Outlook Connection Status */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 max-w-2xl mx-auto">
+                <h4 className="text-sm font-semibold text-blue-800 mb-2">📧 Outlook Connection Status:</h4>
+                <div className="text-xs text-blue-700 space-y-1">
+                  <p>• Status: <span className="font-semibold text-red-600">Not Connected</span></p>
+                  <p>• Issue: Outlook API is returning invalid response</p>
+                  <p>• Solution: Connect your Outlook account to see real emails</p>
+                </div>
+              </div>
+              
               <div className="mt-6">
                 <Button 
                   onClick={() => fetchDashboardData(false)}
@@ -502,6 +533,29 @@ const EnhancedInboxOverview: React.FC = () => {
                   variant="secondary"
                 >
                   View Last Month
+                </Button>
+                <Button 
+                  onClick={async () => {
+                    try {
+                      const response = await fetch('/api/test-outlook-connection');
+                      const result = await response.json();
+                      console.log('🔍 Outlook connection test:', result);
+                      alert(`Outlook Connection Test:\n\n${JSON.stringify(result, null, 2)}`);
+                    } catch (error) {
+                      console.error('Test failed:', error);
+                      alert(`Test failed: ${error}`);
+                    }
+                  }}
+                  variant="secondary"
+                  className="ml-3"
+                >
+                  Test Outlook Connection
+                </Button>
+                <Button 
+                  onClick={() => window.location.href = '/api/auth/outlook'}
+                  className="ml-3 bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  Connect Outlook Account
                 </Button>
               </div>
             </div>
