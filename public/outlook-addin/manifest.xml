@@ -9,15 +9,14 @@
   <ProviderName>BlocIQ</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="BlocIQ AI Assistant"/>
-  <Description DefaultValue="AI assistant with sidebar chat and email reply generation"/>
+  <Description DefaultValue="AI assistant for property management"/>
 
-  <IconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-32.png"/>
-  <HighResolutionIconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-80.png"/>
+  <IconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icons/icon-32.png"/>
+  <HighResolutionIconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icons/icon-80.png"/>
 
   <SupportUrl DefaultValue="https://www.blociq.co.uk"/>
   
   <AppDomains>
-    <AppDomain>https://blociq.co.uk</AppDomain>
     <AppDomain>https://www.blociq.co.uk</AppDomain>
   </AppDomains>
 
@@ -38,23 +37,15 @@
         <RequestedHeight>450</RequestedHeight>
       </DesktopSettings>
     </Form>
-    <Form xsi:type="ItemEdit">
-      <DesktopSettings>
-        <SourceLocation DefaultValue="https://www.blociq.co.uk/outlook-addin/taskpane.html"/>
-        <RequestedHeight>450</RequestedHeight>
-      </DesktopSettings>
-    </Form>
   </FormSettings>
 
   <Permissions>ReadWriteMailbox</Permissions>
 
   <Rule xsi:type="RuleCollection" Mode="Or">
     <Rule xsi:type="ItemIs" ItemType="Message" FormType="Read"/>
-    <Rule xsi:type="ItemIs" ItemType="Message" FormType="Edit"/>
   </Rule>
 
   <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1" xsi:type="VersionOverridesV1_1">
-
     <Requirements>
       <bt:Sets DefaultMinVersion="1.3">
         <bt:Set Name="Mailbox"/>
@@ -70,6 +61,7 @@
             <OfficeTab id="TabDefault">
               <Group id="CommandsGroup">
                 <Label resid="GroupLabel"/>
+                
                 <Control xsi:type="Button" id="TaskPaneButton">
                   <Label resid="TaskPaneButton.Label"/>
                   <Supertip>
@@ -86,60 +78,7 @@
                     <SourceLocation resid="Taskpane.Url"/>
                   </Action>
                 </Control>
-                <Control xsi:type="Button" id="ActionButton">
-                  <Label resid="ActionButton.Label"/>
-                  <Supertip>
-                    <Title resid="ActionButton.Label"/>
-                    <Description resid="ActionButton.Tooltip"/>
-                  </Supertip>
-                  <Icon>
-                    <bt:Image size="16" resid="Icon.16x16"/>
-                    <bt:Image size="32" resid="Icon.32x32"/>
-                    <bt:Image size="80" resid="Icon.80x80"/>
-                  </Icon>
-                  <Action xsi:type="ExecuteFunction">
-                    <FunctionName>generateAIReply</FunctionName>
-                  </Action>
-                </Control>
-              </Group>
-            </OfficeTab>
-          </ExtensionPoint>
-
-          <ExtensionPoint xsi:type="MessageComposeCommandSurface">
-            <OfficeTab id="TabDefault">
-              <Group id="CommandsGroup2">
-                <Label resid="GroupLabel"/>
-                <Control xsi:type="Button" id="TaskPaneButton2">
-                  <Label resid="TaskPaneButton.Label"/>
-                  <Supertip>
-                    <Title resid="TaskPaneButton.Label"/>
-                    <Description resid="TaskPaneButton.Tooltip"/>
-                  </Supertip>
-                  <Icon>
-                    <bt:Image size="16" resid="Icon.16x16"/>
-                    <bt:Image size="32" resid="Icon.32x32"/>
-                    <bt:Image size="80" resid="Icon.80x80"/>
-                  </Icon>
-                  <Action xsi:type="ShowTaskpane">
-                    <TaskpaneId>ButtonId2</TaskpaneId>
-                    <SourceLocation resid="Taskpane.Url"/>
-                  </Action>
-                </Control>
-                <Control xsi:type="Button" id="ActionButton2">
-                  <Label resid="ActionButton.Label"/>
-                  <Supertip>
-                    <Title resid="ActionButton.Label"/>
-                    <Description resid="ActionButton.Tooltip"/>
-                  </Supertip>
-                  <Icon>
-                    <bt:Image size="16" resid="Icon.16x16"/>
-                    <bt:Image size="32" resid="Icon.32x32"/>
-                    <bt:Image size="80" resid="Icon.80x80"/>
-                  </Icon>
-                  <Action xsi:type="ExecuteFunction">
-                    <FunctionName>generateAIReply</FunctionName>
-                  </Action>
-                </Control>
+                
               </Group>
             </OfficeTab>
           </ExtensionPoint>
@@ -162,13 +101,11 @@
 
       <bt:ShortStrings>
         <bt:String id="GroupLabel" DefaultValue="BlocIQ"/>
-        <bt:String id="TaskPaneButton.Label" DefaultValue="Open Assistant"/>
-        <bt:String id="ActionButton.Label" DefaultValue="Generate Reply"/>
+        <bt:String id="TaskPaneButton.Label" DefaultValue="BlocIQ Assistant"/>
       </bt:ShortStrings>
 
       <bt:LongStrings>
         <bt:String id="TaskPaneButton.Tooltip" DefaultValue="Open BlocIQ AI Assistant"/>
-        <bt:String id="ActionButton.Tooltip" DefaultValue="Generate AI-powered reply"/>
       </bt:LongStrings>
     </Resources>
 
