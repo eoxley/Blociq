@@ -6,6 +6,7 @@ import { NavigationProvider } from '@/components/NavigationContext'
 import { AgencyProvider } from '@/hooks/useAgency'
 import { LeaseNotificationProvider } from '@/contexts/LeaseNotificationContext'
 import { ToastProvider } from '@/components/ToastNotifications'
+import { SupabaseProvider } from '@/components/SupabaseProvider'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import { createClient } from '@/lib/supabase/server'
 
@@ -26,10 +27,11 @@ export default async function DashboardLayout({
 
   return (
     <ErrorBoundary>
-      <NavigationProvider>
-        <AgencyProvider>
-          <ToastProvider>
-            <LeaseNotificationProvider>
+      <SupabaseProvider>
+        <NavigationProvider>
+          <AgencyProvider>
+            <ToastProvider>
+              <LeaseNotificationProvider>
             <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 via-white to-gray-50">
             <div className="flex flex-1 overflow-hidden">
               {/* Desktop Sidebar */}
@@ -60,10 +62,11 @@ export default async function DashboardLayout({
               </main>
             </div>
           </div>
-            </LeaseNotificationProvider>
-          </ToastProvider>
-        </AgencyProvider>
-      </NavigationProvider>
+              </LeaseNotificationProvider>
+            </ToastProvider>
+          </AgencyProvider>
+        </NavigationProvider>
+      </SupabaseProvider>
     </ErrorBoundary>
   )
 } 

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { supabase } from '@/lib/supabase/client';
+import { useSupabase } from '@/components/SupabaseProvider';
 import { useRouter } from 'next/navigation';
 import { Menu, X, Bell, Settings, User, HelpCircle, LogOut, Home, Inbox, Building2, Shield, Megaphone, Wrench, Brain } from 'lucide-react';
 import BlocIQLogo from './BlocIQLogo';
@@ -21,6 +21,7 @@ const navItems = [
 ];
 
 export default function MobileNavigation() {
+  const { supabase } = useSupabase();
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
