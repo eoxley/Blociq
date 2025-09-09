@@ -158,8 +158,12 @@ const EnhancedEditAssetModal: React.FC<EnhancedEditAssetModalProps> = ({
       
       const response = await fetch(`/api/compliance/assets/${assetId}?buildingId=${buildingId}`)
       
+      console.log('🔍 [Modal] Asset fetch response:', response.status, response.statusText);
+      
       if (!response.ok) {
-        throw new Error('Failed to fetch asset data')
+        const errorText = await response.text();
+        console.error('🔍 [Modal] Asset fetch error:', errorText);
+        throw new Error(`Failed to fetch asset data: ${response.status} ${errorText}`)
       }
       
       const result = await response.json()
@@ -270,11 +274,17 @@ const EnhancedEditAssetModal: React.FC<EnhancedEditAssetModalProps> = ({
         })
       }
 
+      console.log('🔍 [Modal] Asset save response:', response.status, response.statusText);
+      
       if (!response.ok) {
-        throw new Error('Failed to save asset')
+        const errorText = await response.text();
+        console.error('🔍 [Modal] Asset save error:', errorText);
+        throw new Error(`Failed to save asset: ${response.status} ${errorText}`)
       }
 
       const result = await response.json()
+      
+      console.log('🔍 [Modal] Asset save result:', result);
       
       if (!result.success) {
         throw new Error(result.error || 'Failed to save asset')

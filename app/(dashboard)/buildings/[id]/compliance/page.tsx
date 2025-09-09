@@ -347,13 +347,40 @@ export default function BuildingCompliancePage() {
                 <RefreshCw className="h-5 w-5" />
               </button>
               
-              <button
-                onClick={() => router.push(`/buildings/${buildingId}/compliance/setup`)}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-white/20 backdrop-blur-sm text-white rounded-lg hover:bg-white/30 transition-all duration-200 border border-white/30"
-              >
-                <Plus className="h-5 w-5" />
-                Set Up Compliance
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={async () => {
+                    try {
+                      const response = await fetch('/api/compliance/setup', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ buildingId })
+                      });
+                      const result = await response.json();
+                      if (result.success) {
+                        toast.success(`Setup complete! Created ${result.assetsCreated} assets`);
+                        fetchComplianceData();
+                      } else {
+                        toast.error('Setup failed: ' + result.error);
+                      }
+                    } catch (err) {
+                      toast.error('Setup failed');
+                    }
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-green-600/90 backdrop-blur-sm text-white rounded-lg hover:bg-green-700 transition-all duration-200 text-sm"
+                >
+                  <Settings className="h-4 w-4" />
+                  Quick Setup
+                </button>
+                
+                <button
+                  onClick={() => router.push(`/buildings/${buildingId}/compliance/setup`)}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-white/20 backdrop-blur-sm text-white rounded-lg hover:bg-white/30 transition-all duration-200 border border-white/30"
+                >
+                  <Plus className="h-5 w-5" />
+                  Set Up Compliance
+                </button>
+              </div>
             </div>
           </div>
 

@@ -26,6 +26,8 @@ export async function GET(
       return NextResponse.json({ error: "Building ID is required" }, { status: 400 });
     }
 
+    console.log('🔍 [Asset API] Fetching asset:', { buildingId, assetId, userId: user.id });
+
     // Get building compliance asset with related data
     const { data: assetData, error: assetError } = await supabase
       .from('building_compliance_assets')
@@ -37,31 +39,13 @@ export async function GET(
           category,
           description,
           frequency_months
-        ),
-        compliance_documents (
-          id,
-          original_filename,
-          file_type,
-          file_size,
-          document_type,
-          document_category,
-          ai_confidence_score,
-          upload_date,
-          processing_status,
-          ai_document_extractions (
-            inspection_date,
-            next_due_date,
-            inspector_name,
-            inspector_company,
-            certificate_number,
-            compliance_status,
-            verified_by_user
-          )
         )
       `)
       .eq('building_id', buildingId)
       .eq('compliance_asset_id', assetId)
       .single();
+
+    console.log('🔍 [Asset API] Query result:', { assetData, assetError });
 
     if (assetError || !assetData) {
       console.error('Asset fetch error:', assetError);
@@ -69,6 +53,27 @@ export async function GET(
         error: "Asset not found or access denied" 
       }, { status: 404 });
     }
+
+    // Get documents separately to avoid complex join issues
+    const { data: documents, error: docError } = await supabase
+      .from('compliance_documents')
+      .select(`
+        id,
+        original_filename,
+        file_type,
+        file_size,
+        document_type,
+        document_category,
+        ai_confidence_score,
+        upload_date,
+        processing_status,
+        is_current_version
+      `)
+      .eq('building_id', buildingId)
+      .eq('compliance_asset_id', assetId)
+      .order('upload_date', { ascending: false });
+
+    console.log('🔍 [Asset API] Documents query:', { documents, docError });
 
     // Transform the response
     const responseData = {
@@ -93,20 +98,20 @@ export async function GET(
         override_reason: assetData.override_reason,
         
         // Document statistics
-        document_count: assetData.document_count || 0,
-        latest_upload_date: assetData.latest_upload_date
+        document_count: documents?.length || 0,
+        latest_upload_date: documents?.[0]?.upload_date || null
       },
-      documents: assetData.compliance_documents?.map((doc: any) => ({
+      documents: documents?.map((doc: any) => ({
         id: doc.id,
-        filename: doc.original_filename,
-        fileType: doc.file_type,
-        fileSize: doc.file_size,
-        documentType: doc.document_type,
-        category: doc.document_category,
-        confidence: doc.ai_confidence_score,
-        uploadDate: doc.upload_date,
-        processingStatus: doc.processing_status,
-        extractedData: doc.ai_document_extractions?.[0] || null
+        original_filename: doc.original_filename,
+        file_type: doc.file_type,
+        file_size: doc.file_size,
+        document_type: doc.document_type,
+        document_category: doc.document_category,
+        ai_confidence_score: doc.ai_confidence_score,
+        upload_date: doc.upload_date,
+        processing_status: doc.processing_status,
+        is_current_version: doc.is_current_version
       })) || [],
       success: true
     };
@@ -151,6 +156,8 @@ export async function PUT(
       overrideReason,
       frequencyMonths
     } = body;
+
+    console.log('🔍 [Asset UPDATE] Request:', { buildingId, assetId: params.assetId, status, userId: user.id });
 
     if (!buildingId) {
       return NextResponse.json({ error: "Building ID is required" }, { status: 400 });
