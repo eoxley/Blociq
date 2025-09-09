@@ -215,7 +215,7 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
     throw new Error('Microsoft OAuth configuration missing')
   }
 
-  const tenantId = process.env.AZURE_TENANT_ID || 'common';
+  const tenantId = process.env.AZURE_TENANT_ID || '6c00dc8f-a9ab-4339-a17d-437869997312';
   const response = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
     method: 'POST',
     headers: {
@@ -275,7 +275,7 @@ async function refreshAccessTokenForUser(userId: string, refreshToken: string): 
     throw new Error('Microsoft OAuth configuration missing')
   }
 
-  const tenantId = process.env.AZURE_TENANT_ID || 'common';
+  const tenantId = process.env.AZURE_TENANT_ID || '6c00dc8f-a9ab-4339-a17d-437869997312';
   const response = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
     method: 'POST',
     headers: {

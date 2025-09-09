@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
     console.log('[Outlook OAuth] State cookie set');
 
     // Build the Microsoft OAuth URL
-    const tenantId = process.env.AZURE_TENANT_ID || 'common';
+    const tenantId = process.env.AZURE_TENANT_ID || '6c00dc8f-a9ab-4339-a17d-437869997312';
     const baseAuthUrl = process.env.MICROSOFT_AUTH_URL || `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize`;
     const authUrl = new URL(baseAuthUrl);
     authUrl.searchParams.set('client_id', clientId);

@@ -6,7 +6,7 @@ export async function getAccessTokenFromCode(code: string): Promise<{
   refresh_token: string;
   expires_in: number;
 }> {
-  const tenantId = process.env.AZURE_TENANT_ID || 'common';
+  const tenantId = process.env.AZURE_TENANT_ID || '6c00dc8f-a9ab-4339-a17d-437869997312';
   const tokenResponse = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
     method: 'POST',
     headers: {
@@ -54,7 +54,7 @@ export async function exchangeCodeForTokens(code: string) {
 
   console.log("🚀 Sending token exchange with:", params.toString());
 
-  const tenantId = process.env.AZURE_TENANT_ID || 'common';
+  const tenantId = process.env.AZURE_TENANT_ID || '6c00dc8f-a9ab-4339-a17d-437869997312';
   const res = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
     method: 'POST',
     headers: {
