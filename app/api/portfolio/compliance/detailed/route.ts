@@ -102,15 +102,25 @@ export async function GET(request: NextRequest) {
         asset_id,
         status,
         last_renewed_date,
+        last_carried_out,
         next_due_date,
         notes,
+        inspector_provider,
+        certificate_reference,
+        contractor,
         created_at,
         updated_at,
         compliance_assets!asset_id (
           id,
           name,
           category,
-          description
+          description,
+          frequency_months
+        ),
+        buildings!building_id (
+          id,
+          name,
+          is_hrb
         ),
         compliance_documents (
           id,

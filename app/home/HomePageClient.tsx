@@ -950,6 +950,38 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     }
   }, [messages])
 
+  // Preload compliance summary on component mount
+  useEffect(() => {
+    const preloadComplianceSummary = async () => {
+      try {
+        console.log('🔄 Preloading compliance summary for homepage...');
+        const response = await fetch('/api/ask-ai/compliance-upcoming');
+        const data = await response.json();
+        
+        if (data.summary) {
+          // Add the preloaded message to the chat
+          const preloadMessage = { 
+            sender: 'ai' as const, 
+            text: data.summary, 
+            timestamp: new Date() 
+          };
+          
+          setMessages(prev => [...prev, preloadMessage]);
+          console.log('✅ Compliance summary preloaded on homepage');
+        } else {
+          console.log('⚠️ No compliance summary available for preload');
+        }
+      } catch (error) {
+        console.error('❌ Error preloading compliance summary:', error);
+      }
+    };
+
+    // Only preload if user is authenticated and no messages exist yet
+    if (userData && messages.length === 0) {
+      preloadComplianceSummary();
+    }
+  }, [userData, messages.length]);
+
   // File handling constants
   const acceptedFileTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain']
   const maxFiles = 5

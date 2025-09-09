@@ -232,9 +232,31 @@ const EnhancedEditAssetModal: React.FC<EnhancedEditAssetModalProps> = ({
   }
 
   const handleSave = async () => {
+    // Enhanced validation
     if (!formData.compliance_asset_id) {
       toast.error('Please select a compliance asset')
       return
+    }
+
+    if (!formData.last_carried_out) {
+      toast.error('Last Carried Out date is required')
+      return
+    }
+
+    if (!formData.next_due_date) {
+      toast.error('Next Due Date is required')
+      return
+    }
+
+    // Validate date logic
+    if (formData.last_carried_out && formData.next_due_date) {
+      const lastDate = new Date(formData.last_carried_out)
+      const nextDate = new Date(formData.next_due_date)
+      
+      if (nextDate <= lastDate) {
+        toast.error('Next Due Date must be after Last Carried Out date')
+        return
+      }
     }
 
     try {
@@ -637,7 +659,7 @@ const EnhancedEditAssetModal: React.FC<EnhancedEditAssetModalProps> = ({
             </button>
             <button
               onClick={handleSave}
-              disabled={loading || !formData.compliance_asset_id}
+              disabled={loading || !formData.compliance_asset_id || !formData.last_carried_out || !formData.next_due_date}
               className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (

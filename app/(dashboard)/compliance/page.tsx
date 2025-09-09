@@ -128,7 +128,30 @@ export default function CompliancePage() {
       
       if (detailedData.success && detailedData.data) {
         console.log('✅ Detailed compliance data fetched:', detailedData.data.length, 'assets')
-        setComplianceData(detailedData.data)
+        
+        // Transform the data to ensure proper structure
+        const transformedData = detailedData.data.map((asset: any) => ({
+          ...asset,
+          // Ensure building_id is a string for consistency
+          building_id: asset.building_id.toString(),
+          // Ensure buildings object exists
+          buildings: asset.buildings || {
+            id: asset.building_id.toString(),
+            name: 'Unknown Building',
+            is_hrb: false
+          },
+          // Ensure compliance_assets object exists
+          compliance_assets: asset.compliance_assets || {
+            id: asset.asset_id,
+            name: 'Unknown Asset',
+            category: 'Unknown',
+            description: 'No description available',
+            frequency_months: 12
+          }
+        }))
+        
+        setComplianceData(transformedData)
+        console.log('✅ Set compliance data:', transformedData.length, 'assets')
       } else if (detailedData.debug && detailedData.assets) {
         console.log('🔧 Debug mode - processing assets without authentication')
         // Transform debug assets into proper format for display
@@ -146,10 +169,14 @@ export default function CompliancePage() {
         }))
         setComplianceData(debugAssets)
         console.log('🔧 Set debug compliance data:', debugAssets.length, 'assets')
+      } else {
+        console.log('⚠️ No detailed data available, setting empty array')
+        setComplianceData([])
       }
     } catch (err) {
       console.warn('Could not fetch detailed compliance data:', err)
       // Don't throw error - continue with overview data only
+      setComplianceData([])
     }
   }
 
@@ -1042,6 +1069,37 @@ export default function CompliancePage() {
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
               >
                 Test Data
+              </button>
+              
+              <button
+                onClick={async () => {
+                  try {
+                    const response = await fetch('/api/compliance/test-comprehensive');
+                    const data = await response.json();
+                    console.log('🧪 Comprehensive test result:', data);
+                    
+                    const summary = data.data?.summary;
+                    const message = `Comprehensive Test Results:
+                    
+✅ Compliance Assets: ${data.data?.complianceAssets?.count || 0}
+✅ User Buildings: ${data.data?.userBuildings?.count || 0}
+✅ Building Assets: ${data.data?.buildingAssets?.count || 0}
+✅ Detailed API: ${summary?.detailedApiWorking ? 'Working' : 'Failed'}
+✅ Overview API: ${summary?.overviewApiWorking ? 'Working' : 'Failed'}
+
+Ready for Testing: ${summary?.readyForTesting ? 'YES' : 'NO'}
+
+Check console for full details.`;
+                    
+                    alert(message);
+                  } catch (error) {
+                    console.error('Comprehensive test failed:', error);
+                    alert('Comprehensive test failed: ' + error);
+                  }
+                }}
+                className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+              >
+                Full Test
               </button>
               
               <button

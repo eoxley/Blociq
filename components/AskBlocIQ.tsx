@@ -70,6 +70,7 @@ interface AskBlocIQProps {
   context?: string;
   placeholder?: string;
   className?: string;
+  preload?: string;
 }
 
 // Extract project ID from pathname
@@ -118,7 +119,8 @@ export default function AskBlocIQ({
   buildingName,
   context, 
   placeholder = "Ask BlocIQ anything...",
-  className = ""
+  className = "",
+  preload
 }: AskBlocIQProps) {
   const pathname = usePathname();
   const projectId = extractProjectId(pathname || '');
@@ -175,6 +177,38 @@ export default function AskBlocIQ({
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  // Handle preload functionality
+  useEffect(() => {
+    if (preload && userId) {
+      const handlePreload = async () => {
+        try {
+          console.log('🔄 Preloading compliance summary...');
+          const response = await fetch('/api/ask-ai/compliance-upcoming');
+          const data = await response.json();
+          
+          if (data.summary) {
+            // Add the preloaded message to the chat
+            const preloadMessage: Message = {
+              id: `preload-${Date.now()}`,
+              type: 'assistant',
+              content: data.summary,
+              timestamp: new Date()
+            };
+            
+            setMessages(prev => [...prev, preloadMessage]);
+            console.log('✅ Compliance summary preloaded');
+          } else {
+            console.log('⚠️ No compliance summary available');
+          }
+        } catch (error) {
+          console.error('❌ Error preloading compliance summary:', error);
+        }
+      };
+
+      handlePreload();
+    }
+  }, [preload, userId]);
 
   // Auto-resize textarea with improved functionality
   useEffect(() => {
