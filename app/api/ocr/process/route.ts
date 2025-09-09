@@ -23,7 +23,12 @@ export async function POST(req: NextRequest) {
         config: {
           hasToken: !!token,
           hasUrl: !!ocrUrl
-        }
+        },
+        suggestions: [
+          'Set RENDER_OCR_URL to your deployed Render service URL',
+          'Set RENDER_OCR_TOKEN to match the token configured on Render service',
+          'Verify both environment variables are set in your deployment platform'
+        ]
       }, { status: 500 });
     }
     
@@ -140,7 +145,12 @@ export async function POST(req: NextRequest) {
         success: false,
         reason: "render-connection-failed",
         details: `Cannot connect to Render OCR service at ${ocrUrl}. Service may be down or URL incorrect.`,
-        error: fetchError instanceof Error ? fetchError.message : 'Network error'
+        error: fetchError instanceof Error ? fetchError.message : 'Network error',
+        suggestions: [
+          'Check if the Render service is running and accessible',
+          'Verify the RENDER_OCR_URL is correct',
+          'Check network connectivity to Render service'
+        ]
       }, { status: 503 });
     }
 
@@ -148,7 +158,22 @@ export async function POST(req: NextRequest) {
       const errorText = await renderResponse.text().catch(() => "");
       console.error('❌ Render OCR service failed:', renderResponse.status, errorText);
       
-      // Handle specific error types
+      // Handle specific error types with detailed suggestions
+      if (renderResponse.status === 401) {
+        return NextResponse.json({
+          success: false,
+          reason: "authentication-failed",
+          details: `Authentication failed with Render OCR service. Token may be invalid or expired.`,
+          status: renderResponse.status,
+          error: errorText,
+          suggestions: [
+            "Verify RENDER_OCR_TOKEN matches the token configured on Render service",
+            "Check if the token has expired or been regenerated",
+            "Ensure the token is correctly set in your environment variables"
+          ]
+        }, { status: 401 });
+      }
+      
       if (renderResponse.status === 404) {
         return NextResponse.json({
           success: false,
@@ -157,7 +182,7 @@ export async function POST(req: NextRequest) {
           suggestions: [
             "Verify RENDER_OCR_URL environment variable is correct",
             "Ensure Render OCR service is deployed and running", 
-            "Check that the /ocr/process endpoint exists on the service"
+            "Check that the /upload endpoint exists on the service"
           ],
           status: renderResponse.status
         }, { status: 502 });
@@ -173,15 +198,41 @@ export async function POST(req: NextRequest) {
           reason: "bucket-not-found",
           bucket: bucket,
           detail: `Storage bucket "${bucket}" not found on Render OCR service. Please ensure bucket exists in Supabase.`,
-          status: renderResponse.status
+          status: renderResponse.status,
+          suggestions: [
+            `Create the "${bucket}" bucket in your Supabase storage`,
+            "Verify SUPABASE_STORAGE_BUCKET environment variable matches the bucket name",
+            "Check that the Render service has access to the Supabase storage bucket"
+          ]
         }, { status: 502 });
+      }
+      
+      // Check for file-related errors
+      if (errorText.includes('File not found') || errorText.includes('storage_key')) {
+        return NextResponse.json({
+          success: false,
+          reason: "file-not-found",
+          details: `File not found in storage. The storage key may be invalid or the file may have been deleted.`,
+          status: renderResponse.status,
+          error: errorText,
+          suggestions: [
+            "Verify the file was successfully uploaded to Supabase storage",
+            "Check that the storage key is correct and accessible",
+            "Ensure the file hasn't been deleted from storage"
+          ]
+        }, { status: 404 });
       }
       
       return NextResponse.json({ 
         success: false, 
         reason: "render-ocr-failed", 
         status: renderResponse.status, 
-        detail: errorText 
+        detail: errorText,
+        suggestions: [
+          "Check Render service logs for detailed error information",
+          "Verify all required environment variables are set on Render service",
+          "Ensure the service has sufficient resources to process the request"
+        ]
       }, { status: 502 });
     }
 
@@ -212,7 +263,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: false,
       reason: "proxy-error",
-      details: error instanceof Error ? error.message : 'Unknown proxy error'
+      details: error instanceof Error ? error.message : 'Unknown proxy error',
+      suggestions: [
+        "Check the application logs for more detailed error information",
+        "Verify all environment variables are correctly configured",
+        "Ensure the OCR service is accessible and running"
+      ]
     }, { status: 500 });
   }
 }
