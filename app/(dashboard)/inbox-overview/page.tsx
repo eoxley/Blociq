@@ -1,7 +1,7 @@
 "use client";
 
-import EnhancedInboxOverview from "@/components/inbox/EnhancedInboxOverview";
+import LiveInboxOverview from "@/components/inbox/LiveInboxOverview";
 
 export default function InboxOverviewPage() {
-  return <EnhancedInboxOverview />;
+  return <LiveInboxOverview />;
 }

@@ -93,9 +93,11 @@ export async function GET(req: NextRequest) {
                     throw new Error('Token exchange failed: ' + errorText);
                 }
                 
-                // Redirect to home page
-                console.log('[Outlook Callback] Redirecting to /');
-                window.location.href = '/';
+                // Redirect to the return URL or inbox overview
+                const returnUrl = sessionStorage.getItem('outlook_return_url') || '/inbox-overview';
+                sessionStorage.removeItem('outlook_return_url');
+                console.log('[Outlook Callback] Redirecting to:', returnUrl);
+                window.location.href = returnUrl;
                 
             } catch (error) {
                 console.error('[Outlook Callback] Error during token exchange:', error);
