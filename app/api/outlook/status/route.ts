@@ -4,7 +4,7 @@ import { cookies } from 'next/headers';
 
 export async function GET(req: NextRequest) {
   try {
-    const supabase = createClient(await cookies());
+    const supabase = createClient(cookies());
     
     // Get the current user's session - Safe destructuring to prevent "Right side of assignment cannot be destructured" error
     const sessionResult = await supabase.auth.getSession();

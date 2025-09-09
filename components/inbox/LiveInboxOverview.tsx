@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useOutlookConnection } from '@/hooks/useOutlookConnection';
+import { LeaseNotificationProvider } from '@/contexts/LeaseNotificationContext';
 
 interface LiveEmailStats {
   total: number;
@@ -133,11 +134,13 @@ const LiveInboxOverview: React.FC = () => {
     if (!supabaseLoading && supabase && !outlookStatus.isChecking && !outlookStatus.isConnected && !outlookStatus.error) {
       console.log('🔄 Auto-initiating Outlook connection...');
       // Small delay to ensure UI is ready
-      setTimeout(() => {
+      const timeout = setTimeout(() => {
         initiateConnection();
       }, 1000);
+      
+      return () => clearTimeout(timeout);
     }
-  }, [supabaseLoading, supabase, outlookStatus, initiateConnection]);
+  }, [supabaseLoading, supabase, outlookStatus.isChecking, outlookStatus.isConnected, outlookStatus.error, initiateConnection]);
 
   const handleRefresh = () => {
     if (outlookStatus.isConnected) {
@@ -165,7 +168,8 @@ const LiveInboxOverview: React.FC = () => {
   // Loading state
   if (supabaseLoading || outlookStatus.isChecking || (loading && outlookStatus.isConnected)) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      <LeaseNotificationProvider>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
         <div className="max-w-6xl mx-auto p-6 pt-24">
           <div className="text-center">
             <div className="inline-flex items-center gap-3 bg-white/80 backdrop-blur-sm rounded-full px-6 py-3 shadow-lg mb-6">
@@ -187,13 +191,15 @@ const LiveInboxOverview: React.FC = () => {
           </div>
         </div>
       </div>
+      </LeaseNotificationProvider>
     );
   }
 
   // Connection required state
   if (!outlookStatus.isConnected) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      <LeaseNotificationProvider>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
         <div className="max-w-4xl mx-auto p-6 pt-24">
           <div className="text-center">
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/50">
@@ -252,13 +258,15 @@ const LiveInboxOverview: React.FC = () => {
           </div>
         </div>
       </div>
+      </LeaseNotificationProvider>
     );
   }
 
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      <LeaseNotificationProvider>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
         <div className="max-w-4xl mx-auto p-6 pt-24">
           <Card className="border-red-200 bg-red-50/50">
             <CardContent className="p-8 text-center">
@@ -278,12 +286,14 @@ const LiveInboxOverview: React.FC = () => {
           </Card>
         </div>
       </div>
+      </LeaseNotificationProvider>
     );
   }
 
   // Main dashboard with live stats
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <LeaseNotificationProvider>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       {/* Hero Section with Live Stats */}
       <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 pt-20">
         <div className="absolute inset-0 bg-black/10"></div>
@@ -475,6 +485,7 @@ const LiveInboxOverview: React.FC = () => {
         </div>
       </div>
     </div>
+    </LeaseNotificationProvider>
   );
 };
 
