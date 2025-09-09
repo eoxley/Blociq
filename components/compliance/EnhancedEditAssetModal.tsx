@@ -256,11 +256,22 @@ const EnhancedEditAssetModal: React.FC<EnhancedEditAssetModalProps> = ({
 
       let response
       if (assetId) {
-        // Update existing asset
-        response = await fetch(`/api/compliance/assets/${formData.compliance_asset_id}`, {
+        // Update existing asset - use the building-specific endpoint
+        response = await fetch(`/api/compliance/building/${buildingId}/assets/${assetId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(saveData)
+          body: JSON.stringify({
+            status: saveData.status,
+            notes: saveData.notes,
+            next_due_date: saveData.nextDueDate,
+            last_renewed_date: saveData.lastRenewedDate,
+            last_carried_out: saveData.lastCarriedOut,
+            inspector_provider: saveData.inspectorProvider,
+            certificate_reference: saveData.certificateReference,
+            contractor: saveData.contractor,
+            override_reason: saveData.overrideReason,
+            frequency_months: saveData.frequencyMonths
+          })
         })
       } else {
         // Create new asset - would need separate endpoint

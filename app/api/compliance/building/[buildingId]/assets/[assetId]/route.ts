@@ -9,7 +9,18 @@ export async function PUT(
   try {
     const { buildingId, assetId } = await params
     const body = await req.json()
-    const { status, notes, next_due_date, last_renewed_date } = body
+    const { 
+      status, 
+      notes, 
+      next_due_date, 
+      last_renewed_date,
+      last_carried_out,
+      inspector_provider,
+      certificate_reference,
+      contractor,
+      override_reason,
+      frequency_months
+    } = body
 
     const supabase = createClient(cookies())
 
@@ -61,6 +72,12 @@ export async function PUT(
     if (notes !== undefined) updateData.notes = notes
     if (next_due_date !== undefined) updateData.next_due_date = next_due_date || null
     if (last_renewed_date !== undefined) updateData.last_renewed_date = last_renewed_date || null
+    if (last_carried_out !== undefined) updateData.last_carried_out = last_carried_out || null
+    if (inspector_provider !== undefined) updateData.inspector_provider = inspector_provider || null
+    if (certificate_reference !== undefined) updateData.certificate_reference = certificate_reference || null
+    if (contractor !== undefined) updateData.contractor = contractor || null
+    if (override_reason !== undefined) updateData.override_reason = override_reason || null
+    if (frequency_months !== undefined) updateData.frequency_months = frequency_months || null
 
     // Update the compliance asset
     const { data, error } = await supabase

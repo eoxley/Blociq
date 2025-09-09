@@ -840,13 +840,13 @@ export default function CompliancePage() {
           </BlocIQCard>
 
         {/* Compliance Assets List */}
-        {filteredComplianceData.length > 0 && (
-          <BlocIQCard variant="elevated" className="mt-8">
-            <BlocIQCardHeader>
-              <h2 className="text-lg font-semibold text-gray-900">All Compliance Assets</h2>
-            </BlocIQCardHeader>
-              
-                          <BlocIQCardContent>
+        <BlocIQCard variant="elevated" className="mt-8">
+          <BlocIQCardHeader>
+            <h2 className="text-lg font-semibold text-gray-900">All Compliance Assets</h2>
+          </BlocIQCardHeader>
+            
+          <BlocIQCardContent>
+            {filteredComplianceData.length > 0 ? (
               <div className="divide-y divide-gray-100">
                 {filteredComplianceData.map(item => (
                   <div key={item.id} className="p-6 hover:bg-gray-50 transition-colors">
@@ -922,9 +922,41 @@ export default function CompliancePage() {
                   </div>
                 ))}
               </div>
-            </BlocIQCardContent>
-          </BlocIQCard>
-        )}
+            ) : (
+              <div className="text-center py-12">
+                <Shield className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No Compliance Assets Found</h3>
+                <p className="text-gray-600 mb-6">
+                  {complianceData.length === 0 
+                    ? "No compliance assets have been set up yet. Add some compliance assets to get started."
+                    : "No assets match your current filters. Try adjusting your search criteria."
+                  }
+                </p>
+                <div className="flex items-center justify-center gap-3">
+                  <button
+                    onClick={() => {
+                      setFilterBuilding('all')
+                      setFilterCategory('all')
+                      setFilterStatus('all')
+                      setSearchQuery('')
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Clear Filters
+                  </button>
+                  {complianceData.length === 0 && (
+                    <button
+                      onClick={() => router.push('/buildings')}
+                      className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                    >
+                      Go to Buildings
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </BlocIQCardContent>
+        </BlocIQCard>
 
         {/* Sync Results */}
         {syncResults && (
@@ -980,6 +1012,59 @@ export default function CompliancePage() {
             </BlocIQCardContent>
           </BlocIQCard>
         )}
+
+        {/* Test Data Button */}
+        <BlocIQCard className="mb-6">
+          <BlocIQCardHeader>
+            <h2 className="text-xl font-semibold">Debug & Test</h2>
+          </BlocIQCardHeader>
+          <BlocIQCardContent>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setDebugMode(!debugMode)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                {debugMode ? 'Hide Debug' : 'Show Debug'}
+              </button>
+              
+              <button
+                onClick={async () => {
+                  try {
+                    const response = await fetch('/api/compliance/test-data');
+                    const data = await response.json();
+                    console.log('🧪 Test data result:', data);
+                    alert(`Test completed! Check console for details.\n\nSummary:\n- Compliance Assets: ${data.data?.complianceAssets?.count || 0}\n- Buildings: ${data.data?.buildings?.count || 0}\n- Building Assets: ${data.data?.buildingAssets?.count || 0}\n- User Buildings: ${data.data?.userBuildings?.count || 0}`);
+                  } catch (error) {
+                    console.error('Test failed:', error);
+                    alert('Test failed: ' + error);
+                  }
+                }}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                Test Data
+              </button>
+              
+              <button
+                onClick={async () => {
+                  try {
+                    const response = await fetch('/api/compliance/seed', { method: 'POST' });
+                    const data = await response.json();
+                    console.log('🌱 Seed result:', data);
+                    alert(`Seed completed! Check console for details.\n\nMessage: ${data.message || 'Unknown'}`);
+                    // Refresh the page data
+                    await fetchComplianceData();
+                  } catch (error) {
+                    console.error('Seed failed:', error);
+                    alert('Seed failed: ' + error);
+                  }
+                }}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              >
+                Seed Data
+              </button>
+            </div>
+          </BlocIQCardContent>
+        </BlocIQCard>
 
         {/* Debug Section */}
         {debugMode && (
