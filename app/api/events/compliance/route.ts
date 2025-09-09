@@ -4,42 +4,16 @@ import { cookies } from 'next/headers';
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('📊 Fetching detailed compliance data for portfolio...');
+    console.log('📅 Fetching compliance events for homepage...');
     const supabase = createRouteHandlerClient({ cookies });
     
     // Get the current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
-      console.log('⚠️ Authentication failed, returning debug info');
-      
-      // Return debug info instead of failing
-      try {
-        const { data: allBuildings } = await supabase
-          .from('buildings')
-          .select('id, name, is_hrb')
-          .limit(5);
-          
-        const { data: allAssets } = await supabase
-          .from('building_compliance_assets')
-          .select('id, building_id, status')
-          .limit(10);
-          
-        return NextResponse.json({
-          success: false,
-          debug: true,
-          error: 'Authentication required',
-          buildings: allBuildings || [],
-          assets: allAssets || [],
-          authError: authError?.message,
-          user: user ? 'User exists' : 'No user'
-        });
-      } catch (debugError) {
-        return NextResponse.json({ 
-          success: false,
-          error: 'Authentication required',
-          debugError: debugError.message
-        }, { status: 401 });
-      }
+      return NextResponse.json({ 
+        success: false,
+        error: 'Authentication required'
+      }, { status: 401 });
     }
 
     console.log('🔐 User authenticated:', user.id);
@@ -74,7 +48,7 @@ export async function GET(request: NextRequest) {
         buildings = allBuildings;
       }
     }
-    
+
     if (buildingsError) {
       console.error('Error fetching buildings:', buildingsError);
       return NextResponse.json({ 
@@ -93,67 +67,101 @@ export async function GET(request: NextRequest) {
     const buildingIds = buildings.map(b => b.id);
     console.log('🏢 Found', buildings.length, 'buildings for user');
 
-    // Get all building compliance assets with full details
-    const { data: complianceData, error: complianceError } = await supabase
+    // Get compliance assets with due dates in the next 30 days
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+    
+    const { data: complianceAssets, error: complianceError } = await supabase
       .from('building_compliance_assets')
       .select(`
         id,
         building_id,
         asset_id,
         status,
-        last_renewed_date,
         next_due_date,
         notes,
-        created_at,
-        updated_at,
         compliance_assets!asset_id (
           id,
           name,
           category,
           description
-        ),
-        compliance_documents (
-          id,
-          document_url,
-          created_at
         )
       `)
       .in('building_id', buildingIds)
-      .order('next_due_date', { ascending: true });
+      .not('next_due_date', 'is', null)
+      .gte('next_due_date', new Date().toISOString().split('T')[0])
+      .lte('next_due_date', thirtyDaysFromNow.toISOString().split('T')[0])
+      .order('next_due_date', { ascending: true })
+      .limit(10);
 
     if (complianceError) {
-      console.error('Error fetching compliance data:', complianceError);
+      console.error('Error fetching compliance assets:', complianceError);
       return NextResponse.json({ 
         success: false,
-        error: 'Failed to fetch compliance data'
+        error: 'Failed to fetch compliance assets'
       }, { status: 500 });
     }
 
     // Create building lookup map
     const buildingMap = new Map(buildings.map(b => [b.id, b]));
 
-    // Transform the data to include building information
-    const transformedData = (complianceData || []).map(item => ({
-      ...item,
-      buildings: buildingMap.get(item.building_id) ? {
-        ...buildingMap.get(item.building_id),
-        id: buildingMap.get(item.building_id)!.id.toString()
-      } : null
-    }));
+    // Transform compliance assets to PropertyEvent format
+    const complianceEvents = (complianceAssets || []).map(asset => {
+      const building = buildingMap.get(asset.building_id);
+      const dueDate = new Date(asset.next_due_date);
+      const now = new Date();
+      const isOverdue = dueDate < now;
+      const daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      
+      // Determine status
+      let status = 'upcoming';
+      let statusColor = 'blue';
+      if (isOverdue) {
+        status = 'overdue';
+        statusColor = 'red';
+      } else if (daysUntilDue <= 7) {
+        status = 'due_soon';
+        statusColor = 'yellow';
+      }
 
-    console.log('✅ Detailed compliance data fetched:', transformedData.length, 'assets');
+      return {
+        id: `compliance-${asset.id}`,
+        building: building?.name || 'Unknown Building',
+        date: asset.next_due_date,
+        title: asset.compliance_assets?.name || 'Unknown Asset',
+        category: asset.compliance_assets?.category || 'Compliance',
+        source: 'compliance' as const,
+        event_type: 'compliance' as const,
+        location: building?.name || null,
+        organiser_name: null,
+        online_meeting: null,
+        startUtc: null,
+        endUtc: null,
+        timeZoneIana: 'Europe/London',
+        isAllDay: true,
+        // Additional compliance-specific fields
+        compliance_status: asset.status,
+        compliance_notes: asset.notes,
+        days_until_due: daysUntilDue,
+        is_overdue: isOverdue,
+        status: status,
+        status_color: statusColor
+      };
+    });
+
+    console.log('✅ Found', complianceEvents.length, 'compliance events');
 
     return NextResponse.json({
       success: true,
-      data: transformedData,
-      count: transformedData.length
+      data: complianceEvents
     });
 
   } catch (error) {
-    console.error('❌ Detailed compliance API error:', error);
+    console.error('❌ Compliance events API error:', error);
     return NextResponse.json({
       success: false,
-      error: 'Internal server error'
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }

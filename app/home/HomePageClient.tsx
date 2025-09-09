@@ -38,8 +38,8 @@ type PropertyEvent = {
   date: string
   title: string
   category: string
-  source?: 'property' | 'outlook'
-  event_type?: 'outlook' | 'manual'
+  source?: 'property' | 'outlook' | 'compliance'
+  event_type?: 'outlook' | 'manual' | 'compliance'
   location?: string | null
   organiser_name?: string | null
   online_meeting?: any | null
@@ -48,6 +48,13 @@ type PropertyEvent = {
   endUtc?: string | null
   timeZoneIana?: string | null
   isAllDay?: boolean
+  // Compliance-specific fields
+  compliance_status?: string
+  compliance_notes?: string | null
+  days_until_due?: number
+  is_overdue?: boolean
+  status?: string
+  status_color?: string
 }
 
 type Building = {
@@ -340,7 +347,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
   const fetchEvents = async () => {
     try {
-      // Fetch from both property_events and manual_events tables
+      // Fetch from property_events, manual_events, and compliance events
       const responses = await Promise.all([
         supabase
           .from('property_events')
@@ -353,11 +360,12 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
           .select('*')
           .gte('start_time', new Date().toISOString().split('T')[0])
           .order('start_time', { ascending: true })
-          .limit(5)
+          .limit(5),
+        fetch('/api/events/compliance').then(res => res.json())
       ])
 
       // Safe destructuring with fallback
-      const [propertyEventsResponse, manualEventsResponse] = responses || [{}, {}]
+      const [propertyEventsResponse, manualEventsResponse, complianceResponse] = responses || [{}, {}, {}]
 
       if (propertyEventsResponse.error) {
         console.error('Error fetching property events:', propertyEventsResponse.error)
@@ -366,6 +374,11 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
       if (manualEventsResponse.error) {
         console.error('Error fetching manual events:', manualEventsResponse.error)
+        // Continue with empty array instead of crashing
+      }
+
+      if (complianceResponse.error) {
+        console.error('Error fetching compliance events:', complianceResponse.error)
         // Continue with empty array instead of crashing
       }
 
@@ -429,10 +442,14 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         }
       })
 
+      // Get compliance events from API response
+      const complianceEvents: PropertyEvent[] = complianceResponse.success ? (complianceResponse.data || []) : []
+
       console.log('📅 Fetched events:', {
         propertyEvents: propertyEventsResponse.data?.length || 0,
         manualEvents: manualEventsResponse.data?.length || 0,
-        manualEventsData: manualEventsResponse.data
+        complianceEvents: complianceEvents.length,
+        complianceData: complianceResponse
       })
 
       // Debug timezone conversion
@@ -446,11 +463,11 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       }
 
       // Combine and sort all events
-      const allEvents = [...propertyEvents, ...manualEvents].sort((a, b) => 
+      const allEvents = [...propertyEvents, ...manualEvents, ...complianceEvents].sort((a, b) => 
         new Date(a.date).getTime() - new Date(b.date).getTime()
       )
 
-      setUpcomingEvents(allEvents.slice(0, 5)) // Limit to 5 total events
+      setUpcomingEvents(allEvents.slice(0, 8)) // Increased limit to accommodate compliance events
     } catch (error) {
       console.error('Error in fetchEvents:', error)
       // Set empty events array instead of crashing
@@ -1983,6 +2000,25 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                                           Property Event
                                         </span>
                                       )}
+                                      {event.source === 'compliance' && (
+                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                          Compliance Due
+                                        </span>
+                                      )}
+                                      {/* Compliance Status Badge */}
+                                      {event.source === 'compliance' && event.status && (
+                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                          event.status === 'overdue' 
+                                            ? 'bg-red-100 text-red-800' 
+                                            : event.status === 'due_soon'
+                                            ? 'bg-yellow-100 text-yellow-800'
+                                            : 'bg-blue-100 text-blue-800'
+                                        }`}>
+                                          {event.status === 'overdue' ? 'Overdue' : 
+                                           event.status === 'due_soon' ? 'Due Soon' : 
+                                           'Upcoming'}
+                                        </span>
+                                      )}
                                     </div>
                                   </div>
                                 </div>
@@ -2037,6 +2073,54 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                                         <p className="text-gray-900 font-semibold">{event.organiser_name}</p>
                                       </div>
                                     </div>
+                                  )}
+
+                                  {/* Compliance-specific details */}
+                                  {event.source === 'compliance' && (
+                                    <>
+                                      {/* Compliance Status */}
+                                      {event.compliance_status && (
+                                        <div className="flex items-start gap-3">
+                                          <div className="w-6 h-6 bg-gradient-to-r from-[#ef4444]/20 to-[#dc2626]/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 border border-[#ef4444]/30">
+                                            <AlertCircle className="h-3 w-3 text-[#ef4444]" />
+                                          </div>
+                                          <div>
+                                            <p className="text-sm font-semibold text-gray-700 mb-2">Compliance Status</p>
+                                            <p className="text-gray-900 font-semibold capitalize">{event.compliance_status}</p>
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {/* Days Until Due */}
+                                      {event.days_until_due !== undefined && (
+                                        <div className="flex items-start gap-3">
+                                          <div className="w-6 h-6 bg-gradient-to-r from-[#3b82f6]/20 to-[#1d4ed8]/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 border border-[#3b82f6]/30">
+                                            <Calendar className="h-3 w-3 text-[#3b82f6]" />
+                                          </div>
+                                          <div>
+                                            <p className="text-sm font-semibold text-gray-700 mb-2">Due In</p>
+                                            <p className="text-gray-900 font-semibold">
+                                              {event.days_until_due === 0 ? 'Today' : 
+                                               event.days_until_due < 0 ? `${Math.abs(event.days_until_due)} days overdue` :
+                                               `${event.days_until_due} days`}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {/* Compliance Notes */}
+                                      {event.compliance_notes && (
+                                        <div className="flex items-start gap-3">
+                                          <div className="w-6 h-6 bg-gradient-to-r from-[#6b7280]/20 to-[#374151]/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 border border-[#6b7280]/30">
+                                            <FileText className="h-3 w-3 text-[#6b7280]" />
+                                          </div>
+                                          <div>
+                                            <p className="text-sm font-semibold text-gray-700 mb-2">Notes</p>
+                                            <p className="text-gray-900 font-semibold">{event.compliance_notes}</p>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </>
                                   )}
 
                                   {/* Online Meeting */}

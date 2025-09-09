@@ -39,15 +39,12 @@ interface ComplianceAsset {
 
 interface BuildingComplianceAsset {
   id: string
-  building_id: string
-  compliance_asset_id: string
-  due_date: string | null
-  document_id: string | null
-  status: 'compliant' | 'overdue' | 'upcoming' | 'not_applied'
+  building_id: number
+  asset_id: string
+  status: 'compliant' | 'overdue' | 'upcoming' | 'not_applied' | 'pending'
   last_renewed_date: string | null
   next_due_date: string | null
   notes: string | null
-  contractor: string | null
   created_at: string
   updated_at: string
   buildings: {
@@ -105,6 +102,9 @@ export default function CompliancePage() {
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [editingAsset, setEditingAsset] = useState<BuildingComplianceAsset | null>(null)
+  const [debugMode, setDebugMode] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const [syncResults, setSyncResults] = useState<any>(null)
 
 
 
@@ -140,7 +140,7 @@ export default function CompliancePage() {
             description: 'Asset from debug mode'
           },
           buildings: {
-            id: asset.building_id,
+            id: asset.building_id.toString(),
             name: detailedData.buildings.find(b => b.id === asset.building_id)?.name || 'Unknown Building'
           }
         }))
@@ -150,6 +150,31 @@ export default function CompliancePage() {
     } catch (err) {
       console.warn('Could not fetch detailed compliance data:', err)
       // Don't throw error - continue with overview data only
+    }
+  }
+
+  const syncToCalendar = async () => {
+    try {
+      setSyncing(true)
+      setSyncResults(null)
+      
+      const response = await fetch('/api/sync/compliance-to-calendar', { method: 'POST' })
+      const data = await response.json()
+      
+      setSyncResults(data)
+      
+      if (data.success) {
+        // Refresh compliance data to show updated sync status
+        await fetchComplianceData()
+      }
+    } catch (error) {
+      setSyncResults({ 
+        success: false, 
+        error: 'Failed to sync to calendar', 
+        details: error 
+      })
+    } finally {
+      setSyncing(false)
     }
   }
 
@@ -188,7 +213,7 @@ export default function CompliancePage() {
 
       // Transform API data to match our component structure
       const buildingSummaries = overview.map((building: any) => ({
-        id: building.building_id,
+        id: building.building_id.toString(),
         name: building.building_name,
         is_hrb: false, // We'll get this from buildings table
         compliance_assets_count: building.total_assets,
@@ -279,7 +304,7 @@ export default function CompliancePage() {
   })
 
   const filteredComplianceData = complianceData.filter(item => {
-    if (filterBuilding !== 'all' && item.building_id !== filterBuilding) return false
+    if (filterBuilding !== 'all' && item.building_id.toString() !== filterBuilding) return false
     if (filterCategory !== 'all' && item.compliance_assets?.category !== filterCategory) return false
     if (filterStatus !== 'all' && item.status !== filterStatus) return false
     if (searchQuery) {
@@ -402,6 +427,18 @@ export default function CompliancePage() {
               </div>
               
               <div className="flex items-center gap-3">
+                <button
+                  onClick={syncToCalendar}
+                  disabled={syncing}
+                  className="p-3 text-blue-500 hover:text-blue-700 hover:bg-blue-100 rounded-xl transition-all duration-200 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Sync to Outlook calendar"
+                >
+                  {syncing ? (
+                    <RefreshCw className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <Calendar className="h-5 w-5" />
+                  )}
+                </button>
                 <button
                   onClick={fetchComplianceData}
                   className="p-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-all duration-200 hover:scale-110"
@@ -889,6 +926,100 @@ export default function CompliancePage() {
           </BlocIQCard>
         )}
 
+        {/* Sync Results */}
+        {syncResults && (
+          <BlocIQCard className="mb-6">
+            <BlocIQCardHeader>
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold">Calendar Sync Results</h2>
+                <button
+                  onClick={() => setSyncResults(null)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  ✕
+                </button>
+              </div>
+            </BlocIQCardHeader>
+            <BlocIQCardContent>
+              {syncResults.success ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-blue-50 p-4 rounded-lg text-center">
+                      <div className="text-2xl font-bold text-blue-600">{syncResults.data?.synced || 0}</div>
+                      <div className="text-sm text-blue-800">Total Synced</div>
+                    </div>
+                    <div className="bg-green-50 p-4 rounded-lg text-center">
+                      <div className="text-2xl font-bold text-green-600">{syncResults.data?.created || 0}</div>
+                      <div className="text-sm text-green-800">Created</div>
+                    </div>
+                    <div className="bg-yellow-50 p-4 rounded-lg text-center">
+                      <div className="text-2xl font-bold text-yellow-600">{syncResults.data?.updated || 0}</div>
+                      <div className="text-sm text-yellow-800">Updated</div>
+                    </div>
+                    <div className="bg-red-50 p-4 rounded-lg text-center">
+                      <div className="text-2xl font-bold text-red-600">{syncResults.data?.errors || 0}</div>
+                      <div className="text-sm text-red-800">Errors</div>
+                    </div>
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    <strong>Message:</strong> {syncResults.message}
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <div className="text-red-800">
+                    <strong>Error:</strong> {syncResults.error}
+                  </div>
+                  {syncResults.details && (
+                    <div className="text-red-600 text-sm mt-2">
+                      <strong>Details:</strong> {JSON.stringify(syncResults.details, null, 2)}
+                    </div>
+                  )}
+                </div>
+              )}
+            </BlocIQCardContent>
+          </BlocIQCard>
+        )}
+
+        {/* Debug Section */}
+        {debugMode && (
+          <BlocIQCard className="mb-6">
+            <BlocIQCardHeader>
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold">Debug Information</h2>
+                <button
+                  onClick={() => setDebugMode(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  ✕
+                </button>
+              </div>
+            </BlocIQCardHeader>
+            <BlocIQCardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h3 className="font-semibold mb-2">Buildings ({buildings.length})</h3>
+                  <pre className="bg-gray-100 p-2 rounded text-xs overflow-auto max-h-32">
+                    {JSON.stringify(buildings, null, 2)}
+                  </pre>
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-2">Compliance Data ({complianceData.length})</h3>
+                  <pre className="bg-gray-100 p-2 rounded text-xs overflow-auto max-h-32">
+                    {JSON.stringify(complianceData.slice(0, 3), null, 2)}
+                  </pre>
+                </div>
+              </div>
+              <div className="mt-4">
+                <h3 className="font-semibold mb-2">Summary</h3>
+                <pre className="bg-gray-100 p-2 rounded text-xs">
+                  {JSON.stringify(summary, null, 2)}
+                </pre>
+              </div>
+            </BlocIQCardContent>
+          </BlocIQCard>
+        )}
+
         {/* Empty State */}
         {filteredComplianceData.length === 0 && !loading && (
           <div className="text-center py-12">
@@ -901,8 +1032,24 @@ export default function CompliancePage() {
               }
             </p>
             {!searchQuery && filterBuilding === 'all' && filterCategory === 'all' && filterStatus === 'all' && (
-              <div className="text-sm text-gray-500">
-                Navigate to individual building pages to set up compliance assets
+              <div className="space-y-4">
+                <div className="text-sm text-gray-500">
+                  Navigate to individual building pages to set up compliance assets
+                </div>
+                <div className="flex gap-4 justify-center">
+                  <button
+                    onClick={() => setDebugMode(!debugMode)}
+                    className="text-sm text-blue-600 hover:text-blue-800 underline"
+                  >
+                    {debugMode ? 'Hide' : 'Show'} Debug Info
+                  </button>
+                  <a
+                    href="/test-compliance"
+                    className="text-sm text-blue-600 hover:text-blue-800 underline"
+                  >
+                    Test Compliance Data
+                  </a>
+                </div>
               </div>
             )}
           </div>
@@ -915,7 +1062,7 @@ export default function CompliancePage() {
       {editingAsset && (
         <EnhancedEditAssetModal
           buildingId={editingAsset.building_id}
-          assetId={editingAsset.compliance_asset_id}
+          assetId={editingAsset.asset_id}
           asset={editingAsset}
           isOpen={!!editingAsset}
           onClose={() => setEditingAsset(null)}
