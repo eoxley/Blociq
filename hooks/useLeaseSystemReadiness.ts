@@ -63,10 +63,10 @@ export function useLeaseSystemReadiness(): LeaseSystemReadiness {
       }
       newChecks.databaseTable = true;
 
-      // Check if background processing is available
+      // Check if background processing is available using the health check endpoint
       try {
         const response = await fetch('/api/cron/process-lease-jobs', {
-          method: 'GET',
+          method: 'POST', // Use POST for health check - doesn't require CRON_SECRET
           headers: { 'Content-Type': 'application/json' }
         });
         
