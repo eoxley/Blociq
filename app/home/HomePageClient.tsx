@@ -30,6 +30,7 @@ import CommunicationModal from '@/components/CommunicationModal'
 import { getRandomWelcomeMessage } from '@/utils/messages'
 import { HybridLeaseProcessor } from '@/lib/hybrid-lease-processor'
 import ClientOnly from '@/components/ClientOnly'
+import EmailSummaryCard from '@/components/home/EmailSummaryCard'
 
 
 type PropertyEvent = {
@@ -1680,7 +1681,12 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
           </div>
         </div>
 
-
+        {/* Email Summary Card */}
+        <div className="flex justify-center">
+          <div className="w-full max-w-4xl">
+            <EmailSummaryCard />
+          </div>
+        </div>
 
         {/* Today's Tasks Section */}
         <div className="space-y-8">
