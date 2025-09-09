@@ -20,7 +20,6 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useOutlookConnection } from '@/hooks/useOutlookConnection';
-import { LeaseNotificationProvider } from '@/contexts/LeaseNotificationContext';
 
 interface LiveEmailStats {
   total: number;
@@ -168,7 +167,6 @@ const LiveInboxOverview: React.FC = () => {
   // Loading state
   if (supabaseLoading || outlookStatus.isChecking || (loading && outlookStatus.isConnected)) {
     return (
-      <LeaseNotificationProvider>
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
         <div className="max-w-6xl mx-auto p-6 pt-24">
           <div className="text-center">
@@ -191,14 +189,12 @@ const LiveInboxOverview: React.FC = () => {
           </div>
         </div>
       </div>
-      </LeaseNotificationProvider>
     );
   }
 
   // Connection required state
   if (!outlookStatus.isConnected) {
     return (
-      <LeaseNotificationProvider>
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
         <div className="max-w-4xl mx-auto p-6 pt-24">
           <div className="text-center">
@@ -258,14 +254,12 @@ const LiveInboxOverview: React.FC = () => {
           </div>
         </div>
       </div>
-      </LeaseNotificationProvider>
     );
   }
 
   // Error state
   if (error) {
     return (
-      <LeaseNotificationProvider>
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
         <div className="max-w-4xl mx-auto p-6 pt-24">
           <Card className="border-red-200 bg-red-50/50">
@@ -286,13 +280,11 @@ const LiveInboxOverview: React.FC = () => {
           </Card>
         </div>
       </div>
-      </LeaseNotificationProvider>
     );
   }
 
   // Main dashboard with live stats
   return (
-    <LeaseNotificationProvider>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       {/* Hero Section with Live Stats */}
       <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 pt-20">
@@ -485,7 +477,6 @@ const LiveInboxOverview: React.FC = () => {
         </div>
       </div>
     </div>
-    </LeaseNotificationProvider>
   );
 };
 

@@ -25,9 +25,18 @@ export async function GET(req: NextRequest) {
       .from('outlook_tokens')
       .select('*')
       .eq('user_id', session.user.id)
-      .single();
+      .maybeSingle();
 
-    if (tokenError || !tokens) {
+    if (tokenError) {
+      console.error('Error fetching Outlook tokens:', tokenError);
+      return NextResponse.json({
+        connected: false,
+        error: 'Database error',
+        message: 'Failed to check Outlook tokens'
+      }, { status: 500 });
+    }
+
+    if (!tokens) {
       return NextResponse.json({
         connected: false,
         error: 'No Outlook tokens found',
