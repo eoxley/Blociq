@@ -2,11 +2,23 @@
 
 let isOfficeReady = false;
 let currentUser = null;
+let currentEmail = null;
+
+// Global error handling
+window.addEventListener('error', (event) => {
+    console.error('[BlocIQ Taskpane] Global error:', event.error);
+    showError('An error occurred: ' + event.error.message);
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+    console.error('[BlocIQ Taskpane] Promise rejection:', event.reason);
+    showError('An error occurred: ' + event.reason);
+});
 
 // Wait for Office.js to be ready
 Office.onReady((info) => {
     isOfficeReady = true;
-    console.log('Office.js ready in taskpane');
+    console.log('[BlocIQ Taskpane] Office.js ready, host:', info.host);
     
     // Update header status
     document.getElementById('headerStatus').textContent = 'Ready';
@@ -22,6 +34,9 @@ Office.onReady((info) => {
         };
         document.getElementById('headerStatus').textContent = `Hello, ${currentUser.name.split(' ')[0]}!`;
     }
+    
+    // Load current email context
+    loadEmailContext();
 });
 
 function initializeChat() {
@@ -60,6 +75,209 @@ function initializeChat() {
     if (isOfficeReady) {
         addEmailContextActions();
     }
+}
+
+/**
+ * Load current email context
+ */
+async function loadEmailContext() {
+    try {
+        if (!isOfficeReady || !Office.context.mailbox.item) {
+            return;
+        }
+        
+        const item = Office.context.mailbox.item;
+        if (item.itemType !== 'message') {
+            return;
+        }
+        
+        currentEmail = {
+            subject: item.subject || 'No subject',
+            sender: item.from ? item.from.emailAddress : 'Unknown',
+            body: await getItemBody(item)
+        };
+        
+        console.log('[BlocIQ Taskpane] Email context loaded:', currentEmail);
+        
+        // Add email context to chat
+        if (currentEmail.subject !== 'No subject') {
+            addMessage('assistant', `I can see you're working with an email: "${currentEmail.subject}" from ${currentEmail.sender}. How can I help you with this?`);
+        }
+        
+    } catch (error) {
+        console.error('[BlocIQ Taskpane] Error loading email context:', error);
+    }
+}
+
+/**
+ * Get item body content
+ */
+async function getItemBody(item) {
+    return new Promise((resolve, reject) => {
+        item.body.getAsync(Office.CoercionType.Text, (result) => {
+            if (result.status === Office.AsyncResultStatus.Succeeded) {
+                resolve(result.value);
+            } else {
+                reject(new Error(result.error.message));
+            }
+        });
+    });
+}
+
+/**
+ * Show error message
+ */
+function showError(message) {
+    addMessage('assistant', `❌ Error: ${message}`, false, true);
+}
+
+/**
+ * Add email context actions
+ */
+function addEmailContextActions() {
+    const chatContainer = document.getElementById('chatContainer');
+    
+    // Create quick actions container
+    const actionsContainer = document.createElement('div');
+    actionsContainer.className = 'quick-actions';
+    actionsContainer.style.cssText = `
+        margin: 10px 0;
+        padding: 10px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border: 1px solid #e9ecef;
+    `;
+    
+    actionsContainer.innerHTML = `
+        <div style="font-size: 12px; font-weight: 600; margin-bottom: 8px; color: #495057;">Quick Actions:</div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button onclick="generateReply()" style="padding: 4px 8px; font-size: 11px; background: #0078d4; color: white; border: none; border-radius: 4px; cursor: pointer;">Generate Reply</button>
+            <button onclick="summarizeEmail()" style="padding: 4px 8px; font-size: 11px; background: #107c10; color: white; border: none; border-radius: 4px; cursor: pointer;">Summarize Email</button>
+            <button onclick="extractActionItems()" style="padding: 4px 8px; font-size: 11px; background: #ff8c00; color: white; border: none; border-radius: 4px; cursor: pointer;">Extract Actions</button>
+        </div>
+    `;
+    
+    chatContainer.appendChild(actionsContainer);
+}
+
+/**
+ * Generate reply for current email
+ */
+async function generateReply() {
+    if (!currentEmail) {
+        showError('No email context available');
+        return;
+    }
+    
+    addMessage('user', 'Generate a reply for this email');
+    const typingId = showTypingIndicator();
+    
+    try {
+        const reply = await generateAIReply({
+            subject: currentEmail.subject,
+            body: currentEmail.body,
+            sender: currentEmail.sender,
+            context: 'taskpane'
+        });
+        
+        hideTypingIndicator(typingId);
+        
+        if (reply && reply.content) {
+            addMessage('assistant', `Here's a suggested reply:\n\n${reply.content}`, false, true);
+        } else {
+            addMessage('assistant', 'I was unable to generate a reply. Please try again.');
+        }
+    } catch (error) {
+        hideTypingIndicator(typingId);
+        showError('Failed to generate reply: ' + error.message);
+    }
+}
+
+/**
+ * Summarize current email
+ */
+async function summarizeEmail() {
+    if (!currentEmail) {
+        showError('No email context available');
+        return;
+    }
+    
+    addMessage('user', 'Summarize this email');
+    const typingId = showTypingIndicator();
+    
+    try {
+        const summary = await callAIAPI('summarize', {
+            subject: currentEmail.subject,
+            body: currentEmail.body,
+            sender: currentEmail.sender
+        });
+        
+        hideTypingIndicator(typingId);
+        addMessage('assistant', `Email Summary:\n\n${summary}`, false, true);
+    } catch (error) {
+        hideTypingIndicator(typingId);
+        showError('Failed to summarize email: ' + error.message);
+    }
+}
+
+/**
+ * Extract action items from current email
+ */
+async function extractActionItems() {
+    if (!currentEmail) {
+        showError('No email context available');
+        return;
+    }
+    
+    addMessage('user', 'Extract action items from this email');
+    const typingId = showTypingIndicator();
+    
+    try {
+        const actions = await callAIAPI('extract-actions', {
+            subject: currentEmail.subject,
+            body: currentEmail.body,
+            sender: currentEmail.sender
+        });
+        
+        hideTypingIndicator(typingId);
+        addMessage('assistant', `Action Items:\n\n${actions}`, false, true);
+    } catch (error) {
+        hideTypingIndicator(typingId);
+        showError('Failed to extract action items: ' + error.message);
+    }
+}
+
+/**
+ * Call AI API
+ */
+async function callAIAPI(action, data) {
+    try {
+        const response = await fetch(`https://www.blociq.co.uk/api/ai/${action}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`API error: ${response.status} ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        return result.content || result.message || 'No response generated';
+        
+    } catch (error) {
+        console.error('[BlocIQ Taskpane] API error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Generate AI Reply via API
+ */
+async function generateAIReply(emailData) {
+    return callAIAPI('generate-reply', emailData);
 }
 
 function sendMessage() {

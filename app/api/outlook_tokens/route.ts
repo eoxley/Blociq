@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 
 export async function GET(req: NextRequest) {
@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
   };
 
   try {
-    const supabase = createClient(cookies());
+    const supabase = createRouteHandlerClient({ cookies });
     
     // Get the current user's session - Safe destructuring to prevent "Right side of assignment cannot be destructured" error
     const sessionResult = await supabase.auth.getSession();

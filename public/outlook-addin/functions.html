@@ -8,25 +8,27 @@
 </head>
 <body>
     <script>
-        Office.onReady(() => {
-            console.log('BlocIQ Functions loaded');
+        // Global error handling
+        window.addEventListener('error', (event) => {
+            console.error('[BlocIQ Functions] Global error:', event.error);
         });
 
-        function generateAIReply(event) {
-            console.log('Generate AI Reply function called');
-            
-            try {
-                alert('BlocIQ AI Reply feature activated!');
-                event.completed();
-            } catch (error) {
-                console.error('Error in generateAIReply:', error);
-                event.completed();
-            }
-        }
+        // Load the main functions script
+        (function() {
+            const script = document.createElement('script');
+            script.src = 'https://www.blociq.co.uk/outlook-addin/functions.js';
+            script.onload = function() {
+                console.log('[BlocIQ Functions] Main functions script loaded');
+            };
+            script.onerror = function() {
+                console.error('[BlocIQ Functions] Failed to load main functions script');
+            };
+            document.head.appendChild(script);
+        })();
 
-        // Register the function for Office
-        Office.actions = Office.actions || {};
-        Office.actions.generateAIReply = generateAIReply;
+        Office.onReady(() => {
+            console.log('[BlocIQ Functions] Office.js ready');
+        });
     </script>
 </body>
 </html>

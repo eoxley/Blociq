@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 
 export const runtime = "nodejs";
@@ -7,7 +7,7 @@ export const maxDuration = 30;
 
 export async function GET(req: NextRequest) {
   try {
-    const supabase = createClient();
+    const supabase = createRouteHandlerClient({ cookies });
     
     // Get the current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -43,18 +43,18 @@ export async function GET(req: NextRequest) {
     if (isExpired) {
       try {
         console.log('Outlook token expired, attempting to refresh...');
-        const tenantId = process.env.OUTLOOK_TENANT_ID || 'common';
+        const tenantId = process.env.AZURE_TENANT_ID || process.env.OUTLOOK_TENANT_ID || 'common';
         const refreshResponse = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
           },
           body: new URLSearchParams({
-            client_id: process.env.OUTLOOK_CLIENT_ID!,
-            client_secret: process.env.OUTLOOK_CLIENT_SECRET!,
+            client_id: process.env.MICROSOFT_CLIENT_ID || process.env.OUTLOOK_CLIENT_ID!,
+            client_secret: process.env.MICROSOFT_CLIENT_SECRET || process.env.OUTLOOK_CLIENT_SECRET!,
             grant_type: 'refresh_token',
             refresh_token: tokens.refresh_token,
-            redirect_uri: process.env.OUTLOOK_REDIRECT_URI!,
+            redirect_uri: process.env.MICROSOFT_REDIRECT_URI || process.env.OUTLOOK_REDIRECT_URI!,
           }),
         });
 
