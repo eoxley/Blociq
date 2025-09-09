@@ -1,8 +1,26 @@
-// Re-export from centralized location
-export { createServerClient, createApiClient, getServiceClient as getServiceRoleClient } from '@/lib/supabase/server'
+import { createServerClient } from '@supabase/ssr'
 
-// Legacy compatibility
-export async function createClient(cookieStore?: any) {
-  const { createApiClient } = await import('@/lib/supabase/server')
-  return createApiClient()
+export function createClient(cookieStore: any) {
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet: any[]) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            )
+          } catch {
+            // The `setAll` method was called from a Server Component.
+            // This can be ignored if you have middleware refreshing
+            // user sessions.
+          }
+        },
+      },
+    }
+  )
 }
