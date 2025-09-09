@@ -30,9 +30,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const clientId = process.env.MICROSOFT_CLIENT_ID
-    const clientSecret = process.env.MICROSOFT_CLIENT_SECRET
-    const redirectUri = process.env.MICROSOFT_REDIRECT_URI
+    const clientId = process.env.MICROSOFT_CLIENT_ID?.trim()
+    const clientSecret = process.env.MICROSOFT_CLIENT_SECRET?.trim()
+    const redirectUri = process.env.MICROSOFT_REDIRECT_URI?.trim()
 
     if (!clientId || !clientSecret || !redirectUri) {
       throw new Error('Microsoft OAuth configuration missing')

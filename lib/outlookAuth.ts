@@ -207,9 +207,9 @@ export async function getValidAccessTokenForUser(userId: string): Promise<string
  * Refresh an expired access token
  */
 async function refreshAccessToken(refreshToken: string): Promise<string> {
-  const clientId = process.env.MICROSOFT_CLIENT_ID
-  const clientSecret = process.env.MICROSOFT_CLIENT_SECRET
-  const redirectUri = process.env.MICROSOFT_REDIRECT_URI
+  const clientId = process.env.MICROSOFT_CLIENT_ID?.trim()
+  const clientSecret = process.env.MICROSOFT_CLIENT_SECRET?.trim()
+  const redirectUri = process.env.MICROSOFT_REDIRECT_URI?.trim()
 
   if (!clientId || !clientSecret || !redirectUri) {
     throw new Error('Microsoft OAuth configuration missing')
@@ -267,9 +267,9 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
  * Refresh an expired access token for a specific user (server-side)
  */
 async function refreshAccessTokenForUser(userId: string, refreshToken: string): Promise<string> {
-  const clientId = process.env.MICROSOFT_CLIENT_ID
-  const clientSecret = process.env.MICROSOFT_CLIENT_SECRET
-  const redirectUri = process.env.MICROSOFT_REDIRECT_URI
+  const clientId = process.env.MICROSOFT_CLIENT_ID?.trim()
+  const clientSecret = process.env.MICROSOFT_CLIENT_SECRET?.trim()
+  const redirectUri = process.env.MICROSOFT_REDIRECT_URI?.trim()
 
   if (!clientId || !clientSecret || !redirectUri) {
     throw new Error('Microsoft OAuth configuration missing')

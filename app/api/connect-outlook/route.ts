@@ -37,8 +37,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Generate Microsoft OAuth URL
-    const clientId = process.env.MICROSOFT_CLIENT_ID;
-    const redirectUri = process.env.MICROSOFT_REDIRECT_URI;
+    const clientId = process.env.MICROSOFT_CLIENT_ID?.trim();
+    const redirectUri = process.env.MICROSOFT_REDIRECT_URI?.trim();
     
     if (!clientId || !redirectUri) {
       return NextResponse.json({

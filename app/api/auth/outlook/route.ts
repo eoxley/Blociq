@@ -7,8 +7,8 @@ export async function GET(req: NextRequest) {
     console.log('[Outlook OAuth] Starting OAuth initiation...');
     
     // Microsoft OAuth 2.0 configuration
-    const clientId = process.env.MICROSOFT_CLIENT_ID;
-    const redirectUri = process.env.MICROSOFT_REDIRECT_URI;
+    const clientId = process.env.MICROSOFT_CLIENT_ID?.trim();
+    const redirectUri = process.env.MICROSOFT_REDIRECT_URI?.trim();
     const scope = 'openid profile email offline_access Mail.Read Mail.Send Calendars.Read Calendars.ReadWrite';
     
     console.log('[Outlook OAuth] Environment check:', {

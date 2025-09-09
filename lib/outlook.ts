@@ -13,10 +13,10 @@ export async function getAccessTokenFromCode(code: string): Promise<{
       'Content-Type': 'application/x-www-form-urlencoded',
     },
     body: new URLSearchParams({
-      client_id: process.env.MICROSOFT_CLIENT_ID!,
-      client_secret: process.env.MICROSOFT_CLIENT_SECRET!,
+      client_id: process.env.MICROSOFT_CLIENT_ID!.trim(),
+      client_secret: process.env.MICROSOFT_CLIENT_SECRET!.trim(),
       code: code,
-      redirect_uri: process.env.MICROSOFT_REDIRECT_URI!,
+      redirect_uri: process.env.MICROSOFT_REDIRECT_URI!.trim(),
       grant_type: 'authorization_code'
     }),
   });
@@ -46,11 +46,11 @@ export async function getAccessTokenFromCode(code: string): Promise<{
  */
 export async function exchangeCodeForTokens(code: string) {
   const params = new URLSearchParams();
-  params.append('client_id', process.env.MICROSOFT_CLIENT_ID!);
-  params.append('client_secret', process.env.MICROSOFT_CLIENT_SECRET!);
+  params.append('client_id', process.env.MICROSOFT_CLIENT_ID!.trim());
+  params.append('client_secret', process.env.MICROSOFT_CLIENT_SECRET!.trim());
   params.append('grant_type', 'authorization_code');
   params.append('code', code);
-  params.append('redirect_uri', process.env.NEXT_PUBLIC_MICROSOFT_REDIRECT_URI!);
+  params.append('redirect_uri', process.env.NEXT_PUBLIC_MICROSOFT_REDIRECT_URI!.trim());
 
   console.log("🚀 Sending token exchange with:", params.toString());
 
