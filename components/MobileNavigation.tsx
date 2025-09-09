@@ -12,7 +12,6 @@ import { BlocIQBadge } from '@/components/ui/blociq-badge';
 
 const navItems = [
   { label: "Home", icon: Home, href: "/home", comingSoon: false, description: "Dashboard overview" },
-  { label: "Outlook Add-in", icon: Inbox, href: "/outlook-addin", comingSoon: false, description: "Email triage dashboard" },
   { label: "Buildings", icon: Building2, href: "/buildings", comingSoon: false, description: "Property portfolio" },
   { label: "Compliance", icon: Shield, href: "/compliance", comingSoon: false, description: "Regulatory tracking" },
   { label: "Communications", icon: Megaphone, href: "/communications", comingSoon: false, description: "Letter & email templates" },

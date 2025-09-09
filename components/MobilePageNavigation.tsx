@@ -22,7 +22,6 @@ export default function MobilePageNavigation({
 
   const quickNavItems = [
     { label: "Home", href: "/home", icon: Home },
-    { label: "Outlook Add-in", href: "/outlook-addin", icon: Inbox },
     { label: "Buildings", href: "/buildings", icon: Building2 },
     { label: "Compliance", href: "/compliance", icon: Shield },
     { label: "Communications", href: "/communications", icon: Megaphone },
