@@ -6,7 +6,7 @@
            xsi:type="MailApp">
 
   <Id>c518d2f2-3bc7-4db4-a863-7cc313c921f5</Id>
-  <Version>1.0.0.12</Version>
+  <Version>1.0.0.13</Version>
   <ProviderName>BlocIQ</ProviderName>
   <DefaultLocale>en-GB</DefaultLocale>
   <DisplayName DefaultValue="BlocIQ Assistant"/>
@@ -25,8 +25,8 @@
 
   <!-- Single Requirements section with proper version -->
   <Requirements>
-    <Sets DefaultMinVersion="1.10">
-      <Set Name="Mailbox" MinVersion="1.10"/>
+    <Sets DefaultMinVersion="1.5">
+      <Set Name="Mailbox" MinVersion="1.5"/>
     </Sets>
   </Requirements>
 
@@ -59,8 +59,8 @@
 
     <!-- Single Requirements section in VersionOverrides -->
     <Requirements>
-      <bt:Sets DefaultMinVersion="1.10">
-        <bt:Set Name="Mailbox" MinVersion="1.10"/>
+      <bt:Sets DefaultMinVersion="1.5">
+        <bt:Set Name="Mailbox" MinVersion="1.5"/>
       </bt:Sets>
     </Requirements>
 
@@ -72,7 +72,6 @@
           <!-- Task Panes -->
           <TaskPane id="taskpaneChat">
             <SourceLocation resid="taskpaneUrl"/>
-            <SupportsPinning>true</SupportsPinning>
           </TaskPane>
 
           <!-- Read Surface -->
@@ -194,4 +193,4 @@
       </bt:LongStrings>
     </Resources>
   </VersionOverrides>
-</OfficeApp><!-- Cache buster: Wed Sep 10 19:24:56 BST 2025 -->
+</OfficeApp><!-- Cache buster: Wed Sep 10 19:45:23 BST 2025 -->
