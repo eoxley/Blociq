@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
+import { createClient } from '@/utils/supabase/server';
 import { cookies } from "next/headers";
 
 export async function POST(
@@ -10,15 +10,20 @@ export async function POST(
     console.log("📎 Uploading document to major works project...");
     
     const { projectId } = await params;
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = createClient(cookies());
     
-    // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    // Get the current user - Safe destructuring to prevent "Right side of assignment cannot be destructured" error
+    const sessionResult = await supabase.auth.getSession();
+    const sessionData = sessionResult?.data || {}
+    const session = sessionData.session || null
+    const sessionError = sessionResult?.error || null
     
-    if (userError || !user) {
-      console.error("❌ User authentication failed:", userError);
+    if (sessionError || !session) {
+      console.error("❌ User authentication failed:", sessionError);
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const user = session.user;
 
     console.log("✅ User authenticated:", user.id);
     console.log("🏗️ Project ID:", projectId);
@@ -179,15 +184,20 @@ export async function GET(
     console.log("📎 Fetching documents for major works project...");
     
     const { projectId } = await params;
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = createClient(cookies());
     
-    // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    // Get the current user - Safe destructuring to prevent "Right side of assignment cannot be destructured" error
+    const sessionResult = await supabase.auth.getSession();
+    const sessionData = sessionResult?.data || {}
+    const session = sessionData.session || null
+    const sessionError = sessionResult?.error || null
     
-    if (userError || !user) {
-      console.error("❌ User authentication failed:", userError);
+    if (sessionError || !session) {
+      console.error("❌ User authentication failed:", sessionError);
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const user = session.user;
 
     console.log("✅ User authenticated:", user.id);
     console.log("🏗️ Project ID:", projectId);

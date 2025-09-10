@@ -142,22 +142,30 @@ export async function POST(req: NextRequest) {
     }
 
     // Dynamic imports to prevent build-time execution
-    const { createRouteHandlerClient } = await import('@supabase/auth-helpers-nextjs');
+    const { createClient } = await import('@/utils/supabase/server');
     const { default: OpenAI } = await import('openai');
     const { MAX_CHARS_PER_DOC, MAX_TOTAL_DOC_CHARS, truncate, isSummariseLike } = await import("../../../lib/ask/text");
     const { searchBuildingAndUnits, searchLeaseholderDirect } = await import('../../../lib/supabase/buildingSearch');
     const { searchEntireDatabase, formatSearchResultsForAI, extractRelevantContext } = await import('../../../lib/supabase/comprehensiveDataSearch');
 
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = createClient(cookies());
     
-    // Get current user (optional for public access)
+    // Get current user (optional for public access) - Safe destructuring to prevent "Right side of assignment cannot be destructured" error
     let user = null;
     let isPublicAccess = true;
     
     try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      user = authUser;
-      isPublicAccess = !user;
+      const sessionResult = await supabase.auth.getSession();
+      const sessionData = sessionResult?.data || {}
+      const session = sessionData.session || null
+      const sessionError = sessionResult?.error || null
+      
+      if (!sessionError && session) {
+        user = session.user;
+        isPublicAccess = false;
+      } else {
+        isPublicAccess = true;
+      }
     } catch (authError) {
       console.warn('Auth check failed, proceeding as public access:', authError);
       isPublicAccess = true;

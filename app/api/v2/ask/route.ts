@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/utils/supabase/server';
 import type { Database } from '@/types/supabase'; // if you have it; else remove and type as any
 import { AI_ENABLED, OPENAI_API_KEY } from '@/lib/ai/config';
 
@@ -15,9 +15,13 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
   const { question = '', context = {} } = body as { question?: string; context?: any };
 
-  const supabase = createRouteHandlerClient<Database>({ cookies });
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) return json({ status:'forbidden', answer:'Sign in required.' }, 401);
+  const supabase = createClient(cookies());
+  const sessionResult = await supabase.auth.getSession();
+  const sessionData = sessionResult?.data || {}
+  const session = sessionData.session || null
+  const sessionError = sessionResult?.error || null
+  
+  if (sessionError || !session) return json({ status:'forbidden', answer:'Sign in required.' }, 401);
 
   const qRaw = String(question || '').trim();
   const q = qRaw.toLowerCase();
