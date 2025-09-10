@@ -157,6 +157,8 @@ export async function DELETE(
     // For lease lab, we don't require agency membership
     // The system works directly with user authentication
     console.log('✅ User authenticated for lease lab delete');
+    console.log('👤 Current user ID:', user.id);
+    console.log('👤 Current user email:', user.email);
 
     // First, check if the job exists and belongs to the user
     console.log('🔍 Checking if job exists:', params.id, 'for user:', user.id);
@@ -191,6 +193,9 @@ export async function DELETE(
     }
 
     console.log('✅ Job found and belongs to user:', existingJob);
+    console.log('🔍 Job user_id:', existingJob.user_id);
+    console.log('🔍 Current user_id:', user.id);
+    console.log('🔍 User IDs match:', existingJob.user_id === user.id);
 
     // Delete the job
     console.log('🗑️ Deleting job from database:', params.id, 'for user:', user.id);

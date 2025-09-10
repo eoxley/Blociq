@@ -22,6 +22,7 @@ export async function GET(req: NextRequest) {
     // The system works directly with user authentication
     console.log('✅ User authenticated for lease lab jobs');
     console.log('👤 User ID:', user.id);
+    console.log('👤 User email:', user.email);
 
     // Get query parameters
     const { searchParams } = new URL(req.url);
@@ -50,6 +51,8 @@ export async function GET(req: NextRequest) {
 
     console.log('📋 Returning jobs from API:', jobs?.length || 0, 'jobs');
     console.log('📋 Job IDs from API:', jobs?.map(job => job.id) || []);
+    console.log('📋 Job user_ids from API:', jobs?.map(job => job.user_id) || []);
+    console.log('📋 Query user_id:', user.id);
     
     return NextResponse.json({ 
       success: true,
