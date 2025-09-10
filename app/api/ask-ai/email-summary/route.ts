@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/utils/supabase/server';
 import { cookies } from 'next/headers';
 
 export const runtime = "nodejs";
@@ -7,17 +7,22 @@ export const maxDuration = 30;
 
 export async function GET(req: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = createClient(cookies());
     
-    // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    // Get the current user - Safe destructuring to prevent "Right side of assignment cannot be destructured" error
+    const sessionResult = await supabase.auth.getSession();
+    const sessionData = sessionResult?.data || {}
+    const session = sessionData.session || null
+    const sessionError = sessionResult?.error || null
     
-    if (userError || !user) {
+    if (sessionError || !session) {
       return NextResponse.json({ 
         error: 'Authentication required',
         message: 'Please log in to view email summary'
       }, { status: 401 });
     }
+
+    const user = session.user;
 
     // Get the user's Outlook tokens
     const { data: tokens, error: tokenError } = await supabase

@@ -1,20 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/utils/supabase/server';
 import { cookies } from 'next/headers';
 
 export async function GET(req: NextRequest) {
+  // Fix 406 by setting proper headers
+  const headers = {
+    'Content-Type': 'application/json',
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+  };
+
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = createClient(cookies());
     
-    // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    // Get the current user - Safe destructuring to prevent "Right side of assignment cannot be destructured" error
+    const sessionResult = await supabase.auth.getSession();
+    const sessionData = sessionResult?.data || {}
+    const session = sessionData.session || null
+    const sessionError = sessionResult?.error || null
     
-    if (userError || !user) {
+    if (sessionError || !session) {
       return NextResponse.json({ 
         error: 'Authentication required',
         message: 'Please log in to view user data'
-      }, { status: 401 });
+      }, { status: 401, headers });
     }
+
+    const user = session.user;
 
     // Get user profile from the users table
     const { data: profile, error: profileError } = await supabase
@@ -33,7 +44,7 @@ export async function GET(req: NextRequest) {
           created_at: user.created_at,
           profile: null
         }
-      });
+      }, { headers });
     }
 
     return NextResponse.json({
@@ -44,7 +55,7 @@ export async function GET(req: NextRequest) {
         created_at: user.created_at,
         profile: profile
       }
-    });
+    }, { headers });
 
   } catch (error) {
     console.error('Users API error:', error);
@@ -52,6 +63,6 @@ export async function GET(req: NextRequest) {
       success: false,
       error: 'Failed to fetch user data',
       message: 'An unexpected error occurred. Please try again.'
-    }, { status: 500 });
+    }, { status: 500, headers });
   }
 }
