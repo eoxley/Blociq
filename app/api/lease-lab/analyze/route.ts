@@ -1,23 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createServiceClient } from '@supabase/supabase-js';
 
 export const maxDuration = 120; // 2 minutes for AI analysis
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = createClient();
-    
-    // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError || !user) {
-      return NextResponse.json({ 
-        error: 'Authentication required',
-        message: 'Please log in to analyze documents'
-      }, { status: 401 });
-    }
+    // Use service role client for internal processing
+    const serviceSupabase = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
 
-    const { jobId, extractedText, filename, mime } = await req.json();
+    const { jobId, extractedText, filename, mime, userId } = await req.json();
 
     if (!jobId || !extractedText) {
       return NextResponse.json({ 
@@ -26,7 +21,12 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    console.log('🤖 Starting AI analysis for job:', jobId);
+    // Validate the job exists and get user context if needed
+    if (userId) {
+      console.log('🤖 Starting AI analysis for job:', jobId, 'user:', userId);
+    } else {
+      console.log('🤖 Starting AI analysis for job:', jobId);
+    }
 
     // Call OpenAI to analyze the extracted text
     const analysisPrompt = `

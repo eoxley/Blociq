@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 
 export async function POST(req: NextRequest) {
@@ -109,8 +110,14 @@ export async function POST(req: NextRequest) {
     // This will be processed asynchronously to avoid timeout issues
     setTimeout(async () => {
       try {
+        // Use service role client for background processing
+        const serviceSupabase = createServiceClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.SUPABASE_SERVICE_ROLE_KEY!
+        );
+
         // Update job status to OCR
-        await supabase
+        await serviceSupabase
           .from('document_jobs')
           .update({ 
             status: 'OCR',
@@ -142,7 +149,7 @@ export async function POST(req: NextRequest) {
         console.log('✅ OCR completed:', ocrResult);
 
         // Update job status to EXTRACT
-        await supabase
+        await serviceSupabase
           .from('document_jobs')
           .update({ 
             status: 'EXTRACT',
@@ -151,7 +158,7 @@ export async function POST(req: NextRequest) {
           .eq('id', job.id);
 
         // Update job status to SUMMARISE
-        await supabase
+        await serviceSupabase
           .from('document_jobs')
           .update({ 
             status: 'SUMMARISE',
@@ -160,7 +167,7 @@ export async function POST(req: NextRequest) {
           .eq('id', job.id);
 
         // Store the extracted text for analysis
-        await supabase
+        await serviceSupabase
           .from('document_jobs')
           .update({ 
             extracted_text: ocrResult.text,
@@ -180,7 +187,8 @@ export async function POST(req: NextRequest) {
             jobId: job.id,
             extractedText: ocrResult.text,
             filename: file.name,
-            mime: file.type
+            mime: file.type,
+            userId: user.id
           })
         });
 
@@ -192,7 +200,7 @@ export async function POST(req: NextRequest) {
         console.log('✅ AI analysis completed:', analysisResult);
 
         // Update job as ready with real analysis
-        await supabase
+        await serviceSupabase
           .from('document_jobs')
           .update({ 
             status: 'READY',
@@ -206,7 +214,7 @@ export async function POST(req: NextRequest) {
       } catch (error) {
         console.error('❌ Error in document processing:', error);
         // Mark job as failed
-        await supabase
+        await serviceSupabase
           .from('document_jobs')
           .update({ 
             status: 'FAILED',
