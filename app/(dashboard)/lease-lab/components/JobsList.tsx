@@ -112,17 +112,34 @@ export default function JobsList({ jobs, onViewAnalysis, onRefresh }: JobsListPr
       case 'QUEUED':
         return 'Queued';
       case 'OCR':
-        return 'OCR';
+        return 'Reading Document';
       case 'EXTRACT':
-        return 'Extracting';
+        return 'Extracting Data';
       case 'SUMMARISE':
-        return 'Summarising';
+        return 'AI Analysis';
       case 'READY':
         return 'Ready';
       case 'FAILED':
         return 'Failed';
       default:
         return 'Unknown';
+    }
+  };
+
+  const getProgressMessage = (status: DocumentJob['status'], filename: string) => {
+    const fileSize = filename.includes('_') ? 'large document' : 'document';
+    
+    switch (status) {
+      case 'QUEUED':
+        return `Your ${fileSize} is in the queue and will start processing shortly.`;
+      case 'OCR':
+        return `Reading through your ${fileSize} with advanced OCR technology. This is a large document so grab a cup of tea! ☕`;
+      case 'EXTRACT':
+        return `Extracting key information from your lease document. Almost there!`;
+      case 'SUMMARISE':
+        return `Our AI is analyzing clauses, dates, and obligations. Just a moment longer...`;
+      default:
+        return '';
     }
   };
 
@@ -218,16 +235,42 @@ export default function JobsList({ jobs, onViewAnalysis, onRefresh }: JobsListPr
                 <span>• {formatDate(job.created_at)}</span>
               </div>
 
-              {/* Progress Bar */}
+              {/* Processing Banner */}
               {['QUEUED', 'OCR', 'EXTRACT', 'SUMMARISE'].includes(job.status) && (
                 <div className="mb-3">
+                  {/* Don't Refresh Warning */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-3">
+                    <div className="flex items-start space-x-3">
+                      <div className="flex-shrink-0">
+                        <Clock className="h-5 w-5 text-blue-600 animate-pulse" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="text-sm font-medium text-blue-900 mb-1">
+                          Processing in progress...
+                        </h4>
+                        <p className="text-sm text-blue-800 mb-2">
+                          {getProgressMessage(job.status, job.filename)}
+                        </p>
+                        <div className="flex items-center space-x-4 text-xs text-blue-700">
+                          <span className="flex items-center space-x-1">
+                            <RefreshCw className="h-3 w-3" />
+                            <span>Please don't refresh the page</span>
+                          </span>
+                          <span>•</span>
+                          <span>This page will update automatically</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Progress Bar */}
                   <div className="flex justify-between text-xs text-gray-600 mb-1">
-                    <span>Processing</span>
+                    <span>{getStatusText(job.status)}</span>
                     <span>{getProgressPercentage(job.status)}%</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div
-                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-500 ease-out"
                       style={{ width: `${getProgressPercentage(job.status)}%` }}
                     ></div>
                   </div>

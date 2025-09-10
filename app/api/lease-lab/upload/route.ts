@@ -106,124 +106,31 @@ export async function POST(req: NextRequest) {
       }, { status: 500 });
     }
 
-    // Start background OCR processing (non-blocking)
-    // This will be processed asynchronously to avoid timeout issues
-    setTimeout(async () => {
-      try {
-        // Use service role client for background processing
-        const serviceSupabase = createServiceClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.SUPABASE_SERVICE_ROLE_KEY!
-        );
-
-        // Update job status to OCR
-        await serviceSupabase
-          .from('document_jobs')
-          .update({ 
-            status: 'OCR',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', job.id);
-
-        console.log('🔍 Starting OCR processing for job:', job.id);
-
-        // Call the real OCR service
-        const ocrResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/ocr/process`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            storageKey: filePath,
-            filename: file.name,
-            mime: file.type,
-            use_google_vision: true
-          })
-        });
-
-        if (!ocrResponse.ok) {
-          throw new Error(`OCR service failed: ${ocrResponse.status}`);
-        }
-
-        const ocrResult = await ocrResponse.json();
-        console.log('✅ OCR completed:', ocrResult);
-
-        // Update job status to EXTRACT
-        await serviceSupabase
-          .from('document_jobs')
-          .update({ 
-            status: 'EXTRACT',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', job.id);
-
-        // Update job status to SUMMARISE
-        await serviceSupabase
-          .from('document_jobs')
-          .update({ 
-            status: 'SUMMARISE',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', job.id);
-
-        // Store the extracted text for analysis
-        await serviceSupabase
-          .from('document_jobs')
-          .update({ 
-            extracted_text: ocrResult.text,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', job.id);
-
-        console.log('📝 Starting AI analysis and summarisation...');
-
-        // Call AI analysis service
-        const analysisResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/lease-lab/analyze`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            jobId: job.id,
-            extractedText: ocrResult.text,
-            filename: file.name,
-            mime: file.type,
-            userId: user.id
-          })
-        });
-
-        if (!analysisResponse.ok) {
-          throw new Error(`AI analysis failed: ${analysisResponse.status}`);
-        }
-
-        const analysisResult = await analysisResponse.json();
-        console.log('✅ AI analysis completed:', analysisResult);
-
-        // Update job as ready with real analysis
-        await serviceSupabase
-          .from('document_jobs')
-          .update({ 
-            status: 'READY',
-            summary_json: analysisResult.summary,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', job.id);
-
-        console.log('🎉 Document processing completed successfully');
-
-      } catch (error) {
-        console.error('❌ Error in document processing:', error);
-        // Mark job as failed
-        await serviceSupabase
-          .from('document_jobs')
-          .update({ 
-            status: 'FAILED',
-            error_message: error instanceof Error ? error.message : 'Processing failed. Please try again.',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', job.id);
-      }
-    }, 1000); // Start processing after 1 second
+    // Trigger background processing via separate API call
+    // This ensures processing continues even after upload response is sent
+    try {
+      console.log('🔄 Triggering background processing for job:', job.id);
+      
+      // Make non-blocking call to processing endpoint
+      fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/lease-lab/process`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          jobId: job.id,
+          filePath: filePath,
+          filename: file.name,
+          mime: file.type,
+          userId: user.id
+        })
+      }).catch(error => {
+        console.error('❌ Failed to trigger background processing:', error);
+      });
+      
+    } catch (error) {
+      console.error('❌ Error triggering background processing:', error);
+    }
 
     return NextResponse.json({ 
       success: true,
