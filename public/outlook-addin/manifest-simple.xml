@@ -1,28 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
-           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1" 
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
            xsi:type="MailApp">
 
   <Id>c518d2f2-3bc7-4db4-a863-7cc313c921f5</Id>
-  <Version>1.0.0.14</Version>
+  <Version>1.0.0.15</Version>
   <ProviderName>BlocIQ</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="BlocIQ Assistant"/>
-  <Description DefaultValue="AI-powered property management assistant for Outlook"/>
+  <Description DefaultValue="AI-powered property management assistant"/>
   <IconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icons/icon-32.png"/>
-  <HighResolutionIconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icons/icon-80.png"/>
-  <SupportUrl DefaultValue="https://www.blociq.co.uk/support"/>
-
-  <AppDomains>
-    <AppDomain>https://www.blociq.co.uk</AppDomain>
-  </AppDomains>
 
   <Hosts>
     <Host Name="Mailbox"/>
   </Hosts>
 
   <Requirements>
-    <Sets DefaultMinVersion="1.1">
+    <Sets>
       <Set Name="Mailbox" MinVersion="1.1"/>
     </Sets>
   </Requirements>
@@ -31,24 +25,15 @@
     <Form xsi:type="ItemRead">
       <DesktopSettings>
         <SourceLocation DefaultValue="https://www.blociq.co.uk/outlook-addin/taskpane.html"/>
-        <RequestedHeight>400</RequestedHeight>
-      </DesktopSettings>
-    </Form>
-    <Form xsi:type="ItemEdit">
-      <DesktopSettings>
-        <SourceLocation DefaultValue="https://www.blociq.co.uk/outlook-addin/taskpane.html"/>
-        <RequestedHeight>400</RequestedHeight>
+        <RequestedHeight>250</RequestedHeight>
       </DesktopSettings>
     </Form>
   </FormSettings>
 
-  <Permissions>ReadWriteMailbox</Permissions>
+  <Permissions>ReadItem</Permissions>
 
   <Rule xsi:type="RuleCollection" Mode="Or">
     <Rule xsi:type="ItemIs" ItemType="Message" FormType="Read"/>
-    <Rule xsi:type="ItemIs" ItemType="Message" FormType="Edit"/>
   </Rule>
-
-  <DisableEntityHighlighting>false</DisableEntityHighlighting>
 
 </OfficeApp>
