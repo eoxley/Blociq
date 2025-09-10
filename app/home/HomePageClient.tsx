@@ -329,27 +329,41 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
   const fetchBuildings = async () => {
     try {
+      console.log('🔄 Fetching buildings via API...')
       // Use API endpoint instead of direct Supabase call
       const response = await fetch('/api/buildings')
+      console.log('📊 Buildings API response:', response.status, response.statusText)
+      
       if (!response.ok) {
-        console.error('Error fetching buildings:', response.status, response.statusText)
+        console.error('❌ Error fetching buildings:', response.status, response.statusText)
         return
       }
 
       const data = await response.json()
+      console.log('🏢 Buildings data:', data)
       setBuildings(data || [])
     } catch (error) {
-      console.error('Error in fetchBuildings:', error)
+      console.error('❌ Error in fetchBuildings:', error)
     }
   }
 
   const fetchEvents = async () => {
     try {
+      console.log('🔄 Fetching events via API...')
       // Fetch from property_events, manual_events, and compliance events using API endpoints
       const responses = await Promise.all([
-        fetch('/api/events/property').then(res => res.json()),
-        fetch('/api/events/manual').then(res => res.json()),
-        fetch('/api/events/compliance').then(res => res.json())
+        fetch('/api/events/property').then(res => {
+          console.log('📊 Property events response:', res.status, res.statusText)
+          return res.json()
+        }),
+        fetch('/api/events/manual').then(res => {
+          console.log('📊 Manual events response:', res.status, res.statusText)
+          return res.json()
+        }),
+        fetch('/api/events/compliance').then(res => {
+          console.log('📊 Compliance events response:', res.status, res.statusText)
+          return res.json()
+        })
       ])
 
       // Safe destructuring with fallback
@@ -465,14 +479,16 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
   const checkOutlook = async () => {
     try {
+      console.log('🔄 Checking Outlook connection...')
       const status = await checkOutlookConnection()
+      console.log('📊 Outlook status:', status)
       setOutlookConnected(status.connected)
       
       if (status.connected) {
         await loadOutlookEvents()
       }
     } catch (error) {
-      console.error('Error checking Outlook connection:', error)
+      console.error('❌ Error checking Outlook connection:', error)
     }
   }
 
