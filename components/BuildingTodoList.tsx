@@ -364,8 +364,8 @@ export default function BuildingTodoList({
   }
 
   // Use fake data if no real data is available
-  const displayTodos = todos.length > 0 ? todos : fakeTodos
-  const displayComplianceItems = complianceItems.length > 0 ? complianceItems : fakeComplianceItems
+  const displayTodos = todos
+  const displayComplianceItems = complianceItems
   const totalItems = displayTodos.length + displayComplianceItems.length
   const hasItems = totalItems > 0
 

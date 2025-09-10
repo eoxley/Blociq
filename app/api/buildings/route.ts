@@ -12,6 +12,8 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    console.log('🏢 Fetching buildings for user:', session.user.id)
+
     // Fetch all buildings
     const { data: buildings, error: buildingsError } = await supabase
       .from('buildings')

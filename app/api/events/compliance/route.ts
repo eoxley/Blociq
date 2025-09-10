@@ -59,7 +59,8 @@ export async function GET(request: NextRequest) {
       console.error('Error fetching buildings:', buildingsError);
       return NextResponse.json({ 
         success: false,
-        error: 'Failed to fetch buildings'
+        error: 'Failed to fetch buildings',
+        details: buildingsError.message
       }, { status: 500 });
     }
 

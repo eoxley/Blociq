@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/utils/supabase/server';
 import { cookies } from 'next/headers';
 
 export async function GET(request: NextRequest) {
   try {
     console.log('🧪 Testing compliance data...');
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = createClient(cookies());
     
     // Get the current user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const { data: { session }, error: authError } = await supabase.auth.getSession();
+    const user = session?.user;
     if (authError || !user) {
       return NextResponse.json({ 
         success: false,
