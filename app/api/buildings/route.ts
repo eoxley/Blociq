@@ -1,24 +1,16 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@/utils/supabase/server'
 import { NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 
 export async function GET() {
   try {
-    // Check if Supabase environment variables are available
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      console.log('Supabase environment variables not found')
-      return NextResponse.json({ 
-        buildings: [],
-        totalBuildings: 0,
-        totalUnits: 0,
-        isDummyData: false,
-        error: 'Supabase not configured'
-      })
+    const supabase = createClient(cookies())
+    
+    // Check authentication
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    if (sessionError || !session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
 
     // Fetch all buildings
     const { data: buildings, error: buildingsError } = await supabase

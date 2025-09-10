@@ -18,15 +18,11 @@ export default function AISummaryButton({ buildingId, buildingName }: AISummaryB
     setShowModal(true)
 
     try {
-      const response = await fetch('/api/generate-building-summary', {
-        method: 'POST',
+      const response = await fetch(`/api/generate-summary?buildingId=${buildingId}`, {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          buildingId,
-          buildingName,
-        }),
       })
 
       if (!response.ok) {

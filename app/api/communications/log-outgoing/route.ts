@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/utils/supabase/server';
 import { cookies } from 'next/headers';
 
 interface LogOutgoingEmailRequest {
@@ -23,7 +23,7 @@ interface LogOutgoingEmailRequest {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = createClient(cookies());
     
     // Check authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -196,7 +196,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = createClient(cookies());
     
     // Check authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser();

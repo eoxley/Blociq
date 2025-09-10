@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
+import { createClient } from '@/utils/supabase/server';
 import { cookies } from "next/headers";
 
 export async function GET(req: NextRequest) {
   try {
     console.log("📋 Fetching communication templates...");
     
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = createClient(cookies());
     
     // Get the current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
   try {
     console.log("📝 Creating new communication template...");
     
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = createClient(cookies());
     
     // Get the current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
