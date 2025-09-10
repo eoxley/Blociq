@@ -62,6 +62,7 @@ interface ComplianceSetupWizardProps {
   existingAssets: BuildingComplianceAsset[]
   allAssets: ComplianceAsset[]
   buildingId: string
+  onAssetsUpdated?: () => void
 }
 
 const CATEGORY_ICONS: Record<string, any> = {
@@ -103,7 +104,8 @@ export default function ComplianceSetupWizard({
   buildingSetup, 
   existingAssets, 
   allAssets, 
-  buildingId 
+  buildingId,
+  onAssetsUpdated
 }: ComplianceSetupWizardProps) {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(0)
@@ -207,6 +209,9 @@ export default function ComplianceSetupWizard({
         setSelectedAssets(newSelected)
         
         toast.success('Asset removed successfully')
+        
+        // Notify parent component to refresh
+        onAssetsUpdated?.()
       } else {
         throw new Error('Failed to remove asset')
       }

@@ -144,10 +144,10 @@ def process_pdf(file_path: str, use_google_vision: bool = False) -> tuple[str, s
         images = convert_from_path(file_path, dpi=150)
         extracted_texts = []
         
-        # Limit to first 10 pages for very large documents
-        max_pages = min(len(images), 10)
-        if len(images) > 10:
-            print(f"Large document detected ({len(images)} pages), processing first 10 pages only")
+        # Limit to first 25 pages for very large documents
+        max_pages = min(len(images), 25)
+        if len(images) > 25:
+            print(f"Large document detected ({len(images)} pages), processing first 25 pages only")
         
         for i, image in enumerate(images[:max_pages]):
             # Save image temporarily

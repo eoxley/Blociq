@@ -12,10 +12,10 @@
 - **After**: 150 DPI (good quality, much faster)
 - **Speed improvement**: ~4x faster
 
-### **2. Page Limit (10 pages max)**
+### **2. Page Limit (25 pages max)**
 - **Before**: Processed all pages (could be 50+ pages)
-- **After**: Processes first 10 pages only
-- **Speed improvement**: Prevents extremely long processing times
+- **After**: Processes first 25 pages only
+- **Speed improvement**: Accommodates legal documents while preventing extremely long processing times
 
 ### **3. Optimized Tesseract Config**
 - **Before**: Default configuration
@@ -48,7 +48,7 @@
 | Setting | Before | After | Improvement |
 |---------|--------|-------|-------------|
 | DPI | 300 | 150 | 4x faster |
-| Pages | All | Max 10 | Prevents timeouts |
+| Pages | All | Max 25 | Accommodates legal docs |
 | Config | Default | Optimized | 2x faster |
 | **Total** | **20+ min** | **2-5 min** | **4-10x faster** |
 

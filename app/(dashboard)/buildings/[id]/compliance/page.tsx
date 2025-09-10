@@ -30,7 +30,8 @@ import {
   ChevronLeft,
   MapPin,
   Layers,
-  Construction
+  Construction,
+  Trash2
 } from 'lucide-react'
 import { toast } from 'sonner'
 import EnhancedEditAssetModal from '@/components/compliance/EnhancedEditAssetModal'
@@ -106,6 +107,7 @@ export default function BuildingCompliancePage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [updatingAssets, setUpdatingAssets] = useState(false)
   const [editingAsset, setEditingAsset] = useState<BuildingComplianceAsset | null>(null)
+  const [deletingAssets, setDeletingAssets] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     if (buildingId) {
@@ -224,6 +226,37 @@ export default function BuildingCompliancePage() {
       toast.error('Failed to add HRB assets')
     } finally {
       setUpdatingAssets(false)
+    }
+  }
+
+  const handleDeleteAsset = async (assetId: string) => {
+    if (!confirm('Are you sure you want to delete this compliance asset? This action cannot be undone.')) {
+      return
+    }
+
+    setDeletingAssets(prev => new Set([...prev, assetId]))
+    
+    try {
+      const response = await fetch(`/api/building_compliance_assets?id=${assetId}`, {
+        method: 'DELETE'
+      })
+      
+      if (response.ok) {
+        toast.success('Compliance asset deleted successfully')
+        // Refresh compliance data
+        await fetchComplianceData()
+      } else {
+        throw new Error('Failed to delete asset')
+      }
+    } catch (error) {
+      console.error('Error deleting asset:', error)
+      toast.error('Failed to delete compliance asset')
+    } finally {
+      setDeletingAssets(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(assetId)
+        return newSet
+      })
     }
   }
 
@@ -669,14 +702,30 @@ export default function BuildingCompliancePage() {
                           </span>
                         )}
                         
-                        <button
-                          onClick={() => setEditingAsset(item)}
-                          className="inline-flex items-center gap-2 px-3 py-2 bg-green-50 text-green-700 text-sm rounded-lg hover:bg-green-100 transition-colors"
-                          title="Edit compliance asset"
-                        >
-                          <Settings className="h-4 w-4" />
-                          Edit
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setEditingAsset(item)}
+                            className="inline-flex items-center gap-2 px-3 py-2 bg-green-50 text-green-700 text-sm rounded-lg hover:bg-green-100 transition-colors"
+                            title="Edit compliance asset"
+                          >
+                            <Settings className="h-4 w-4" />
+                            Edit
+                          </button>
+                          
+                          <button
+                            onClick={() => handleDeleteAsset(item.id)}
+                            disabled={deletingAssets.has(item.id)}
+                            className="inline-flex items-center gap-2 px-3 py-2 bg-red-50 text-red-700 text-sm rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Delete compliance asset"
+                          >
+                            {deletingAssets.has(item.id) ? (
+                              <RefreshCw className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                            Delete
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>

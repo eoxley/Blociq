@@ -1,8 +1,8 @@
 "use client"
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { toast } from 'react-hot-toast';
-import { Upload, FileText, AlertCircle, CheckCircle } from 'lucide-react';
+import { Upload, FileText, AlertCircle, CheckCircle, X, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { 
@@ -26,6 +26,7 @@ interface UploadState {
   results: any | null;
   error: string | null;
   lastProcessedFile: { name: string; size: number; hash?: string } | null;
+  canCancel: boolean;
 }
 
 export default function DocumentUploaderWithCacheBusting({
@@ -34,13 +35,44 @@ export default function DocumentUploaderWithCacheBusting({
   onError,
   className = ""
 }: DocumentUploaderProps) {
+  const abortControllerRef = useRef<AbortController | null>(null);
+  
   const [uploadState, setUploadState] = useState<UploadState>({
     loading: false,
     progress: '',
     results: null,
     error: null,
-    lastProcessedFile: null
+    lastProcessedFile: null,
+    canCancel: false
   });
+
+  // Cancel upload function
+  const cancelUpload = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      setUploadState(prev => ({
+        ...prev,
+        loading: false,
+        progress: '',
+        error: 'Upload cancelled by user',
+        canCancel: false
+      }));
+      toast.error('Upload cancelled');
+    }
+  }, []);
+
+  // Delete/clear results function
+  const deleteResults = useCallback(() => {
+    setUploadState({
+      loading: false,
+      progress: '',
+      results: null,
+      error: null,
+      lastProcessedFile: null,
+      canCancel: false
+    });
+    toast.success('Results cleared');
+  }, []);
 
   // Clear previous results when new file is selected
   const clearPreviousResults = useCallback((file: File) => {
@@ -62,6 +94,9 @@ export default function DocumentUploaderWithCacheBusting({
   // Enhanced file upload with cache busting
   const handleFileUpload = useCallback(async (file: File) => {
     try {
+      // Create abort controller for cancellation
+      abortControllerRef.current = new AbortController();
+      
       // Clear any existing results immediately
       clearPreviousResults(file);
       
@@ -69,7 +104,8 @@ export default function DocumentUploaderWithCacheBusting({
         ...prev,
         loading: true,
         error: null,
-        progress: 'Preparing upload...'
+        progress: 'Preparing upload...',
+        canCancel: true
       }));
 
       // Generate unique identifiers for this upload
@@ -106,6 +142,7 @@ export default function DocumentUploaderWithCacheBusting({
         loading: false,
         results: result,
         progress: '',
+        canCancel: false,
         lastProcessedFile: { 
           name: file.name, 
           size: file.size, 
@@ -131,7 +168,8 @@ export default function DocumentUploaderWithCacheBusting({
         ...prev,
         loading: false,
         error: errorMessage,
-        progress: ''
+        progress: '',
+        canCancel: false
       }));
 
       toast.error(`Upload failed: ${errorMessage}`);
@@ -206,8 +244,8 @@ export default function DocumentUploaderWithCacheBusting({
       {/* Progress Indicator */}
       {uploadState.loading && uploadState.progress && (
         <Card className="mt-4 p-4 bg-blue-50 border-blue-200">
-          <div className="flex items-center">
-            <div className="animate-pulse">
+          <div className="flex items-center justify-between">
+            <div className="animate-pulse flex-1">
               <div className="flex items-center text-blue-700">
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-700 mr-2"></div>
                 <span className="font-medium">
@@ -220,6 +258,17 @@ export default function DocumentUploaderWithCacheBusting({
                 </div>
               )}
             </div>
+            {uploadState.canCancel && (
+              <Button
+                onClick={cancelUpload}
+                variant="outline"
+                size="sm"
+                className="ml-4 text-red-600 border-red-300 hover:bg-red-50"
+              >
+                <X className="h-4 w-4 mr-1" />
+                Cancel
+              </Button>
+            )}
           </div>
         </Card>
       )}
@@ -240,12 +289,13 @@ export default function DocumentUploaderWithCacheBusting({
       {/* Results Display */}
       {uploadState.results && !uploadState.loading && (
         <Card className="mt-4 p-4 bg-green-50 border-green-200">
-          <div className="flex items-start">
-            <CheckCircle className="h-5 w-5 text-green-600 mr-2 mt-0.5" />
-            <div className="flex-1">
-              <div className="font-medium text-green-700 mb-2">
-                Document Processed Successfully
-              </div>
+          <div className="flex items-start justify-between">
+            <div className="flex items-start">
+              <CheckCircle className="h-5 w-5 text-green-600 mr-2 mt-0.5" />
+              <div className="flex-1">
+                <div className="font-medium text-green-700 mb-2">
+                  Document Processed Successfully
+                </div>
               
               {/* Processing Metadata */}
               <div className="text-xs text-gray-500 space-y-1 mb-3">
@@ -276,7 +326,18 @@ export default function DocumentUploaderWithCacheBusting({
                   )}
                 </div>
               )}
+              </div>
             </div>
+            
+            <Button
+              onClick={deleteResults}
+              variant="outline"
+              size="sm"
+              className="text-red-600 border-red-300 hover:bg-red-50 flex items-center gap-2"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete
+            </Button>
           </div>
         </Card>
       )}

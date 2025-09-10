@@ -2,7 +2,7 @@ import { cookies } from 'next/headers'
 import { createClient } from '@/utils/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import { AlertTriangle } from 'lucide-react'
-import ComplianceSetupWizard from './ComplianceSetupWizard'
+import ComplianceSetupClient from './ComplianceSetupClient'
 import NotFound from '../../../../../../components/NotFound'
 
 interface ComplianceSetupPageProps {
@@ -86,7 +86,7 @@ export default async function ComplianceSetupPage({ params }: ComplianceSetupPag
     }
 
     return (
-      <ComplianceSetupWizard
+      <ComplianceSetupClient
         building={building}
         buildingSetup={buildingSetup}
         existingAssets={existingAssets || []}

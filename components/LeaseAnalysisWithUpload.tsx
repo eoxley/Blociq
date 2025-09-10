@@ -1,8 +1,8 @@
 "use client"
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { toast } from 'react-hot-toast';
-import { Upload, FileText, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react';
+import { Upload, FileText, AlertCircle, CheckCircle, ArrowLeft, X, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import LeaseAnalysisReport from './LeaseAnalysisReport';
@@ -20,20 +20,52 @@ interface UploadState {
   error: string | null;
   showAnalysis: boolean;
   lastProcessedFile: { name: string; size: number; hash?: string } | null;
+  canCancel: boolean;
 }
 
 export default function LeaseAnalysisWithUpload({
   buildingId,
   className = ""
 }: LeaseAnalysisWithUploadProps) {
+  const abortControllerRef = useRef<AbortController | null>(null);
   const [uploadState, setUploadState] = useState<UploadState>({
     loading: false,
     progress: '',
     results: null,
     error: null,
     showAnalysis: false,
-    lastProcessedFile: null
+    lastProcessedFile: null,
+    canCancel: false
   });
+
+  // Cancel upload function
+  const cancelUpload = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      setUploadState(prev => ({
+        ...prev,
+        loading: false,
+        progress: '',
+        error: 'Upload cancelled by user',
+        canCancel: false
+      }));
+      toast.error('Upload cancelled');
+    }
+  };
+
+  // Delete/clear results function
+  const deleteResults = () => {
+    setUploadState({
+      loading: false,
+      progress: '',
+      results: null,
+      error: null,
+      showAnalysis: false,
+      lastProcessedFile: null,
+      canCancel: false
+    });
+    toast.success('Results cleared');
+  };
 
   // Transform API results to LeaseAnalysisReport format
   const transformToLeaseFormat = (apiResults: any, fileName: string) => {
@@ -133,6 +165,9 @@ export default function LeaseAnalysisWithUpload({
   // Handle file upload with cache busting
   const handleFileUpload = async (file: File) => {
     try {
+      // Create abort controller for cancellation
+      abortControllerRef.current = new AbortController();
+      
       // Clear any existing results immediately
       setUploadState(prev => ({
         ...prev,
@@ -141,7 +176,8 @@ export default function LeaseAnalysisWithUpload({
         results: null,
         showAnalysis: false,
         progress: 'Preparing upload...',
-        lastProcessedFile: { name: file.name, size: file.size }
+        lastProcessedFile: { name: file.name, size: file.size },
+        canCancel: true
       }));
 
       console.log(`📤 Starting lease analysis for: ${file.name}`);
@@ -168,6 +204,7 @@ export default function LeaseAnalysisWithUpload({
         results: result,
         showAnalysis: true,
         progress: '',
+        canCancel: false,
         lastProcessedFile: { 
           name: file.name, 
           size: file.size, 
@@ -191,7 +228,8 @@ export default function LeaseAnalysisWithUpload({
         loading: false,
         error: errorMessage,
         progress: '',
-        showAnalysis: false
+        showAnalysis: false,
+        canCancel: false
       }));
 
       toast.error(`Analysis failed: ${errorMessage}`);
@@ -234,8 +272,8 @@ export default function LeaseAnalysisWithUpload({
     
     return (
       <div className={className}>
-        {/* Back Button */}
-        <div className="mb-4">
+        {/* Back Button and Delete Button */}
+        <div className="mb-4 flex items-center justify-between">
           <Button
             onClick={handleBackToUpload}
             variant="outline"
@@ -243,6 +281,15 @@ export default function LeaseAnalysisWithUpload({
           >
             <ArrowLeft className="h-4 w-4" />
             Upload Another Lease
+          </Button>
+          
+          <Button
+            onClick={deleteResults}
+            variant="outline"
+            className="text-red-600 border-red-300 hover:bg-red-50 flex items-center gap-2"
+          >
+            <Trash2 className="h-4 w-4" />
+            Delete Results
           </Button>
         </div>
 
@@ -333,8 +380,8 @@ export default function LeaseAnalysisWithUpload({
         {/* Progress Indicator */}
         {uploadState.loading && uploadState.progress && (
           <Card className="mt-6 p-4 bg-blue-50 border-blue-200">
-            <div className="flex items-center">
-              <div className="animate-pulse w-full">
+            <div className="flex items-center justify-between">
+              <div className="animate-pulse flex-1">
                 <div className="flex items-center text-blue-700">
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-700 mr-3"></div>
                   <span className="font-medium">
@@ -350,6 +397,17 @@ export default function LeaseAnalysisWithUpload({
                   <div className="bg-blue-600 h-2 rounded-full animate-pulse" style={{width: '60%'}}></div>
                 </div>
               </div>
+              {uploadState.canCancel && (
+                <Button
+                  onClick={cancelUpload}
+                  variant="outline"
+                  size="sm"
+                  className="ml-4 text-red-600 border-red-300 hover:bg-red-50"
+                >
+                  <X className="h-4 w-4 mr-1" />
+                  Cancel
+                </Button>
+              )}
             </div>
           </Card>
         )}
