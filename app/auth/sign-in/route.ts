@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const CLIENT_ID = process.env.MICROSOFT_CLIENT_ID!;
-const REDIRECT_URI = encodeURIComponent("https://www.blociq.co.uk/auth/callback");
+const REDIRECT_URI = encodeURIComponent("https://www.blociq.co.uk/api/auth/outlook/callback");
 const SCOPES = encodeURIComponent(
   "openid profile email offline_access Mail.Read Mail.Send Calendars.ReadWrite"
 );
