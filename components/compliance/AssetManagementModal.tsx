@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Loader2, Settings, Plus, Building2, Shield, Zap, Flame, Wrench, AlertTriangle, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { Loader2, Settings, Plus, Building2, Shield, Zap, Flame, Wrench, AlertTriangle, CheckCircle, Clock, XCircle, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ComplianceTemplate {
@@ -82,6 +82,7 @@ export default function AssetManagementModal({ building, isOpen, onClose, onAsse
   const [currentAssets, setCurrentAssets] = useState<ComplianceAsset[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('configure');
+  const [removingAssets, setRemovingAssets] = useState<Set<string>>(new Set());
   const [customAsset, setCustomAsset] = useState({
     asset_name: '',
     category: 'general',
@@ -222,6 +223,35 @@ export default function AssetManagementModal({ building, isOpen, onClose, onAsse
       toast.error('Failed to add custom asset');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const removeAsset = async (assetId: string) => {
+    setRemovingAssets(prev => new Set([...prev, assetId]));
+    
+    try {
+      const response = await fetch('/api/compliance/assets', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: assetId })
+      });
+
+      if (response.ok) {
+        toast.success('Asset removed successfully');
+        await loadCurrentAssets();
+        onAssetsUpdated();
+      } else {
+        throw new Error('Failed to remove asset');
+      }
+    } catch (error) {
+      console.error('Failed to remove asset:', error);
+      toast.error('Failed to remove asset');
+    } finally {
+      setRemovingAssets(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(assetId);
+        return newSet;
+      });
     }
   };
 
@@ -504,6 +534,18 @@ export default function AssetManagementModal({ building, isOpen, onClose, onAsse
                               {status.icon}
                               <span className="text-sm font-medium">{status.label}</span>
                             </div>
+                            <button
+                              onClick={() => removeAsset(asset.id)}
+                              disabled={removingAssets.has(asset.id)}
+                              className="ml-2 p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Remove asset"
+                            >
+                              {removingAssets.has(asset.id) ? (
+                                <div className="animate-spin h-4 w-4 border-2 border-red-600 border-t-transparent rounded-full" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
+                            </button>
                           </div>
                         </div>
                       </CardContent>

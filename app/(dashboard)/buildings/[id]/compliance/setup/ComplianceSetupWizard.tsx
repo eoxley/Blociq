@@ -17,7 +17,9 @@ import {
   Clock,
   Star,
   Plus,
-  Target
+  Target,
+  Trash2,
+  X
 } from 'lucide-react'
 import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui/blociq-card'
 import { BlocIQButton } from '@/components/ui/blociq-button'
@@ -110,12 +112,18 @@ export default function ComplianceSetupWizard({
   )
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
   const [saving, setSaving] = useState(false)
+  const [removingAssets, setRemovingAssets] = useState<Set<string>>(new Set())
 
   const steps = [
     {
       id: 'overview',
       title: 'Building Assessment',
       description: 'Review your building type and compliance requirements'
+    },
+    {
+      id: 'existing',
+      title: 'Existing Assets',
+      description: 'Manage currently configured compliance assets'
     },
     {
       id: 'selection',
@@ -182,6 +190,36 @@ export default function ComplianceSetupWizard({
     const newSelected = new Set(selectedAssets)
     hrbAssets.forEach(asset => newSelected.add(asset.id))
     setSelectedAssets(newSelected)
+  }
+
+  const removeAsset = async (assetId: string) => {
+    setRemovingAssets(prev => new Set([...prev, assetId]))
+    
+    try {
+      const response = await fetch(`/api/building_compliance_assets?id=${assetId}`, {
+        method: 'DELETE'
+      })
+      
+      if (response.ok) {
+        // Remove from selected assets
+        const newSelected = new Set(selectedAssets)
+        newSelected.delete(assetId)
+        setSelectedAssets(newSelected)
+        
+        toast.success('Asset removed successfully')
+      } else {
+        throw new Error('Failed to remove asset')
+      }
+    } catch (error) {
+      console.error('Error removing asset:', error)
+      toast.error('Failed to remove asset')
+    } finally {
+      setRemovingAssets(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(assetId)
+        return newSet
+      })
+    }
   }
 
   const handleComplete = async () => {
@@ -309,6 +347,136 @@ export default function ComplianceSetupWizard({
       )}
     </div>
   )
+
+  const renderExistingAssetsStep = () => {
+    const existingAssetsWithDetails = existingAssets
+      .map(ea => {
+        const asset = allAssets.find(a => a.id === ea.compliance_asset_id)
+        return asset ? { ...ea, asset } : null
+      })
+      .filter(Boolean)
+      .sort((a, b) => (a?.asset?.category || '').localeCompare(b?.asset?.category || ''))
+
+    const assetsByCategory = existingAssetsWithDetails.reduce((acc, item) => {
+      if (!item) return acc
+      const category = item.asset?.category || 'Other'
+      if (!acc[category]) {
+        acc[category] = []
+      }
+      acc[category].push(item)
+      return acc
+    }, {} as Record<string, any[]>)
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-xl font-semibold text-gray-900">Existing Compliance Assets</h3>
+            <p className="text-gray-600 mt-1">Manage currently configured assets for {building.name}</p>
+          </div>
+          <div className="text-sm text-gray-500">
+            {existingAssetsWithDetails.length} assets configured
+          </div>
+        </div>
+
+        {existingAssetsWithDetails.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Settings className="h-8 w-8 text-gray-400" />
+            </div>
+            <h4 className="text-lg font-medium text-gray-900 mb-2">No Assets Configured</h4>
+            <p className="text-gray-600 mb-4">This building doesn't have any compliance assets set up yet.</p>
+            <p className="text-sm text-gray-500">Continue to the next step to add compliance assets.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {Object.entries(assetsByCategory).map(([category, categoryAssets]) => {
+              const Icon = CATEGORY_ICONS[category] || Settings
+              
+              return (
+                <BlocIQCard key={category} className="border-l-4 border-l-blue-500">
+                  <BlocIQCardHeader className="pb-3">
+                    <div className="flex items-center gap-3">
+                      <Icon className="h-5 w-5 text-blue-600" />
+                      <h4 className="font-semibold">{category}</h4>
+                      <BlocIQBadge variant="secondary" className={CATEGORY_COLORS[category]}>
+                        {categoryAssets.length} assets
+                      </BlocIQBadge>
+                    </div>
+                  </BlocIQCardHeader>
+                  
+                  <BlocIQCardContent className="pt-0">
+                    <div className="space-y-3">
+                      {categoryAssets.map((item) => {
+                        if (!item) return null
+                        const { asset, id, status } = item
+                        const isRemoving = removingAssets.has(id)
+                        
+                        return (
+                          <div
+                            key={id}
+                            className="p-4 border rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <h5 className="font-medium">{asset.name}</h5>
+                                  <BlocIQBadge 
+                                    variant="secondary" 
+                                    className={
+                                      status === 'not_applied' ? 'bg-red-100 text-red-800' :
+                                      status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                      status === 'completed' ? 'bg-green-100 text-green-800' :
+                                      'bg-gray-100 text-gray-800'
+                                    }
+                                  >
+                                    {status.replace('_', ' ')}
+                                  </BlocIQBadge>
+                                  {asset.is_required && (
+                                    <BlocIQBadge variant="secondary" className="bg-red-100 text-red-800">
+                                      Required
+                                    </BlocIQBadge>
+                                  )}
+                                  {asset.is_hrb_related && (
+                                    <BlocIQBadge variant="secondary" className="bg-purple-100 text-purple-800">
+                                      HRB
+                                    </BlocIQBadge>
+                                  )}
+                                </div>
+                                <p className="text-sm text-gray-600 mb-2">{asset.description}</p>
+                                <div className="flex items-center gap-3 text-xs text-gray-500">
+                                  <span className="flex items-center gap-1">
+                                    <Clock className="h-3 w-3" />
+                                    Every {asset.frequency_months} months
+                                  </span>
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => removeAsset(id)}
+                                disabled={isRemoving}
+                                className="ml-4 p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                title="Remove asset"
+                              >
+                                {isRemoving ? (
+                                  <div className="animate-spin h-4 w-4 border-2 border-red-600 border-t-transparent rounded-full" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4" />
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </BlocIQCardContent>
+                </BlocIQCard>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    )
+  }
 
   const renderSelectionStep = () => (
     <div className="space-y-6">
@@ -538,15 +706,17 @@ export default function ComplianceSetupWizard({
       case 0:
         return renderOverviewStep()
       case 1:
-        return renderSelectionStep()
+        return renderExistingAssetsStep()
       case 2:
+        return renderSelectionStep()
+      case 3:
         return renderReviewStep()
       default:
         return null
     }
   }
 
-  const canProceed = currentStep < 2 || selectedAssets.size > 0
+  const canProceed = currentStep < 3 || selectedAssets.size > 0
   const isLastStep = currentStep === steps.length - 1
 
   return (

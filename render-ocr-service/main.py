@@ -75,7 +75,7 @@ if GOOGLE_VISION_AVAILABLE:
 # Initialize Supabase client if available
 supabase: Optional[Client] = None
 if SUPABASE_AVAILABLE:
-    supabase_url = os.getenv("NEXT_PUBLIC_SUPABASE_URL")
+    supabase_url = os.getenv("SUPABASE_URL")
     supabase_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
     if supabase_url and supabase_key:
         try:
@@ -194,7 +194,7 @@ async def health_check():
         },
         "environment": {
             "google_credentials_configured": bool(os.getenv("GOOGLE_CREDENTIALS_JSON")),
-            "supabase_url_configured": bool(os.getenv("NEXT_PUBLIC_SUPABASE_URL")),
+            "supabase_url_configured": bool(os.getenv("SUPABASE_URL")),
             "supabase_key_configured": bool(os.getenv("SUPABASE_SERVICE_ROLE_KEY")),
             "render_token_configured": bool(os.getenv("RENDER_OCR_TOKEN"))
         },

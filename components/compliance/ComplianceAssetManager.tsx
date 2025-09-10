@@ -27,7 +27,8 @@ import {
   XCircle,
   Save,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  Trash2
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -202,6 +203,7 @@ export default function ComplianceAssetManager({ building, onAssetsUpdated }: Co
   const [isHRB, setIsHRB] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [customAssetModalOpen, setCustomAssetModalOpen] = useState(false);
+  const [removingAssets, setRemovingAssets] = useState<Set<string>>(new Set());
   const [customAsset, setCustomAsset] = useState({
     name: '',
     category: 'general',
@@ -261,6 +263,32 @@ export default function ComplianceAssetManager({ building, onAssetsUpdated }: Co
     
     // Auto-save configuration
     await saveConfiguration(newActiveAssets);
+  };
+
+  const removeAsset = async (assetId: string) => {
+    setRemovingAssets(prev => new Set([...prev, assetId]));
+    
+    try {
+      // Remove from active assets
+      const newActiveAssets = new Set(activeAssets);
+      newActiveAssets.delete(assetId);
+      setActiveAssets(newActiveAssets);
+      
+      // Save configuration
+      await saveConfiguration(newActiveAssets);
+      
+      toast.success('Asset removed successfully');
+      onAssetsUpdated();
+    } catch (error) {
+      console.error('Error removing asset:', error);
+      toast.error('Failed to remove asset');
+    } finally {
+      setRemovingAssets(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(assetId);
+        return newSet;
+      });
+    }
   };
 
   const toggleAllAssets = async () => {
@@ -498,6 +526,20 @@ export default function ComplianceAssetManager({ building, onAssetsUpdated }: Co
                         <Label className="text-sm">
                           {status.label}
                         </Label>
+                        {activeAssets.has(asset.id) && !isDisabled && (
+                          <button
+                            onClick={() => removeAsset(asset.id)}
+                            disabled={removingAssets.has(asset.id)}
+                            className="ml-2 p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Remove asset"
+                          >
+                            {removingAssets.has(asset.id) ? (
+                              <div className="animate-spin h-4 w-4 border-2 border-red-600 border-t-transparent rounded-full" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
