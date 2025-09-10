@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import { validateLeaseDocument } from '@/ai/contracts/validateLeaseSummary';
 
@@ -197,9 +198,16 @@ export async function DELETE(
     console.log('🔍 Current user_id:', user.id);
     console.log('🔍 User IDs match:', existingJob.user_id === user.id);
 
-    // Delete the job
+    // Delete the job using service role client for proper permissions
     console.log('🗑️ Deleting job from database:', params.id, 'for user:', user.id);
-    const { error: deleteError, count } = await supabase
+    
+    // Create service role client for deletion
+    const serviceSupabase = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+    
+    const { error: deleteError, count } = await serviceSupabase
       .from('document_jobs')
       .delete()
       .eq('id', params.id)
