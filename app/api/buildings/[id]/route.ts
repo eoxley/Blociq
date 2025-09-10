@@ -1,11 +1,6 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@/utils/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
-import { Database } from '../../../../lib/database.types'
-
-const supabase = createClient<Database>(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+import { cookies } from 'next/headers'
 
 export async function GET(
   request: Request,
@@ -13,6 +8,13 @@ export async function GET(
 ) {
   try {
     const { id: buildingId } = await params
+    const supabase = createClient(cookies())
+
+    // Check authentication
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    if (sessionError || !session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
     // Get building information
     const { data: building, error: buildingError } = await supabase
@@ -43,6 +45,14 @@ export async function PUT(
 ) {
   try {
     const { id: buildingId } = await params
+    const supabase = createClient(cookies())
+    
+    // Check authentication
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    if (sessionError || !session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const body = await request.json()
     const { buildingData, setupData } = body
 
@@ -83,7 +93,7 @@ export async function PUT(
       const { error: setupError } = await supabase
         .from('building_setup')
         .insert({
-          building_id: parseInt(buildingId),
+          building_id: buildingId,
           ...setupData,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
@@ -108,6 +118,14 @@ export async function PATCH(
 ) {
   try {
     const { id: buildingId } = await params
+    const supabase = createClient(cookies())
+    
+    // Check authentication
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    if (sessionError || !session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const body = await request.json()
     const { name, address, is_hrb } = body
 

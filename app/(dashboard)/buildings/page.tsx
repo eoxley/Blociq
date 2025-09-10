@@ -15,111 +15,7 @@ import {
 } from 'lucide-react'
 import { BlocIQButton } from '@/components/ui/blociq-button'
 
-// Hardcoded dummy buildings for demo purposes
-const dummyBuildings = [
-  { 
-    id: 'dummy-1', 
-    name: "Kingsmere House", 
-    address: "Wimbledon, London SW19", 
-    units: 42,
-    isDummy: true,
-    is_hrb: true
-  },
-  { 
-    id: 'dummy-2', 
-    name: "Harbour View", 
-    address: "Brighton Seafront, BN1", 
-    units: 28,
-    isDummy: true,
-    is_hrb: true
-  },
-  { 
-    id: 'dummy-3', 
-    name: "Maple Row", 
-    address: "Guildford, Surrey GU1", 
-    units: 16,
-    isDummy: true
-  },
-  { 
-    id: 'dummy-4', 
-    name: "Riverside Court", 
-    address: "Kingston upon Thames, KT1", 
-    units: 35,
-    isDummy: true
-  },
-  { 
-    id: 'dummy-5', 
-    name: "Oakwood Gardens", 
-    address: "Epsom, Surrey KT18", 
-    units: 24,
-    isDummy: true,
-    is_hrb: true
-  },
-  { 
-    id: 'dummy-6', 
-    name: "Victoria Heights", 
-    address: "Croydon, London CR0", 
-    units: 31,
-    isDummy: true
-  },
-  { 
-    id: 'dummy-7', 
-    name: "Parkview Apartments", 
-    address: "Sutton, Surrey SM1", 
-    units: 19,
-    isDummy: true
-  },
-  { 
-    id: 'dummy-8', 
-    name: "The Regency", 
-    address: "Worthing, West Sussex BN11", 
-    units: 22,
-    isDummy: true
-  },
-  { 
-    id: 'dummy-9', 
-    name: "Marina Point", 
-    address: "Portsmouth, Hampshire PO1", 
-    units: 38,
-    isDummy: true
-  },
-  { 
-    id: 'dummy-10', 
-    name: "St. James Court", 
-    address: "Southampton, Hampshire SO14", 
-    units: 27,
-    isDummy: true
-  },
-  { 
-    id: 'dummy-11', 
-    name: "The Grand", 
-    address: "Bournemouth, Dorset BH1", 
-    units: 33,
-    isDummy: true
-  },
-  { 
-    id: 'dummy-12', 
-    name: "Cliffside Manor", 
-    address: "Eastbourne, East Sussex BN21", 
-    units: 15,
-    isDummy: true,
-    is_hrb: true
-  },
-  { 
-    id: 'dummy-13', 
-    name: "Seaside Plaza", 
-    address: "Hastings, East Sussex TN34", 
-    units: 29,
-    isDummy: true
-  },
-  { 
-    id: 'dummy-14', 
-    name: "Royal Gardens", 
-    address: "Chichester, West Sussex PO19", 
-    units: 21,
-    isDummy: true
-  }
-]
+// Dummy data removed - only showing live buildings from database
 
 // Client component for the buildings list with search functionality
 function BuildingsList() {
@@ -161,9 +57,9 @@ function BuildingsList() {
     fetchRealBuildings()
   }, [])
 
-  // Combine real and dummy buildings
+  // Only show real buildings from database
   const combinedBuildings = useMemo(() => {
-    return [...realBuildings, ...dummyBuildings]
+    return realBuildings
   }, [realBuildings])
 
   // Filter buildings based on search term (case-insensitive)

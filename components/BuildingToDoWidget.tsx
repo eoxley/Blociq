@@ -14,13 +14,7 @@ interface Task {
 }
 
 export default function BuildingToDoWidget() {
-  const [tasks, setTasks] = useState<Task[]>([
-    { id: 1, text: "Review EICR due by 15 Aug", done: false, dueDate: "2024-08-15" },
-    { id: 2, text: "Chase Tri Fire for FRA update", done: false, dueDate: "2024-08-20" },
-    { id: 3, text: "Submit Section 20 notice draft", done: true, dueDate: "2024-08-10" },
-    { id: 4, text: "Schedule building inspection", done: false, dueDate: "2024-08-25" },
-    { id: 5, text: "Update fire safety procedures", done: false, dueDate: "2024-08-30" },
-  ]);
+  const [tasks, setTasks] = useState<Task[]>([]);
 
   const [newTaskText, setNewTaskText] = useState("");
   const [showAddForm, setShowAddForm] = useState(false);
