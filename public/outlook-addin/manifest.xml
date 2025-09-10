@@ -4,7 +4,7 @@
            xsi:type="MailApp">
 
   <Id>c518d2f2-3bc7-4db4-a863-7cc313c921f5</Id>
-  <Version>1.0.0.16</Version>
+  <Version>1.0.0.17</Version>
   <ProviderName>BlocIQ</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="BlocIQ Assistant"/>
@@ -24,7 +24,7 @@
   <FormSettings>
     <Form xsi:type="ItemRead">
       <DesktopSettings>
-        <SourceLocation DefaultValue="https://www.blociq.co.uk/outlook-addin/taskpane.html"/>
+        <SourceLocation DefaultValue="https://www.blociq.co.uk/outlook-addin/test.html"/>
         <RequestedHeight>250</RequestedHeight>
       </DesktopSettings>
     </Form>
