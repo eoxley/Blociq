@@ -158,9 +158,43 @@ export async function DELETE(
     // The system works directly with user authentication
     console.log('✅ User authenticated for lease lab delete');
 
+    // First, check if the job exists and belongs to the user
+    console.log('🔍 Checking if job exists:', params.id, 'for user:', user.id);
+    const { data: existingJob, error: checkError } = await supabase
+      .from('document_jobs')
+      .select('id, user_id, filename')
+      .eq('id', params.id)
+      .single();
+
+    if (checkError) {
+      console.error('❌ Error checking job:', checkError);
+      return NextResponse.json({ 
+        error: 'Job not found',
+        message: 'The job could not be found.'
+      }, { status: 404 });
+    }
+
+    if (!existingJob) {
+      console.error('❌ Job not found:', params.id);
+      return NextResponse.json({ 
+        error: 'Job not found',
+        message: 'The job could not be found.'
+      }, { status: 404 });
+    }
+
+    if (existingJob.user_id !== user.id) {
+      console.error('❌ Job does not belong to user:', { jobUserId: existingJob.user_id, currentUserId: user.id });
+      return NextResponse.json({ 
+        error: 'Unauthorized',
+        message: 'You do not have permission to delete this job.'
+      }, { status: 403 });
+    }
+
+    console.log('✅ Job found and belongs to user:', existingJob);
+
     // Delete the job
     console.log('🗑️ Deleting job from database:', params.id, 'for user:', user.id);
-    const { error: deleteError } = await supabase
+    const { error: deleteError, count } = await supabase
       .from('document_jobs')
       .delete()
       .eq('id', params.id)
@@ -174,10 +208,11 @@ export async function DELETE(
       }, { status: 500 });
     }
 
-    console.log('✅ Job successfully deleted from database');
+    console.log('✅ Job successfully deleted from database. Rows affected:', count);
     return NextResponse.json({ 
       success: true,
-      message: 'Job deleted successfully'
+      message: 'Job deleted successfully',
+      rowsAffected: count
     });
 
   } catch (error) {

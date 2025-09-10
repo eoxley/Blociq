@@ -21,6 +21,7 @@ export async function GET(req: NextRequest) {
     // For lease lab, we don't require agency membership
     // The system works directly with user authentication
     console.log('✅ User authenticated for lease lab jobs');
+    console.log('👤 User ID:', user.id);
 
     // Get query parameters
     const { searchParams } = new URL(req.url);
@@ -29,6 +30,7 @@ export async function GET(req: NextRequest) {
     const offset = (page - 1) * limit;
 
     // Fetch jobs for the user
+    console.log('🔍 Querying jobs for user_id:', user.id);
     const query = supabase
       .from('document_jobs')
       .select('*')
