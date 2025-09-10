@@ -183,9 +183,9 @@ export default function AnalysisDrawer({ job, onClose, onAttachToBuilding }: Ana
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
-      <div className="absolute inset-0 bg-black bg-opacity-50" onClick={handleClose}></div>
+      <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={handleClose}></div>
       
-      <div className="absolute right-0 top-0 h-full w-full max-w-4xl bg-white shadow-xl">
+      <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 h-[90vh] w-[90vw] max-w-4xl bg-white rounded-lg shadow-xl">
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-gray-200">
