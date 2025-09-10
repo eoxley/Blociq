@@ -28,98 +28,167 @@ export async function POST(req: NextRequest) {
       console.log('🤖 Starting AI analysis for job:', jobId);
     }
 
-    // Call OpenAI to analyze the extracted text with enhanced clause analysis
+    // Call OpenAI to analyze the extracted text with comprehensive LeaseClear-style analysis
     const analysisPrompt = `
-Analyze this UK lease document and extract comprehensive clause information. Return ONLY a valid JSON object - no markdown formatting or code blocks:
+Analyze this UK lease document with the same comprehensive detail as the professional LeaseClear service. Extract ALL information systematically and create a detailed report with specific clause references. Return ONLY a valid JSON object - no markdown formatting or code blocks:
 
 {
   "doc_type": "lease",
-  "overview": "Brief overview of the document type and property location",
-  "parties": ["Party 1: Full Name or Company", "Party 2: Full Name or Company"],
-  "property_details": {
-    "address": "Full property address",
-    "description": "Type of property (flat, house, etc.)",
-    "lease_type": "Leasehold/Freehold"
+  "executive_summary": "Comprehensive overview like: This is a lease for a [property type] in [location] for a term of [X] years from [start date]. The leaseholder is responsible for [key responsibilities]. A management company is responsible for [their duties], with costs recovered through [service charge details]. Key restrictions include [main restrictions].",
+  "basic_property_details": {
+    "property_description": "e.g. First Floor Flat at 133 Selhurst Close, Wimbledon, known as Plot 259",
+    "lease_term": "e.g. 125 years starting from 1st January 1992", 
+    "parties": [
+      "Lessor: [Full company/person name]",
+      "Lessee: [Full names of all lessees]", 
+      "Management Company: [Company name if applicable]"
+    ],
+    "title_number": "e.g. TGL 57174",
+    "referenced_clauses": ["Page references and clause citations"]
   },
-  "key_dates": [
-    {"title": "Lease Start Date", "date": "YYYY-MM-DD", "description": "When the lease begins"},
-    {"title": "Lease End Date", "date": "YYYY-MM-DD", "description": "When the lease ends"},
-    {"title": "Break Clause Date", "date": "YYYY-MM-DD", "description": "When break clause can be exercised"}
-  ],
-  "financials": [
-    {"title": "Premium/Purchase Price", "amount": "£X,XXX", "description": "One-time payment"},
-    {"title": "Ground Rent", "amount": "£XXX per year", "description": "Annual ground rent"},
-    {"title": "Service Charge", "amount": "£XXX per year", "description": "Annual service charge"}
-  ],
-  "clause_summaries": [
+  "detailed_sections": [
     {
-      "clause_type": "Rent Review",
-      "title": "Rent Review Mechanism", 
-      "summary": "Detailed explanation of how rent reviews work",
-      "key_points": ["Point 1", "Point 2"],
-      "frequency": "Every X years",
-      "impact": "High/Medium/Low impact on tenant"
+      "section_title": "Ground Rent",
+      "content": [
+        "The ground rent is [amount] per year, payable on [date] if demanded by the Lessor."
+      ],
+      "referenced_clauses": ["TO HOLD (Page 8), Clause 2(1)"]
     },
     {
-      "clause_type": "Repair & Maintenance",
-      "title": "Maintenance Responsibilities",
-      "summary": "Who is responsible for what repairs and maintenance",
-      "key_points": ["Tenant responsibilities", "Landlord responsibilities"],
-      "frequency": "Ongoing",
-      "impact": "High impact on tenant"
+      "section_title": "Pets", 
+      "content": [
+        "You are not allowed to keep any bird, cat, dog, or other animal that might cause annoyance to other residents of the building or the estate."
+      ],
+      "referenced_clauses": ["Clause 3(15)"]
     },
     {
-      "clause_type": "Assignment & Subletting", 
-      "title": "Transfer Rights",
-      "summary": "Rules about selling or subletting the lease",
-      "key_points": ["Assignment process", "Consent requirements"],
-      "frequency": "As needed",
-      "impact": "Medium impact on tenant"
+      "section_title": "Alterations & Improvements",
+      "content": [
+        "You must not make any alterations or additions to the property, either internally or externally, without first getting written consent from the Lessor.",
+        "You are explicitly forbidden from interfering with, injuring, or removing any main walls, timbers, or other structural or load-bearing parts of the property."
+      ],
+      "referenced_clauses": ["Clause 3(10)"]
     },
     {
-      "clause_type": "Use Restrictions",
-      "title": "Permitted Use",
-      "summary": "What the property can and cannot be used for", 
-      "key_points": ["Permitted uses", "Prohibited activities"],
-      "frequency": "Ongoing",
-      "impact": "Medium impact on tenant"
+      "section_title": "Repairs and Maintenance Responsibilities", 
+      "content": [
+        "Your (Lessee's) Responsibilities: You are responsible for the repair and upkeep of the inside of your flat, including non-structural walls, floors, ceilings, windows, and window frames. You must also maintain the interior of the flat and the exterior of the flat's entrance door in good decorative condition.",
+        "Company's Responsibilities: The Management Company is responsible for repairing and maintaining the main structure of the building (foundations, roof, structural walls), the Internal Common Areas, and the External Common Areas (including footpaths, accessways, and fences)."
+      ],
+      "referenced_clauses": ["Lessee: Clause 2(10), Clause 3(1), Clause 3(2), Company: Clause 5(1), Clause 5(2)"]
     },
     {
-      "clause_type": "Insurance",
-      "title": "Insurance Requirements",
-      "summary": "Insurance obligations for both parties",
-      "key_points": ["Building insurance", "Contents insurance"],
-      "frequency": "Annual",
-      "impact": "Medium impact on tenant"
+      "section_title": "Service Charge Provisions",
+      "content": [
+        "Apportionment: You must pay a service charge, which is split into two parts. Your share for internal building costs is [X]% ('Internal Specified Proportion'). Your share for external estate costs ('External Specified Proportion') is based on your property type as listed in the lease.",
+        "Financial Year: The service charge year runs from [start date] to [end date].",
+        "Payment Schedule: The Management Company will send an estimate of the year's costs after [date]. You must pay this within [X] days of the notice, although the Company may allow you to pay in up to [X] equal monthly instalments by standing order.",
+        "Covered Costs: The service charge covers costs for repairs, maintenance, cleaning, gardening, insurance for the building, management fees, and contributions to a reserve fund for future major works."
+      ],
+      "referenced_clauses": ["Definitions: 'INTERNAL SPECIFIED PROPORTION', 'EXTERNAL SPECIFIED PROPORTION' (Page 1 & 2), Clause 6A(1), 6A(2), 6A(3), Clause 6B, Clause 7(8)"]
+    },
+    {
+      "section_title": "Demised Premises Definition",
+      "content": [
+        "The 'Premises' refers to the flat itself, including the structure up to the halfway point of walls, floors, and ceilings shared with other properties.",
+        "The demise specifically includes the external walls, doors, windows, and window frames of your flat.",
+        "It also includes any allocated balcony, private store, and letterbox. For top-floor flats, the roof and its supporting structure are included."
+      ],
+      "referenced_clauses": ["Definitions: 'THE PREMISES' (Page 1), Clause 1(1), 1(3), 1(5), 1(6), 1(7)"]
+    },
+    {
+      "section_title": "Access Rights & Services",
+      "content": [
+        "Your Rights: You have the right to use the internal and external common areas (like hallways, stairs, paths, and gardens) for their intended purposes.",
+        "Lessor's/Company's Rights: The Lessor or Management Company has the right to enter your property to check its condition or carry out repairs, provided they give you reasonable notice (except in an emergency). They also have rights to run services for other properties through your demise."
+      ],
+      "referenced_clauses": ["Lessee's Rights: Clause 1(10), Clause 1(11), Lessor's/Company's Rights: Clause 1(15), 1(16), 1(17), Clause 2(5)"]
+    },
+    {
+      "section_title": "Use Restrictions",
+      "content": [
+        "The property must only be used as a single private home for you and your family.",
+        "Any garage or parking space included with the property can only be used for parking one private motor vehicle.",
+        "You cannot display any signs, plates, or placards in the windows or on the exterior, except for one 'for sale' or 'to let' board."
+      ],
+      "referenced_clauses": ["Clause 3(8)(a), Clause 3(14), Clause 3(16)(b)"]
+    },
+    {
+      "section_title": "Subletting & Assignment",
+      "content": [
+        "You cannot sell or sublet only a part of your property; it must be the whole flat.",
+        "When you sell (assign) the lease, the new owner must apply in writing to become a member of the Management Company.",
+        "You must notify the Lessor in writing within [X] days of any sale, mortgage, or transfer and pay a registration fee.",
+        "During the last seven years of the lease term, you need the Lessor's written consent to sell or sublet, though this consent cannot be unreasonably withheld."
+      ],
+      "referenced_clauses": ["Clause 2(8), Clause 2(9), Clause 9"]
+    },
+    {
+      "section_title": "Nuisance and Anti-Social Behaviour",
+      "content": [
+        "You must not do anything on the property or estate that could be considered a nuisance or cause annoyance to other residents, the Lessor, or the Management Company.",
+        "You must not play any musical instruments, audio equipment, or sing in a way that is audible outside your flat between the hours of [X] p.m. and [X] a.m."
+      ],
+      "referenced_clauses": ["Clause 3(9), Clause 3(13)"]
+    },
+    {
+      "section_title": "Insurance Obligations",
+      "content": [
+        "The Management Company is responsible for insuring the entire building against standard risks, including subsidence and landslip, for its full rebuilding cost.",
+        "You must not do anything that could invalidate the building's insurance policy or cause the premium to increase.",
+        "The Company must use any insurance payout to rebuild or repair the building."
+      ],
+      "referenced_clauses": ["Clause 3(12), Clause 5(6)"]
+    },
+    {
+      "section_title": "Forfeiture & Breach",
+      "content": [
+        "If you fail to pay rent or breach any of your lease obligations, the Lessor has the right to 're-enter' the property, which would end your lease.",
+        "This right to forfeit is subject to legal protections, and the Lessor must give one month's written notice to your mortgage lender before taking action."
+      ],
+      "referenced_clauses": ["Clause 8"]
+    },
+    {
+      "section_title": "Remedial Powers for Landlord",
+      "content": [
+        "If the Lessor serves you a notice to carry out repairs and you fail to do so within two months, the Lessor has the right to enter your property, perform the required works, and charge you for all associated costs. These costs can be recovered from you in the same way as unpaid rent."
+      ],
+      "referenced_clauses": ["Clause 2(6)"]
     }
   ],
-  "obligations": [
-    {"title": "Tenant Obligations", "description": "Key things the tenant must do"},
-    {"title": "Landlord Obligations", "description": "Key things the landlord must do"}
+  "other_provisions": [
+    {
+      "title": "Company Membership",
+      "description": "As the owner, you must be a member of the Management Company. On selling the property, you must ensure the buyer signs a deed to become a member.",
+      "referenced_clauses": ["Clause 2(8)(b), Clause 2(9)(c)"]
+    },
+    {
+      "title": "Parking Restrictions", 
+      "description": "You must not leave any vehicle that is not roadworthy on the estate for more than 48 hours.",
+      "referenced_clauses": ["Clause 3(5)"]
+    },
+    {
+      "title": "Washing Restrictions",
+      "description": "You are not allowed to hang washing or clothes lines anywhere on the exterior of your flat or in the common areas, except in any specifically designated drying areas.",
+      "referenced_clauses": ["Clause 3(16)(a)"]
+    }
   ],
-  "restrictions": [
-    {"title": "Property Use", "description": "How the property can be used"},
-    {"title": "Modifications", "description": "Rules about making changes"}
-  ],
-  "key_risks": [
-    {"risk": "Risk description", "impact": "High/Medium/Low", "mitigation": "How to address this risk"}
-  ],
-  "actions_required": [
-    {"action": "What needs to be done", "by_whom": "Tenant/Landlord", "deadline": "When", "priority": "High/Medium/Low"}
-  ],
-  "unknowns": ["Items requiring legal clarification"]
+  "disclaimer": "This analysis is generated by artificial intelligence and is for informational purposes only. It should not be considered as legal advice. The AI may make errors or omissions in its analysis. Always consult with a qualified solicitor or legal professional for specific legal matters regarding your lease agreement before making any important decisions."
 }
 
 CRITICAL INSTRUCTIONS:
-1. Focus heavily on CLAUSE SUMMARIES - this is the most important section
-2. Extract actual clause content, not generic descriptions
-3. Look for specific lease terms, conditions, and obligations
-4. Identify unusual or non-standard clauses that need attention
-5. Summarize complex legal language in plain English
-6. Return ONLY the JSON object, no other text
+1. Extract EVERY section like the LeaseClear example - be extremely comprehensive and thorough
+2. Include specific clause references for EVERYTHING like "Clause 3(15)" or "Page 8" 
+3. Use exact wording from the lease where possible - copy verbatim important clauses
+4. Fill in specific amounts, dates, percentages, and numbers where found in the document
+5. Create detailed sections for ALL lease aspects: pets, alterations, repairs, service charges, use restrictions, subletting, insurance, forfeiture, remedial powers, etc.
+6. The executive_summary should be a comprehensive paragraph explaining the lease type, location, term, key responsibilities, and main restrictions
+7. For service charges, extract exact percentages, payment schedules, and covered costs
+8. Include the disclaimer exactly as provided
+9. Return ONLY the JSON object, no other text or formatting
 
-Document text:
-${extractedText.substring(0, 15000)}
+Document text to analyze:
+${extractedText.substring(0, 22000)}
 `;
 
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -133,7 +202,7 @@ ${extractedText.substring(0, 15000)}
         messages: [
           {
             role: 'system',
-            content: 'You are an expert UK property lawyer specializing in lease analysis. Your task is to read lease documents and extract detailed clause summaries in plain English. Focus on identifying specific lease terms, unusual clauses, tenant/landlord obligations, and potential risks. Convert complex legal language into clear summaries that property professionals can understand. Return ONLY valid JSON - no markdown, no explanations, no code blocks. Be precise with actual clause content, not generic descriptions.'
+            content: 'You are a professional lease analysis service like LeaseClear, specializing in comprehensive UK lease document analysis. Your task is to extract EVERY detail from lease documents with the same thoroughness and structure as the LeaseClear sample provided. Create detailed sections for ALL lease aspects including: basic property details, ground rent, pets policy, alterations rules, repair responsibilities, service charge provisions, demised premises definition, access rights, use restrictions, subletting rules, nuisance clauses, insurance obligations, forfeiture terms, remedial powers, and other key provisions. Include specific clause references (e.g. "Clause 3(15)", "Page 8", "TO HOLD (Page 8)") for every statement. Extract exact wording, specific amounts, dates, percentages, and payment schedules. Match the professional formatting and comprehensive coverage of the LeaseClear example. Return ONLY valid JSON - no markdown, no explanations, no code blocks.'
           },
           {
             role: 'user',
@@ -141,7 +210,7 @@ ${extractedText.substring(0, 15000)}
           }
         ],
         temperature: 0.1,
-        max_tokens: 3000
+        max_tokens: 6000
       })
     });
 

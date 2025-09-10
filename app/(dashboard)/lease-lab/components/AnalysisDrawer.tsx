@@ -19,13 +19,9 @@ export default function AnalysisDrawer({ job, onClose, onAttachToBuilding }: Ana
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: FileText },
-    { id: 'clauses', label: 'Clauses', icon: FileText },
-    { id: 'dates', label: 'Key Dates', icon: Calendar },
-    { id: 'financials', label: 'Financials', icon: DollarSign },
-    { id: 'obligations', label: 'Obligations', icon: CheckCircle },
-    { id: 'restrictions', label: 'Restrictions', icon: Shield },
-    { id: 'variations', label: 'Variations', icon: Edit3 },
-    { id: 'actions', label: 'Action Points', icon: AlertTriangle },
+    { id: 'property', label: 'Property Details', icon: FileText },
+    { id: 'sections', label: 'Detailed Sections', icon: FileText },
+    { id: 'provisions', label: 'Other Provisions', icon: Shield },
   ];
 
   const handleAttachToBuilding = async () => {
@@ -54,20 +50,18 @@ export default function AnalysisDrawer({ job, onClose, onAttachToBuilding }: Ana
   const renderOverview = () => (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-3">Document Summary</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-3">Executive Summary</h3>
         <p className="text-gray-700 leading-relaxed">
-          {summary.overview || 'No overview available.'}
+          {summary.executive_summary || summary.overview || 'No overview available.'}
         </p>
       </div>
 
-      {summary.parties && summary.parties.length > 0 && (
-        <div>
-          <h4 className="text-md font-semibold text-gray-900 mb-2">Parties</h4>
-          <ul className="space-y-1">
-            {summary.parties.map((party: any, index: number) => (
-              <li key={index} className="text-gray-700">• {party}</li>
-            ))}
-          </ul>
+      {summary.disclaimer && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <h4 className="text-md font-semibold text-yellow-800 mb-2">Important Disclaimer</h4>
+          <p className="text-yellow-700 text-sm">
+            {summary.disclaimer}
+          </p>
         </div>
       )}
 
@@ -83,6 +77,124 @@ export default function AnalysisDrawer({ job, onClose, onAttachToBuilding }: Ana
       )}
     </div>
   );
+
+  const renderPropertyDetails = () => {
+    const property = summary.basic_property_details || {};
+    return (
+      <div className="space-y-6">
+        {property.property_description && (
+          <div>
+            <h4 className="text-md font-semibold text-gray-900 mb-2">Property</h4>
+            <p className="text-gray-700">{property.property_description}</p>
+          </div>
+        )}
+
+        {property.lease_term && (
+          <div>
+            <h4 className="text-md font-semibold text-gray-900 mb-2">Lease Term</h4>
+            <p className="text-gray-700">{property.lease_term}</p>
+          </div>
+        )}
+
+        {property.parties && property.parties.length > 0 && (
+          <div>
+            <h4 className="text-md font-semibold text-gray-900 mb-2">Parties</h4>
+            <ul className="space-y-1">
+              {property.parties.map((party: any, index: number) => (
+                <li key={index} className="text-gray-700">• {party}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {property.title_number && (
+          <div>
+            <h4 className="text-md font-semibold text-gray-900 mb-2">Title Number</h4>
+            <p className="text-gray-700">{property.title_number}</p>
+          </div>
+        )}
+
+        {property.referenced_clauses && property.referenced_clauses.length > 0 && (
+          <div>
+            <h4 className="text-md font-semibold text-gray-900 mb-2">Referenced Clauses</h4>
+            <div className="flex flex-wrap gap-2">
+              {property.referenced_clauses.map((clause: string, index: number) => (
+                <span key={index} className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+                  {clause}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderDetailedSections = () => {
+    const sections = summary.detailed_sections || [];
+    return (
+      <div className="space-y-6">
+        {sections.length > 0 ? (
+          sections.map((section: any, index: number) => (
+            <div key={index} className="border border-gray-200 rounded-lg p-6">
+              <h4 className="text-lg font-semibold text-gray-900 mb-4">{section.section_title}</h4>
+              
+              {section.content && section.content.length > 0 && (
+                <div className="space-y-3 mb-4">
+                  {section.content.map((content: string, contentIndex: number) => (
+                    <p key={contentIndex} className="text-gray-700 leading-relaxed">• {content}</p>
+                  ))}
+                </div>
+              )}
+
+              {section.referenced_clauses && section.referenced_clauses.length > 0 && (
+                <div>
+                  <h5 className="text-sm font-semibold text-gray-600 mb-2">Referenced Clauses:</h5>
+                  <div className="flex flex-wrap gap-2">
+                    {section.referenced_clauses.map((clause: string, clauseIndex: number) => (
+                      <span key={clauseIndex} className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+                        {clause}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))
+        ) : (
+          <p className="text-gray-500 text-center py-8">No detailed sections available.</p>
+        )}
+      </div>
+    );
+  };
+
+  const renderOtherProvisions = () => {
+    const provisions = summary.other_provisions || [];
+    return (
+      <div className="space-y-4">
+        {provisions.length > 0 ? (
+          provisions.map((provision: any, index: number) => (
+            <div key={index} className="border border-gray-200 rounded-lg p-4">
+              <h4 className="font-semibold text-gray-900 mb-2">{provision.title}</h4>
+              <p className="text-gray-700 text-sm mb-2">{provision.description}</p>
+              
+              {provision.referenced_clauses && provision.referenced_clauses.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {provision.referenced_clauses.map((clause: string, clauseIndex: number) => (
+                    <span key={clauseIndex} className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+                      {clause}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))
+        ) : (
+          <p className="text-gray-500 text-center py-8">No other provisions identified.</p>
+        )}
+      </div>
+    );
+  };
 
   const renderListSection = (items: any[], emptyMessage: string) => (
     <div className="space-y-3">
@@ -118,20 +230,12 @@ export default function AnalysisDrawer({ job, onClose, onAttachToBuilding }: Ana
     switch (activeTab) {
       case 'overview':
         return renderOverview();
-      case 'clauses':
-        return renderListSection(summary.clauses || [], 'No clauses identified.');
-      case 'dates':
-        return renderListSection(summary.key_dates || [], 'No key dates found.');
-      case 'financials':
-        return renderListSection(summary.financials || [], 'No financial information found.');
-      case 'obligations':
-        return renderListSection(summary.obligations || [], 'No obligations identified.');
-      case 'restrictions':
-        return renderListSection(summary.restrictions || [], 'No restrictions found.');
-      case 'variations':
-        return renderListSection(summary.variations || [], 'No variations identified.');
-      case 'actions':
-        return renderListSection(summary.actions || [], 'No action points identified.');
+      case 'property':
+        return renderPropertyDetails();
+      case 'sections':
+        return renderDetailedSections();
+      case 'provisions':
+        return renderOtherProvisions();
       default:
         return renderOverview();
     }
