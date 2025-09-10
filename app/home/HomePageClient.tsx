@@ -1254,14 +1254,17 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (user?.email) {
-        const { data: profileData } = await supabase
-          .from('users')
-          .select('first_name')
-          .eq('email', user.email)
-          .single()
-        
-        if (profileData?.first_name) {
-          setUserFirstName(profileData.first_name)
+        // Use API endpoint instead of direct Supabase call
+        const response = await fetch('/api/users')
+        if (response.ok) {
+          const data = await response.json()
+          if (data.first_name) {
+            setUserFirstName(data.first_name)
+          } else {
+            // Fallback: use first part of email before @
+            const emailPrefix = user.email.split('@')[0]
+            setUserFirstName(emailPrefix)
+          }
         } else {
           // Fallback: use first part of email before @
           const emailPrefix = user.email.split('@')[0]

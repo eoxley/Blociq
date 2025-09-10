@@ -51,26 +51,28 @@ export default function OutlookConnectButton({
         return
       }
 
-      const { data: tokens, error } = await supabase
-        .from('outlook_tokens')
-        .select('email, expires_at')
-        .eq('user_id', user.id)
-        .single()
+      // Use API endpoint instead of direct Supabase call
+      const response = await fetch('/api/outlook_tokens')
+      if (!response.ok) {
+        setConnectionStatus('disconnected')
+        return
+      }
 
-      if (error || !tokens) {
+      const data = await response.json()
+      if (!data.email || !data.expires_at) {
         setConnectionStatus('disconnected')
         return
       }
 
       // Check if token is expired
-      const isExpired = new Date(tokens.expires_at) < new Date()
+      const isExpired = new Date(data.expires_at) < new Date()
       if (isExpired) {
         setConnectionStatus('disconnected')
         return
       }
 
       setConnectionStatus('connected')
-      setUserEmail(tokens.email)
+      setUserEmail(data.email)
     } catch (error) {
       console.error('Error checking Outlook connection:', error)
       setConnectionStatus('disconnected')
