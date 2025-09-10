@@ -46,6 +46,9 @@ export async function GET(req: NextRequest) {
       }, { status: 500 });
     }
 
+    console.log('📋 Returning jobs from API:', jobs?.length || 0, 'jobs');
+    console.log('📋 Job IDs from API:', jobs?.map(job => job.id) || []);
+    
     return NextResponse.json({ 
       success: true,
       jobs: jobs || [],

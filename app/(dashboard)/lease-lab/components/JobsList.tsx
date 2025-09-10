@@ -57,7 +57,9 @@ export default function JobsList({ jobs, onViewAnalysis, onRefresh }: JobsListPr
         console.log('✅ Delete successful:', responseData);
         toast.success('Analysis deleted successfully');
         // Only refresh after successful API call - this will remove the job from UI
+        console.log('🔄 Refreshing jobs list after successful delete...');
         await onRefresh(); // Refresh the jobs list
+        console.log('✅ Jobs list refreshed');
       } else {
         const errorData = await response.json();
         console.error('❌ Delete failed:', errorData);

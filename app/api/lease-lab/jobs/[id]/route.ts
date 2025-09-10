@@ -159,6 +159,7 @@ export async function DELETE(
     console.log('✅ User authenticated for lease lab delete');
 
     // Delete the job
+    console.log('🗑️ Deleting job from database:', params.id, 'for user:', user.id);
     const { error: deleteError } = await supabase
       .from('document_jobs')
       .delete()
@@ -166,13 +167,14 @@ export async function DELETE(
       .eq('user_id', user.id);
 
     if (deleteError) {
-      console.error('Error deleting job:', deleteError);
+      console.error('❌ Error deleting job:', deleteError);
       return NextResponse.json({ 
         error: 'Failed to delete job',
         message: 'Unable to delete job. Please try again.'
       }, { status: 500 });
     }
 
+    console.log('✅ Job successfully deleted from database');
     return NextResponse.json({ 
       success: true,
       message: 'Job deleted successfully'
