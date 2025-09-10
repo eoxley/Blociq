@@ -6,6 +6,7 @@ import { X, FileText, Mail, Download, Eye, AlertCircle, CheckCircle } from 'luci
 interface MailMergeModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onCampaignCreated?: (campaignData: any) => void;
   buildingId?: string;
   buildingName?: string;
 }
@@ -35,7 +36,7 @@ interface PreviewData {
   warnings: string[];
 }
 
-export default function MailMergeModal({ isOpen, onClose, buildingId, buildingName }: MailMergeModalProps) {
+export default function MailMergeModal({ isOpen, onClose, onCampaignCreated, buildingId, buildingName }: MailMergeModalProps) {
   const [step, setStep] = useState(1);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
@@ -51,16 +52,18 @@ export default function MailMergeModal({ isOpen, onClose, buildingId, buildingNa
       loadTemplates();
       if (buildingId) {
         loadRecipients();
+      } else {
+        setRecipients([]);
       }
     }
   }, [isOpen, buildingId]);
 
   const loadTemplates = async () => {
     try {
-      const response = await fetch('/api/comms/templates');
+      const response = await fetch('/api/communications/templates');
       if (response.ok) {
         const data = await response.json();
-        setTemplates(data);
+        setTemplates(data.templates || []);
       }
     } catch (error) {
       console.error('Failed to load templates:', error);
@@ -142,6 +145,16 @@ export default function MailMergeModal({ isOpen, onClose, buildingId, buildingNa
       if (response.ok) {
         const data = await response.json();
         setStep(4);
+        
+        // Call the campaign created callback
+        if (onCampaignCreated) {
+          onCampaignCreated({
+            name: selectedTemplate.name,
+            type: selectedTemplate.type,
+            recipientCount: recipients.length,
+            testMode: testMode
+          });
+        }
       } else {
         const errorData = await response.json();
         setError(errorData.message || 'Failed to generate communications');
@@ -226,12 +239,28 @@ export default function MailMergeModal({ isOpen, onClose, buildingId, buildingNa
           {step === 1 && (
             <div>
               <h3 className="text-lg font-medium mb-4">Select Template</h3>
+              
+              {!buildingId && (
+                <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <div className="flex items-center">
+                    <AlertCircle className="w-5 h-5 text-yellow-500 mr-2" />
+                    <span className="text-yellow-700">
+                      Please select a building first to use mail merge functionality.
+                    </span>
+                  </div>
+                </div>
+              )}
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {templates.map((template) => (
                   <div
                     key={template.id}
-                    onClick={() => handleTemplateSelect(template)}
-                    className="p-4 border rounded-lg hover:border-blue-500 cursor-pointer transition-colors"
+                    onClick={() => buildingId && handleTemplateSelect(template)}
+                    className={`p-4 border rounded-lg transition-colors ${
+                      buildingId 
+                        ? 'hover:border-blue-500 cursor-pointer' 
+                        : 'opacity-50 cursor-not-allowed'
+                    }`}
                   >
                     <div className="flex items-center mb-2">
                       {template.type === 'letter' ? (

@@ -4,28 +4,19 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/utils/supabase/server';
 import { cookies } from 'next/headers';
 
 export async function GET(req: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = createClient(cookies());
     
     // Get current user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    const user = session?.user;
+    
+    if (sessionError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    
-    // Get user's agency
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('agency_id')
-      .eq('id', user.id)
-      .single();
-    
-    if (!profile?.agency_id) {
-      return NextResponse.json({ error: 'User not linked to agency' }, { status: 400 });
     }
     
     const { searchParams } = new URL(req.url);
@@ -39,23 +30,25 @@ export async function GET(req: NextRequest) {
     
     // Get recipients for the building
     const { data: recipients, error: recipientsError } = await supabase
-      .from('v_building_recipients')
+      .from('leaseholders')
       .select(`
-        leaseholder_id,
-        leaseholder_name,
-        salutation,
-        salutation_fallback,
+        id as leaseholder_id,
+        name as leaseholder_name,
         email,
-        postal_address,
-        unit_label,
-        unit_number,
-        unit_type,
-        building_name,
-        opt_out_email,
-        uses_unit_as_postal
+        phone,
+        units!inner(
+          id as unit_id,
+          unit_number,
+          building_id,
+          buildings!inner(
+            id,
+            name as building_name,
+            address
+          )
+        )
       `)
-      .eq('building_id', buildingId)
-      .eq('agency_id', profile.agency_id);
+      .eq('units.building_id', buildingId)
+      .not('email', 'is', null);
     
     if (recipientsError) {
       return NextResponse.json({ 
@@ -64,29 +57,18 @@ export async function GET(req: NextRequest) {
       }, { status: 500 });
     }
     
-    // Group recipients by lease for joint letters
-    const recipientsByLease = groupRecipientsByLease(recipients || []);
+    // Transform data for mail merge
+    const transformedRecipients = (recipients || []).map(recipient => ({
+      leaseholder_id: recipient.leaseholder_id,
+      leaseholder_name: recipient.leaseholder_name,
+      salutation: `Dear ${recipient.leaseholder_name}`,
+      email: recipient.email,
+      postal_address: recipient.units?.buildings?.address || '',
+      unit_label: `Unit ${recipient.units?.unit_number}`,
+      opt_out_email: false
+    }));
     
-    // Convert to simplified format for UI
-    const simplifiedRecipients = Array.from(recipientsByLease.values()).map(leaseRecipients => {
-      const primary = leaseRecipients[0];
-      return {
-        leaseholder_id: primary.leaseholder_id,
-        leaseholder_name: primary.leaseholder_name,
-        salutation: primary.salutation || primary.salutation_fallback,
-        email: primary.email,
-        postal_address: primary.postal_address,
-        unit_label: primary.unit_label,
-        unit_number: primary.unit_number,
-        unit_type: primary.unit_type,
-        building_name: primary.building_name,
-        opt_out_email: primary.opt_out_email,
-        uses_unit_as_postal: primary.uses_unit_as_postal,
-        joint_leaseholders: leaseRecipients.map(r => r.leaseholder_name)
-      };
-    });
-    
-    return NextResponse.json(simplifiedRecipients);
+    return NextResponse.json(transformedRecipients);
     
   } catch (error) {
     console.error('Recipients API error:', error);
@@ -95,21 +77,4 @@ export async function GET(req: NextRequest) {
       message: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
-}
-
-/**
- * Group recipients by lease for joint letters
- */
-function groupRecipientsByLease(recipients: any[]): Map<string, any[]> {
-  const groups = new Map<string, any[]>();
-  
-  for (const recipient of recipients) {
-    const leaseId = recipient.lease_id;
-    if (!groups.has(leaseId)) {
-      groups.set(leaseId, []);
-    }
-    groups.get(leaseId)!.push(recipient);
-  }
-  
-  return groups;
 }

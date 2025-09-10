@@ -759,10 +759,19 @@ export default function CommunicationsPage() {
                   {/* Mail-Merge Button */}
                   <button
                     onClick={() => {
+                      if (!selectedBuilding) {
+                        toast.error('Please select a building first to use mail merge');
+                        return;
+                      }
                       console.log('[CommunicationsPage] Opening Mail-Merge Modal');
                       setShowMailMerge(true);
                     }}
-                    className="w-full bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700 text-white py-3 px-6 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2"
+                    disabled={!selectedBuilding}
+                    className={`w-full py-3 px-6 rounded-lg font-medium shadow-lg transition-all duration-200 flex items-center justify-center gap-2 ${
+                      selectedBuilding
+                        ? 'bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700 text-white hover:shadow-xl'
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
                   >
                     <FileText className="h-5 w-5" />
                     Mail-Merge Campaign
@@ -834,13 +843,33 @@ export default function CommunicationsPage() {
                 <p className="text-sm text-gray-600">Create professional documents with AI assistance</p>
               </div>
             </div>
-            <Link
-              href="/communications/templates"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-            >
-              <Plus className="h-4 w-4" />
-              Manage Templates
-            </Link>
+            <div className="flex gap-2">
+              <button
+                onClick={async () => {
+                  try {
+                    const response = await fetch('/api/comms/seed-templates', { method: 'POST' });
+                    if (response.ok) {
+                      toast.success('Sample templates created successfully!');
+                    } else {
+                      toast.error('Failed to create sample templates');
+                    }
+                  } catch (error) {
+                    toast.error('Error creating sample templates');
+                  }
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+              >
+                <Plus className="h-4 w-4" />
+                Create Sample Templates
+              </button>
+              <Link
+                href="/communications/templates"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+              >
+                <Plus className="h-4 w-4" />
+                Manage Templates
+              </Link>
+            </div>
           </div>
         </div>
         
@@ -1070,9 +1099,11 @@ export default function CommunicationsPage() {
 
       {/* Mail-Merge Modal */}
       <MailMergeModal
-        open={showMailMerge}
+        isOpen={showMailMerge}
         onClose={() => setShowMailMerge(false)}
         onCampaignCreated={handleMailMergeCampaign}
+        buildingId={selectedBuilding}
+        buildingName={buildings.find(b => b.id === selectedBuilding)?.name}
       />
     </div>
   )
