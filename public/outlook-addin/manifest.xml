@@ -4,11 +4,11 @@
            xsi:type="MailApp">
 
   <Id>c518d2f2-3bc7-4db4-a863-7cc313c921f5</Id>
-  <Version>1.0.0.17</Version>
+  <Version>1.0.0.18</Version>
   <ProviderName>BlocIQ</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
-  <DisplayName DefaultValue="BlocIQ Assistant"/>
-  <Description DefaultValue="AI-powered property management assistant"/>
+  <DisplayName DefaultValue="BlocIQ"/>
+  <Description DefaultValue="BlocIQ Assistant"/>
   <IconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icons/icon-32.png"/>
 
   <Hosts>
@@ -25,7 +25,7 @@
     <Form xsi:type="ItemRead">
       <DesktopSettings>
         <SourceLocation DefaultValue="https://www.blociq.co.uk/outlook-addin/test.html"/>
-        <RequestedHeight>250</RequestedHeight>
+        <RequestedHeight>300</RequestedHeight>
       </DesktopSettings>
     </Form>
   </FormSettings>
