@@ -8,38 +8,30 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createClient();
+    const supabase = createClient(cookies());
     
     // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
-    if (userError || !user) {
+    if (sessionError || !session?.user) {
       return NextResponse.json({ 
         error: 'Authentication required',
         message: 'Please log in to view job details'
       }, { status: 401 });
     }
 
-    // Get the user's agency
-    const { data: agencyMember } = await supabase
-      .from('agency_members')
-      .select('agency_id')
-      .eq('user_id', user.id)
-      .single();
+    const user = session.user;
 
-    if (!agencyMember) {
-      return NextResponse.json({ 
-        error: 'Agency membership required',
-        message: 'Please join an agency to view job details'
-      }, { status: 403 });
-    }
+    // For lease lab, we don't require agency membership
+    // The system works directly with user authentication
+    console.log('✅ User authenticated for lease lab job fetch');
 
     // Fetch the specific job
     const { data: job, error: jobError } = await supabase
       .from('document_jobs')
       .select('*')
       .eq('id', params.id)
-      .eq('agency_id', agencyMember.agency_id)
+      .eq('user_id', user.id)
       .single();
 
     if (jobError || !job) {
@@ -87,31 +79,23 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createClient();
+    const supabase = createClient(cookies());
     
     // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
-    if (userError || !user) {
+    if (sessionError || !session?.user) {
       return NextResponse.json({ 
         error: 'Authentication required',
         message: 'Please log in to update job'
       }, { status: 401 });
     }
 
-    // Get the user's agency
-    const { data: agencyMember } = await supabase
-      .from('agency_members')
-      .select('agency_id')
-      .eq('user_id', user.id)
-      .single();
+    const user = session.user;
 
-    if (!agencyMember) {
-      return NextResponse.json({ 
-        error: 'Agency membership required',
-        message: 'Please join an agency to update job'
-      }, { status: 403 });
-    }
+    // For lease lab, we don't require agency membership
+    // The system works directly with user authentication
+    console.log('✅ User authenticated for lease lab job update');
 
     const body = await req.json();
     const { linked_building_id, linked_unit_id } = body;
@@ -125,7 +109,7 @@ export async function PATCH(
         updated_at: new Date().toISOString()
       })
       .eq('id', params.id)
-      .eq('agency_id', agencyMember.agency_id)
+      .eq('user_id', user.id)
       .select()
       .single();
 
@@ -156,38 +140,30 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createClient();
+    const supabase = createClient(cookies());
     
     // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
-    if (userError || !user) {
+    if (sessionError || !session?.user) {
       return NextResponse.json({ 
         error: 'Authentication required',
         message: 'Please log in to delete job'
       }, { status: 401 });
     }
 
-    // Get the user's agency
-    const { data: agencyMember } = await supabase
-      .from('agency_members')
-      .select('agency_id')
-      .eq('user_id', user.id)
-      .single();
+    const user = session.user;
 
-    if (!agencyMember) {
-      return NextResponse.json({ 
-        error: 'Agency membership required',
-        message: 'Please join an agency to delete job'
-      }, { status: 403 });
-    }
+    // For lease lab, we don't require agency membership
+    // The system works directly with user authentication
+    console.log('✅ User authenticated for lease lab delete');
 
     // Delete the job
     const { error: deleteError } = await supabase
       .from('document_jobs')
       .delete()
       .eq('id', params.id)
-      .eq('agency_id', agencyMember.agency_id);
+      .eq('user_id', user.id);
 
     if (deleteError) {
       console.error('Error deleting job:', deleteError);

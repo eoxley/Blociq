@@ -4,17 +4,19 @@ import { cookies } from 'next/headers';
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = createClient();
+    const supabase = createClient(cookies());
     
     // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
-    if (userError || !user) {
+    if (sessionError || !session?.user) {
       return NextResponse.json({ 
         error: 'Authentication required',
         message: 'Please log in to upload documents'
       }, { status: 401 });
     }
+
+    const user = session.user;
 
     // For lease lab, we don't require agency membership
     // The system works directly with user authentication
