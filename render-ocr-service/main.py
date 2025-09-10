@@ -107,8 +107,8 @@ def extract_text_with_tesseract(image_path: str) -> str:
     """Extract text using Tesseract OCR"""
     try:
         image = Image.open(image_path)
-        # Configure Tesseract for better accuracy
-        custom_config = r'--oem 3 --psm 6'
+        # Configure Tesseract for faster processing
+        custom_config = r'--oem 3 --psm 6 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,!?()[]{}:;"\'-/ '
         text = pytesseract.image_to_string(image, config=custom_config)
         return text.strip()
     except Exception as e:
@@ -140,11 +140,16 @@ def extract_text_with_google_vision(image_path: str) -> str:
 def process_pdf(file_path: str, use_google_vision: bool = False) -> tuple[str, str]:
     """Process PDF file and extract text from all pages"""
     try:
-        # Convert PDF to images
-        images = convert_from_path(file_path, dpi=300)
+        # Convert PDF to images (reduced DPI for faster processing)
+        images = convert_from_path(file_path, dpi=150)
         extracted_texts = []
         
-        for i, image in enumerate(images):
+        # Limit to first 10 pages for very large documents
+        max_pages = min(len(images), 10)
+        if len(images) > 10:
+            print(f"Large document detected ({len(images)} pages), processing first 10 pages only")
+        
+        for i, image in enumerate(images[:max_pages]):
             # Save image temporarily
             with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp_img:
                 image.save(temp_img.name, 'PNG')
