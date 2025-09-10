@@ -4,8 +4,6 @@ import React, { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { 
   Building2, 
-  MapPin, 
-  Users, 
   Plus,
   Eye,
   ArrowRight,
@@ -13,7 +11,6 @@ import {
   Shield,
   Sparkles
 } from 'lucide-react'
-import { BlocIQButton } from '@/components/ui/blociq-button'
 
 // Dummy data removed - only showing live buildings from database
 
@@ -22,7 +19,6 @@ function BuildingsList() {
   const [searchQuery, setSearchQuery] = useState('')
   const [realBuildings, setRealBuildings] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [showCreateModal, setShowCreateModal] = useState(false)
 
   // Fetch real buildings from Supabase
   useEffect(() => {
@@ -116,7 +112,7 @@ function BuildingsList() {
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
-              onClick={() => setShowCreateModal(true)}
+              onClick={() => alert('Building creation feature coming soon!')}
               className="bg-gradient-to-r from-white to-white/90 hover:from-white/90 hover:to-white text-blue-600 px-10 py-4 rounded-2xl font-bold shadow-2xl hover:shadow-3xl transition-all duration-300 border-2 border-white/50 hover:border-white transform hover:scale-105"
             >
               <Plus className="h-6 w-6 mr-3 inline" />
@@ -235,55 +231,6 @@ function BuildingsList() {
                       <Shield className="h-4 w-4" />
                       View Compliance
                     </Link>
-                  </div>
-                </div>
-              </div>
-            ))}
-            {/* Demo Building Tiles */}
-            {dummyBuildings.map((building) => (
-              <div
-                key={building.id}
-                className="group bg-white rounded-3xl shadow-xl border border-gray-100 hover:shadow-2xl hover:shadow-gray-500/20 transition-all duration-500 overflow-hidden transform hover:scale-[1.02] relative"
-              >
-                {/* Hover Effect Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-br from-gray-500/8 to-gray-600/8 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl pointer-events-none"></div>
-                
-                {/* HRB Badge */}
-                {building.is_hrb && (
-                  <div className="absolute top-4 right-4 z-10">
-                    <div className="bg-gradient-to-r from-red-600 to-red-700 text-white text-xs font-bold px-3 py-1 rounded-full shadow-2xl">
-                      HRB
-                    </div>
-                  </div>
-                )}
-
-
-
-                {/* Building Icon */}
-                <div className="w-20 h-20 bg-gradient-to-br from-gray-400 to-gray-500 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-2xl">
-                  <Building2 className="h-10 w-10 text-white" />
-                </div>
-
-                {/* Building Info */}
-                <div className="px-6 pb-6 text-center">
-                  <h3 className="text-xl font-bold text-gray-900 mb-2 leading-tight">{building.name}</h3>
-                  <p className="text-gray-600 mb-4 font-medium">{building.address}</p>
-                  <div className="text-gray-700 font-semibold mb-6">{building.units} Units</div>
-                  
-                  {/* Action Buttons */}
-                  <div className="space-y-3">
-                    <button
-                      className="w-full bg-gradient-to-r from-gray-400 to-gray-500 text-white border-0 transition-all duration-300 rounded-2xl font-bold text-base shadow-lg hover:shadow-xl py-3 cursor-not-allowed opacity-75"
-                      disabled
-                    >
-                      Demo Only
-                    </button>
-                    <button
-                      className="w-full bg-gradient-to-r from-gray-400 to-gray-500 text-white border-0 transition-all duration-300 rounded-2xl font-bold text-base shadow-lg hover:shadow-xl py-3 cursor-not-allowed opacity-75"
-                      disabled
-                    >
-                      Demo Only
-                    </button>
                   </div>
                 </div>
               </div>
