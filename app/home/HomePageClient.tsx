@@ -329,16 +329,14 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
   const fetchBuildings = async () => {
     try {
-      const { data, error } = await supabase
-        .from('buildings')
-        .select('id, name')
-        .order('name')
-
-      if (error) {
-        console.error('Error fetching buildings:', error)
+      // Use API endpoint instead of direct Supabase call
+      const response = await fetch('/api/buildings')
+      if (!response.ok) {
+        console.error('Error fetching buildings:', response.status, response.statusText)
         return
       }
 
+      const data = await response.json()
       setBuildings(data || [])
     } catch (error) {
       console.error('Error in fetchBuildings:', error)
@@ -347,37 +345,27 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
   const fetchEvents = async () => {
     try {
-      // Fetch from property_events, manual_events, and compliance events
+      // Fetch from property_events, manual_events, and compliance events using API endpoints
       const responses = await Promise.all([
-        supabase
-          .from('property_events')
-          .select('*')
-          .gte('date', new Date().toISOString().split('T')[0])
-          .order('date', { ascending: true })
-          .limit(5),
-        supabase
-          .from('manual_events')
-          .select('*')
-          .gte('start_time', new Date().toISOString().split('T')[0])
-          .order('start_time', { ascending: true })
-          .limit(5),
+        fetch('/api/events/property').then(res => res.json()),
+        fetch('/api/events/manual').then(res => res.json()),
         fetch('/api/events/compliance').then(res => res.json())
       ])
 
       // Safe destructuring with fallback
       const [propertyEventsResponse, manualEventsResponse, complianceResponse] = responses || [{}, {}, {}]
 
-      if (propertyEventsResponse.error) {
+      if (!propertyEventsResponse.success) {
         console.error('Error fetching property events:', propertyEventsResponse.error)
         // Continue with empty array instead of crashing
       }
 
-      if (manualEventsResponse.error) {
+      if (!manualEventsResponse.success) {
         console.error('Error fetching manual events:', manualEventsResponse.error)
         // Continue with empty array instead of crashing
       }
 
-      if (complianceResponse.error) {
+      if (!complianceResponse.success) {
         console.error('Error fetching compliance events:', complianceResponse.error)
         // Continue with empty array instead of crashing
       }

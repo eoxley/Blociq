@@ -24,14 +24,14 @@ export async function checkOutlookConnection(): Promise<OutlookConnectionStatus>
       return { connected: false };
     }
 
-    // Get the user's Outlook tokens
-    const { data: tokens, error: tokenError } = await supabase
-      .from('outlook_tokens')
-      .select('*')
-      .eq('user_id', session.user.id)
-      .single();
+    // Use API endpoint instead of direct Supabase call
+    const response = await fetch('/api/outlook_tokens');
+    if (!response.ok) {
+      return { connected: false };
+    }
 
-    if (tokenError || !tokens) {
+    const tokens = await response.json();
+    if (!tokens || !tokens.email || !tokens.expires_at) {
       return { connected: false };
     }
 
