@@ -170,8 +170,10 @@ ${extractedText.substring(0, 15000)}
       }
       
       console.log('🔍 Attempting to parse cleaned JSON response...');
+      console.log('🔍 First 500 chars of cleaned response:', cleanedText.substring(0, 500));
       summary = JSON.parse(cleanedText);
       console.log('✅ Successfully parsed AI analysis JSON');
+      console.log('🔍 Has clause_summaries:', summary.clause_summaries ? `${summary.clause_summaries.length} clauses` : 'missing');
       
     } catch (parseError) {
       console.error('❌ Failed to parse OpenAI response after cleaning:', parseError.message);
