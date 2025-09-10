@@ -1,6 +1,6 @@
 /**
  * BlocIQ Outlook Add-in Functions
- * This file contains all command handlers for the Outlook add-in
+ * Clean implementation with only core functionality
  */
 
 // Global error handling
@@ -8,7 +8,6 @@ window.addEventListener('error', (event) => {
     console.error('[BlocIQ Add-in] Global error:', event.error);
 });
 
-// Unhandled promise rejection handler
 window.addEventListener('unhandledrejection', (event) => {
     console.error('[BlocIQ Add-in] Promise rejection:', event.reason);
 });
@@ -19,11 +18,11 @@ Office.onReady((info) => {
 });
 
 /**
- * Generate AI Reply from Read Mode
+ * Generate AI Reply - Main function for both Read and Compose modes
  */
-async function onGenerateReplyFromRead(event) {
+async function generateReply(event) {
     try {
-        console.log('[BlocIQ Add-in] onGenerateReplyFromRead started');
+        console.log('[BlocIQ Add-in] generateReply started');
         
         const item = Office.context.mailbox.item;
         
@@ -36,7 +35,7 @@ async function onGenerateReplyFromRead(event) {
         }
         
         // Get email details
-        const subject = item.subject;
+        const subject = item.subject || 'No subject';
         const body = await getItemBody(item);
         const sender = item.from ? item.from.emailAddress : 'Unknown';
         
@@ -50,12 +49,12 @@ async function onGenerateReplyFromRead(event) {
             subject,
             body,
             sender,
-            context: 'read'
+            context: 'functions'
         });
         
         if (reply && reply.content) {
-            // Show the generated reply in a modal or task pane
-            showAIReplyModal(reply.content, subject);
+            // Insert the reply into the compose body
+            await insertReplyIntoCompose(reply.content);
             showNotification('AI reply generated successfully!', 'success');
         } else {
             throw new Error('No reply generated');
@@ -64,143 +63,10 @@ async function onGenerateReplyFromRead(event) {
         event.completed();
         
     } catch (error) {
-        console.error('[BlocIQ Add-in] Error in onGenerateReplyFromRead:', error);
+        console.error('[BlocIQ Add-in] Error in generateReply:', error);
         showNotification('Error generating reply: ' + error.message, 'error');
         event.completed();
     }
-}
-
-/**
- * Generate AI Reply in Compose Mode
- */
-async function onGenerateIntoCompose(event) {
-    try {
-        console.log('[BlocIQ Add-in] onGenerateIntoCompose started');
-        
-        const item = Office.context.mailbox.item;
-        
-        if (!item) {
-            throw new Error('No mailbox item available');
-        }
-        
-        if (item.itemType !== 'message') {
-            throw new Error('Not a message item');
-        }
-        
-        // Get email details
-        const subject = item.subject;
-        const body = await getItemBody(item);
-        const sender = item.from ? item.from.emailAddress : 'Unknown';
-        
-        console.log('[BlocIQ Add-in] Compose email details:', { subject, sender, bodyLength: body.length });
-        
-        // Show loading state
-        showNotification('Generating AI reply...', 'info');
-        
-        // Call AI API to generate reply
-        const reply = await generateAIReply({
-            subject,
-            body,
-            sender,
-            context: 'compose'
-        });
-        
-        if (reply && reply.content) {
-            // Insert the reply into the compose body
-            await insertReplyIntoCompose(reply.content);
-            showNotification('AI reply inserted successfully!', 'success');
-        } else {
-            throw new Error('No reply generated');
-        }
-        
-        event.completed();
-        
-    } catch (error) {
-        console.error('[BlocIQ Add-in] Error in onGenerateIntoCompose:', error);
-        showNotification('Error generating reply: ' + error.message, 'error');
-        event.completed();
-    }
-}
-
-/**
- * Show AI Reply Modal
- */
-function showAIReplyModal(content, subject) {
-    // Create modal overlay
-    const overlay = document.createElement('div');
-    overlay.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.5);
-        z-index: 10000;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    `;
-    
-    // Create modal content
-    const modal = document.createElement('div');
-    modal.style.cssText = `
-        background: white;
-        border-radius: 8px;
-        padding: 20px;
-        max-width: 600px;
-        max-height: 80vh;
-        overflow-y: auto;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-    `;
-    
-    modal.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <h3 style="margin: 0; color: #333;">AI Generated Reply</h3>
-            <button id="closeModal" style="background: none; border: none; font-size: 20px; cursor: pointer;">&times;</button>
-        </div>
-        <div style="margin-bottom: 15px;">
-            <strong>Subject:</strong> ${subject || 'No subject'}
-        </div>
-        <div style="margin-bottom: 20px;">
-            <strong>Reply:</strong>
-            <div style="background: #f5f5f5; padding: 10px; border-radius: 4px; margin-top: 5px; white-space: pre-wrap;">${content}</div>
-        </div>
-        <div style="display: flex; gap: 10px; justify-content: flex-end;">
-            <button id="copyReply" style="padding: 8px 16px; background: #0078d4; color: white; border: none; border-radius: 4px; cursor: pointer;">Copy Reply</button>
-            <button id="useReply" style="padding: 8px 16px; background: #107c10; color: white; border: none; border-radius: 4px; cursor: pointer;">Use This Reply</button>
-        </div>
-    `;
-    
-    overlay.appendChild(modal);
-    document.body.appendChild(overlay);
-    
-    // Event handlers
-    document.getElementById('closeModal').onclick = () => {
-        document.body.removeChild(overlay);
-    };
-    
-    document.getElementById('copyReply').onclick = () => {
-        navigator.clipboard.writeText(content).then(() => {
-            showNotification('Reply copied to clipboard!', 'success');
-        });
-    };
-    
-    document.getElementById('useReply').onclick = async () => {
-        try {
-            await insertReplyIntoCompose(content);
-            showNotification('Reply inserted into compose!', 'success');
-            document.body.removeChild(overlay);
-        } catch (error) {
-            showNotification('Error inserting reply: ' + error.message, 'error');
-        }
-    };
-    
-    // Close on overlay click
-    overlay.onclick = (e) => {
-        if (e.target === overlay) {
-            document.body.removeChild(overlay);
-        }
-    };
 }
 
 /**
@@ -282,44 +148,54 @@ function showNotification(message, type = 'info') {
         top: 20px;
         right: 20px;
         padding: 12px 20px;
-        border-radius: 4px;
+        border-radius: 8px;
         color: white;
         font-weight: 500;
         z-index: 10001;
         max-width: 300px;
         word-wrap: break-word;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 13px;
     `;
     
     // Set color based on type
     switch (type) {
         case 'success':
-            notification.style.background = '#107c10';
+            notification.style.background = 'linear-gradient(135deg, #10b981, #059669)';
             break;
         case 'error':
-            notification.style.background = '#d13438';
+            notification.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
             break;
         case 'warning':
-            notification.style.background = '#ff8c00';
+            notification.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
             break;
         default:
-            notification.style.background = '#0078d4';
+            notification.style.background = 'linear-gradient(135deg, #008C8F, #2BBEB4)';
     }
     
     notification.textContent = message;
     document.body.appendChild(notification);
     
-    // Remove after 3 seconds
+    // Remove after 4 seconds
     setTimeout(() => {
         if (document.body.contains(notification)) {
-            document.body.removeChild(notification);
+            notification.style.opacity = '0';
+            notification.style.transform = 'translateX(100%)';
+            notification.style.transition = 'all 0.3s ease';
+            setTimeout(() => {
+                if (document.body.contains(notification)) {
+                    document.body.removeChild(notification);
+                }
+            }, 300);
         }
-    }, 3000);
+    }, 4000);
 }
 
-// Export functions for Office
-if (typeof Office !== 'undefined') {
-    Office.actions = Office.actions || {};
-    Office.actions.onGenerateReplyFromRead = onGenerateReplyFromRead;
-    Office.actions.onGenerateIntoCompose = onGenerateIntoCompose;
+// Export functions for Office using the correct method
+if (typeof Office !== 'undefined' && Office.actions) {
+    Office.actions.associate("generateReply", generateReply);
+} else {
+    // Fallback for when Office.actions is not available
+    window.generateReply = generateReply;
 }

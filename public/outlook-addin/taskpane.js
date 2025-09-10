@@ -1,4 +1,5 @@
 // BlocIQ AI Assistant - Taskpane JavaScript
+// Clean, focused implementation for Outlook Add-in
 
 let isOfficeReady = false;
 let currentUser = null;
@@ -54,7 +55,7 @@ function initializeChat() {
     // Auto-resize textarea
     inputField.addEventListener('input', function() {
         this.style.height = 'auto';
-        this.style.height = Math.min(this.scrollHeight, 80) + 'px';
+        this.style.height = Math.min(this.scrollHeight, 100) + 'px';
         
         // Enable/disable send button
         sendButton.disabled = this.value.trim() === '';
@@ -71,7 +72,7 @@ function initializeChat() {
     // Send button click
     sendButton.addEventListener('click', sendMessage);
     
-    // Add some quick action buttons for email context
+    // Add quick action buttons for email context
     if (isOfficeReady) {
         addEmailContextActions();
     }
@@ -140,20 +141,13 @@ function addEmailContextActions() {
     // Create quick actions container
     const actionsContainer = document.createElement('div');
     actionsContainer.className = 'quick-actions';
-    actionsContainer.style.cssText = `
-        margin: 10px 0;
-        padding: 10px;
-        background: #f8f9fa;
-        border-radius: 8px;
-        border: 1px solid #e9ecef;
-    `;
     
     actionsContainer.innerHTML = `
-        <div style="font-size: 12px; font-weight: 600; margin-bottom: 8px; color: #495057;">Quick Actions:</div>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-            <button onclick="generateReply()" style="padding: 4px 8px; font-size: 11px; background: #0078d4; color: white; border: none; border-radius: 4px; cursor: pointer;">Generate Reply</button>
-            <button onclick="summarizeEmail()" style="padding: 4px 8px; font-size: 11px; background: #107c10; color: white; border: none; border-radius: 4px; cursor: pointer;">Summarize Email</button>
-            <button onclick="extractActionItems()" style="padding: 4px 8px; font-size: 11px; background: #ff8c00; color: white; border: none; border-radius: 4px; cursor: pointer;">Extract Actions</button>
+        <div class="quick-actions-title">Quick Actions:</div>
+        <div class="quick-actions-buttons">
+            <button onclick="generateReply()" class="quick-action-btn">Generate Reply</button>
+            <button onclick="summarizeEmail()" class="quick-action-btn secondary">Summarize Email</button>
+            <button onclick="extractActionItems()" class="quick-action-btn secondary">Extract Actions</button>
         </div>
     `;
     
@@ -352,7 +346,7 @@ function showTypingIndicator() {
     return typingId;
 }
 
-function removeTypingIndicator(typingId) {
+function hideTypingIndicator(typingId) {
     const typingElement = document.getElementById(typingId);
     if (typingElement) {
         typingElement.remove();
@@ -387,7 +381,7 @@ async function processMessage(message, typingId) {
         const data = await response.json();
         
         // Remove typing indicator
-        removeTypingIndicator(typingId);
+        hideTypingIndicator(typingId);
         
         // Add AI response
         addMessage('assistant', data.response || data.message);
@@ -399,7 +393,7 @@ async function processMessage(message, typingId) {
         
     } catch (error) {
         console.error('Error processing message:', error);
-        removeTypingIndicator(typingId);
+        hideTypingIndicator(typingId);
         
         // Show fallback response
         addMessage('assistant', 'I apologize, but I\'m having trouble connecting to the AI service right now. Please try again in a moment, or contact support if the issue persists.');
@@ -460,7 +454,7 @@ function addReplyButton(suggestedReply) {
     contentDiv.className = 'message-content';
     contentDiv.innerHTML = `
         <p style="margin-bottom: 8px;">Would you like me to insert this reply into your email?</p>
-        <button onclick="insertReply('${btoa(suggestedReply)}')" style="background: #008C8F; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">Insert Reply</button>
+        <button onclick="insertReply('${btoa(suggestedReply)}')" class="quick-action-btn">Insert Reply</button>
     `;
     
     buttonDiv.appendChild(avatar);
@@ -488,56 +482,5 @@ function insertReply(encodedReply) {
     }
 }
 
-function addEmailContextActions() {
-    // Add quick action buttons based on email context
-    setTimeout(async () => {
-        const context = await getEmailContext();
-        
-        if (context.available) {
-            let quickActions = [];
-            
-            if (context.isCompose) {
-                quickActions.push('Help me write a professional email');
-                quickActions.push('Suggest improvements to my draft');
-            } else {
-                quickActions.push('Generate a reply to this email');
-                quickActions.push('Summarize this email');
-                quickActions.push('What action items are in this email?');
-            }
-            
-            // Add quick action buttons
-            const chatContainer = document.getElementById('chatContainer');
-            const actionsDiv = document.createElement('div');
-            actionsDiv.className = 'message assistant';
-            
-            const avatar = document.createElement('div');
-            avatar.className = 'message-avatar';
-            avatar.textContent = 'AI';
-            
-            const contentDiv = document.createElement('div');
-            contentDiv.className = 'message-content';
-            contentDiv.innerHTML = `
-                <p style="margin-bottom: 8px; font-size: 11px; opacity: 0.8;">Quick actions:</p>
-                ${quickActions.map(action => 
-                    `<button onclick="sendQuickMessage('${action}')" style="background: #f3f4f6; border: 1px solid #d1d5db; padding: 4px 8px; margin: 2px; border-radius: 4px; font-size: 10px; cursor: pointer;">${action}</button>`
-                ).join('')}
-            `;
-            
-            actionsDiv.appendChild(avatar);
-            actionsDiv.appendChild(contentDiv);
-            
-            chatContainer.appendChild(actionsDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
-    }, 1000);
-}
-
-function sendQuickMessage(message) {
-    // Simulate clicking a quick action
-    document.getElementById('inputField').value = message;
-    sendMessage();
-}
-
 // Make functions globally available
 window.insertReply = insertReply;
-window.sendQuickMessage = sendQuickMessage;
