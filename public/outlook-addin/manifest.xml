@@ -25,8 +25,8 @@
 
   <!-- Single Requirements section with proper version -->
   <Requirements>
-    <Sets DefaultMinVersion="1.8">
-      <Set Name="Mailbox" MinVersion="1.8"/>
+    <Sets DefaultMinVersion="1.10">
+      <Set Name="Mailbox" MinVersion="1.10"/>
     </Sets>
   </Requirements>
 
@@ -59,8 +59,8 @@
 
     <!-- Single Requirements section in VersionOverrides -->
     <Requirements>
-      <bt:Sets DefaultMinVersion="1.8">
-        <bt:Set Name="Mailbox" MinVersion="1.8"/>
+      <bt:Sets DefaultMinVersion="1.10">
+        <bt:Set Name="Mailbox" MinVersion="1.10"/>
       </bt:Sets>
     </Requirements>
 
