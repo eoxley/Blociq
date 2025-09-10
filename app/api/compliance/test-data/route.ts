@@ -1,21 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/utils/supabase/server';
 import { cookies } from 'next/headers';
 
 export async function GET(request: NextRequest) {
   try {
     console.log('🧪 Testing compliance data...');
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = createClient(cookies());
     
-    // Get the current user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
+    // Get the current user - Safe destructuring to prevent "Right side of assignment cannot be destructured" error
+    const sessionResult = await supabase.auth.getSession();
+    const sessionData = sessionResult?.data || {}
+    const session = sessionData.session || null
+    const sessionError = sessionResult?.error || null
+    
+    if (sessionError || !session) {
       return NextResponse.json({ 
         success: false,
         error: 'Authentication required',
         user: null
       }, { status: 401 });
     }
+
+    const user = session.user;
 
     console.log('🔐 User authenticated:', user.id);
 

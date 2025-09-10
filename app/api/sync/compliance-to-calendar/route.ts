@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/utils/supabase/server';
 import { cookies } from 'next/headers';
 import { 
   syncMultipleComplianceAssetsToOutlook,
@@ -9,16 +9,22 @@ import {
 export async function POST(request: NextRequest) {
   try {
     console.log('📅 Starting compliance to calendar sync...');
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = createClient(cookies());
     
-    // Get the current user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
+    // Get the current user - Safe destructuring to prevent "Right side of assignment cannot be destructured" error
+    const sessionResult = await supabase.auth.getSession();
+    const sessionData = sessionResult?.data || {}
+    const session = sessionData.session || null
+    const sessionError = sessionResult?.error || null
+    
+    if (sessionError || !session) {
       return NextResponse.json({ 
         success: false,
         error: 'Authentication required'
       }, { status: 401 });
     }
+
+    const user = session.user;
 
     console.log('🔐 User authenticated:', user.id);
 
@@ -188,16 +194,22 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     console.log('📅 Getting compliance calendar sync status...');
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = createClient(cookies());
     
-    // Get the current user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
+    // Get the current user - Safe destructuring to prevent "Right side of assignment cannot be destructured" error
+    const sessionResult = await supabase.auth.getSession();
+    const sessionData = sessionResult?.data || {}
+    const session = sessionData.session || null
+    const sessionError = sessionResult?.error || null
+    
+    if (sessionError || !session) {
       return NextResponse.json({ 
         success: false,
         error: 'Authentication required'
       }, { status: 401 });
     }
+
+    const user = session.user;
 
     // Get compliance assets with calendar sync status
     const { data: complianceAssets, error: complianceError } = await supabase

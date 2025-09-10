@@ -1,15 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/utils/supabase/server';
 import { cookies } from 'next/headers';
 
 export async function GET(request: NextRequest) {
   try {
     console.log('📊 Fetching detailed compliance data for portfolio...');
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = createClient(cookies());
     
-    // Get the current user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
+    // Get the current user - Safe destructuring to prevent "Right side of assignment cannot be destructured" error
+    const sessionResult = await supabase.auth.getSession();
+    const sessionData = sessionResult?.data || {}
+    const session = sessionData.session || null
+    const sessionError = sessionResult?.error || null
+    
+    if (sessionError || !session) {
       console.log('⚠️ Authentication failed, returning debug info');
       
       // Return debug info instead of failing
@@ -30,8 +34,8 @@ export async function GET(request: NextRequest) {
           error: 'Authentication required',
           buildings: allBuildings || [],
           assets: allAssets || [],
-          authError: authError?.message,
-          user: user ? 'User exists' : 'No user'
+          authError: sessionError?.message,
+          user: session ? 'User exists' : 'No user'
         });
       } catch (debugError) {
         return NextResponse.json({ 
@@ -41,6 +45,8 @@ export async function GET(request: NextRequest) {
         }, { status: 401 });
       }
     }
+
+    const user = session.user;
 
     console.log('🔐 User authenticated:', user.id);
 
