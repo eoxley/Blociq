@@ -28,14 +28,19 @@ export async function POST(req: NextRequest) {
       console.log('🤖 Starting AI analysis for job:', jobId);
     }
 
-    // Call OpenAI to analyze the extracted text
+    // Call OpenAI to analyze the extracted text with enhanced clause analysis
     const analysisPrompt = `
-Analyze this UK lease document and extract all key information. Return ONLY a valid JSON object with the following structure - do not include any markdown formatting or code blocks:
+Analyze this UK lease document and extract comprehensive clause information. Return ONLY a valid JSON object - no markdown formatting or code blocks:
 
 {
   "doc_type": "lease",
-  "overview": "Brief overview of the document type and property",
+  "overview": "Brief overview of the document type and property location",
   "parties": ["Party 1: Full Name or Company", "Party 2: Full Name or Company"],
+  "property_details": {
+    "address": "Full property address",
+    "description": "Type of property (flat, house, etc.)",
+    "lease_type": "Leasehold/Freehold"
+  },
   "key_dates": [
     {"title": "Lease Start Date", "date": "YYYY-MM-DD", "description": "When the lease begins"},
     {"title": "Lease End Date", "date": "YYYY-MM-DD", "description": "When the lease ends"},
@@ -44,29 +49,77 @@ Analyze this UK lease document and extract all key information. Return ONLY a va
   "financials": [
     {"title": "Premium/Purchase Price", "amount": "£X,XXX", "description": "One-time payment"},
     {"title": "Ground Rent", "amount": "£XXX per year", "description": "Annual ground rent"},
-    {"title": "Service Charge", "amount": "£XXX per year", "description": "Annual service charge"},
-    {"title": "Maintenance Charge", "amount": "£XXX", "description": "Maintenance obligations"}
+    {"title": "Service Charge", "amount": "£XXX per year", "description": "Annual service charge"}
+  ],
+  "clause_summaries": [
+    {
+      "clause_type": "Rent Review",
+      "title": "Rent Review Mechanism", 
+      "summary": "Detailed explanation of how rent reviews work",
+      "key_points": ["Point 1", "Point 2"],
+      "frequency": "Every X years",
+      "impact": "High/Medium/Low impact on tenant"
+    },
+    {
+      "clause_type": "Repair & Maintenance",
+      "title": "Maintenance Responsibilities",
+      "summary": "Who is responsible for what repairs and maintenance",
+      "key_points": ["Tenant responsibilities", "Landlord responsibilities"],
+      "frequency": "Ongoing",
+      "impact": "High impact on tenant"
+    },
+    {
+      "clause_type": "Assignment & Subletting", 
+      "title": "Transfer Rights",
+      "summary": "Rules about selling or subletting the lease",
+      "key_points": ["Assignment process", "Consent requirements"],
+      "frequency": "As needed",
+      "impact": "Medium impact on tenant"
+    },
+    {
+      "clause_type": "Use Restrictions",
+      "title": "Permitted Use",
+      "summary": "What the property can and cannot be used for", 
+      "key_points": ["Permitted uses", "Prohibited activities"],
+      "frequency": "Ongoing",
+      "impact": "Medium impact on tenant"
+    },
+    {
+      "clause_type": "Insurance",
+      "title": "Insurance Requirements",
+      "summary": "Insurance obligations for both parties",
+      "key_points": ["Building insurance", "Contents insurance"],
+      "frequency": "Annual",
+      "impact": "Medium impact on tenant"
+    }
   ],
   "obligations": [
-    {"title": "Maintenance Responsibility", "description": "Who maintains what"},
-    {"title": "Insurance Obligations", "description": "Insurance requirements"},
-    {"title": "Repair Obligations", "description": "Repair responsibilities"}
+    {"title": "Tenant Obligations", "description": "Key things the tenant must do"},
+    {"title": "Landlord Obligations", "description": "Key things the landlord must do"}
   ],
   "restrictions": [
-    {"title": "Use Restrictions", "description": "Permitted use of property"},
-    {"title": "Alteration Restrictions", "description": "Restrictions on modifications"},
-    {"title": "Assignment/Subletting", "description": "Transfer restrictions"}
+    {"title": "Property Use", "description": "How the property can be used"},
+    {"title": "Modifications", "description": "Rules about making changes"}
   ],
-  "variations": [],
-  "actions": [],
-  "source_spans": [],
-  "unknowns": ["Any unclear or missing information"]
+  "key_risks": [
+    {"risk": "Risk description", "impact": "High/Medium/Low", "mitigation": "How to address this risk"}
+  ],
+  "actions_required": [
+    {"action": "What needs to be done", "by_whom": "Tenant/Landlord", "deadline": "When", "priority": "High/Medium/Low"}
+  ],
+  "unknowns": ["Items requiring legal clarification"]
 }
 
-IMPORTANT: Extract real information from the document. Look for specific names, dates, amounts, and terms. Return ONLY the JSON object, no other text.
+CRITICAL INSTRUCTIONS:
+1. Focus heavily on CLAUSE SUMMARIES - this is the most important section
+2. Extract actual clause content, not generic descriptions
+3. Look for specific lease terms, conditions, and obligations
+4. Identify unusual or non-standard clauses that need attention
+5. Summarize complex legal language in plain English
+6. Return ONLY the JSON object, no other text
 
 Document text:
-${extractedText.substring(0, 12000)}
+${extractedText.substring(0, 15000)}
 `;
 
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -80,7 +133,7 @@ ${extractedText.substring(0, 12000)}
         messages: [
           {
             role: 'system',
-            content: 'You are a legal document analyst specializing in UK lease agreements. Extract specific information from lease documents and return ONLY valid JSON - no markdown, no explanations, no code blocks. Be precise with names, dates, and financial amounts found in the document.'
+            content: 'You are an expert UK property lawyer specializing in lease analysis. Your task is to read lease documents and extract detailed clause summaries in plain English. Focus on identifying specific lease terms, unusual clauses, tenant/landlord obligations, and potential risks. Convert complex legal language into clear summaries that property professionals can understand. Return ONLY valid JSON - no markdown, no explanations, no code blocks. Be precise with actual clause content, not generic descriptions.'
           },
           {
             role: 'user',
@@ -88,7 +141,7 @@ ${extractedText.substring(0, 12000)}
           }
         ],
         temperature: 0.1,
-        max_tokens: 2000
+        max_tokens: 3000
       })
     });
 
