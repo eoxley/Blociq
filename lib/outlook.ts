@@ -45,12 +45,27 @@ export async function getAccessTokenFromCode(code: string): Promise<{
  * Exchange authorization code for tokens
  */
 export async function exchangeCodeForTokens(code: string) {
+  // Validate environment variables
+  const clientId = process.env.MICROSOFT_CLIENT_ID;
+  const clientSecret = process.env.MICROSOFT_CLIENT_SECRET;
+  const redirectUri = process.env.MICROSOFT_REDIRECT_URI;
+  
+  if (!clientId) {
+    throw new Error('MICROSOFT_CLIENT_ID environment variable is not set');
+  }
+  if (!clientSecret) {
+    throw new Error('MICROSOFT_CLIENT_SECRET environment variable is not set');
+  }
+  if (!redirectUri) {
+    throw new Error('MICROSOFT_REDIRECT_URI environment variable is not set');
+  }
+  
   const params = new URLSearchParams();
-  params.append('client_id', process.env.MICROSOFT_CLIENT_ID!.trim());
-  params.append('client_secret', process.env.MICROSOFT_CLIENT_SECRET!.trim());
+  params.append('client_id', clientId.trim());
+  params.append('client_secret', clientSecret.trim());
   params.append('grant_type', 'authorization_code');
   params.append('code', code);
-  params.append('redirect_uri', process.env.NEXT_PUBLIC_MICROSOFT_REDIRECT_URI!.trim());
+  params.append('redirect_uri', redirectUri.trim());
 
   console.log("🚀 Sending token exchange with:", params.toString());
 
