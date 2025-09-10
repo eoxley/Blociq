@@ -24,30 +24,18 @@ export async function GET(request: NextRequest) {
 
     console.log('🔐 User authenticated:', user.id);
 
-    // Get user's buildings - try multiple approaches
+    // Get user's buildings through agency membership
     let { data: buildings, error: buildingsError } = await supabase
       .from('buildings')
-      .select('id, name, is_hrb')
-      .eq('user_id', user.id);
+      .select('id, name, is_hrb, agency_id')
+      .eq('agency_id', user.id); // Use agency_id instead of user_id
     
-    // If no buildings found with user_id, try building_members table
+    // If no buildings found with agency_id, try to get all buildings (for testing)
     if ((!buildings || buildings.length === 0) && !buildingsError) {
-      const { data: memberBuildings, error: memberError } = await supabase
-        .from('building_members')
-        .select('building_id, buildings!building_id(id, name, is_hrb)')
-        .eq('user_id', user.id);
-      
-      if (!memberError && memberBuildings) {
-        buildings = memberBuildings.map(m => m.buildings).filter(Boolean);
-      }
-    }
-    
-    // If still no buildings, try to get all buildings (for testing)
-    if ((!buildings || buildings.length === 0) && !buildingsError) {
-      console.log('No user-specific buildings found, trying to get all buildings for testing');
+      console.log('No agency-specific buildings found, trying to get all buildings for testing');
       const { data: allBuildings, error: allBuildingsError } = await supabase
         .from('buildings')
-        .select('id, name, is_hrb')
+        .select('id, name, is_hrb, agency_id')
         .limit(5);
       
       if (!allBuildingsError && allBuildings) {
@@ -78,21 +66,16 @@ export async function GET(request: NextRequest) {
     const thirtyDaysFromNow = new Date();
     thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
     
+    // First get compliance assets without the foreign key join
     const { data: complianceAssets, error: complianceError } = await supabase
       .from('building_compliance_assets')
       .select(`
         id,
         building_id,
-        asset_id,
+        compliance_asset_id,
         status,
         next_due_date,
-        notes,
-        compliance_assets!asset_id (
-          id,
-          name,
-          category,
-          description
-        )
+        notes
       `)
       .in('building_id', buildingIds)
       .not('next_due_date', 'is', null)
@@ -135,8 +118,8 @@ export async function GET(request: NextRequest) {
         id: `compliance-${asset.id}`,
         building: building?.name || 'Unknown Building',
         date: asset.next_due_date,
-        title: asset.compliance_assets?.name || 'Unknown Asset',
-        category: asset.compliance_assets?.category || 'Compliance',
+        title: `Compliance Asset ${asset.compliance_asset_id}`, // Use compliance_asset_id since we can't join
+        category: 'Compliance',
         source: 'compliance' as const,
         event_type: 'compliance' as const,
         location: building?.name || null,

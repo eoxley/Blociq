@@ -22,30 +22,18 @@ export async function GET(request: NextRequest) {
 
     const user = session.user;
 
-    // Get user's buildings
+    // Get user's buildings through agency membership
     let { data: buildings, error: buildingsError } = await supabase
       .from('buildings')
-      .select('id, name, is_hrb')
-      .eq('user_id', user.id);
+      .select('id, name, is_hrb, agency_id')
+      .eq('agency_id', user.id); // Use agency_id instead of user_id
     
-    // If no buildings found with user_id, try building_members table
+    // If no buildings found with agency_id, try to get all buildings (for testing)
     if ((!buildings || buildings.length === 0) && !buildingsError) {
-      const { data: memberBuildings, error: memberError } = await supabase
-        .from('building_members')
-        .select('building_id, buildings!building_id(id, name, is_hrb)')
-        .eq('user_id', user.id);
-      
-      if (!memberError && memberBuildings) {
-        buildings = memberBuildings.map(m => m.buildings).filter(Boolean);
-      }
-    }
-    
-    // If still no buildings, try to get all buildings (for testing)
-    if ((!buildings || buildings.length === 0) && !buildingsError) {
-      console.log('No user-specific buildings found, trying to get all buildings for testing');
+      console.log('No agency-specific buildings found, trying to get all buildings for testing');
       const { data: allBuildings, error: allBuildingsError } = await supabase
         .from('buildings')
-        .select('id, name, is_hrb')
+        .select('id, name, is_hrb, agency_id')
         .limit(5);
       
       if (!allBuildingsError && allBuildings) {
@@ -75,22 +63,16 @@ export async function GET(request: NextRequest) {
     const buildingIds = buildings.map(b => b.id);
     console.log('🏢 Found', buildings.length, 'buildings for user');
 
-    // Get compliance overview data
+    // Get compliance overview data without foreign key join
     const { data: complianceData, error: complianceError } = await supabase
       .from('building_compliance_assets')
       .select(`
         id,
         building_id,
-        asset_id,
+        compliance_asset_id,
         status,
         next_due_date,
-        notes,
-        compliance_assets!asset_id (
-          id,
-          name,
-          category,
-          description
-        )
+        notes
       `)
       .in('building_id', buildingIds)
       .order('next_due_date', { ascending: true });
@@ -119,9 +101,9 @@ export async function GET(request: NextRequest) {
         id: asset.id,
         building_id: asset.building_id,
         building_name: building?.name || 'Unknown Building',
-        asset_id: asset.asset_id,
-        asset_name: asset.compliance_assets?.name || 'Unknown Asset',
-        category: asset.compliance_assets?.category || 'Unknown',
+        asset_id: asset.compliance_asset_id,
+        asset_name: `Compliance Asset ${asset.compliance_asset_id}`, // Use compliance_asset_id since we can't join
+        category: 'Compliance',
         status: asset.status,
         next_due_date: asset.next_due_date,
         notes: asset.notes,
