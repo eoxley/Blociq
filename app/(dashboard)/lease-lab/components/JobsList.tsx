@@ -12,7 +12,7 @@ interface JobsListProps {
   onDelete?: (jobId: string) => void;
 }
 
-export default function JobsList({ jobs, onViewAnalysis, onRefresh, onDelete }: JobsListProps) {
+export default function JobsList({ jobs, onViewAnalysis, onRefresh }: JobsListProps) {
   const [refreshing, setRefreshing] = useState(false);
   const [deletingJobs, setDeletingJobs] = useState<Set<string>>(new Set());
 
@@ -45,21 +45,28 @@ export default function JobsList({ jobs, onViewAnalysis, onRefresh, onDelete }: 
     setDeletingJobs(prev => new Set([...prev, jobId]));
     
     try {
+      console.log('🗑️ Attempting to delete job:', jobId);
       const response = await fetch(`/api/lease-lab/jobs/${jobId}`, {
         method: 'DELETE'
       });
       
+      console.log('📡 Delete response status:', response.status);
+      
       if (response.ok) {
+        const responseData = await response.json();
+        console.log('✅ Delete successful:', responseData);
         toast.success('Analysis deleted successfully');
-        onDelete?.(jobId);
+        // Only refresh after successful API call - this will remove the job from UI
         await onRefresh(); // Refresh the jobs list
       } else {
         const errorData = await response.json();
+        console.error('❌ Delete failed:', errorData);
         throw new Error(errorData.message || 'Failed to delete analysis');
       }
     } catch (error) {
       console.error('Error deleting job:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to delete analysis');
+      // Don't call onDelete or refresh on error - job should remain in UI
     } finally {
       setDeletingJobs(prev => {
         const newSet = new Set(prev);
