@@ -150,3 +150,63 @@ export async function PATCH(
     }, { status: 500 });
   }
 }
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const supabase = createClient();
+    
+    // Get the current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      return NextResponse.json({ 
+        error: 'Authentication required',
+        message: 'Please log in to delete job'
+      }, { status: 401 });
+    }
+
+    // Get the user's agency
+    const { data: agencyMember } = await supabase
+      .from('agency_members')
+      .select('agency_id')
+      .eq('user_id', user.id)
+      .single();
+
+    if (!agencyMember) {
+      return NextResponse.json({ 
+        error: 'Agency membership required',
+        message: 'Please join an agency to delete job'
+      }, { status: 403 });
+    }
+
+    // Delete the job
+    const { error: deleteError } = await supabase
+      .from('document_jobs')
+      .delete()
+      .eq('id', params.id)
+      .eq('agency_id', agencyMember.agency_id);
+
+    if (deleteError) {
+      console.error('Error deleting job:', deleteError);
+      return NextResponse.json({ 
+        error: 'Failed to delete job',
+        message: 'Unable to delete job. Please try again.'
+      }, { status: 500 });
+    }
+
+    return NextResponse.json({ 
+      success: true,
+      message: 'Job deleted successfully'
+    });
+
+  } catch (error) {
+    console.error('Job delete error:', error);
+    return NextResponse.json({ 
+      error: 'Failed to delete job',
+      message: 'An unexpected error occurred. Please try again.'
+    }, { status: 500 });
+  }
+}

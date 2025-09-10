@@ -1,17 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FileText, Clock, CheckCircle, AlertCircle, Eye, Link, Download, RefreshCw } from 'lucide-react';
+import { FileText, Clock, CheckCircle, AlertCircle, Eye, Link, Download, RefreshCw, Trash2 } from 'lucide-react';
 import { DocumentJob } from '../LeaseLabClient';
+import { toast } from 'sonner';
 
 interface JobsListProps {
   jobs: DocumentJob[];
   onViewAnalysis: (job: DocumentJob) => void;
   onRefresh: () => void;
+  onDelete?: (jobId: string) => void;
 }
 
-export default function JobsList({ jobs, onViewAnalysis, onRefresh }: JobsListProps) {
+export default function JobsList({ jobs, onViewAnalysis, onRefresh, onDelete }: JobsListProps) {
   const [refreshing, setRefreshing] = useState(false);
+  const [deletingJobs, setDeletingJobs] = useState<Set<string>>(new Set());
 
   // Auto-refresh every 5 seconds for jobs that are still processing
   useEffect(() => {
@@ -32,6 +35,38 @@ export default function JobsList({ jobs, onViewAnalysis, onRefresh }: JobsListPr
     setRefreshing(true);
     await onRefresh();
     setRefreshing(false);
+  };
+
+  const handleDelete = async (jobId: string, filename: string) => {
+    if (!confirm(`Are you sure you want to delete "${filename}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    setDeletingJobs(prev => new Set([...prev, jobId]));
+    
+    try {
+      const response = await fetch(`/api/lease-lab/jobs/${jobId}`, {
+        method: 'DELETE'
+      });
+      
+      if (response.ok) {
+        toast.success('Analysis deleted successfully');
+        onDelete?.(jobId);
+        await onRefresh(); // Refresh the jobs list
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete analysis');
+      }
+    } catch (error) {
+      console.error('Error deleting job:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to delete analysis');
+    } finally {
+      setDeletingJobs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(jobId);
+        return newSet;
+      });
+    }
   };
 
   const getStatusIcon = (status: DocumentJob['status']) => {
@@ -213,6 +248,21 @@ export default function JobsList({ jobs, onViewAnalysis, onRefresh }: JobsListPr
                   <span>Attached</span>
                 </div>
               )}
+
+              {/* Delete Button */}
+              <button
+                onClick={() => handleDelete(job.id, job.filename)}
+                disabled={deletingJobs.has(job.id)}
+                className="flex items-center space-x-1 px-3 py-2 text-sm font-medium text-red-600 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Delete analysis"
+              >
+                {deletingJobs.has(job.id) ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+                <span>Delete</span>
+              </button>
             </div>
           </div>
         </div>

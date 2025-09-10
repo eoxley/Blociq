@@ -79,6 +79,17 @@ export default function LeaseLabClient() {
     }
   };
 
+  const handleDeleteJob = (jobId: string) => {
+    // Remove the job from local state immediately for better UX
+    setJobs(prev => prev.filter(job => job.id !== jobId));
+    
+    // If the deleted job was being viewed, close the analysis drawer
+    if (selectedJob?.id === jobId) {
+      setShowAnalysis(false);
+      setSelectedJob(null);
+    }
+  };
+
   return (
     <div className="space-y-8">
       {/* Upload Panel */}
@@ -107,6 +118,7 @@ export default function LeaseLabClient() {
             jobs={jobs} 
             onViewAnalysis={handleViewAnalysis}
             onRefresh={fetchJobs}
+            onDelete={handleDeleteJob}
           />
         )}
       </div>
