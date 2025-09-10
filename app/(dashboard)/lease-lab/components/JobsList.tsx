@@ -16,6 +16,13 @@ export default function JobsList({ jobs, onViewAnalysis, onRefresh }: JobsListPr
   const [refreshing, setRefreshing] = useState(false);
   const [deletingJobs, setDeletingJobs] = useState<Set<string>>(new Set());
 
+  // Debug: Log props on mount
+  console.log('🔍 JobsList props:', { 
+    jobsCount: jobs.length, 
+    onRefreshType: typeof onRefresh,
+    onViewAnalysisType: typeof onViewAnalysis 
+  });
+
   // Auto-refresh every 5 seconds for jobs that are still processing
   useEffect(() => {
     const processingJobs = jobs.filter(job => 
@@ -58,8 +65,13 @@ export default function JobsList({ jobs, onViewAnalysis, onRefresh }: JobsListPr
         toast.success('Analysis deleted successfully');
         // Only refresh after successful API call - this will remove the job from UI
         console.log('🔄 Refreshing jobs list after successful delete...');
-        await onRefresh(); // Refresh the jobs list
-        console.log('✅ Jobs list refreshed');
+        console.log('🔄 onRefresh function:', typeof onRefresh);
+        if (onRefresh) {
+          await onRefresh(); // Refresh the jobs list
+          console.log('✅ Jobs list refreshed');
+        } else {
+          console.error('❌ onRefresh function is not available');
+        }
       } else {
         const errorData = await response.json();
         console.error('❌ Delete failed:', errorData);

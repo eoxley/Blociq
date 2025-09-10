@@ -38,13 +38,16 @@ export default function LeaseLabClient() {
 
   const fetchJobs = async () => {
     try {
-      console.log('🔄 Fetching jobs from server...');
+      console.log('🔄 fetchJobs called - Fetching jobs from server...');
       const response = await fetch('/api/lease-lab/jobs');
+      console.log('📡 fetchJobs response status:', response.status);
       if (response.ok) {
         const data = await response.json();
         console.log('📋 Jobs fetched from server:', data.jobs?.length || 0, 'jobs');
         console.log('📋 Job IDs:', data.jobs?.map(job => job.id) || []);
+        console.log('🔄 Setting jobs state...');
         setJobs(data.jobs || []);
+        console.log('✅ Jobs state updated');
       } else {
         console.error('❌ Failed to fetch jobs:', response.status);
       }
@@ -112,7 +115,10 @@ export default function LeaseLabClient() {
           <JobsList 
             jobs={jobs} 
             onViewAnalysis={handleViewAnalysis}
-            onRefresh={fetchJobs}
+            onRefresh={() => {
+              console.log('🔄 onRefresh callback called from LeaseLabClient');
+              fetchJobs();
+            }}
           />
         )}
       </div>
