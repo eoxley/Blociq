@@ -8,13 +8,16 @@
   <!-- Begin Basic Settings: Add-in metadata, used for all versions of Office unless override provided -->
   <Id>a5c5e9d4-4f9c-4b3a-8a7e-2c1b9f8d3e6a</Id>
   <Version>1.0.0.0</Version>
-  <ProviderName>BlocIQ</ProviderName>
+  <ProviderName>BlocIQ Ltd</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="BlocIQ Chat Assistant" />
-  <Description DefaultValue="Your AI-powered property law assistant, always available in your sidebar." />
+  <Description DefaultValue="Your AI-powered property law assistant, always available in your sidebar for instant legal guidance and support." />
   <IconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icons/icon-32.png" />
   <HighResolutionIconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icons/icon-80.png" />
   <SupportUrl DefaultValue="https://www.blociq.co.uk/support" />
+  <AppDomains>
+    <AppDomain>https://www.blociq.co.uk</AppDomain>
+  </AppDomains>
 
   <!-- Begin Add-in Commands Mode integration -->
   <Hosts>
@@ -76,9 +79,9 @@
 
           <ExtensionPoint xsi:type="MessageComposeCommandSurface">
             <OfficeTab id="TabDefault">
-              <Group id="BlocIQChatGroup">
+              <Group id="BlocIQChatComposeGroup">
                 <Label resid="BlocIQChatAssistant.Group.Label" />
-                <Control xsi:type="Button" id="BlocIQTaskPaneButton">
+                <Control xsi:type="Button" id="BlocIQTaskPaneComposeButton">
                   <Label resid="BlocIQChatAssistant.TaskPane.Label" />
                   <Supertip>
                     <Title resid="BlocIQChatAssistant.TaskPane.Label" />
@@ -118,7 +121,7 @@
         <bt:String id="BlocIQChatAssistant.GetStarted.Title" DefaultValue="Get started with BlocIQ Chat Assistant"/>
       </bt:ShortStrings>
       <bt:LongStrings>
-        <bt:String id="BlocIQChatAssistant.TaskPane.Tooltip" DefaultValue="Open your AI-powered property law assistant"/>
+        <bt:String id="BlocIQChatAssistant.TaskPane.Tooltip" DefaultValue="Open your AI-powered property law assistant for instant legal guidance"/>
         <bt:String id="BlocIQChatAssistant.GetStarted.Description" DefaultValue="Your AI assistant is ready to help with property law questions. Click to open the chat interface."/>
       </bt:LongStrings>
     </Resources>

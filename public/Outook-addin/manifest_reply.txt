@@ -8,13 +8,16 @@
   <!-- Begin Basic Settings: Add-in metadata, used for all versions of Office unless override provided -->
   <Id>b7d8f2a5-6e1c-4d9b-9f2a-8e5c7b4d1f6e</Id>
   <Version>1.0.0.0</Version>
-  <ProviderName>BlocIQ</ProviderName>
+  <ProviderName>BlocIQ Ltd</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="BlocIQ AI Reply" />
-  <Description DefaultValue="Generate professional email replies using AI-powered legal expertise." />
+  <Description DefaultValue="Generate professional email replies using AI-powered legal expertise with one click." />
   <IconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icons/icon-32.png" />
   <HighResolutionIconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icons/icon-80.png" />
   <SupportUrl DefaultValue="https://www.blociq.co.uk/support" />
+  <AppDomains>
+    <AppDomain>https://www.blociq.co.uk</AppDomain>
+  </AppDomains>
 
   <!-- Begin Add-in Commands Mode integration -->
   <Hosts>
@@ -23,7 +26,7 @@
 
   <Requirements>
     <Sets>
-      <Set Name="Mailbox" MinVersion="1.3" />
+      <Set Name="Mailbox" MinVersion="1.5" />
     </Sets>
   </Requirements>
 
