@@ -12,7 +12,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-const JOB_ID = '6c8ae83a-40ed-40d3-9296-ee1f7a148812';
+const JOB_ID = '87e33651-500c-4043-97b5-3e0fbb1efeaa';
 
 async function reprocessJobWithFix() {
   console.log(`🔄 Reprocessing job with AI analysis fix: ${JOB_ID}\n`);
