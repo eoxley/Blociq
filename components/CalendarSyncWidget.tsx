@@ -75,7 +75,7 @@ export default function CalendarSyncWidget({ onSyncComplete }: CalendarSyncWidge
 
   const handleConnectOutlook = () => {
     // Redirect to Outlook connection
-    window.location.href = '/api/connect-outlook'
+    window.location.href = '/api/auth/outlook'
   }
 
   return (
@@ -115,7 +115,11 @@ export default function CalendarSyncWidget({ onSyncComplete }: CalendarSyncWidge
               <span className="text-gray-600">Last sync:</span>
               <span className="ml-2 font-medium">
                 {syncStatus.lastSync 
-                  ? new Date(syncStatus.lastSync).toLocaleDateString()
+                  ? new Date(syncStatus.lastSync).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric'
+                    })
                   : 'Never'
                 }
               </span>

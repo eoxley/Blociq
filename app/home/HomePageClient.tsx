@@ -842,7 +842,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
               
               // Add to processed documents for Q&A
               const processedDoc = {
-                id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                id: `doc-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
                 filename: uploadedFile.name,
                 documentType: uploadData.documentType || 'lease_agreement',
                 textLength: uploadData.textLength,
@@ -1912,7 +1912,12 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                     </div>
                     {lastSyncTime && (
                       <div className="text-xs text-white/60">
-                        Last sync: {new Date(lastSyncTime).toLocaleDateString()}
+                        Last sync: {new Date(lastSyncTime).toLocaleDateString('en-GB', { 
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                          timeZone: 'Europe/London'
+                        })}
                       </div>
                     )}
                   </div>
