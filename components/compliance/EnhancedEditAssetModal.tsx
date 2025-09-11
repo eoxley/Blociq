@@ -278,8 +278,9 @@ const EnhancedEditAssetModal: React.FC<EnhancedEditAssetModalProps> = ({
 
       let response
       if (assetId) {
-        // Update existing asset - use the building-specific endpoint
-        response = await fetch(`/api/compliance/building/${buildingId}/assets/${assetId}`, {
+        // Update existing asset - use the building-specific endpoint with building_compliance_assets.id
+        const buildingComplianceAssetId = formData.building_compliance_asset_id || formData.id;
+        response = await fetch(`/api/compliance/building/${buildingId}/assets/${buildingComplianceAssetId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
