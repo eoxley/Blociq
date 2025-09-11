@@ -33,6 +33,7 @@ import EditIconButton from '@/components/ui/EditIconButton'
 import EmptyValue from '@/components/ui/EmptyValue'
 import Revealable from '@/components/ui/Revealable'
 import UnitsTable from '@/components/buildings/UnitsTable'
+import ActionTracker from '@/components/buildings/ActionTracker'
 
 interface Building {
   id: string
@@ -562,6 +563,9 @@ export default function BuildingDetailClient({
           <UnitsTable buildingId={buildingId} />
         </div>
       </SectionCard>
+
+      {/* Action Tracker Section */}
+      <ActionTracker buildingId={buildingId} />
 
       {/* Compliance Summary Section */}
       <SectionCard className="group">
