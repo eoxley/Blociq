@@ -139,12 +139,26 @@ export function useAIConversation(): UseAIConversationReturn {
         setIsProcessingOCR(false);
 
         // Send enhanced message to AI
+        // Detect if we're in an Outlook add-in context
+        const isOutlookAddin = typeof window !== 'undefined' && 
+          ((window as any).Office !== undefined || 
+           window.location.pathname.includes('ai-assistant') ||
+           window.parent !== window); // In iframe context
+        
+        const apiEndpoint = isOutlookAddin ? '/api/addin/ask-ai' : '/api/ask-ai';
         const formData = new FormData();
-        formData.append('userQuestion', enhancedMessage);
+        
+        if (isOutlookAddin) {
+          formData.append('prompt', enhancedMessage);
+          formData.append('contextType', 'general');
+        } else {
+          formData.append('userQuestion', enhancedMessage);
+        }
+        
         formData.append('useMemory', useMemory.toString());
         if (conversationId) formData.append('conversationId', conversationId);
 
-        const response = await fetch('/api/ask-ai', {
+        const response = await fetch(apiEndpoint, {
           method: 'POST',
           body: formData
         });
@@ -170,16 +184,30 @@ export function useAIConversation(): UseAIConversationReturn {
         }
       } else {
         // Text-only message
-        const response = await fetch('/api/ask-ai', {
+        // Detect if we're in an Outlook add-in context
+        const isOutlookAddin = typeof window !== 'undefined' && 
+          ((window as any).Office !== undefined || 
+           window.location.pathname.includes('ai-assistant') ||
+           window.parent !== window); // In iframe context
+        
+        const apiEndpoint = isOutlookAddin ? '/api/addin/ask-ai' : '/api/ask-ai';
+        const requestBody = isOutlookAddin ? {
+          prompt: content.trim(),
+          contextType: 'general',
+          useMemory: useMemory.toString(),
+          conversationId: conversationId || undefined
+        } : {
+          userQuestion: content.trim(),
+          useMemory: useMemory.toString(),
+          conversationId: conversationId || undefined
+        };
+
+        const response = await fetch(apiEndpoint, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            userQuestion: content.trim(),
-            useMemory: useMemory.toString(),
-            conversationId: conversationId || undefined
-          })
+          body: JSON.stringify(requestBody)
         });
 
         if (!response.ok) {
