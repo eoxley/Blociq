@@ -41,45 +41,58 @@ CREATE TRIGGER update_building_action_tracker_updated_at
 -- Enable Row Level Security
 ALTER TABLE building_action_tracker ENABLE ROW LEVEL SECURITY;
 
+-- Create UUID helper function for building access
+CREATE OR REPLACE FUNCTION public.user_has_agency_building_access_uuid(building_id_param UUID)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    user_agency_id UUID;
+BEGIN
+    -- Get user's agency_id from JWT
+    user_agency_id := public.get_user_agency_id();
+    
+    -- If no agency_id in JWT, deny access
+    IF user_agency_id IS NULL THEN
+        RETURN FALSE;
+    END IF;
+    
+    -- Check if building belongs to user's agency
+    RETURN EXISTS (
+        SELECT 1 FROM public.buildings
+        WHERE id = building_id_param
+        AND agency_id = user_agency_id
+    );
+END;
+$$;
+
+-- Grant execute permissions
+GRANT EXECUTE ON FUNCTION public.user_has_agency_building_access_uuid(UUID) TO authenticated;
+
 -- Create RLS policies for action tracker
 -- Users can only access tracker items for buildings they have access to
 CREATE POLICY "Users can view action tracker items for their buildings" ON building_action_tracker
     FOR SELECT USING (
-        building_id IN (
-            SELECT b.id FROM buildings b 
-            INNER JOIN profiles p ON p.id = auth.uid()
-            -- Add your building access logic here based on your existing RLS patterns
-        )
+        public.user_has_agency_building_access_uuid(building_id)
     );
 
 CREATE POLICY "Users can insert action tracker items for their buildings" ON building_action_tracker
     FOR INSERT WITH CHECK (
-        building_id IN (
-            SELECT b.id FROM buildings b 
-            INNER JOIN profiles p ON p.id = auth.uid()
-            -- Add your building access logic here based on your existing RLS patterns
-        )
-        AND created_by = auth.uid()
+        public.user_has_agency_building_access_uuid(building_id)
+        AND created_by = public.get_user_id()
     );
 
 CREATE POLICY "Users can update action tracker items they created" ON building_action_tracker
     FOR UPDATE USING (
-        created_by = auth.uid()
-        AND building_id IN (
-            SELECT b.id FROM buildings b 
-            INNER JOIN profiles p ON p.id = auth.uid()
-            -- Add your building access logic here based on your existing RLS patterns
-        )
+        created_by = public.get_user_id()
+        AND public.user_has_agency_building_access_uuid(building_id)
     );
 
 CREATE POLICY "Users can delete action tracker items they created" ON building_action_tracker
     FOR DELETE USING (
-        created_by = auth.uid()
-        AND building_id IN (
-            SELECT b.id FROM buildings b 
-            INNER JOIN profiles p ON p.id = auth.uid()
-            -- Add your building access logic here based on your existing RLS patterns
-        )
+        created_by = public.get_user_id()
+        AND public.user_has_agency_building_access_uuid(building_id)
     );
 
 -- Insert seed data for testing (building ID: 2beeec1d-a94e-4058-b881-213d74cc6830)
