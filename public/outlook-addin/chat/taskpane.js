@@ -7,6 +7,8 @@ Office.onReady((info) => {
 });
 
 let isLoading = false;
+let authToken = null;
+let currentUser = null;
 
 function initializeApp() {
     const messageForm = document.getElementById('messageForm');
@@ -20,8 +22,84 @@ function initializeApp() {
     messageInput.addEventListener('keydown', handleKeyDown);
     messageInput.addEventListener('input', autoResize);
 
+    // Initialize authentication
+    initializeAuth();
+
     // Focus on input
     messageInput.focus();
+}
+
+async function initializeAuth() {
+    try {
+        console.log('🔐 Initializing authentication...');
+        
+        // Try to get user email from Outlook context
+        if (typeof Office !== 'undefined' && Office.context && Office.context.mailbox) {
+            const userEmail = Office.context.mailbox.userProfile.emailAddress;
+            console.log('📧 Got user email from Outlook:', userEmail);
+            
+            if (userEmail) {
+                await authenticateWithEmail(userEmail);
+                return;
+            }
+        }
+        
+        console.log('⚠️ Could not get user email from Outlook context');
+        showError('Unable to get user email from Outlook. Please ensure the add-in is properly loaded.');
+        
+    } catch (error) {
+        console.error('❌ Auth initialization error:', error);
+        showError('Authentication failed. Please try reloading the add-in.');
+    }
+}
+
+async function authenticateWithEmail(email) {
+    try {
+        console.log('🔐 Authenticating with email:', email);
+        
+        const response = await fetch('https://www.blociq.co.uk/api/outlook-addin/auth', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                bypass_auth: true,
+                email: email
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            authToken = data.token;
+            currentUser = data.user;
+            console.log('✅ Authentication successful for user:', currentUser.name);
+            
+            // Update welcome message with user info
+            updateWelcomeMessage();
+            
+        } else if (data.needsSignup) {
+            console.log('❌ User needs to sign up first');
+            showError(`No BlocIQ account found for ${email}. Please sign up at blociq.co.uk first.`);
+        } else {
+            console.error('❌ Authentication failed:', data.error);
+            showError(`Authentication failed: ${data.message || data.error}`);
+        }
+        
+    } catch (error) {
+        console.error('❌ Authentication request failed:', error);
+        showError('Unable to authenticate. Please check your internet connection.');
+    }
+}
+
+function updateWelcomeMessage() {
+    const welcomeMessage = document.querySelector('.welcome-message');
+    if (welcomeMessage && currentUser) {
+        welcomeMessage.innerHTML = `
+            <h3>👋 Welcome back, ${currentUser.name}!</h3>
+            <p>I'm your AI assistant, ready to help with property law questions, legal guidance, and document reviews. How can I assist you today?</p>
+        `;
+    }
 }
 
 function handleFormSubmit(event) {
@@ -51,9 +129,16 @@ async function sendMessage() {
     
     console.log('Message input value:', message);
     console.log('Is loading:', isLoading);
+    console.log('Auth token available:', !!authToken);
     
     if (!message || isLoading) {
         console.log('Message empty or already loading, skipping send');
+        return;
+    }
+
+    if (!authToken) {
+        console.log('❌ No auth token available');
+        showError('Not authenticated. Please reload the add-in.');
         return;
     }
 
@@ -68,15 +153,17 @@ async function sendMessage() {
     showLoading();
     
     try {
-        console.log('Making API request to:', 'https://www.blociq.co.uk/api/ask-ai');
+        console.log('Making API request to:', 'https://www.blociq.co.uk/api/outlook-addin/ask-ai');
         
-        const response = await fetch('https://www.blociq.co.uk/api/ask-ai', {
+        const response = await fetch('https://www.blociq.co.uk/api/outlook-addin/ask-ai', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                message: message,
+                prompt: message,
+                token: authToken,
+                is_outlook_addin: true,
                 context: 'outlook-addin'
             })
         });
