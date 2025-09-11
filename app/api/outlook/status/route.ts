@@ -4,13 +4,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
-import { cookies } from 'next/headers';
+import { createClient } from '@/utils/supabase/server-fixed';
 
 export async function GET(request: NextRequest) {
   try {
     console.log('🔍 Checking Outlook connection status...');
-    const supabase = createClient(cookies());
+    const supabase = await createClient();
     
     // Get the current user
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
