@@ -40,37 +40,10 @@ export async function GET(request: NextRequest) {
     try {
       console.log('🔍 Fetching user buildings and compliance data...');
       
-      // Get user's buildings - try multiple approaches
-      let { data: buildings, error: buildingsError } = await supabase
+      // Get user's buildings using agency-based access (matching the pattern from other APIs)
+      const { data: buildings, error: buildingsError } = await supabase
         .from('buildings')
-        .select('id, name, is_hrb')
-        .eq('user_id', user.id);
-      
-      // If no buildings found with user_id, try building_members table
-      if ((!buildings || buildings.length === 0) && !buildingsError) {
-        console.log('No buildings found with user_id, trying building_members table...');
-        const { data: memberBuildings, error: memberError } = await supabase
-          .from('building_members')
-          .select('building_id, buildings!building_id(id, name, is_hrb)')
-          .eq('user_id', user.id);
-        
-        if (!memberError && memberBuildings) {
-          buildings = memberBuildings.map(m => m.buildings).filter(Boolean);
-        }
-      }
-      
-      // If still no buildings, try to get all buildings (for testing)
-      if ((!buildings || buildings.length === 0) && !buildingsError) {
-        console.log('No user-specific buildings found, trying to get all buildings for testing');
-        const { data: allBuildings, error: allBuildingsError } = await supabase
-          .from('buildings')
-          .select('id, name, is_hrb')
-          .limit(5);
-        
-        if (!allBuildingsError && allBuildings) {
-          buildings = allBuildings;
-        }
-      }
+        .select('id, name, is_hrb, agency_id');
       
       if (buildingsError) {
         console.error('Error fetching buildings:', buildingsError);
@@ -86,8 +59,8 @@ export async function GET(request: NextRequest) {
             building_id,
             status,
             next_due_date,
-            asset_id,
-            compliance_assets!asset_id (
+            compliance_asset_id,
+            compliance_assets!compliance_asset_id (
               name,
               category,
               description
