@@ -1,20 +1,21 @@
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1" 
-           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-           xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0" 
-           xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
-           xsi:type="TaskPaneApp">
+<?xml version="1.0" encoding="UTF-8"?>
+<OfficeApp
+          xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+          xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
+          xsi:type="TaskPaneApp">
 
   <Id>a5c5e9d4-4f9c-4b3a-8a7e-2c1b9f8d3e6a</Id>
   <Version>1.0.0.0</Version>
   <ProviderName>BlocIQ Ltd</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="BlocIQ Chat Assistant" />
-  <Description DefaultValue="AI-powered property law assistant available in your sidebar for instant legal guidance and support." />
+  <Description DefaultValue="AI powered property law assistant available in your sidebar for instant legal guidance." />
   <IconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icons/icon-32.png" />
   <HighResolutionIconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icons/icon-80.png" />
   <SupportUrl DefaultValue="https://www.blociq.co.uk/support" />
-  
+
   <AppDomains>
     <AppDomain>https://www.blociq.co.uk</AppDomain>
   </AppDomains>
@@ -41,14 +42,10 @@
   <Permissions>ReadItem</Permissions>
 
   <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
+
     <Hosts>
       <Host xsi:type="MailHost">
         <DesktopFormFactor>
-          <GetStarted>
-            <Title resid="GetStarted.Title"/>
-            <Description resid="GetStarted.Description"/>
-            <LearnMoreUrl resid="GetStarted.LearnMoreUrl"/>
-          </GetStarted>
 
           <ExtensionPoint xsi:type="MessageReadCommandSurface">
             <OfficeTab id="TabDefault">
@@ -57,7 +54,7 @@
                 <Control xsi:type="Button" id="msgReadOpenPaneButton">
                   <Label resid="TaskpaneButton.Label" />
                   <Supertip>
-                    <Title resid="TaskpaneButton.Label" />
+                    <Title resid="TaskpaneButton.Title" />
                     <Description resid="TaskpaneButton.Tooltip" />
                   </Supertip>
                   <Icon>
@@ -82,7 +79,7 @@
                 <Control xsi:type="Button" id="msgComposeOpenPaneButton">
                   <Label resid="TaskpaneButton.Label" />
                   <Supertip>
-                    <Title resid="TaskpaneButton.Label" />
+                    <Title resid="TaskpaneButton.Title" />
                     <Description resid="TaskpaneButton.Tooltip" />
                   </Supertip>
                   <Icon>
@@ -99,6 +96,7 @@
               </Group>
             </OfficeTab>
           </ExtensionPoint>
+
         </DesktopFormFactor>
       </Host>
     </Hosts>
@@ -111,17 +109,16 @@
       </bt:Images>
       <bt:Urls>
         <bt:Url id="Taskpane.Url" DefaultValue="https://www.blociq.co.uk/outlook-addin/chat/taskpane.html"/>
-        <bt:Url id="GetStarted.LearnMoreUrl" DefaultValue="https://www.blociq.co.uk"/>
       </bt:Urls>
       <bt:ShortStrings>
-        <bt:String id="TaskpaneButton.Label" DefaultValue="Ask BlocIQ"/>
         <bt:String id="GroupLabel" DefaultValue="BlocIQ"/>
-        <bt:String id="GetStarted.Title" DefaultValue="Get started with BlocIQ"/>
+        <bt:String id="TaskpaneButton.Label" DefaultValue="Ask BlocIQ"/>
+        <bt:String id="TaskpaneButton.Title" DefaultValue="BlocIQ Assistant"/>
       </bt:ShortStrings>
       <bt:LongStrings>
-        <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Open your AI-powered property law assistant for instant legal guidance"/>
-        <bt:String id="GetStarted.Description" DefaultValue="Your AI assistant is ready to help with property law questions. Click to open the chat interface."/>
+        <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Open your AI powered property law assistant for instant legal guidance"/>
       </bt:LongStrings>
     </Resources>
+
   </VersionOverrides>
 </OfficeApp>

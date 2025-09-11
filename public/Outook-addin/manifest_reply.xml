@@ -1,20 +1,21 @@
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1" 
-           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-           xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0" 
-           xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
-           xsi:type="TaskPaneApp">
+<?xml version="1.0" encoding="UTF-8"?>
+<OfficeApp
+          xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+          xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
+          xsi:type="TaskPaneApp">
 
   <Id>b7d8f2a5-6e1c-4d9b-9f2a-8e5c7b4d1f6e</Id>
   <Version>1.0.0.0</Version>
   <ProviderName>BlocIQ Ltd</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="BlocIQ AI Reply" />
-  <Description DefaultValue="Generate professional email replies using AI-powered legal expertise with one click." />
+  <Description DefaultValue="Generate professional email replies using AI powered legal expertise with one click." />
   <IconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icons/icon-32.png" />
   <HighResolutionIconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icons/icon-80.png" />
   <SupportUrl DefaultValue="https://www.blociq.co.uk/support" />
-  
+
   <AppDomains>
     <AppDomain>https://www.blociq.co.uk</AppDomain>
   </AppDomains>
@@ -40,6 +41,7 @@
   <Permissions>ReadWriteMailbox</Permissions>
 
   <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
+
     <Hosts>
       <Host xsi:type="MailHost">
         <DesktopFormFactor>
@@ -49,10 +51,10 @@
             <OfficeTab id="TabDefault">
               <Group id="CommandsGroup">
                 <Label resid="GroupLabel" />
-                <Control xsi:type="Button" id="msgComposeInsertGist">
-                  <Label resid="CommandsGroup.InsertGist" />
+                <Control xsi:type="Button" id="msgComposeInsertText">
+                  <Label resid="CommandsGroup.InsertText" />
                   <Supertip>
-                    <Title resid="CommandsGroup.InsertGist" />
+                    <Title resid="CommandsGroup.InsertText" />
                     <Description resid="FunctionButton.Tooltip" />
                   </Supertip>
                   <Icon>
@@ -67,6 +69,7 @@
               </Group>
             </OfficeTab>
           </ExtensionPoint>
+
         </DesktopFormFactor>
       </Host>
     </Hosts>
@@ -81,12 +84,13 @@
         <bt:Url id="Commands.Url" DefaultValue="https://www.blociq.co.uk/outlook-addin/reply/functions.html"/>
       </bt:Urls>
       <bt:ShortStrings>
-        <bt:String id="CommandsGroup.InsertGist" DefaultValue="BlocIQ AI Reply"/>
         <bt:String id="GroupLabel" DefaultValue="BlocIQ"/>
+        <bt:String id="CommandsGroup.InsertText" DefaultValue="BlocIQ AI Reply"/>
       </bt:ShortStrings>
       <bt:LongStrings>
-        <bt:String id="FunctionButton.Tooltip" DefaultValue="Generate a professional AI-powered reply based on the original email content"/>
+        <bt:String id="FunctionButton.Tooltip" DefaultValue="Generate a professional AI powered reply based on the original email content"/>
       </bt:LongStrings>
     </Resources>
+
   </VersionOverrides>
 </OfficeApp>
