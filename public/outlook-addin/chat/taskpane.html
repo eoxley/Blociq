@@ -167,6 +167,20 @@
             transform: none;
         }
 
+        .message-input:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .input-container {
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+            padding: 16px;
+            background: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+        }
+
         .loading {
             display: flex;
             align-items: center;
@@ -236,17 +250,18 @@
             </div>
         </div>
 
-        <div class="input-container">
+        <form id="messageForm" class="input-container">
             <textarea 
                 class="message-input" 
                 id="messageInput" 
                 placeholder="Ask me anything about property law..."
                 rows="1"
+                required
             ></textarea>
-            <button class="send-button" id="sendButton" type="button">
+            <button class="send-button" id="sendButton" type="submit">
                 <span>➤</span>
             </button>
-        </div>
+        </form>
     </div>
 
     <script src="taskpane.js"></script>

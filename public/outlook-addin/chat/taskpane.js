@@ -9,17 +9,24 @@ Office.onReady((info) => {
 let isLoading = false;
 
 function initializeApp() {
+    const messageForm = document.getElementById('messageForm');
     const messageInput = document.getElementById('messageInput');
     const sendButton = document.getElementById('sendButton');
     const messagesContainer = document.getElementById('messages');
 
     // Event listeners
+    messageForm.addEventListener('submit', handleFormSubmit);
     sendButton.addEventListener('click', sendMessage);
     messageInput.addEventListener('keydown', handleKeyDown);
     messageInput.addEventListener('input', autoResize);
 
     // Focus on input
     messageInput.focus();
+}
+
+function handleFormSubmit(event) {
+    event.preventDefault();
+    sendMessage();
 }
 
 function handleKeyDown(event) {
@@ -39,7 +46,12 @@ async function sendMessage() {
     const messageInput = document.getElementById('messageInput');
     const message = messageInput.value.trim();
     
-    if (!message || isLoading) return;
+    if (!message || isLoading) {
+        console.log('Message empty or already loading, skipping send');
+        return;
+    }
+
+    console.log('Sending message:', message);
 
     // Clear input and add user message
     messageInput.value = '';
@@ -50,6 +62,8 @@ async function sendMessage() {
     showLoading();
     
     try {
+        console.log('Making API request to:', 'https://www.blociq.co.uk/api/ask-ai');
+        
         const response = await fetch('https://www.blociq.co.uk/api/ask-ai', {
             method: 'POST',
             headers: {
@@ -61,24 +75,32 @@ async function sendMessage() {
             })
         });
 
+        console.log('Response status:', response.status);
+        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const errorText = await response.text();
+            console.error('API Error Response:', errorText);
+            throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
         }
 
         const data = await response.json();
+        console.log('API Response data:', data);
         
         hideLoading();
         
-        if (data.response) {
-            addMessage(data.response, 'assistant');
+        if (data.response || data.result) {
+            const responseText = data.response || data.result;
+            addMessage(responseText, 'assistant');
         } else {
+            console.error('No response field in API data:', data);
             throw new Error('No response received from AI');
         }
         
     } catch (error) {
         console.error('Error sending message:', error);
         hideLoading();
-        showError('Sorry, I encountered an error. Please try again or check your connection.');
+        showError(`Sorry, I encountered an error: ${error.message}. Please try again or check your connection.`);
     }
 }
 
@@ -112,7 +134,11 @@ function addMessage(text, sender) {
 function showLoading() {
     isLoading = true;
     const sendButton = document.getElementById('sendButton');
+    const messageInput = document.getElementById('messageInput');
+    
     sendButton.disabled = true;
+    messageInput.disabled = true;
+    sendButton.innerHTML = '<span>⏳</span>';
     
     const messagesContainer = document.getElementById('messages');
     
@@ -136,7 +162,11 @@ function showLoading() {
 function hideLoading() {
     isLoading = false;
     const sendButton = document.getElementById('sendButton');
+    const messageInput = document.getElementById('messageInput');
+    
     sendButton.disabled = false;
+    messageInput.disabled = false;
+    sendButton.innerHTML = '<span>➤</span>';
     
     const loadingIndicator = document.getElementById('loading-indicator');
     if (loadingIndicator) {
