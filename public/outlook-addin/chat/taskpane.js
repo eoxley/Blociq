@@ -25,12 +25,14 @@ function initializeApp() {
 }
 
 function handleFormSubmit(event) {
+    console.log('Form submitted');
     event.preventDefault();
     sendMessage();
 }
 
 function handleKeyDown(event) {
     if (event.key === 'Enter' && !event.shiftKey) {
+        console.log('Enter key pressed');
         event.preventDefault();
         sendMessage();
     }
@@ -43,8 +45,12 @@ function autoResize() {
 }
 
 async function sendMessage() {
+    console.log('sendMessage() called');
     const messageInput = document.getElementById('messageInput');
     const message = messageInput.value.trim();
+    
+    console.log('Message input value:', message);
+    console.log('Is loading:', isLoading);
     
     if (!message || isLoading) {
         console.log('Message empty or already loading, skipping send');
@@ -91,9 +97,12 @@ async function sendMessage() {
         
         if (data.response || data.result) {
             const responseText = data.response || data.result;
+            console.log('Adding assistant message:', responseText);
             addMessage(responseText, 'assistant');
+            console.log('Assistant message added successfully');
         } else {
             console.error('No response field in API data:', data);
+            console.error('Available fields:', Object.keys(data));
             throw new Error('No response received from AI');
         }
         
@@ -105,11 +114,18 @@ async function sendMessage() {
 }
 
 function addMessage(text, sender) {
+    console.log(`Adding message from ${sender}:`, text);
     const messagesContainer = document.getElementById('messages');
+    
+    if (!messagesContainer) {
+        console.error('Messages container not found!');
+        return;
+    }
     
     // Remove welcome message if it exists
     const welcomeMessage = messagesContainer.querySelector('.welcome-message');
     if (welcomeMessage) {
+        console.log('Removing welcome message');
         welcomeMessage.remove();
     }
     
@@ -128,10 +144,12 @@ function addMessage(text, sender) {
     messageDiv.appendChild(bubble);
     
     messagesContainer.appendChild(messageDiv);
+    console.log('Message added to DOM, total messages:', messagesContainer.children.length);
     scrollToBottom();
 }
 
 function showLoading() {
+    console.log('Showing loading indicator');
     isLoading = true;
     const sendButton = document.getElementById('sendButton');
     const messageInput = document.getElementById('messageInput');
@@ -156,10 +174,12 @@ function showLoading() {
     `;
     
     messagesContainer.appendChild(loadingDiv);
+    console.log('Loading indicator added, total messages:', messagesContainer.children.length);
     scrollToBottom();
 }
 
 function hideLoading() {
+    console.log('Hiding loading indicator');
     isLoading = false;
     const sendButton = document.getElementById('sendButton');
     const messageInput = document.getElementById('messageInput');
@@ -170,23 +190,34 @@ function hideLoading() {
     
     const loadingIndicator = document.getElementById('loading-indicator');
     if (loadingIndicator) {
+        console.log('Removing loading indicator');
         loadingIndicator.remove();
+    } else {
+        console.log('Loading indicator not found');
     }
 }
 
 function showError(message) {
+    console.log('Showing error message:', message);
     const messagesContainer = document.getElementById('messages');
+    
+    if (!messagesContainer) {
+        console.error('Messages container not found for error display!');
+        return;
+    }
     
     const errorDiv = document.createElement('div');
     errorDiv.className = 'error-message';
     errorDiv.textContent = message;
     
     messagesContainer.appendChild(errorDiv);
+    console.log('Error message added to DOM');
     scrollToBottom();
     
     // Remove error message after 5 seconds
     setTimeout(() => {
         if (errorDiv.parentNode) {
+            console.log('Removing error message after timeout');
             errorDiv.remove();
         }
     }, 5000);
@@ -194,5 +225,10 @@ function showError(message) {
 
 function scrollToBottom() {
     const messagesContainer = document.getElementById('messages');
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    if (messagesContainer) {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        console.log('Scrolled to bottom, scroll height:', messagesContainer.scrollHeight);
+    } else {
+        console.error('Messages container not found for scrolling!');
+    }
 }
