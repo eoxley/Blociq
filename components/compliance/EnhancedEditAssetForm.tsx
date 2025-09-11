@@ -572,10 +572,15 @@ export default function EnhancedEditAssetForm({
           )}
         </div>
 
-        {/* Footer */}
-        {activeTab === 'details' && (
-          <div className="border-t border-gray-200 p-6 bg-gray-50">
-            <div className="flex items-center justify-end gap-3">
+        {/* Footer - Always visible to allow saving from any tab */}
+        <div className="border-t border-gray-200 p-6 bg-gray-50">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-600">
+              {activeTab === 'details' && '* Fields marked with asterisk are required'}
+              {activeTab === 'documents' && `${documents.length} document${documents.length !== 1 ? 's' : ''} uploaded`}
+              {activeTab === 'upload' && 'Upload compliance certificates, reports, or photos'}
+            </div>
+            <div className="flex items-center gap-3">
               <button
                 onClick={onClose}
                 className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
@@ -595,13 +600,13 @@ export default function EnhancedEditAssetForm({
                 ) : (
                   <>
                     <Save className="h-4 w-4" />
-                    Save Changes
+                    Update Asset
                   </>
                 )}
               </button>
             </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   )
