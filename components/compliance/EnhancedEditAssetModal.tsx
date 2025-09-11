@@ -375,9 +375,9 @@ const EnhancedEditAssetModal: React.FC<EnhancedEditAssetModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-white/20">
+      <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col border border-white/20 min-h-[600px]">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-blue-50 to-purple-50">
+        <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-blue-50 to-purple-50 flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-100 rounded-lg">
               <Shield className="h-6 w-6 text-blue-600" />
@@ -644,9 +644,17 @@ const EnhancedEditAssetModal: React.FC<EnhancedEditAssetModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between p-6 border-t bg-gray-50">
+        <div className="flex items-center justify-between p-6 border-t bg-gradient-to-r from-gray-50 to-gray-100 flex-shrink-0 shadow-lg">
           <div className="text-sm text-gray-600">
-            * Fields marked with asterisk are required
+            <div>* Fields marked with asterisk are required</div>
+            {/* Debug info - remove in production */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="text-xs text-gray-500 mt-1">
+                Debug: Asset ID: {formData.compliance_asset_id ? '✓' : '✗'}, 
+                Last Carried Out: {formData.last_carried_out ? '✓' : '✗'}, 
+                Next Due: {formData.next_due_date ? '✓' : '✗'}
+              </div>
+            )}
           </div>
           
           <div className="flex items-center gap-3">
@@ -660,7 +668,10 @@ const EnhancedEditAssetModal: React.FC<EnhancedEditAssetModalProps> = ({
             <button
               onClick={handleSave}
               disabled={loading || !formData.compliance_asset_id || !formData.last_carried_out || !formData.next_due_date}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold shadow-lg hover:shadow-xl"
+              title={!formData.compliance_asset_id ? 'Please select a compliance asset' : 
+                     !formData.last_carried_out ? 'Please enter last carried out date' :
+                     !formData.next_due_date ? 'Please enter next due date' : 'Save changes'}
             >
               {loading ? (
                 <>

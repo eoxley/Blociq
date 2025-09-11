@@ -98,13 +98,13 @@ export async function GET(request: NextRequest) {
 
     console.log('✅ Outlook tokens saved successfully for:', userEmail)
 
-    // Redirect to inbox with success message
-    return NextResponse.redirect(new URL(`/inbox?success=outlook_connected&email=${encodeURIComponent(userEmail)}`, request.url))
+    // Redirect to homepage with success message
+    return NextResponse.redirect(new URL(`/?success=outlook_connected&email=${encodeURIComponent(userEmail)}`, request.url))
 
   } catch (error) {
     console.error('Outlook OAuth callback error:', error)
     return NextResponse.redirect(
-      new URL(`/dashboard?error=oauth_failed&message=${encodeURIComponent(error instanceof Error ? error.message : 'Unknown error')}`, request.url)
+      new URL(`/?error=oauth_failed&message=${encodeURIComponent(error instanceof Error ? error.message : 'Unknown error')}`, request.url)
     )
   }
 } 

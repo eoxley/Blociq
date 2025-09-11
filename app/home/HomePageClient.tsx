@@ -145,6 +145,12 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   const [isDragOver, setIsDragOver] = useState(false)
   const [showCommunicationModal, setShowCommunicationModal] = useState(false)
   
+  // Calendar sync state
+  const [outlookConnected, setOutlookConnected] = useState(false)
+  const [calendarSyncing, setCalendarSyncing] = useState(false)
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null)
+  const [syncEventCount, setSyncEventCount] = useState(0)
+  
   // Document Q&A state
   const [processedDocuments, setProcessedDocuments] = useState<Array<{
     id: string;
@@ -324,8 +330,30 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     fetchBuildings()
     fetchEvents()
     checkOutlook()
+    checkOutlookStatus()
     fetchEmails()
     fetchUserFirstName()
+  }, [])
+
+  // Handle URL parameters for Outlook connection success/error
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const success = urlParams.get('success')
+    const error = urlParams.get('error')
+    const email = urlParams.get('email')
+
+    if (success === 'outlook_connected' && email) {
+      toast.success(`Outlook connected successfully! Email: ${email}`)
+      // Refresh Outlook status
+      checkOutlookStatus()
+      // Clean up URL
+      window.history.replaceState({}, '', window.location.pathname)
+    } else if (error === 'oauth_failed') {
+      const message = urlParams.get('message')
+      toast.error(`Outlook connection failed: ${message || 'Unknown error'}`)
+      // Clean up URL
+      window.history.replaceState({}, '', window.location.pathname)
+    }
   }, [])
 
   const fetchBuildings = async () => {
@@ -550,6 +578,74 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       toast.error('Failed to sync Outlook calendar')
     } finally {
       setSyncingOutlook(false)
+    }
+  }
+
+  // Calendar sync functions
+  const checkOutlookStatus = async () => {
+    try {
+      const response = await fetch('/api/outlook/status')
+      if (response.ok) {
+        const data = await response.json()
+        setOutlookConnected(data.connected || false)
+        setLastSyncTime(data.lastSync || null)
+        setSyncEventCount(data.eventCount || 0)
+        console.log('📊 Outlook status:', data)
+      }
+    } catch (error) {
+      console.error('Error checking Outlook status:', error)
+    }
+  }
+
+  const handleCalendarSync = async () => {
+    setCalendarSyncing(true)
+    try {
+      const response = await fetch('/api/calendar/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        toast.success(`Calendar synced successfully! ${data.synced} events added.`)
+        setLastSyncTime(new Date().toISOString())
+        setSyncEventCount(prev => prev + data.synced)
+        // Refresh events to show the new synced events
+        await fetchEvents()
+      } else {
+        toast.error(data.message || 'Failed to sync calendar')
+      }
+    } catch (error) {
+      console.error('Calendar sync error:', error)
+      toast.error('Failed to sync calendar. Please try again.')
+    } finally {
+      setCalendarSyncing(false)
+    }
+  }
+
+  const handleConnectOutlook = async () => {
+    try {
+      const response = await fetch('/api/connect-outlook', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.authUrl) {
+        // Redirect to Microsoft OAuth
+        window.location.href = data.authUrl
+      } else {
+        toast.error(data.message || 'Failed to initiate Outlook connection')
+      }
+    } catch (error) {
+      console.error('Error connecting to Outlook:', error)
+      toast.error('Failed to connect to Outlook. Please try again.')
     }
   }
 
@@ -1752,14 +1848,9 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
             <p className="text-lg text-gray-600 leading-relaxed">Manage your property events and building tasks</p>
           </div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-[600px] mb-8">
-            {/* Calendar Sync Widget */}
-            <div className="h-full">
-              <CalendarSyncWidget onSyncComplete={fetchEvents} />
-            </div>
-            
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-[600px] mb-8">
             {/* Property Events Widget */}
-            <div className="lg:col-span-2 h-full">
+            <div className="h-full">
               <div className="bg-white rounded-2xl shadow-lg border-0 overflow-hidden h-full flex flex-col">
                 {/* Header */}
                 <div className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] p-6 text-white">
@@ -1774,15 +1865,60 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                       </div>
                     </div>
                     
-                    {/* Add Event Button in Hero Banner */}
-                    {!showAddEventForm && (
-                      <button
-                        onClick={() => setShowAddEventForm(true)}
-                        className="bg-white/25 backdrop-blur-sm hover:bg-white/35 text-white px-4 py-2 rounded-xl text-sm transition-all duration-200 border border-white/30 shadow-lg flex items-center gap-2"
-                      >
-                        <Plus className="h-4 w-4" />
-                        Add Event
-                      </button>
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-2">
+                      {/* Calendar Sync Button */}
+                      {outlookConnected ? (
+                        <button
+                          onClick={handleCalendarSync}
+                          disabled={calendarSyncing}
+                          className="bg-white/25 backdrop-blur-sm hover:bg-white/35 text-white px-4 py-2 rounded-xl text-sm transition-all duration-200 border border-white/30 shadow-lg flex items-center gap-2 disabled:opacity-50"
+                        >
+                          {calendarSyncing ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-4 w-4" />
+                          )}
+                          Sync Calendar
+                        </button>
+                      ) : (
+                        <button
+                          onClick={handleConnectOutlook}
+                          className="bg-white/25 backdrop-blur-sm hover:bg-white/35 text-white px-4 py-2 rounded-xl text-sm transition-all duration-200 border border-white/30 shadow-lg flex items-center gap-2"
+                        >
+                          <Calendar className="h-4 w-4" />
+                          Connect Outlook
+                        </button>
+                      )}
+
+                      {/* Add Event Button */}
+                      {!showAddEventForm && (
+                        <button
+                          onClick={() => setShowAddEventForm(true)}
+                          className="bg-white/25 backdrop-blur-sm hover:bg-white/35 text-white px-4 py-2 rounded-xl text-sm transition-all duration-200 border border-white/30 shadow-lg flex items-center gap-2"
+                        >
+                          <Plus className="h-4 w-4" />
+                          Add Event
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Calendar Sync Status */}
+                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/20">
+                    <div className="flex items-center gap-2 text-xs text-white/80">
+                      <div className={`w-2 h-2 rounded-full ${outlookConnected ? 'bg-green-400' : 'bg-amber-400'}`}></div>
+                      <span>
+                        {outlookConnected 
+                          ? `Outlook Connected • ${syncEventCount} events synced` 
+                          : 'Outlook Not Connected'
+                        }
+                      </span>
+                    </div>
+                    {lastSyncTime && (
+                      <div className="text-xs text-white/60">
+                        Last sync: {new Date(lastSyncTime).toLocaleDateString()}
+                      </div>
                     )}
                   </div>
 
