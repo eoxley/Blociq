@@ -71,29 +71,62 @@ async function getEmailContext(item) {
 
 async function generateAIReply(emailContext) {
     try {
-        const response = await fetch('https://www.blociq.co.uk/api/generate-reply', {
+        // First, authenticate to get a token
+        const userEmail = Office.context.mailbox.userProfile.emailAddress;
+        console.log('🔐 Authenticating user:', userEmail);
+        
+        const authResponse = await fetch('https://www.blociq.co.uk/api/outlook-addin/auth', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                subject: emailContext.subject,
-                sender: emailContext.sender,
-                body: emailContext.body,
-                context: 'outlook-addin-reply'
+                bypass_auth: true,
+                email: userEmail
+            })
+        });
+        
+        const authData = await authResponse.json();
+        
+        if (!authResponse.ok || !authData.success) {
+            throw new Error(`Authentication failed: ${authData.message || authData.error}`);
+        }
+        
+        console.log('✅ Authentication successful');
+        
+        // Use the Outlook add-in API for reply generation
+        const response = await fetch('https://www.blociq.co.uk/api/outlook-addin/ask-ai', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                prompt: `Please draft a professional reply to this email. Subject: "${emailContext.subject}", From: ${emailContext.sender}, Content: ${emailContext.body}`,
+                token: authData.token,
+                emailContext: {
+                    subject: emailContext.subject,
+                    from: emailContext.sender,
+                    body: emailContext.body,
+                    conversationId: emailContext.conversationId
+                },
+                is_outlook_addin: true,
+                intent: 'REPLY'
             })
         });
 
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const errorText = await response.text();
+            console.error('API Error Response:', errorText);
+            throw new Error(`HTTP error! status: ${response.status}, response: ${errorText}`);
         }
 
         const data = await response.json();
+        console.log('API Response:', data);
         
-        if (data.reply) {
-            return data.reply;
+        if (data.success && data.response) {
+            return data.response;
         } else {
-            throw new Error('No reply generated');
+            throw new Error(data.error || 'No reply generated');
         }
         
     } catch (error) {
