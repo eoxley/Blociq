@@ -14,7 +14,7 @@
   <Description DefaultValue="Generate professional email replies using AI powered legal expertise with one click." />
   <IconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icons/icon-32.png" />
   <HighResolutionIconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icons/icon-80.png" />
-  <SupportUrl DefaultValue="https://www.blociq.co.uk/support" />
+  <SupportUrl DefaultValue="https://www.blociq.co.uk" />
 
   <AppDomains>
     <AppDomain>https://www.blociq.co.uk</AppDomain>

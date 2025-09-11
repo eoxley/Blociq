@@ -14,7 +14,7 @@
   <Description DefaultValue="AI powered property law assistant available in your sidebar for instant legal guidance." />
   <IconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icons/icon-32.png" />
   <HighResolutionIconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icons/icon-80.png" />
-  <SupportUrl DefaultValue="https://www.blociq.co.uk/support" />
+  <SupportUrl DefaultValue="https://www.blociq.co.uk" />
 
   <AppDomains>
     <AppDomain>https://www.blociq.co.uk</AppDomain>
