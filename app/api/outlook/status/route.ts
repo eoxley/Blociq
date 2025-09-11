@@ -1,107 +1,90 @@
+/**
+ * Outlook Connection Status API
+ * Checks if user has connected Outlook and provides sync status
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { cookies } from 'next/headers';
 
-export async function GET(req: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
+    console.log('🔍 Checking Outlook connection status...');
     const supabase = createClient(cookies());
     
-    // Get the current user's session - Safe destructuring to prevent "Right side of assignment cannot be destructured" error
-    const sessionResult = await supabase.auth.getSession();
-    const sessionData = sessionResult?.data || {}
-    const session = sessionData.session || null
-    const sessionError = sessionResult?.error || null
+    // Get the current user
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    const user = session?.user;
     
-    if (sessionError || !session) {
+    if (sessionError || !user) {
       return NextResponse.json({ 
-        connected: false, 
-        error: 'Not authenticated',
-        message: 'Please log in to connect Outlook'
+        connected: false,
+        error: 'Authentication required'
       }, { status: 401 });
     }
 
-    // Get the user's Outlook tokens
+    console.log('🔐 User authenticated:', user.id);
+
+    // Check if user has valid Outlook tokens
     const { data: tokens, error: tokenError } = await supabase
-      .from('outlook_tokens')
-      .select('*')
-      .eq('user_id', session.user.id)
-      .maybeSingle();
+      .from("outlook_tokens")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("expires_at", { ascending: false })
+      .limit(1)
+      .single();
 
-    if (tokenError) {
-      console.error('Error fetching Outlook tokens:', tokenError);
+    if (tokenError || !tokens) {
+      console.log('❌ No Outlook tokens found');
       return NextResponse.json({
         connected: false,
-        error: 'Database error',
-        message: 'Failed to check Outlook tokens'
-      }, { status: 500 });
-    }
-
-    if (!tokens) {
-      return NextResponse.json({
-        connected: false,
-        error: 'No Outlook tokens found',
-        message: 'Please connect your Outlook account first'
+        message: 'Outlook not connected'
       });
     }
 
     // Check if token is expired
-    const now = new Date();
-    const expiresAt = new Date(tokens.expires_at);
-    const isExpired = expiresAt <= now;
-
+    const isExpired = new Date(tokens.expires_at) < new Date();
+    
     if (isExpired) {
+      console.log('⚠️ Outlook token expired');
       return NextResponse.json({
         connected: false,
-        error: 'Token expired',
-        message: 'Please reconnect your Outlook account',
-        tokenExpired: true,
-        expiresAt: tokens.expires_at
+        message: 'Outlook session expired',
+        expired: true
       });
     }
 
-    // Test the token by making a simple API call
-    try {
-      const testResponse = await fetch('https://graph.microsoft.com/v1.0/me', {
-        headers: {
-          'Authorization': `Bearer ${tokens.access_token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+    // Get event count from property_events table
+    const { data: events, error: eventsError } = await supabase
+      .from('property_events')
+      .select('id, created_at')
+      .eq('created_by', user.id)
+      .not('outlook_event_id', 'is', null);
 
-      if (!testResponse.ok) {
-        return NextResponse.json({
-          connected: false,
-          error: 'Token invalid',
-          message: 'Please reconnect your Outlook account',
-          tokenInvalid: true
-        });
-      }
+    const eventCount = events?.length || 0;
+    const lastSync = events?.length > 0 
+      ? events.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]?.created_at
+      : null;
 
-      const userData = await testResponse.json();
+    console.log('✅ Outlook connection status:', {
+      connected: true,
+      eventCount,
+      lastSync
+    });
 
-      return NextResponse.json({
-        connected: true,
-        email: tokens.email,
-        userEmail: userData.mail || userData.userPrincipalName,
-        expiresAt: tokens.expires_at,
-        message: 'Outlook connected successfully'
-      });
-
-    } catch (apiError) {
-      return NextResponse.json({
-        connected: false,
-        error: 'API test failed',
-        message: 'Please reconnect your Outlook account',
-        apiError: apiError instanceof Error ? apiError.message : 'Unknown error'
-      });
-    }
+    return NextResponse.json({
+      connected: true,
+      eventCount,
+      lastSync,
+      expiresAt: tokens.expires_at
+    });
 
   } catch (error) {
-    console.error('Error checking Outlook status:', error);
+    console.error('❌ Outlook status check error:', error);
     return NextResponse.json({
       connected: false,
-      error: 'Internal server error',
-      message: 'Failed to check Outlook connection status'
+      error: 'Status check failed',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
-} 
+}

@@ -31,6 +31,7 @@ import { getRandomWelcomeMessage } from '@/utils/messages'
 import { HybridLeaseProcessor } from '@/lib/hybrid-lease-processor'
 import ClientOnly from '@/components/ClientOnly'
 import EmailSummaryCard from '@/components/home/EmailSummaryCard'
+import CalendarSyncWidget from '@/components/CalendarSyncWidget'
 
 
 type PropertyEvent = {
@@ -1751,9 +1752,14 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
             <p className="text-lg text-gray-600 leading-relaxed">Manage your property events and building tasks</p>
           </div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-[600px] mb-8">
-            {/* Property Events Widget */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-[600px] mb-8">
+            {/* Calendar Sync Widget */}
             <div className="h-full">
+              <CalendarSyncWidget onSyncComplete={fetchEvents} />
+            </div>
+            
+            {/* Property Events Widget */}
+            <div className="lg:col-span-2 h-full">
               <div className="bg-white rounded-2xl shadow-lg border-0 overflow-hidden h-full flex flex-col">
                 {/* Header */}
                 <div className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] p-6 text-white">
@@ -1764,7 +1770,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                       </div>
                       <div>
                         <h2 className="text-xl font-bold">Property Events</h2>
-                        <p className="text-white/80 text-sm">Manage your property events</p>
+                        <p className="text-white/80 text-sm">Manual events & synced calendar</p>
                       </div>
                     </div>
                     
