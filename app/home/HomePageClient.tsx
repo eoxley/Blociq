@@ -312,7 +312,6 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   const [currentWelcomeMessage, setCurrentWelcomeMessage] = useState('')
   const [upcomingEvents, setUpcomingEvents] = useState<PropertyEvent[]>([])
   const [buildings, setBuildings] = useState<Building[]>([])
-  const [outlookConnected, setOutlookConnected] = useState(false)
   const [syncingOutlook, setSyncingOutlook] = useState(false)
   const [todosEmpty, setTodosEmpty] = useState(false)
   const [newEvent, setNewEvent] = useState({
@@ -748,10 +747,6 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     })
   }
 
-  const handleConnectOutlook = () => {
-    const authUrl = getOutlookAuthUrl()
-    window.open(authUrl, '_blank')
-  }
 
   const handleSyncOutlook = async () => {
     setSyncingOutlook(true)
