@@ -869,12 +869,36 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
               console.log('📄 Added document to Q&A system:', processedDoc.filename);
             } else {
               console.log(`⚠️ File processing failed - insufficient text: ${uploadedFile.name}`)
-              setUploadStatus(`⚠️ ${uploadedFile.name} - No meaningful text extracted`)
+              setUploadStatus(`⚠️ ${uploadedFile.name} - Limited text extracted. Try Lease Lab for better analysis.`)
+              
+              // Show helpful toast message
+              toast.info(
+                `📄 ${uploadedFile.name} has limited extractable text.\n\n🏠 For comprehensive analysis of complex documents, try our Lease Lab!`,
+                {
+                  duration: 6000,
+                  action: {
+                    label: 'Open Lease Lab',
+                    onClick: () => window.open('/lease-lab', '_blank')
+                  }
+                }
+              )
             }
           } catch (error) {
             console.error(`❌ Failed to process file ${uploadedFile.name}:`, error)
             const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-            setUploadStatus(`❌ Failed: ${uploadedFile.name} - ${errorMessage}`)
+            setUploadStatus(`❌ Failed: ${uploadedFile.name} - Try Lease Lab for complex documents`)
+            
+            // Show helpful error toast with lease lab suggestion
+            toast.error(
+              `❌ Failed to process ${uploadedFile.name}\n\n💡 For complex documents like leases, try our Lease Lab which has specialized processing capabilities!`,
+              {
+                duration: 8000,
+                action: {
+                  label: 'Try Lease Lab',
+                  onClick: () => window.open('/lease-lab', '_blank')
+                }
+              }
+            )
             throw error
           }
         }
@@ -1100,7 +1124,18 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     }
     
     if (file.size > MAX_FILE_SIZE) {
-      toast.error(`File too large. Maximum size is ${(MAX_FILE_SIZE / (1024 * 1024)).toFixed(0)}MB.`)
+      const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1)
+      const maxSizeMB = (MAX_FILE_SIZE / (1024 * 1024)).toFixed(0)
+      toast.error(
+        `📄 File too large (${fileSizeMB}MB). Maximum size is ${maxSizeMB}MB for quick chat.\n\n🏠 For larger documents like lease agreements, please use our Lease Lab for comprehensive analysis!`,
+        {
+          duration: 8000,
+          action: {
+            label: 'Open Lease Lab',
+            onClick: () => window.open('/lease-lab', '_blank')
+          }
+        }
+      )
       return false
     }
     
@@ -1215,7 +1250,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         success: false,
         documentType: 'document',
         summary: 'Processing failed',
-        analysis: `Failed to process ${file.name}. Please try again or use Lease Lab for large documents.`,
+        analysis: `Unable to process ${file.name}. For large or complex documents like lease agreements, please use our specialized Lease Lab which handles comprehensive document analysis.`,
         filename: file.name,
         textLength: 0,
         extractedText: '',
