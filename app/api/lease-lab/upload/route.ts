@@ -3,6 +3,10 @@ import { createClient } from '@/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 
+// Configure Next.js API route to handle large file uploads
+export const runtime = 'nodejs';
+export const maxDuration = 300; // 5 minutes for document processing
+
 export async function POST(req: NextRequest) {
   try {
     const supabase = createClient(cookies());

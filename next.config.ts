@@ -29,6 +29,8 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
     turbo: {},
     optimizeServerReact: true,
+    // Increase body size limit for file uploads (important for lease lab)
+    bodySizeLimit: '50mb',
   },
   // Configure webpack for faster builds
   webpack: (config, { dev, isServer }) => {

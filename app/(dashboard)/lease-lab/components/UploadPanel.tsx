@@ -28,8 +28,8 @@ export default function UploadPanel({ onUploadSuccess }: UploadPanelProps) {
       };
     }
 
-    // Check file size - be conservative for Render deployment  
-    const maxSize = parseInt(process.env.NEXT_PUBLIC_DOC_REVIEW_MAX_MB || '25') * 1024 * 1024;
+    // Check file size (50MB default - matches server config)
+    const maxSize = parseInt(process.env.NEXT_PUBLIC_DOC_REVIEW_MAX_MB || '50') * 1024 * 1024;
     if (file.size > maxSize) {
       const maxSizeMB = Math.floor(maxSize / (1024 * 1024));
       const fileSizeMB = Math.round(file.size / (1024 * 1024));
