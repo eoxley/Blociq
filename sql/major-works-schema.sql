@@ -66,17 +66,41 @@ CREATE TABLE IF NOT EXISTS public.major_works_logs (
 );
 
 -- Create major_works_documents table for document attachments
-CREATE TABLE IF NOT EXISTS public.major_works_documents (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  project_id UUID NOT NULL REFERENCES public.major_works_projects(id) ON DELETE CASCADE,
-  document_id UUID NOT NULL REFERENCES public.building_documents(id) ON DELETE CASCADE,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  
-  -- Additional document metadata
-  document_type TEXT,
-  description TEXT,
-  uploaded_by UUID REFERENCES auth.users(id)
-);
+-- Note: Only create if building_documents table exists
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT FROM information_schema.tables 
+    WHERE table_schema = 'public' AND table_name = 'building_documents'
+  ) THEN
+    CREATE TABLE IF NOT EXISTS public.major_works_documents (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      project_id UUID NOT NULL REFERENCES public.major_works_projects(id) ON DELETE CASCADE,
+      document_id UUID NOT NULL REFERENCES public.building_documents(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      
+      -- Additional document metadata
+      document_type TEXT,
+      description TEXT,
+      uploaded_by UUID REFERENCES auth.users(id)
+    );
+  ELSE
+    -- Create table without foreign key constraint if building_documents doesn't exist
+    CREATE TABLE IF NOT EXISTS public.major_works_documents (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      project_id UUID NOT NULL REFERENCES public.major_works_projects(id) ON DELETE CASCADE,
+      document_id UUID, -- No foreign key constraint
+      file_name TEXT,
+      file_url TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      
+      -- Additional document metadata  
+      document_type TEXT,
+      description TEXT,
+      uploaded_by UUID REFERENCES auth.users(id)
+    );
+  END IF;
+END $$;
 
 -- Create major_works_milestones table for project milestones
 CREATE TABLE IF NOT EXISTS public.major_works_milestones (
@@ -113,9 +137,17 @@ CREATE INDEX IF NOT EXISTS idx_major_works_logs_project_id ON public.major_works
 CREATE INDEX IF NOT EXISTS idx_major_works_logs_timestamp ON public.major_works_logs(timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_major_works_logs_action ON public.major_works_logs(action);
 
--- Documents table indexes
-CREATE INDEX IF NOT EXISTS idx_major_works_documents_project_id ON public.major_works_documents(project_id);
-CREATE INDEX IF NOT EXISTS idx_major_works_documents_document_id ON public.major_works_documents(document_id);
+-- Documents table indexes (only if table exists)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT FROM information_schema.tables 
+    WHERE table_schema = 'public' AND table_name = 'major_works_documents'
+  ) THEN
+    CREATE INDEX IF NOT EXISTS idx_major_works_documents_project_id ON public.major_works_documents(project_id);
+    CREATE INDEX IF NOT EXISTS idx_major_works_documents_document_id ON public.major_works_documents(document_id);
+  END IF;
+END $$;
 
 -- Milestones table indexes
 CREATE INDEX IF NOT EXISTS idx_major_works_milestones_project_id ON public.major_works_milestones(project_id);
@@ -129,8 +161,18 @@ CREATE INDEX IF NOT EXISTS idx_major_works_milestones_done ON public.major_works
 -- Enable RLS on all tables
 ALTER TABLE public.major_works_projects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.major_works_logs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.major_works_documents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.major_works_milestones ENABLE ROW LEVEL SECURITY;
+
+-- Enable RLS on documents table only if it exists
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT FROM information_schema.tables 
+    WHERE table_schema = 'public' AND table_name = 'major_works_documents'
+  ) THEN
+    ALTER TABLE public.major_works_documents ENABLE ROW LEVEL SECURITY;
+  END IF;
+END $$;
 
 -- Create RLS policies using the same agency-based access pattern as compliance assets
 CREATE POLICY "Users can access major works projects for their agency buildings" 
@@ -148,15 +190,24 @@ USING (
   )
 );
 
-CREATE POLICY "Users can access major works documents for their agency projects" 
-ON public.major_works_documents 
-FOR ALL 
-USING (
-  project_id IN (
-    SELECT id FROM public.major_works_projects 
-    WHERE user_has_agency_building_access_uuid(building_id)
-  )
-);
+-- Only create RLS policy if the table was created
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT FROM information_schema.tables 
+    WHERE table_schema = 'public' AND table_name = 'major_works_documents'
+  ) THEN
+    EXECUTE 'CREATE POLICY "Users can access major works documents for their agency projects" 
+    ON public.major_works_documents 
+    FOR ALL 
+    USING (
+      project_id IN (
+        SELECT id FROM public.major_works_projects 
+        WHERE user_has_agency_building_access_uuid(building_id)
+      )
+    )';
+  END IF;
+END $$;
 
 CREATE POLICY "Users can access major works milestones for their agency projects" 
 ON public.major_works_milestones 
