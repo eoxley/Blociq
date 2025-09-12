@@ -94,24 +94,134 @@ export class LeaseDocumentParser {
 
 // Utility function to detect if a document is likely a lease
 export function isLeaseDocument(fileName: string, ocrText: string): boolean {
-  const leaseKeywords = [
-    'lease', 'tenancy', 'landlord', 'tenant', 'lessor', 'lessee',
-    'ground rent', 'service charge', 'leasehold', 'demise'
-  ]
-  
   const fileNameLower = fileName.toLowerCase()
   const textLower = ocrText.toLowerCase()
   
-  // Check filename
-  const fileNameScore = leaseKeywords.filter(keyword => 
-    fileNameLower.includes(keyword)
-  ).length
+  // Strong lease indicators - must have at least one
+  const strongLeaseKeywords = [
+    'lease agreement', 'tenancy agreement', 'leasehold', 'demise',
+    'lessor', 'lessee', 'landlord and tenant', 'to hold unto',
+    'term of years', 'ground rent', 'lease term'
+  ]
   
-  // Check content
-  const contentScore = leaseKeywords.filter(keyword => 
+  // Weak lease indicators - need multiple
+  const weakLeaseKeywords = [
+    'tenant', 'landlord', 'rent', 'service charge', 'premises'
+  ]
+  
+  // Document types that are definitely NOT leases
+  const excludeKeywords = [
+    'invoice', 'receipt', 'statement', 'bill', 'contract note',
+    'purchase order', 'delivery note', 'certificate', 'report',
+    'survey', 'valuation', 'insurance', 'correspondence', 'letter',
+    'email', 'memorandum', 'agenda', 'minutes'
+  ]
+  
+  // Check for exclusions first
+  const hasExclusions = excludeKeywords.some(keyword => 
+    fileNameLower.includes(keyword) || textLower.includes(keyword)
+  )
+  
+  if (hasExclusions) {
+    return false
+  }
+  
+  // Check for strong lease indicators
+  const strongMatches = strongLeaseKeywords.filter(keyword => 
     textLower.includes(keyword)
   ).length
   
-  // Return true if we have strong indicators
-  return fileNameScore > 0 || contentScore >= 3
+  // Check for weak indicators
+  const weakMatches = weakLeaseKeywords.filter(keyword => 
+    textLower.includes(keyword)
+  ).length
+  
+  // Check filename for lease keywords
+  const fileNameMatches = ['lease', 'tenancy'].filter(keyword => 
+    fileNameLower.includes(keyword)
+  ).length
+  
+  // Lease document criteria:
+  // 1. Strong indicator in text, OR
+  // 2. Lease in filename + at least 2 weak indicators, OR  
+  // 3. At least 4 weak indicators
+  return strongMatches > 0 || 
+         (fileNameMatches > 0 && weakMatches >= 2) || 
+         weakMatches >= 4
+}
+
+// Function to generate basic document summary for non-lease documents
+export function generateBasicDocumentSummary(fileName: string, ocrText: string): any {
+  const documentType = detectDocumentType(ocrText, fileName)
+  
+  return {
+    fileName: fileName,
+    documentType: documentType,
+    isLease: false,
+    generatedDate: new Date().toLocaleDateString('en-GB'),
+    summary: `This appears to be ${documentType.toLowerCase()}. The system detected that this is not a lease document, so a basic summary has been provided instead of detailed lease analysis.`,
+    basicDetails: {
+      documentType: documentType,
+      detectedContent: extractKeyContent(ocrText),
+      pageCount: estimatePageCount(ocrText),
+      wordCount: ocrText.split(/\s+/).length
+    },
+    recommendation: `For detailed analysis of ${documentType.toLowerCase()} documents, please use the appropriate document analysis tool rather than the lease lab.`
+  }
+}
+
+function detectDocumentType(text: string, fileName: string): string {
+  const textLower = text.toLowerCase()
+  const fileNameLower = fileName.toLowerCase()
+  
+  // Common document types
+  const documentTypes = {
+    'Invoice/Bill': ['invoice', 'bill', 'payment due', 'amount due', 'total due'],
+    'Contract': ['contract', 'agreement', 'terms and conditions', 'party of the first part'],
+    'Certificate': ['certificate', 'certification', 'certified', 'hereby certify'],
+    'Report': ['report', 'analysis', 'findings', 'conclusion', 'executive summary'],
+    'Survey': ['survey', 'inspection', 'condition', 'structural', 'building survey'],
+    'Insurance Document': ['insurance', 'policy', 'coverage', 'premium', 'claim'],
+    'Legal Document': ['solicitor', 'barrister', 'legal', 'court', 'jurisdiction'],
+    'Correspondence': ['dear', 'yours sincerely', 'yours faithfully', 'letter', 'memo'],
+    'Financial Statement': ['balance', 'profit', 'loss', 'financial', 'accounts'],
+    'Property Document': ['property', 'freehold', 'title', 'deed', 'conveyance']
+  }
+  
+  // Check filename first
+  for (const [type, keywords] of Object.entries(documentTypes)) {
+    if (keywords.some(keyword => fileNameLower.includes(keyword))) {
+      return type
+    }
+  }
+  
+  // Then check content
+  for (const [type, keywords] of Object.entries(documentTypes)) {
+    const matches = keywords.filter(keyword => textLower.includes(keyword)).length
+    if (matches >= 2) {
+      return type
+    }
+  }
+  
+  return 'General Document'
+}
+
+function extractKeyContent(text: string): string[] {
+  const lines = text.split('\n').filter(line => line.trim().length > 10)
+  const keyLines = []
+  
+  // Extract first few meaningful lines
+  for (let i = 0; i < Math.min(5, lines.length); i++) {
+    if (lines[i].trim().length > 10) {
+      keyLines.push(lines[i].trim().substring(0, 100) + (lines[i].length > 100 ? '...' : ''))
+    }
+  }
+  
+  return keyLines
+}
+
+function estimatePageCount(text: string): number {
+  // Rough estimation: 500 words per page
+  const wordCount = text.split(/\s+/).length
+  return Math.max(1, Math.round(wordCount / 500))
 }

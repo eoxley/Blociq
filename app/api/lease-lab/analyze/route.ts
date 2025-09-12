@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
+import { isLeaseDocument, generateBasicDocumentSummary } from '@/lib/lease/LeaseDocumentParser';
 
 export const maxDuration = 120; // 2 minutes for AI analysis
 
@@ -21,11 +22,41 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // Validate the job exists and get user context if needed
+    // Check if this is actually a lease document
+    const isLease = isLeaseDocument(filename, extractedText);
+    console.log(`📄 Document type detection for "${filename}": ${isLease ? 'LEASE' : 'NON-LEASE'}`);
+
+    if (!isLease) {
+      // Generate basic summary for non-lease documents
+      console.log('📋 Generating basic summary for non-lease document');
+      const basicSummary = generateBasicDocumentSummary(filename, extractedText);
+      
+      // Update job with basic summary
+      await serviceSupabase
+        .from('document_jobs')
+        .update({ 
+          status: 'COMPLETED',
+          analysis_result: basicSummary,
+          updated_at: new Date().toISOString(),
+          completed_at: new Date().toISOString()
+        })
+        .eq('id', jobId);
+
+      return NextResponse.json({ 
+        success: true,
+        message: 'Non-lease document processed with basic summary',
+        isLease: false,
+        documentType: basicSummary.documentType,
+        analysis: basicSummary
+      });
+    }
+
+    // Continue with lease processing for actual lease documents
+    console.log('🏠 Processing as lease document');
     if (userId) {
-      console.log('🤖 Starting AI analysis for job:', jobId, 'user:', userId);
+      console.log('🤖 Starting AI lease analysis for job:', jobId, 'user:', userId);
     } else {
-      console.log('🤖 Starting AI analysis for job:', jobId);
+      console.log('🤖 Starting AI lease analysis for job:', jobId);
     }
 
     // Call OpenAI to analyze the extracted text with comprehensive LeaseClear-style analysis

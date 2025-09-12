@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { processFileWithOCR } from '@/lib/simple-ocr';
-import { LeaseDocumentParser, isLeaseDocument } from '@/lib/lease/LeaseDocumentParser';
+import { LeaseDocumentParser, isLeaseDocument, generateBasicDocumentSummary } from '@/lib/lease/LeaseDocumentParser';
 
 interface Message {
   id: string;
@@ -121,6 +121,38 @@ export function useAIConversation(): UseAIConversationReturn {
           
           setIsProcessingOCR(false);
           return; // Skip regular AI processing for lease documents
+        } else {
+          // Check if any files are non-lease documents that should get basic summaries
+          const nonLeaseFiles = files.filter((file, index) => 
+            !isLeaseDocument(file.name, ocrResults[index]?.text || '')
+          );
+          
+          if (nonLeaseFiles.length > 0 && ocrText.length > 500) {
+            // Generate basic summaries for non-lease documents
+            const nonLeaseFile = nonLeaseFiles[0];
+            const nonLeaseOcrResult = ocrResults[files.indexOf(nonLeaseFile)];
+            const basicSummary = generateBasicDocumentSummary(nonLeaseFile.name, nonLeaseOcrResult.text);
+            
+            // Create basic summary message
+            const summaryMessage: Message = {
+              id: (Date.now() + 2).toString(),
+              role: 'assistant',
+              content: basicSummary.summary,
+              timestamp: new Date(),
+              type: 'basic_summary',
+              leaseData: basicSummary
+            };
+            
+            // Update user message and add basic summary
+            userMessage.ocrText = ocrText;
+            userMessage.ocrStatus = 'completed';
+            setMessages(prev => prev.map(msg => 
+              msg.id === userMessage.id ? userMessage : msg
+            ).concat([summaryMessage]));
+            
+            setIsProcessingOCR(false);
+            return; // Skip regular AI processing for non-lease documents with summaries
+          }
         }
         
         const enhancedMessage = `${content.trim()}\n\nExtracted from uploaded documents:\n${ocrText}`;
