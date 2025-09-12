@@ -109,12 +109,12 @@ export function isLeaseDocument(fileName: string, ocrText: string): boolean {
     'tenant', 'landlord', 'rent', 'service charge', 'premises'
   ]
   
-  // Document types that are definitely NOT leases
+  // Document types that are definitely NOT leases (be more specific)
   const excludeKeywords = [
     'invoice', 'receipt', 'statement', 'bill', 'contract note',
-    'purchase order', 'delivery note', 'certificate', 'report',
-    'survey', 'valuation', 'insurance', 'correspondence', 'letter',
-    'email', 'memorandum', 'agenda', 'minutes'
+    'purchase order', 'delivery note', 'correspondence', 'letter',
+    'email', 'memorandum', 'agenda', 'minutes', 'bank statement',
+    'utility bill', 'council tax', 'meeting minutes'
   ]
   
   // Check for exclusions first

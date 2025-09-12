@@ -802,6 +802,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
             
             const uploadData = await uploadToAskAI(uploadedFile.file)
             console.log('🔍 Upload response data:', uploadData)
+            console.log('🔍 Upload data text length:', uploadData.textLength)
+            console.log('🔍 Upload data extracted text length:', uploadData.extractedText?.length || 0)
             
             // Store the complete result for proper handling
             allResults.push({
@@ -809,7 +811,10 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
               data: uploadData
             })
             
-            if (uploadData.textLength > 0) {
+            // Check both textLength and extracted text content
+            const hasText = uploadData.textLength > 0 || (uploadData.extractedText && uploadData.extractedText.length > 0)
+            
+            if (hasText) {
               const source = uploadData.ocrSource || 'OCR'
               console.log(`✅ File processed successfully via ${source}: ${uploadedFile.name} - ${uploadData.textLength} characters extracted`)
               setUploadStatus(`✅ ${uploadedFile.name} processed - ${uploadData.textLength} characters extracted`)
@@ -817,6 +822,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
               // Process the extracted text normally
               const extractedText = uploadData.extractedText || '';
               
+              // Check if this is a lease document for special handling
               if (isLeaseDocument(uploadedFile.name, extractedText)) {
                 console.log('🏠 Detected lease document, generating enhanced analysis...');
                 
@@ -835,6 +841,10 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                 
                 setMessages(prev => [...prev, leaseMessage]);
                 console.log('✅ Added lease analysis to chat:', leaseAnalysis);
+              } else {
+                console.log('📄 Processing as general document (non-lease)');
+                // For non-lease documents, we still want to process them normally
+                // but without the lease-specific analysis
               }
               
               // Extract document metadata for Q&A system
