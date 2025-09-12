@@ -84,7 +84,13 @@ const ComplianceDocumentUpload: React.FC<DocumentUploadProps> = ({
 
   const { getRootProps, getInputProps, isDragActive: dropzoneActive } = useDropzone({
     onDrop,
-    accept: acceptedFileTypes.reduce((acc, type) => ({ ...acc, [type]: [] }), {}),
+    accept: {
+      'application/pdf': ['.pdf'],
+      'image/jpeg': ['.jpg', '.jpeg'],
+      'image/png': ['.png'],
+      'application/msword': ['.doc'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx']
+    },
     maxFiles: maxFiles - uploadFiles.length,
     maxSize: maxFileSize,
     onDragEnter: () => setIsDragActive(true),
