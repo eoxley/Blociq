@@ -139,22 +139,11 @@ export function useAIConversation(): UseAIConversationReturn {
         setIsProcessingOCR(false);
 
         // Send enhanced message to AI
-        // Detect if we're in an Outlook add-in context
-        const isOutlookAddin = typeof window !== 'undefined' && 
-          ((window as any).Office !== undefined || 
-           window.location.pathname.includes('ai-assistant') ||
-           window.parent !== window); // In iframe context
-        
-        const apiEndpoint = isOutlookAddin ? '/api/addin/ask-ai' : '/api/ask-ai';
+        // Use the main AI endpoint for all contexts - it has CORS support for Outlook add-ins
+        const apiEndpoint = '/api/ask-ai';
         const formData = new FormData();
         
-        if (isOutlookAddin) {
-          formData.append('prompt', enhancedMessage);
-          formData.append('contextType', 'general');
-        } else {
-          formData.append('userQuestion', enhancedMessage);
-        }
-        
+        formData.append('userQuestion', enhancedMessage);
         formData.append('useMemory', useMemory.toString());
         if (conversationId) formData.append('conversationId', conversationId);
 
@@ -184,19 +173,10 @@ export function useAIConversation(): UseAIConversationReturn {
         }
       } else {
         // Text-only message
-        // Detect if we're in an Outlook add-in context
-        const isOutlookAddin = typeof window !== 'undefined' && 
-          ((window as any).Office !== undefined || 
-           window.location.pathname.includes('ai-assistant') ||
-           window.parent !== window); // In iframe context
-        
-        const apiEndpoint = isOutlookAddin ? '/api/addin/ask-ai' : '/api/ask-ai';
-        const requestBody = isOutlookAddin ? {
-          prompt: content.trim(),
-          contextType: 'general',
-          useMemory: useMemory.toString(),
-          conversationId: conversationId || undefined
-        } : {
+        // Use the main AI endpoint for all contexts - it has CORS support for Outlook add-ins
+        // The /api/addin/ask-ai endpoint is too complex and rejects simple chat messages
+        const apiEndpoint = '/api/ask-ai';
+        const requestBody = {
           userQuestion: content.trim(),
           useMemory: useMemory.toString(),
           conversationId: conversationId || undefined

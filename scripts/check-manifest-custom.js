@@ -21,6 +21,12 @@ const MANIFEST_PATH = process.argv[2] || 'manifest.xml';
 const ICONS_DIR = 'public/icons';
 const COMMANDS_FILE = 'src/addin/commands.ts';
 
+// Check if manifest file exists - if not, skip validation (add-in might be web-based)
+if (!fs.existsSync(MANIFEST_PATH)) {
+  console.log('ℹ️  No manifest file found - skipping validation (web-based add-in)');
+  process.exit(0);
+}
+
 // Expected command handlers
 const REQUIRED_HANDLERS = [
   'showChatPane',
