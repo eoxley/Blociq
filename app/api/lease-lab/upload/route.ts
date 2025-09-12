@@ -34,14 +34,19 @@ export async function POST(req: NextRequest) {
     }
 
     // Server-side validation (tamper-proof)
+    // Render supports larger file uploads than Vercel - we can be more generous
     const maxSize = parseInt(process.env.DOC_REVIEW_MAX_MB || '50') * 1024 * 1024;
     const maxPages = parseInt(process.env.DOC_REVIEW_MAX_PAGES || '300');
 
     if (file.size > maxSize) {
+      const maxSizeMB = Math.floor(maxSize / (1024 * 1024));
+      const fileSizeMB = Math.round(file.size / (1024 * 1024));
       return NextResponse.json({ 
         error: 'File too large',
-        message: "This file is too large to process reliably. Try compressing it, splitting into parts, or contact support."
-      }, { status: 400 });
+        message: `File size (${fileSizeMB}MB) exceeds the ${maxSizeMB}MB limit. Please compress the PDF or split it into smaller parts.`,
+        maxSizeMB: maxSizeMB,
+        fileSizeMB: fileSizeMB
+      }, { status: 413 });
     }
 
     // Check file type

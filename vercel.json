@@ -89,6 +89,10 @@
     "app/api/outlook-addin/ask-ai/route.ts": {
       "maxDuration": 120,
       "memory": 512
+    },
+    "app/api/lease-lab/upload/route.ts": {
+      "maxDuration": 300,
+      "memory": 1024
     }
   },
   "env": {

@@ -28,12 +28,14 @@ export default function UploadPanel({ onUploadSuccess }: UploadPanelProps) {
       };
     }
 
-    // Check file size (50MB default)
-    const maxSize = parseInt(process.env.NEXT_PUBLIC_DOC_REVIEW_MAX_MB || '50') * 1024 * 1024;
+    // Check file size - be conservative for Render deployment  
+    const maxSize = parseInt(process.env.NEXT_PUBLIC_DOC_REVIEW_MAX_MB || '25') * 1024 * 1024;
     if (file.size > maxSize) {
+      const maxSizeMB = Math.floor(maxSize / (1024 * 1024));
+      const fileSizeMB = Math.round(file.size / (1024 * 1024));
       return {
         type: 'size',
-        message: "This file is too large to process reliably. Try compressing it, splitting into parts, or contact support."
+        message: `File too large (${fileSizeMB}MB). Maximum size is ${maxSizeMB}MB. Please compress the PDF or split it into smaller parts.`
       };
     }
 
@@ -53,15 +55,27 @@ export default function UploadPanel({ onUploadSuccess }: UploadPanelProps) {
         body: formData,
       });
 
-      const result = await response.json();
-
       if (response.ok) {
+        const result = await response.json();
         onUploadSuccess(result.job);
-      } else {
+      } else if (response.status === 413) {
         setError({
-          type: 'unknown',
-          message: result.message || 'Upload failed. Please try again.'
+          type: 'size',
+          message: 'File too large for upload. Please compress the PDF or split it into smaller parts.'
         });
+      } else {
+        try {
+          const result = await response.json();
+          setError({
+            type: result.error === 'File too large' ? 'size' : 'unknown',
+            message: result.message || 'Upload failed. Please try again.'
+          });
+        } catch {
+          setError({
+            type: 'unknown', 
+            message: `Upload failed (${response.status}). Please try again.`
+          });
+        }
       }
     } catch (error) {
       setError({
