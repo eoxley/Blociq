@@ -24,11 +24,12 @@ export default function AIReplyInner() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          userInput: "Generate a professional reply to this email",
+          userInput: `Please generate a professional reply to this email from ${from} with subject "${subject}". The email content is: ${body}`,
           outlookContext: {
             subject,
             from,
-            body
+            bodyPreview: body,
+            receivedDateTime: new Date().toISOString()
           }
         })
       });

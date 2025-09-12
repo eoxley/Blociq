@@ -146,6 +146,78 @@ export async function addinReplyAdapter(params: {
 }
 
 /**
+ * Generate contextual reply using AI analysis of the email content
+ */
+async function generateContextualReply(
+  context: ReplyContext,
+  replyContext: { replyFacts: string[]; sources: string[] }
+): Promise<string> {
+  const { outlookContext } = context;
+  
+  if (!outlookContext?.bodyPreview) {
+    return '<p>I can help you draft an email, but I need more specific information about what type of email you\'d like to send.</p>\n\n';
+  }
+
+  try {
+    // Use OpenAI to generate contextual reply
+    const prompt = `You are a professional email assistant. Generate a brief, appropriate reply to the following email.
+    
+Email from: ${outlookContext.from || 'Sender'}
+Subject: ${outlookContext.subject || 'No Subject'}
+Content: ${outlookContext.bodyPreview}
+
+Generate a professional reply that:
+1. Acknowledges receipt of the email
+2. Addresses the main points appropriately
+3. Is brief and professional
+4. Uses British English
+5. Is suitable for a business context
+
+Return only the main body content (no greeting or signature, as those are added separately).`;
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a professional email assistant. Generate appropriate, contextual email replies.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        max_tokens: 300,
+        temperature: 0.7
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`OpenAI API failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const aiReply = data.choices?.[0]?.message?.content?.trim();
+    
+    if (aiReply) {
+      return `<p>${aiReply.replace(/\n/g, '</p>\n<p>')}</p>\n\n`;
+    }
+    
+  } catch (error) {
+    console.error('Error generating contextual reply:', error);
+  }
+
+  // Fallback if AI fails
+  return '<p>Thank you for your email. I have received your message and will review it accordingly.</p>\n\n';
+}
+
+/**
  * Generate subject suggestion for reply
  */
 function generateSubjectSuggestion(context: ReplyContext): string {
@@ -190,9 +262,14 @@ async function generateReplyBody(
   const greeting = generateGreeting(context);
   body += `<p>${greeting}</p>\n\n`;
   
-  // Add main content based on query type
+  // Check if this is a property management email or a general email
   const input = userInput.toLowerCase();
+  const emailContent = context.outlookContext?.bodyPreview || '';
   
+  // Use AI to generate contextual reply for all emails
+  body += await generateContextualReply(context, replyContext);
+  
+  // Add specific property management content if relevant
   if (input.includes('section 20') || input.includes('s20')) {
     body += await generateSection20Reply(context, replyContext);
   } else if (input.includes('repair') || input.includes('maintenance')) {
@@ -203,8 +280,6 @@ async function generateReplyBody(
     body += await generateComplianceReply(context, replyContext);
   } else if (input.includes('safety')) {
     body += await generateSafetyReply(context, replyContext);
-  } else {
-    body += await generateGenericReply(context, replyContext);
   }
   
   // Add building context if available
