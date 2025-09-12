@@ -137,15 +137,25 @@ CREATE INDEX IF NOT EXISTS idx_major_works_logs_project_id ON public.major_works
 CREATE INDEX IF NOT EXISTS idx_major_works_logs_timestamp ON public.major_works_logs(timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_major_works_logs_action ON public.major_works_logs(action);
 
--- Documents table indexes (only if table exists)
+-- Documents table indexes (only if table and columns exist)
 DO $$
 BEGIN
   IF EXISTS (
     SELECT FROM information_schema.tables 
     WHERE table_schema = 'public' AND table_name = 'major_works_documents'
   ) THEN
+    -- Always create project_id index
     CREATE INDEX IF NOT EXISTS idx_major_works_documents_project_id ON public.major_works_documents(project_id);
-    CREATE INDEX IF NOT EXISTS idx_major_works_documents_document_id ON public.major_works_documents(document_id);
+    
+    -- Only create document_id index if the column exists
+    IF EXISTS (
+      SELECT FROM information_schema.columns 
+      WHERE table_schema = 'public' 
+      AND table_name = 'major_works_documents' 
+      AND column_name = 'document_id'
+    ) THEN
+      CREATE INDEX IF NOT EXISTS idx_major_works_documents_document_id ON public.major_works_documents(document_id);
+    END IF;
   END IF;
 END $$;
 
