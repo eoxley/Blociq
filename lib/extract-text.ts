@@ -574,7 +574,7 @@ export async function extractText(file: File): Promise<TextExtractionResult> {
           console.info("OCR fallback:", "rasterizing pdf pages");
           try {
             const { rasterizePdfToPngBuffers } = await import('@/lib/ocr/rasterize');
-            const images = await rasterizePdfToPngBuffers(buffer, 15, 180);
+            const images = await rasterizePdfToPngBuffers(buffer, 60, 180);
             let concat = "";
             
             for (const img of images) {

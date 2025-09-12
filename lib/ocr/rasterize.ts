@@ -1,7 +1,7 @@
 // Server-side PDF rasterization utility
 // Minimal implementation for converting PDF pages to PNG buffers
 
-export async function rasterizePdfToPngBuffers(pdfBuffer: Buffer, maxPages = 15, dpi = 180): Promise<Buffer[]> {
+export async function rasterizePdfToPngBuffers(pdfBuffer: Buffer, maxPages = 60, dpi = 180): Promise<Buffer[]> {
   try {
     console.log(`🖼️ Rasterizing PDF: ${pdfBuffer.length} bytes, max ${maxPages} pages at ${dpi} DPI`);
     
@@ -68,7 +68,7 @@ export async function rasterizePdfToPngBuffers(pdfBuffer: Buffer, maxPages = 15,
 }
 
 // Alternative lightweight method using existing PDF.js render if canvas is not available
-export async function rasterizePdfPagesAlternative(pdfBuffer: Buffer, maxPages = 15): Promise<Buffer[]> {
+export async function rasterizePdfPagesAlternative(pdfBuffer: Buffer, maxPages = 60): Promise<Buffer[]> {
   // Placeholder for alternative rasterization method
   // This could use a different approach like calling an external service
   console.warn('🔄 Alternative rasterization not implemented, returning empty array');

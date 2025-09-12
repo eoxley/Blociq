@@ -188,7 +188,7 @@ CRITICAL INSTRUCTIONS:
 9. Return ONLY the JSON object, no other text or formatting
 
 Document text to analyze:
-${extractedText.substring(0, 22000)}
+${extractedText.substring(0, 60000)}
 `;
 
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
