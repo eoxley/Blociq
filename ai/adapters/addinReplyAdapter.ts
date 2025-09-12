@@ -262,25 +262,9 @@ async function generateReplyBody(
   const greeting = generateGreeting(context);
   body += `<p>${greeting}</p>\n\n`;
   
-  // Check if this is a property management email or a general email
-  const input = userInput.toLowerCase();
-  const emailContent = context.outlookContext?.bodyPreview || '';
-  
-  // Use AI to generate contextual reply for all emails
-  body += await generateContextualReply(context, replyContext);
-  
-  // Add specific property management content if relevant
-  if (input.includes('section 20') || input.includes('s20')) {
-    body += await generateSection20Reply(context, replyContext);
-  } else if (input.includes('repair') || input.includes('maintenance')) {
-    body += await generateRepairReply(context, replyContext);
-  } else if (input.includes('service charge')) {
-    body += await generateServiceChargeReply(context, replyContext);
-  } else if (input.includes('compliance')) {
-    body += await generateComplianceReply(context, replyContext);
-  } else if (input.includes('safety')) {
-    body += await generateSafetyReply(context, replyContext);
-  }
+  // Use AI to generate contextual reply for all emails - this is the main content
+  const contextualReply = await generateContextualReply(context, replyContext);
+  body += contextualReply;
   
   // Add building context if available
   if (buildingInfo) {

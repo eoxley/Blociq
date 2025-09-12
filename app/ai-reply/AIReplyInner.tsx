@@ -51,8 +51,11 @@ export default function AIReplyInner() {
 
   // Auto-generate reply when email content is available
   useEffect(() => {
-    if (subject && from && body && !reply && !isLoading) {
-      generateReply();
+    if (subject || from || body) {
+      // Only auto-generate if we have at least some content and haven't already generated
+      if (!reply && !isLoading && !error) {
+        generateReply();
+      }
     }
   }, [subject, from, body]);
 
@@ -63,14 +66,27 @@ export default function AIReplyInner() {
       <div className="mb-6 p-4 bg-gray-50 rounded-lg">
         <h2 className="font-semibold mb-2">Original Email:</h2>
         <div className="mb-2">
-          <strong>Subject:</strong> {subject}
+          <strong>Subject:</strong> {subject || <span className="text-gray-500 italic">No subject provided</span>}
         </div>
         <div className="mb-2">
-          <strong>From:</strong> {from}
+          <strong>From:</strong> {from || <span className="text-gray-500 italic">No sender provided</span>}
         </div>
         <div className="mb-2">
           <strong>Body:</strong>
-          <pre className="whitespace-pre-wrap mt-1 text-sm">{body}</pre>
+          {body ? (
+            <pre className="whitespace-pre-wrap mt-1 text-sm bg-white p-2 rounded border">{body}</pre>
+          ) : (
+            <span className="text-gray-500 italic">No email content provided</span>
+          )}
+        </div>
+        
+        {/* Debug info */}
+        <div className="mt-3 pt-3 border-t border-gray-300">
+          <div className="text-xs text-gray-600">
+            <strong>Debug Info:</strong>
+            <div>Auto-generate conditions: {subject || from || body ? "✅" : "❌"} Content available</div>
+            <div>Reply status: {reply ? "✅ Generated" : isLoading ? "⏳ Generating..." : error ? "❌ Error" : "⭕ Waiting"}</div>
+          </div>
         </div>
       </div>
 
