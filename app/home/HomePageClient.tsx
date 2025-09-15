@@ -3,7 +3,7 @@
 // Home page client component - Major works dashboard removed for cleaner interface
 import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { Calendar, Plus, X, Building, Clock, AlertCircle, CheckCircle, Loader2, ExternalLink, RefreshCw, MessageCircle, MessageSquare, Sparkles, Upload, FileText, Send, Bot, ArrowRight, HelpCircle, Brain, X as XIcon, ChevronDown, ChevronUp, Minimize2, Move, CornerDownRight, MapPin, User, Hash, Scale } from 'lucide-react'
+import { Calendar, Plus, X, Building, Clock, AlertCircle, CheckCircle, Loader2, ExternalLink, RefreshCw, MessageCircle, MessageSquare, Sparkles, FileText, Send, Bot, ArrowRight, HelpCircle, Brain, X as XIcon, ChevronDown, ChevronUp, Minimize2, Move, CornerDownRight, MapPin, User, Hash, Scale } from 'lucide-react'
 import { useSupabase } from '@/components/SupabaseProvider'
 
 
@@ -141,8 +141,6 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   const [isResizing, setIsResizing] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 })
-  const [uploadedFiles, setUploadedFiles] = useState<Array<{file: File, id: string, name: string, size: number, type: string}>>([])
-  const [isDragOver, setIsDragOver] = useState(false)
   const [showCommunicationModal, setShowCommunicationModal] = useState(false)
   
   // Calendar sync state
@@ -309,7 +307,6 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   } | null>(null)
   const askInputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [currentWelcomeMessage, setCurrentWelcomeMessage] = useState('')
   const [upcomingEvents, setUpcomingEvents] = useState<PropertyEvent[]>([])
@@ -815,18 +812,16 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     }
     console.log('🚀 NEW handleAskSubmit called with prompt:', prompt)
     
-    if (!prompt.trim() && uploadedFiles.length === 0) {
-      toast.error('Please enter a question or upload a file.')
+    if (!prompt.trim()) {
+      toast.error('Please enter a question.')
       return
     }
     
     setIsSubmitting(true)
     
-    // Add user message to chat only if there's a prompt
-    if (prompt.trim()) {
-      const userMessage = { sender: 'user' as const, text: prompt, timestamp: new Date() }
-      setMessages(prev => [...prev, userMessage])
-    }
+    // Add user message to chat
+    const userMessage = { sender: 'user' as const, text: prompt, timestamp: new Date() }
+    setMessages(prev => [...prev, userMessage])
     
     try {
       console.log('🤖 Processing request with enhanced AI:', { prompt, contextType: 'general' })
@@ -1159,153 +1154,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     }
   }, [userData, messages.length]);
 
-  // File handling constants
-  const acceptedFileTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain']
-  const maxFiles = 5
-  const MAX_FILE_SIZE = 100 * 1024 * 1024 // 100MB - no more hard limits, StorageKey handles large files
 
-  const validateFile = (file: File): boolean => {
-    if (!acceptedFileTypes.includes(file.type)) {
-      toast.error(`File type not supported. Please upload PDF, DOCX, or TXT files.`)
-      return false
-    }
-    
-    if (file.size > MAX_FILE_SIZE) {
-      const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1)
-      const maxSizeMB = (MAX_FILE_SIZE / (1024 * 1024)).toFixed(0)
-      toast.error(
-        `📄 File too large (${fileSizeMB}MB). Maximum size is ${maxSizeMB}MB for quick chat.\n\n🏠 For larger documents like lease agreements, please use our Lease Lab for comprehensive analysis!`,
-        {
-          duration: 8000,
-          action: {
-            label: 'Open Lease Lab',
-            onClick: () => window.open('/lease-lab', '_blank')
-          }
-        }
-      )
-      return false
-    }
-    
-    if (uploadedFiles.length >= maxFiles) {
-      toast.error(`Maximum ${maxFiles} files allowed.`)
-      return false
-    }
-    
-    return true
-  }
 
-  const handleFileSelect = (files: FileList | null) => {
-    if (!files) return
-    
-    Array.from(files).forEach(file => {
-      if (validateFile(file)) {
-        const fileId = Math.random().toString(36).substr(2, 9)
-        const uploadedFile = {
-          file,
-          id: fileId,
-          name: file.name,
-          size: file.size,
-          type: file.type
-        }
-        
-        setUploadedFiles(prev => [...prev, uploadedFile])
-        // toast.success(`✅ ${file.name} uploaded. You can now ask questions about it.`)
-      }
-    })
-  }
-
-  const removeFile = (fileId: string) => {
-    setUploadedFiles(prev => prev.filter(f => f.id !== fileId))
-    setUploadStatus('')
-  }
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragOver(true)
-  }
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragOver(false)
-  }
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragOver(false)
-    handleFileSelect(e.dataTransfer.files)
-  }
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes'
-    const k = 1024
-    const sizes = ['Bytes', 'KB', 'MB', 'GB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-  }
-
-  const getFileIcon = (fileType: string) => {
-    if (fileType.includes('pdf')) return '📄'
-    if (fileType.includes('word') || fileType.includes('document')) return '📝'
-    if (fileType.includes('text')) return '📄'
-    return '📎'
-  }
-
-  // Hybrid lease processing function - attempts quick processing first, falls back to background processing
-  const uploadToAskAI = async (file: File, buildingId?: string) => {
-    console.log('📄 Processing file for Ask Bloc AI:', file.name);
-    console.log(`📊 File details: ${(file.size / (1024 * 1024)).toFixed(2)} MB, type: ${file.type}`);
-    
-    try {
-      // Simple file upload to Ask AI endpoint - no background processing
-      const formData = new FormData();
-      formData.append('file', file);
-      if (buildingId) formData.append('buildingId', buildingId);
-      
-      const response = await fetch('/api/ask-ai/upload', {
-        method: 'POST',
-        body: formData
-      });
-
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.status}`);
-      }
-
-      const result = await response.json();
-      
-      if (result.success) {
-        console.log('✅ File processed successfully');
-        return {
-          success: true,
-          documentType: result.documentType || 'document',
-          summary: result.summary || 'Document processed successfully',
-          analysis: result.analysis || 'Document analysis completed',
-          filename: file.name,
-          textLength: result.textLength || 0,
-          extractedText: result.extractedText || '',
-          ocrSource: result.ocrSource || 'ask-ai',
-          metadata: {
-            processingType: 'immediate'
-          }
-        };
-      } else {
-        throw new Error(result.error || 'Processing failed');
-      }
-
-    } catch (error) {
-      console.error('❌ File processing error:', error);
-      return {
-        success: false,
-        documentType: 'document',
-        summary: 'Processing failed',
-        analysis: `Unable to process ${file.name}. For large or complex documents like lease agreements, please use our specialized Lease Lab which handles comprehensive document analysis.`,
-        filename: file.name,
-        textLength: 0,
-        extractedText: '',
-        ocrSource: 'error',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
-    }
-  }
 
     // Helper function for processing already uploaded files via OCR endpoint
   const processStoredPath = async (path: string, buildingId?: string) => {
@@ -1571,7 +1421,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                     {/* Submit Button */}
                     <button 
                       onClick={() => handleAskSubmit(askInput)}
-                      disabled={(!askInput.trim() && uploadedFiles.length === 0) || isSubmitting}
+                      disabled={!askInput.trim() || isSubmitting}
                       className="absolute right-3 top-1/2 transform -translate-y-1/2 p-3 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white rounded-xl transition-all duration-200 hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                     >
                       {isSubmitting ? (
@@ -1582,63 +1432,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                     </button>
                   </div>
 
-                  {/* Uploaded Files Display */}
-                  {uploadedFiles.length > 0 && (
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-gray-700">📄 Included in AI context:</span>
-                      </div>
-                      <div className="flex flex-wrap gap-3">
-                        {uploadedFiles.map((file) => (
-                          <div
-                            key={file.id}
-                            className="flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-[#4f46e5]/10 to-[#a855f7]/10 border border-[#4f46e5]/20 rounded-xl text-sm text-[#4f46e5] shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer group"
-                            title={`${file.name} (${formatFileSize(file.size)})`}
-                          >
-                            <span className="text-lg">{getFileIcon(file.type)}</span>
-                            <span className="font-medium truncate max-w-[150px]">{file.name}</span>
-                            <span className={`text-xs ${
-                              file.size > MAX_FILE_SIZE ? 'text-orange-600' : 'text-[#4f46e5]'
-                            } opacity-80`}>
-                              ({formatFileSize(file.size)})
-                              {file.size > MAX_FILE_SIZE && ' ⚡'}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => removeFile(file.id)}
-                              className="ml-1 text-[#4f46e5]/70 hover:text-[#4f46e5] transition-colors opacity-0 group-hover:opacity-100 p-1 hover:bg-[#4f46e5]/10 rounded-lg"
-                            >
-                              <XIcon className="h-3 w-3" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
 
-                  {/* Upload Status Display */}
-                  {uploadStatus && (
-                    <div className="p-4 bg-gray-50 border border-gray-200 rounded-2xl">
-                      <div className="flex items-start gap-3 text-sm">
-                        {uploadStatus.includes('Processing') && (
-                          <Loader2 className="h-4 w-4 animate-spin text-[#4f46e5] mt-0.5 flex-shrink-0" />
-                        )}
-                        {uploadStatus.includes('✅') && (
-                          <span className="text-green-600 text-lg flex-shrink-0">✓</span>
-                        )}
-                        {uploadStatus.includes('❌') && (
-                          <span className="text-red-600 text-lg flex-shrink-0">✗</span>
-                        )}
-                        <span className={`text-sm leading-relaxed ${
-                          uploadStatus.includes('❌') ? 'text-red-600' : 
-                          uploadStatus.includes('✅') ? 'text-green-600' : 
-                          'text-[#4f46e5]'
-                        }`}>
-                          {uploadStatus}
-                        </span>
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
 
