@@ -31,6 +31,13 @@ const NAVIGATION_ITEMS = [
     description: 'Upload & manage documents • AI-powered'
   },
   {
+    key: 'lease-mode',
+    label: 'Lease Mode',
+    icon: ScrollText,
+    href: '/lease-mode',
+    description: 'Specialized lease analysis & extraction'
+  },
+  {
     key: 'compliance',
     label: 'Compliance',
     icon: Shield,

@@ -132,7 +132,6 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   // Ask BlocIQ state
   const [askInput, setAskInput] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [uploadStatus, setUploadStatus] = useState<string>('')
   const [messages, setMessages] = useState<Array<{sender: 'user' | 'ai', text: string, timestamp: Date, type?: 'lease_analysis', leaseData?: any}>>([])
   const [showChat, setShowChat] = useState(false)
   const [chatSize, setChatSize] = useState({ width: 600, height: 500 })
@@ -826,9 +825,9 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     try {
       console.log('🤖 Processing request with enhanced AI:', { prompt, contextType: 'general' })
       
-      // Handle file uploads separately from text-only requests
-      if (uploadedFiles.length > 0) {
-        console.log('🔍 Processing files, skipping text-only path')
+      // Text-only request - use the existing AI endpoint
+      {
+        // Text-only request - use the existing AI endpoint
         
         // Process multiple files sequentially
         const allResults: any[] = []
@@ -1082,9 +1081,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       // Show chat interface
       setShowChat(true)
       
-      // Clear input and files after submission
+      // Clear input after submission
       setAskInput('')
-      setUploadedFiles([])
       // toast.success('Response received!')
     } catch (error) {
       console.error('❌ Error submitting to AI:', error)
@@ -1094,8 +1092,6 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       const errorMessage = { sender: 'ai' as const, text: `Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`, timestamp: new Date() }
       setMessages(prev => [...prev, errorMessage])
       
-      // Clear upload status on error
-      setUploadStatus('')
     } finally {
       setIsSubmitting(false)
     }
@@ -1350,9 +1346,6 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         <div className="flex justify-center">
           <div 
             className={`relative transition-all duration-500 ${showChat ? 'w-[800px]' : 'w-full max-w-4xl'} bg-white rounded-3xl shadow-2xl hover:shadow-3xl border border-gray-100 overflow-hidden group`}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
           >
             {/* Header Section with Brand Gradient */}
             <div className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] p-8 relative overflow-hidden">
@@ -1582,39 +1575,6 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                 
                 {/* Input Bar - Positioned at bottom of chat widget */}
                 <div className="absolute bottom-0 left-0 right-0 bg-white p-4 border-t border-gray-200 shadow-lg">
-                  {/* File Upload Zone */}
-                  {uploadedFiles.length > 0 && (
-                    <div className="mb-3">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-sm font-medium text-gray-600">📄 Included in AI context:</span>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {uploadedFiles.map((file) => (
-                          <div
-                            key={file.id}
-                                                           className="flex items-center gap-2 px-3 py-1.5 bg-white/90 backdrop-blur-sm border border-white/30 rounded-xl text-sm text-white shadow-lg hover:bg-white/95 transition-all duration-200 cursor-pointer group"
-                            title={`${file.name} (${formatFileSize(file.size)})`}
-                          >
-                            <span>{getFileIcon(file.type)}</span>
-                            <span className="font-medium truncate max-w-[120px]">{file.name}</span>
-                            <span className={`text-xs ${
-                              file.size > MAX_FILE_SIZE ? 'text-orange-500' : 'text-blue-500'
-                            } opacity-70`}>
-                              ({formatFileSize(file.size)})
-                              {file.size > MAX_FILE_SIZE && ' ⚡'}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => removeFile(file.id)}
-                              className="ml-1 text-blue-400 hover:text-blue-600 transition-colors opacity-0 group-hover:opacity-100"
-                            >
-                              <XIcon className="h-3 w-3" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
 
                   <div className="flex items-center gap-3">
                     <input
@@ -1627,16 +1587,6 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                       onKeyPress={handleKeyPress}
                     />
                     
-                    {/* File Upload Button */}
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={isSubmitting || uploadedFiles.length >= maxFiles}
-                      className="p-2 text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
-                      title="Attach a document"
-                    >
-                      <Upload className="h-5 w-5" />
-                    </button>
                     
                     {/* Clear Button */}
                     {askInput && (
@@ -1651,7 +1601,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                     {/* Submit Button */}
                     <button 
                       onClick={() => handleAskSubmit(askInput)}
-                      disabled={(!askInput.trim() && uploadedFiles.length === 0) || isSubmitting}
+                      disabled={!askInput.trim() || isSubmitting}
                       className="p-2.5 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white rounded-xl transition-all duration-200 hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                     >
                       {isSubmitting ? (

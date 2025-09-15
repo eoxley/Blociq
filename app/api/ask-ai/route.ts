@@ -49,6 +49,85 @@ const FAQS = [
   }
 ];
 
+// Document retrieval function for Ask BlocIQ
+async function searchDocuments(supabase: any, query: string, buildingId?: string) {
+  try {
+    let documentsQuery = supabase
+      .from('building_documents')
+      .select(`
+        id,
+        name,
+        type,
+        category,
+        file_path,
+        uploaded_at,
+        uploaded_by,
+        ocr_text,
+        metadata,
+        buildings!inner(name)
+      `)
+      .ilike('name', `%${query}%`)
+
+    if (buildingId) {
+      documentsQuery = documentsQuery.eq('building_id', buildingId)
+    }
+
+    const { data: documents, error } = await documentsQuery.limit(10)
+
+    if (error) {
+      console.error('Document search error:', error)
+      return []
+    }
+
+    return documents || []
+  } catch (error) {
+    console.error('Document search error:', error)
+    return []
+  }
+}
+
+// Lease retrieval function for Ask BlocIQ
+async function searchLeases(supabase: any, query: string, buildingId?: string) {
+  try {
+    let leasesQuery = supabase
+      .from('leases')
+      .select(`
+        id,
+        unit_number,
+        leaseholder_name,
+        start_date,
+        end_date,
+        status,
+        ground_rent,
+        service_charge_percentage,
+        responsibilities,
+        restrictions,
+        rights,
+        file_path,
+        ocr_text,
+        metadata,
+        buildings!inner(name)
+      `)
+      .or(`unit_number.ilike.%${query}%,leaseholder_name.ilike.%${query}%`)
+
+    if (buildingId) {
+      leasesQuery = leasesQuery.eq('building_id', buildingId)
+    }
+
+    const { data: leases, error } = await leasesQuery.limit(10)
+
+    if (error) {
+      console.error('Lease search error:', error)
+      return []
+    }
+
+    return leases || []
+  } catch (error) {
+    console.error('Lease search error:', error)
+    return []
+  }
+}
+
 // Enhanced system prompts for different context types
 const SYSTEM_PROMPTS = {
   general: `You are BlocIQ, a UK property management AI assistant. You help property managers with building management, compliance, leaseholder relations, and operational tasks.`,
@@ -605,6 +684,68 @@ Notes & Instructions: ${buildingData.notes || 'No notes added yet'}
         }
       } catch (error) {
         console.warn('Could not fetch building context:', error);
+      }
+    }
+
+    // 📄 DOCUMENT RETRIEVAL FOR ASK BLOCIQ
+    let documentContext = "";
+    let leaseContext = "";
+    
+    // Check if the query is asking about documents or leases
+    const documentKeywords = ['document', 'file', 'pdf', 'report', 'certificate', 'eicr', 'fra', 'insurance', 'lease', 'agreement'];
+    const isDocumentQuery = documentKeywords.some(keyword => 
+      prompt.toLowerCase().includes(keyword)
+    );
+
+    if (isDocumentQuery) {
+      console.log('📄 Searching for relevant documents...');
+      
+      try {
+        // Search for documents
+        const documents = await searchDocuments(supabase, prompt, building_id);
+        
+        if (documents.length > 0) {
+          documentContext = `\n\nRelevant Documents Found:\n${documents.map(doc => 
+            `- ${doc.name} (${doc.category}) - ${doc.buildings?.name || 'Unknown Building'} - Uploaded: ${new Date(doc.uploaded_at).toLocaleDateString()}`
+          ).join('\n')}\n\n`;
+          
+          // Add OCR text from documents for context
+          const ocrTexts = documents
+            .filter(doc => doc.ocr_text)
+            .map(doc => `Document: ${doc.name}\n${doc.ocr_text}`)
+            .join('\n\n');
+          
+          if (ocrTexts) {
+            documentContext += `Document Content:\n${ocrTexts}\n\n`;
+          }
+        }
+
+        // Search for leases
+        const leases = await searchLeases(supabase, prompt, building_id);
+        
+        if (leases.length > 0) {
+          leaseContext = `\n\nRelevant Leases Found:\n${leases.map(lease => 
+            `- Unit ${lease.unit_number}: ${lease.leaseholder_name} (${lease.status}) - ${lease.buildings?.name || 'Unknown Building'}`
+          ).join('\n')}\n\n`;
+          
+          // Add lease details for context
+          const leaseDetails = leases.map(lease => 
+            `Lease for Unit ${lease.unit_number}:\n` +
+            `Leaseholder: ${lease.leaseholder_name}\n` +
+            `Term: ${new Date(lease.start_date).toLocaleDateString()} - ${new Date(lease.end_date).toLocaleDateString()}\n` +
+            `Ground Rent: ${lease.ground_rent}\n` +
+            `Service Charge: ${lease.service_charge_percentage}%\n` +
+            `Responsibilities: ${lease.responsibilities.join(', ')}\n` +
+            `Restrictions: ${lease.restrictions.join(', ')}\n` +
+            `Rights: ${lease.rights.join(', ')}`
+          ).join('\n\n');
+          
+          if (leaseDetails) {
+            leaseContext += `Lease Details:\n${leaseDetails}\n\n`;
+          }
+        }
+      } catch (error) {
+        console.warn('Document search failed:', error);
       }
     }
 

@@ -5,19 +5,23 @@ import { cookies } from 'next/headers'
 export async function POST(request: NextRequest) {
   try {
     const supabase = createClient(cookies())
-
-    // Check authentication
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await request.json()
-    const { documentId } = body
+    const { documentId } = await request.json()
 
     if (!documentId) {
-      return NextResponse.json({ error: 'Document ID is required' }, { status: 400 })
+      return NextResponse.json({ error: 'Document ID required' }, { status: 400 })
     }
+
+    // Update document status to processing
+    await supabase
+      .from('building_documents')
+      .update({ ocr_status: 'processing' })
+      .eq('id', documentId)
 
     // Get document details
     const { data: document, error: docError } = await supabase
@@ -30,70 +34,83 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Document not found' }, { status: 404 })
     }
 
-    // Start OCR processing (placeholder implementation)
-    // In a real implementation, you would:
-    // 1. Download the file from Supabase Storage
-    // 2. Process it through an OCR service
-    // 3. Extract text and metadata
-    // 4. Update the document record
+    // Download file from storage
+    const { data: fileData, error: downloadError } = await supabase.storage
+      .from('documents')
+      .download(document.file_path)
 
-    // Update OCR status to processing
-    await supabase
-      .from('building_documents')
-      .update({
-        ocr_status: 'processing',
-        metadata: { ...document.metadata, ocr_started_at: new Date().toISOString() }
-      })
-      .eq('id', documentId)
+    if (downloadError) {
+      console.error('Download error:', downloadError)
+      await supabase
+        .from('building_documents')
+        .update({ ocr_status: 'failed' })
+        .eq('id', documentId)
+      return NextResponse.json({ error: 'Failed to download file' }, { status: 500 })
+    }
 
-    // Simulate OCR processing (in real implementation, this would be async)
-    setTimeout(async () => {
-      try {
-        const { error: updateError } = await supabase
-          .from('building_documents')
-          .update({
-            ocr_status: 'completed',
-            metadata: {
-              ...document.metadata,
-              ocr_completed_at: new Date().toISOString(),
-              extracted_text: 'Sample extracted text from OCR processing...',
-              pages: 1,
-              confidence: 0.95
-            }
-          })
-          .eq('id', documentId)
+    // Convert to buffer for OCR processing
+    const arrayBuffer = await fileData.arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
 
-        if (updateError) {
-          console.error('Failed to update OCR status:', updateError)
+    // Process with OCR (simplified - in production, use a proper OCR service)
+    let ocrText = ''
+    let metadata = {}
+
+    try {
+      // For now, we'll simulate OCR processing
+      // In production, integrate with Google Vision API, AWS Textract, or similar
+      if (document.type === 'application/pdf') {
+        // Simulate PDF text extraction
+        ocrText = `Extracted text from ${document.name}. This is a placeholder for actual OCR processing.`
+        metadata = {
+          page_count: 1,
+          language: 'en',
+          confidence: 0.95
         }
-      } catch (error) {
-        console.error('OCR processing failed:', error)
-
-        await supabase
-          .from('building_documents')
-          .update({
-            ocr_status: 'failed',
-            metadata: {
-              ...document.metadata,
-              ocr_failed_at: new Date().toISOString(),
-              error: 'OCR processing failed'
-            }
-          })
-          .eq('id', documentId)
+      } else if (document.type.startsWith('image/')) {
+        // Simulate image OCR
+        ocrText = `Extracted text from image ${document.name}. This is a placeholder for actual OCR processing.`
+        metadata = {
+          language: 'en',
+          confidence: 0.90
+        }
+      } else {
+        // For text files, read directly
+        ocrText = buffer.toString('utf-8')
+        metadata = {
+          encoding: 'utf-8',
+          line_count: ocrText.split('\n').length
+        }
       }
-    }, 3000) // 3 second delay for demo
 
-    return NextResponse.json({
-      success: true,
-      message: 'OCR processing started',
-      status: 'processing'
-    })
+      // Update document with OCR results
+      await supabase
+        .from('building_documents')
+        .update({
+          ocr_status: 'completed',
+          ocr_text: ocrText,
+          metadata: metadata
+        })
+        .eq('id', documentId)
+
+      return NextResponse.json({ 
+        success: true, 
+        message: 'OCR processing completed',
+        ocr_text: ocrText,
+        metadata: metadata
+      })
+
+    } catch (ocrError) {
+      console.error('OCR processing error:', ocrError)
+      await supabase
+        .from('building_documents')
+        .update({ ocr_status: 'failed' })
+        .eq('id', documentId)
+      return NextResponse.json({ error: 'OCR processing failed' }, { status: 500 })
+    }
 
   } catch (error) {
-    console.error('OCR processing error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    console.error('OCR endpoint error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
