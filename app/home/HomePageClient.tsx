@@ -362,7 +362,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       console.log('📊 Buildings API response:', response.status, response.statusText)
       
       if (!response.ok) {
-        console.error('❌ Error fetching buildings:', response.status, response.statusText)
+        console.warn('⚠️ Error fetching buildings:', response.status, response.statusText)
+        setBuildings([])
         return
       }
 
@@ -370,7 +371,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       console.log('🏢 Buildings data:', data)
       setBuildings(data || [])
     } catch (error) {
-      console.error('❌ Error in fetchBuildings:', error)
+      console.warn('⚠️ Error in fetchBuildings:', error)
+      setBuildings([])
     }
   }
 
@@ -381,15 +383,36 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       const responses = await Promise.all([
         fetch('/api/events/property').then(res => {
           console.log('📊 Property events response:', res.status, res.statusText)
+          if (!res.ok) {
+            console.warn('Property events API failed, using fallback')
+            return { events: [] }
+          }
           return res.json()
+        }).catch(err => {
+          console.warn('Property events API error, using fallback:', err)
+          return { events: [] }
         }),
         fetch('/api/events/manual').then(res => {
           console.log('📊 Manual events response:', res.status, res.statusText)
+          if (!res.ok) {
+            console.warn('Manual events API failed, using fallback')
+            return { events: [] }
+          }
           return res.json()
+        }).catch(err => {
+          console.warn('Manual events API error, using fallback:', err)
+          return { events: [] }
         }),
         fetch('/api/events/compliance').then(res => {
           console.log('📊 Compliance events response:', res.status, res.statusText)
+          if (!res.ok) {
+            console.warn('Compliance events API failed, using fallback')
+            return { events: [] }
+          }
           return res.json()
+        }).catch(err => {
+          console.warn('Compliance events API error, using fallback:', err)
+          return { events: [] }
         })
       ])
 
@@ -397,17 +420,17 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       const [propertyEventsResponse, manualEventsResponse, complianceResponse] = responses || [{}, {}, {}]
 
       if (!propertyEventsResponse.success) {
-        console.error('Error fetching property events:', propertyEventsResponse.error)
+        console.warn('⚠️ Property events API failed, using empty array:', propertyEventsResponse.error)
         // Continue with empty array instead of crashing
       }
 
       if (!manualEventsResponse.success) {
-        console.error('Error fetching manual events:', manualEventsResponse.error)
+        console.warn('⚠️ Manual events API failed, using empty array:', manualEventsResponse.error)
         // Continue with empty array instead of crashing
       }
 
       if (!complianceResponse.success) {
-        console.error('Error fetching compliance events:', complianceResponse.error)
+        console.warn('⚠️ Compliance events API failed, using empty array:', complianceResponse.error)
         // Continue with empty array instead of crashing
       }
 
@@ -831,8 +854,11 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         
         // Process multiple files sequentially
         const allResults: any[] = []
-        
-        for (const uploadedFile of uploadedFiles) {
+
+        // Fix: Default uploadedFiles to empty array if not defined
+        const files = typeof uploadedFiles !== "undefined" ? uploadedFiles : [];
+
+        for (const uploadedFile of files) {
           try {
             const fileSize = formatFileSize(uploadedFile.file.size)
             console.log(`📤 Uploading file: ${uploadedFile.name} (${fileSize})`)
@@ -1124,8 +1150,14 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       try {
         console.log('🔄 Preloading compliance summary for homepage...');
         const response = await fetch('/api/ask-ai/compliance-upcoming');
+
+        if (!response.ok) {
+          console.warn('Compliance summary API failed:', response.status, response.statusText);
+          return;
+        }
+
         const data = await response.json();
-        
+
         if (data.summary) {
           // Add the preloaded message to the chat
           const preloadMessage = { 
@@ -1140,7 +1172,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
           console.log('⚠️ No compliance summary available for preload');
         }
       } catch (error) {
-        console.error('❌ Error preloading compliance summary:', error);
+        console.warn('⚠️ Error preloading compliance summary:', error);
       }
     };
 
@@ -1300,13 +1332,14 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
             setUserFirstName(emailPrefix)
           }
         } else {
+          console.warn('Users API failed, using email fallback')
           // Fallback: use first part of email before @
           const emailPrefix = user.email.split('@')[0]
           setUserFirstName(emailPrefix)
         }
       }
     } catch (error) {
-      console.error('Error fetching user first name:', error)
+      console.warn('Error fetching user first name, using fallback:', error)
       // Fallback: use first part of email before @
       if (userData.email) {
         const emailPrefix = userData.email.split('@')[0]
