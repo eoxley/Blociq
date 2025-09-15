@@ -90,6 +90,23 @@
                     </Action>
                   </Control>
 
+                  <!-- AI Reply Generation Button for Read Mode -->
+                  <Control xsi:type="Button" id="msgReadGenerateReply">
+                    <Label resid="replyButtonLabel"/>
+                    <Supertip>
+                      <Title resid="replySuperTipTitle"/>
+                      <Description resid="replySuperTipDescription"/>
+                    </Supertip>
+                    <Icon>
+                      <bt:Image size="16" resid="icon16"/>
+                      <bt:Image size="32" resid="icon32"/>
+                      <bt:Image size="80" resid="icon80"/>
+                    </Icon>
+                    <Action xsi:type="ExecuteFunction">
+                      <FunctionName>generateReplyFromRead</FunctionName>
+                    </Action>
+                  </Control>
+
                 </Group>
               </OfficeTab>
             </ExtensionPoint>

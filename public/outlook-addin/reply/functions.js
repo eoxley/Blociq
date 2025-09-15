@@ -1,8 +1,9 @@
 /* global Office */
 
 Office.onReady(() => {
-    // Register the function that will be called when the button is clicked
+    // Register the functions that will be called when the buttons are clicked
     Office.actions.associate("generateReply", generateReply);
+    Office.actions.associate("generateReplyFromRead", generateReplyFromRead);
 });
 
 async function generateReply(event) {
@@ -53,13 +54,56 @@ async function getEmailContext(item) {
         // Get the original email content
         item.body.getAsync(Office.CoercionType.Text, (result) => {
             if (result.status === Office.AsyncResultStatus.Succeeded) {
-                const context = {
-                    subject: item.subject || "No subject",
-                    sender: item.from ? item.from.displayName + " <" + item.from.emailAddress + ">" : "Unknown sender",
-                    body: result.value || "No content",
+                // Safe property access with detailed logging
+                console.log('🔍 Item properties:', {
+                    subject: item.subject,
+                    from: item.from,
                     conversationId: item.conversationId,
+                    hasBody: !!result.value
+                });
+
+                let subject = "No subject";
+                let sender = "Unknown sender";
+
+                // Handle subject property safely
+                if (item.subject && typeof item.subject === 'string') {
+                    subject = item.subject;
+                } else if (item.subject && typeof item.subject === 'object' && item.subject.toString) {
+                    subject = item.subject.toString();
+                } else {
+                    console.warn('⚠️ Subject property issue:', typeof item.subject, item.subject);
+                }
+
+                // Handle sender property safely
+                if (item.from) {
+                    const fromObj = item.from;
+                    console.log('📧 From object:', fromObj);
+
+                    if (typeof fromObj === 'object') {
+                        const displayName = fromObj.displayName || fromObj.name || '';
+                        const emailAddress = fromObj.emailAddress || fromObj.address || '';
+
+                        if (displayName && emailAddress) {
+                            sender = `${displayName} <${emailAddress}>`;
+                        } else if (emailAddress) {
+                            sender = emailAddress;
+                        } else if (displayName) {
+                            sender = displayName;
+                        }
+                    } else if (typeof fromObj === 'string') {
+                        sender = fromObj;
+                    }
+                }
+
+                const context = {
+                    subject: subject,
+                    sender: sender,
+                    body: result.value || "No content",
+                    conversationId: item.conversationId || "unknown",
                     timestamp: new Date().toISOString()
                 };
+
+                console.log('✅ Final email context:', context);
                 resolve(context);
             } else {
                 console.error('Error reading email body:', result.error);
@@ -71,46 +115,26 @@ async function getEmailContext(item) {
 
 async function generateAIReply(emailContext) {
     try {
-        // First, authenticate to get a token
-        const userEmail = Office.context.mailbox.userProfile.emailAddress;
-        console.log('🔐 Authenticating user:', userEmail);
-        
-        const authResponse = await fetch('https://www.blociq.co.uk/api/outlook-addin/auth', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                bypass_auth: true,
-                email: userEmail
-            })
-        });
-        
-        const authData = await authResponse.json();
-        
-        if (!authResponse.ok || !authData.success) {
-            throw new Error(`Authentication failed: ${authData.message || authData.error}`);
-        }
-        
-        console.log('✅ Authentication successful');
-        
-        // Use the Outlook add-in API for reply generation
-        const response = await fetch('https://www.blociq.co.uk/api/outlook-addin/ask-ai', {
+        console.log('🤖 Generating AI reply for email context:', emailContext);
+
+        // Use the main AI API for reply generation (no authentication needed for public access)
+        const response = await fetch('https://www.blociq.co.uk/api/ask-ai', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
                 prompt: `Please draft a professional reply to this email. Subject: "${emailContext.subject}", From: ${emailContext.sender}, Content: ${emailContext.body}`,
-                token: authData.token,
+                building_id: null,
+                is_public: true,
+                context_type: 'email_reply',
+                intent: 'REPLY',
                 emailContext: {
                     subject: emailContext.subject,
                     from: emailContext.sender,
                     body: emailContext.body,
                     conversationId: emailContext.conversationId
-                },
-                is_outlook_addin: true,
-                intent: 'REPLY'
+                }
             })
         });
 
@@ -122,13 +146,13 @@ async function generateAIReply(emailContext) {
 
         const data = await response.json();
         console.log('API Response:', data);
-        
-        if (data.success && data.response) {
-            return data.response;
+
+        if (data.success && (data.response || data.result)) {
+            return data.response || data.result;
         } else {
             throw new Error(data.error || 'No reply generated');
         }
-        
+
     } catch (error) {
         console.error('Error calling AI reply API:', error);
         throw error;
@@ -170,6 +194,53 @@ async function insertReplyIntoBody(replyText) {
     });
 }
 
+async function generateReplyFromRead(event) {
+    try {
+        // Show progress indicator
+        showNotification("Generating AI reply...", "info");
+
+        // Get the current item (the email being read)
+        const item = Office.context.mailbox.item;
+
+        if (!item) {
+            showNotification("No email selected", "error");
+            event.completed();
+            return;
+        }
+
+        // Get email context
+        const emailContext = await getEmailContext(item);
+
+        if (!emailContext) {
+            showNotification("Could not read email content", "error");
+            event.completed();
+            return;
+        }
+
+        // Generate reply using AI
+        const aiReply = await generateAIReply(emailContext);
+
+        if (aiReply) {
+            // Create a new compose form with the reply
+            Office.context.mailbox.displayReplyForm({
+                'htmlBody': aiReply,
+                'attachments': []
+            });
+
+            showNotification("AI reply generated successfully! Check your compose window.", "success");
+        } else {
+            showNotification("Failed to generate reply", "error");
+        }
+
+    } catch (error) {
+        console.error('Error generating reply from read mode:', error);
+        showNotification("Error generating reply: " + error.message, "error");
+    }
+
+    // Complete the action
+    event.completed();
+}
+
 function showNotification(message, type = 'info') {
     // Show notification using Office notification API
     if (Office.context.mailbox.item.notificationMessages) {
@@ -180,7 +251,7 @@ function showNotification(message, type = 'info') {
             icon: type === 'error' ? 'icon2' : 'icon1',
             persistent: type === 'error'
         };
-        
+
         Office.context.mailbox.item.notificationMessages.addAsync(
             notificationId,
             notificationData,
@@ -188,7 +259,7 @@ function showNotification(message, type = 'info') {
                 if (result.status === Office.AsyncResultStatus.Failed) {
                     console.error('Failed to show notification:', result.error);
                 }
-                
+
                 // Auto-remove success notifications after 3 seconds
                 if (type === 'success') {
                     setTimeout(() => {

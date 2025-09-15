@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>BlocIQ Outlook Add-in Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .iframe-container {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: none;
+        }
+        .test-button {
+            background: #007acc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #005999;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 BlocIQ Outlook Add-in Integration Test</h1>
+
+    <div class="test-section">
+        <h2>📋 Test Summary</h2>
+        <div id="test-results">
+            <div class="status info">Starting tests...</div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🤖 Chat Interface Test</h2>
+        <p>Testing the BlocIQ AI chat functionality as used in the Outlook add-in:</p>
+        <button class="test-button" onclick="testChatAPI()">Test Chat API</button>
+        <button class="test-button" onclick="testEmailReplyAPI()">Test Email Reply API</button>
+        <div id="api-test-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>🎯 Live Chat Interface</h2>
+        <p>This is the actual chat interface that would appear in the Outlook add-in:</p>
+        <div class="iframe-container">
+            <iframe src="http://localhost:3003/outlook-addin/chat/taskpane.html" title="BlocIQ Chat Interface"></iframe>
+        </div>
+    </div>
+
+    <script>
+        async function testChatAPI() {
+            const resultsDiv = document.getElementById('api-test-results');
+            resultsDiv.innerHTML = '<div class="status info">Testing chat API...</div>';
+
+            try {
+                const response = await fetch('http://localhost:3003/api/ask-ai', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        prompt: 'What is Section 20 consultation in UK property management?',
+                        building_id: null,
+                        is_public: true,
+                        context_type: 'outlook-addin'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    resultsDiv.innerHTML = `
+                        <div class="status success">✅ Chat API Test Successful</div>
+                        <div style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 4px;">
+                            <strong>Response:</strong><br>
+                            <div style="white-space: pre-wrap; max-height: 200px; overflow-y: auto;">${data.response || data.result}</div>
+                        </div>
+                    `;
+                } else {
+                    resultsDiv.innerHTML = `<div class="status error">❌ Chat API Test Failed: ${data.error || 'Unknown error'}</div>`;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="status error">❌ Chat API Test Error: ${error.message}</div>`;
+            }
+        }
+
+        async function testEmailReplyAPI() {
+            const resultsDiv = document.getElementById('api-test-results');
+            resultsDiv.innerHTML = '<div class="status info">Testing email reply API...</div>';
+
+            try {
+                const response = await fetch('http://localhost:3003/api/ask-ai', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        prompt: 'Please draft a professional reply to this email. Subject: "Meeting Request", From: Joe Goss <joe.goss@fixflo.com>, Content: Hi Ellie, Thanks for emailing. How about Weds 24th at 1 or 4 Fri 26th at 10. We\'ve blocked the above so hopefully one of these slots will work? Best Joe',
+                        building_id: null,
+                        is_public: true,
+                        context_type: 'email_reply',
+                        intent: 'REPLY'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    resultsDiv.innerHTML = `
+                        <div class="status success">✅ Email Reply API Test Successful</div>
+                        <div style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 4px;">
+                            <strong>Generated Reply:</strong><br>
+                            <div style="white-space: pre-wrap; max-height: 200px; overflow-y: auto;">${data.response || data.result}</div>
+                        </div>
+                    `;
+                } else {
+                    resultsDiv.innerHTML = `<div class="status error">❌ Email Reply API Test Failed: ${data.error || 'Unknown error'}</div>`;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="status error">❌ Email Reply API Test Error: ${error.message}</div>`;
+            }
+        }
+
+        // Run initial connectivity test
+        async function runInitialTests() {
+            const resultsDiv = document.getElementById('test-results');
+
+            try {
+                // Test if the chat interface loads
+                const chatResponse = await fetch('http://localhost:3003/outlook-addin/chat/taskpane.html');
+                if (chatResponse.ok) {
+                    resultsDiv.innerHTML += '<div class="status success">✅ Chat interface accessible</div>';
+                } else {
+                    resultsDiv.innerHTML += '<div class="status error">❌ Chat interface not accessible</div>';
+                }
+
+                // Test if the API endpoint is reachable
+                const apiResponse = await fetch('http://localhost:3003/api/ask-ai', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: 'test' })
+                });
+
+                if (apiResponse.status < 500) {
+                    resultsDiv.innerHTML += '<div class="status success">✅ API endpoint reachable</div>';
+                } else {
+                    resultsDiv.innerHTML += '<div class="status error">❌ API endpoint error</div>';
+                }
+
+            } catch (error) {
+                resultsDiv.innerHTML += `<div class="status error">❌ Connectivity test failed: ${error.message}</div>`;
+            }
+        }
+
+        // Run tests when page loads
+        runInitialTests();
+    </script>
+</body>
+</html>

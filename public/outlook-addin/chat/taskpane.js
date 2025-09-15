@@ -149,11 +149,8 @@ async function sendMessage() {
         return;
     }
 
-    if (!authToken) {
-        console.log('❌ No auth token available');
-        showError('Not authenticated. Please reload the add-in.');
-        return;
-    }
+    // Authentication is no longer required since we're using public API access
+    console.log('🔓 Using public API access for chat');
 
     console.log('Sending message:', message);
 
@@ -173,16 +170,16 @@ async function sendMessage() {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout for AI requests
 
-        const response = await fetch(`${baseUrl}/api/outlook-addin/ask-ai`, {
+        const response = await fetch(`${baseUrl}/api/ask-ai`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
                 prompt: message,
-                token: authToken,
-                is_outlook_addin: true,
-                context: 'outlook-addin'
+                building_id: null,
+                is_public: true,
+                context_type: 'outlook-addin'
             }),
             signal: controller.signal
         });
