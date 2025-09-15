@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useSupabase } from '@/components/SupabaseProvider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, Calendar, Loader2, Send, Upload, FileText, X, Check, Sparkles, File, FileText as FileTextIcon, Building2, AlertTriangle, Brain, Building, AlertCircle, CheckCircle, Clock, Paperclip } from 'lucide-react';
+import { Plus, Calendar, Loader2, Send, FileText, X, Check, Sparkles, File, FileText as FileTextIcon, Building2, AlertTriangle, Brain, Building, AlertCircle, CheckCircle, Clock } from 'lucide-react';
 
 import { toast } from 'sonner';
 import AIChatDisclaimer from '@/components/ui/AIChatDisclaimer';
@@ -18,20 +18,9 @@ type Message = {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
-  files?: UploadedFile[];
-  documentAnalysis?: DocumentAnalysis[]; // Added for document analysis results
+  documentAnalysis?: DocumentAnalysis[]; // Keep for document search results
   type?: 'lease_analysis';
   leaseData?: any;
-};
-
-type UploadedFile = {
-  file: File;
-  id: string;
-  name: string;
-  size: number;
-  type: string;
-  status: 'uploading' | 'completed' | 'error';
-  extractionMethod?: 'ocr' | 'enhanced' | 'standard'; // Added for extraction method
 };
 
 type BuildingSuggestedAction = {
@@ -133,31 +122,11 @@ export default function AskBlocIQ({
   const [isDocumentSearch, setIsDocumentSearch] = useState(false);
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
-  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
-  const [isDragOver, setIsDragOver] = useState(false);
   const [usedMajorWorksData, setUsedMajorWorksData] = useState(false);
-  const [processingFiles, setProcessingFiles] = useState<string[]>([]);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-
-  // File handling
-  const acceptedFileTypes = [
-    'application/pdf', 
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 
-    'text/plain',
-    'image/jpeg',
-    'image/jpg',
-    'image/png',
-    'image/gif',
-    'image/bmp',
-    'image/tiff',
-    'image/webp'
-  ];
-  const maxFileSize = 10 * 1024 * 1024; // 10MB
-  const maxFiles = 5;
 
   const { supabase } = useSupabase();
   
@@ -256,132 +225,6 @@ export default function AskBlocIQ({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const validateFile = (file: File): boolean => {
-    if (!acceptedFileTypes.includes(file.type)) {
-      toast.error(`File type not supported. Please upload PDF, DOCX, TXT, or image files (JPG, PNG, GIF, BMP, TIFF, WEBP).`);
-      return false;
-    }
-    
-    // Strict file size limit for Ask Bloc AI - reject large files completely
-    const maxAskAISize = 5 * 1024 * 1024; // 5MB hard limit
-    if (file.size > maxAskAISize) {
-      toast.error(`File too large for Ask Bloc AI. Please use Lease Lab for documents larger than 5MB.`, {
-        description: "For large documents, please go to Lease Lab in the sidebar for proper processing.",
-        duration: 6000,
-      });
-      return false;
-    }
-    
-    if (uploadedFiles.length >= maxFiles) {
-      toast.error(`Maximum ${maxFiles} files allowed.`);
-      return false;
-    }
-    
-    return true;
-  };
-
-  const handleFileSelect = async (files: FileList | null) => {
-    if (!files) return;
-    
-    const fileArray = Array.from(files).slice(0, 5);
-    
-    for (const file of fileArray) {
-      if (validateFile(file)) {
-        const fileData: UploadedFile = {
-          id: (Date.now() + Math.random()).toString(),
-          file,
-          name: file.name,
-          type: file.type,
-          size: file.size,
-          status: 'uploading',
-          extractionMethod: 'standard'
-        };
-        
-        setUploadedFiles(prev => [...prev, { ...fileData, status: 'processing' } as any]);
-        setProcessingFiles(prev => [...prev, fileData.id]);
-
-        // Simple success message without processing details
-        toast.success(`✅ ${file.name} ready for analysis`, {
-          duration: 3000,
-        });
-
-        // Mark as completed immediately - no fake processing
-        setUploadedFiles(prev => prev.map(f => 
-          f.id === fileData.id ? { ...f, status: 'completed' } : f
-        ));
-        setProcessingFiles(prev => prev.filter(id => id !== fileData.id));
-      }
-    }
-  };
-
-  const removeFile = (fileId: string) => {
-    setUploadedFiles(prev => prev.filter(f => f.id !== fileId));
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-    handleFileSelect(e.dataTransfer.files);
-  };
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const getFileIcon = (fileType: string) => {
-    if (fileType.includes('pdf')) return '📄';
-    if (fileType.includes('word') || fileType.includes('document')) return '📝';
-    if (fileType.includes('text')) return '📄';
-    return '📎';
-  };
-
-  const getFileIconComponent = (fileType: string) => {
-    if (fileType.includes('pdf')) return <FileTextIcon className="h-4 w-4 text-red-500" />;
-    if (fileType.includes('word') || fileType.includes('document')) return <FileTextIcon className="h-4 w-4 text-blue-500" />;
-    if (fileType.includes('text')) return <FileTextIcon className="h-4 w-4 text-gray-500" />;
-    return <File className="h-4 w-4 text-gray-500" />;
-  };
-
-  const cleanFileName = (fileName: string) => {
-    return fileName.replace(/\.[^/.]+$/, "");
-  };
-
-  // Convert file to base64 for OCR processing
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => {
-        try {
-          // Remove data:image/jpeg;base64, prefix
-          const base64 = reader.result as string;
-          const base64Data = base64.split(',')[1];
-          if (!base64Data) {
-            reject(new Error('Failed to convert file to base64'));
-            return;
-          }
-          resolve(base64Data);
-        } catch (error) {
-          reject(error);
-        }
-      };
-      reader.onerror = () => reject(new Error('Failed to read file'));
-    });
-  };
 
   const handleSuggestedPrompt = (prompt: string) => {
     setQuestion(prompt);
@@ -396,8 +239,8 @@ export default function AskBlocIQ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!question.trim() && uploadedFiles.length === 0) {
-      toast.error('Please enter a question or upload a file.');
+    if (!question.trim()) {
+      toast.error('Please enter a question.');
       return;
     }
     if (!userId) {
@@ -409,131 +252,23 @@ export default function AskBlocIQ({
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content: question.trim() || `Uploaded ${uploadedFiles.length} file(s) for analysis`,
-      timestamp: new Date(),
-      files: uploadedFiles.length > 0 ? [...uploadedFiles] : undefined
+      content: question.trim(),
+      timestamp: new Date()
     };
 
     setMessages(prev => [...prev, userMessage]);
     setLoading(true);
     setDocumentResults([]);
     setIsDocumentSearch(false);
-    
+
     try {
-      let finalPrompt = question.trim();
-      const uploadedFileResults: any[] = [];
+      const finalPrompt = question.trim();
 
-      // Handle file uploads first if any files are present
-      if (uploadedFiles.length > 0) {
-        // Process each file through comprehensive document analysis
-        for (const uploadedFile of uploadedFiles) {
-          try {
-            console.log('🔄 Processing file through comprehensive analysis:', uploadedFile.name, 'Type:', uploadedFile.file.type);
-            
-            // Convert file to base64 for analysis
-            const base64Data = await fileToBase64(uploadedFile.file);
-            console.log('✅ File converted to base64, length:', base64Data.length);
-            
-            // Process through comprehensive document analysis endpoint
-            const analysisResponse = await fetch('/api/documents/analyze-comprehensive', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                file: base64Data,
-                fileName: uploadedFile.name,
-                buildingId: buildingId
-              }),
-            });
-
-            if (!analysisResponse.ok) {
-              const errorText = await analysisResponse.text();
-              console.error('❌ Comprehensive analysis failed:', analysisResponse.status, errorText);
-              throw new Error(`Document analysis failed: ${analysisResponse.status}`);
-            }
-
-            const analysisResult = await analysisResponse.json();
-            console.log('✅ Comprehensive analysis successful:', analysisResult);
-            
-            if (analysisResult.success) {
-              // Check if this is a lease document for enhanced analysis
-              const extractedText = analysisResult.extractedText || '';
-              const isLease = isLeaseDocument(uploadedFile.name, extractedText);
-              
-              if (isLease) {
-                console.log('🏠 Detected lease document, generating enhanced analysis...');
-                
-                // Generate lease analysis using LeaseDocumentParser
-                const parser = new LeaseDocumentParser(extractedText, uploadedFile.name);
-                const leaseAnalysis = parser.parse();
-                
-                // Add lease analysis message to chat
-                const leaseMessage: Message = {
-                  id: Date.now().toString(),
-                  role: 'assistant',
-                  content: 'I\'ve analyzed your lease document and extracted key information.',
-                  timestamp: new Date(),
-                  type: 'lease_analysis',
-                  leaseData: leaseAnalysis
-                };
-                
-                setMessages(prev => [...prev, leaseMessage]);
-                console.log('✅ Added lease analysis to chat:', leaseAnalysis);
-              } else {
-                // Create structured document analysis result for non-lease documents
-                const documentAnalysis: DocumentAnalysis = {
-                  filename: uploadedFile.name,
-                  summary: analysisResult.analysis.summary || 'Document analyzed successfully',
-                  suggestedActions: analysisResult.suggestedActions || [],
-                  extractionMethod: 'comprehensive_analysis',
-                  extractedText: analysisResult.extractedText,
-                  documentType: analysisResult.documentType
-                };
-                
-                uploadedFileResults.push(documentAnalysis);
-
-                // Add document analysis to messages for display
-                const analysisMessage: Message = {
-                  id: Date.now().toString(),
-                  role: 'assistant',
-                  content: `📄 **${uploadedFile.name}** analyzed successfully!\n\n**Document Type:** ${analysisResult.documentType}\n**Summary:** ${analysisResult.analysis.summary}`,
-                  timestamp: new Date(),
-                  documentAnalysis: [documentAnalysis]
-                };
-                
-                setMessages(prev => [...prev, analysisMessage]);
-              }
-
-              // Add comprehensive analysis to the prompt
-              if (!finalPrompt) {
-                finalPrompt = `Please analyze the uploaded document: ${uploadedFile.name}`;
-              }
-              finalPrompt += `\n\nDocument: ${uploadedFile.name}\nType: ${analysisResult.documentType}\nSummary: ${analysisResult.analysis.summary}\n\nPlease provide insights and answer any specific questions about this document.`;
-            } else {
-              throw new Error('Document analysis failed');
-            }
-          } catch (uploadError) {
-            console.error(`Error processing ${uploadedFile.name}:`, uploadError);
-            toast.error(`Failed to process ${uploadedFile.name}: ${uploadError instanceof Error ? uploadError.message : 'Unknown error'}`);
-          }
-        }
-      }
-
-      // Now send the enhanced prompt to the enhanced ask-ai endpoint
+      // Send query to the ask-ai endpoint for document search and analysis
       const formData = new FormData();
       formData.append('userQuestion', finalPrompt);
       formData.append('useMemory', 'true');
       formData.append('buildingId', buildingId || 'null');
-      
-      // Add any files that were processed
-      if (uploadedFileResults && uploadedFileResults.length > 0) {
-        uploadedFileResults.forEach((fileResult, index) => {
-          if (fileResult.file) {
-            formData.append(`file_${index}`, fileResult.file);
-          }
-        });
-      }
 
       const response = await fetch('/api/ask-ai', {
         method: 'POST',
@@ -545,7 +280,7 @@ export default function AskBlocIQ({
       }
 
       const data = await response.json();
-      
+
       if (data.response) {
         // Add assistant message to history
         const assistantMessage: Message = {
@@ -553,26 +288,16 @@ export default function AskBlocIQ({
           role: 'assistant',
           content: data.response,
           timestamp: new Date(),
-          documentAnalysis: data.documentAnalyses || uploadedFileResults.length > 0 ? uploadedFileResults : undefined
+          documentAnalysis: data.documentAnalyses
         };
-
-        // Debug logging
-        console.log('🔍 Enhanced API Response data:', data);
-        console.log('🔍 Document analyses:', data.documentAnalyses);
-        console.log('🔍 Component uploadedFileResults:', uploadedFileResults);
-        console.log('🔍 Final documentAnalysis:', assistantMessage.documentAnalysis);
 
         setMessages(prev => [...prev, assistantMessage]);
         setAnswer(data.response);
-        
-        // Handle lease summary responses
-        if (data.isLeaseSummary && data.leaseDocumentInfo) {
-          console.log('📋 Lease summary detected:', data.leaseDocumentInfo);
-        }
-        
-        // Handle document analysis results
-        if (data.documentAnalyses && data.documentAnalyses.length > 0) {
-          console.log('📄 Document analyses received:', data.documentAnalyses.length);
+
+        // Handle document search results
+        if (data.documentSearch && data.documents) {
+          setDocumentResults(data.documents);
+          setIsDocumentSearch(true);
         }
 
         // Log the interaction to ai_logs
@@ -587,7 +312,7 @@ export default function AskBlocIQ({
               building_id: buildingId,
               document_search: data.documentSearch || false,
               documents_found: data.documents?.length || 0,
-              files_uploaded: uploadedFiles.length
+              files_uploaded: 0
             });
         } catch (logError) {
           console.error('Failed to log AI interaction:', logError);
@@ -601,7 +326,6 @@ export default function AskBlocIQ({
     } finally {
       setLoading(false);
       setQuestion('');
-      setUploadedFiles([]);
     }
   };
 
@@ -682,7 +406,7 @@ export default function AskBlocIQ({
                   {buildingContext ? `Ready to help with ${buildingContext.name}` : 'How can I help you today?'}
                 </h3>
                 <p className="text-gray-600 mb-8">
-                  Upload documents for analysis, ask about compliance requirements, or get insights about your property portfolio.
+                  Ask about compliance requirements, search existing documents, or get insights about your property portfolio.
                 </p>
                 
                 {/* Suggested Prompts */}
@@ -698,14 +422,6 @@ export default function AskBlocIQ({
                         {prompt}
                       </button>
                     ))}
-                    {uploadedFiles.length > 0 && (
-                      <button
-                        onClick={() => setQuestion("What are the key points in the uploaded documents?")}
-                        className="px-3 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-sm border border-green-200"
-                      >
-                        📄 Analyze Documents
-                      </button>
-                    )}
                   </div>
                 </div>
               </div>
@@ -786,21 +502,6 @@ export default function AskBlocIQ({
                       </div>
                     )}
 
-                    {/* File attachments */}
-                    {message.files && message.files.length > 0 && (
-                      <div className="mt-3 space-y-2">
-                        <p className="text-xs font-medium">📎 Analyzed Documents:</p>
-                        {message.files.map(file => (
-                          <div key={file.id} className={`flex items-center gap-2 p-2 rounded-lg ${
-                            isUser ? 'bg-white bg-opacity-20' : 'bg-white border'
-                          }`}>
-                            <FileText className="w-4 h-4" />
-                            <span className="text-xs font-medium">{file.name}</span>
-                            <CheckCircle className="w-4 h-4 text-green-500 ml-auto" />
-                          </div>
-                        ))}
-                      </div>
-                    )}
 
                     {/* Major Works Badge */}
                     {isAI && usedMajorWorksData && (
@@ -843,72 +544,15 @@ export default function AskBlocIQ({
             </div>
           )}
 
-          {/* File Processing */}
-          {processingFiles.length > 0 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-              <div className="flex items-center gap-3 mb-2">
-                <Clock className="w-4 h-4 text-blue-600 animate-spin" />
-                <span className="font-medium text-blue-700 text-sm">Processing {processingFiles.length} file(s)...</span>
-              </div>
-            </div>
-          )}
           
           <div ref={messagesEndRef} />
         </div>
 
         {/* Input Area - Fixed at bottom of container */}
         <div className="border-t border-gray-200 bg-white absolute bottom-0 left-0 right-0 z-10">
-          {/* Uploaded Files */}
-          {uploadedFiles.length > 0 && (
-            <div className="mb-4 space-y-2">
-              {uploadedFiles.map(file => {
-                const processingFile = processingFiles.find(pf => pf === file.id);
-                return (
-                  <div key={file.id} className={`flex items-center justify-between p-3 rounded-xl border ${
-                    file.status === 'completed' ? 'border-green-200 bg-green-50' : 'border-yellow-200 bg-yellow-50'
-                  }`}>
-                    <div className="flex items-center gap-3">
-                      <FileText className="w-4 h-4 text-gray-500" />
-                      <span className="text-sm font-medium">{file.name}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {file.status === 'completed' ? 
-                        <CheckCircle className="w-4 h-4 text-green-600" /> : 
-                        <Clock className="w-4 h-4 text-yellow-600 animate-spin" />
-                      }
-                      <button
-                        onClick={() => setUploadedFiles(prev => prev.filter(f => f.id !== file.id))}
-                        className="p-1 hover:bg-gray-200 rounded-full"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
           <div className="p-6">
             {/* Input Container - Better aligned with chat content */}
             <div className="flex items-end gap-3 max-w-4xl mx-auto">
-            {/* File Upload */}
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="flex-shrink-0 w-12 h-12 bg-purple-50 hover:bg-purple-100 border-2 border-purple-200 hover:border-purple-300 rounded-xl flex items-center justify-center transition-all duration-200 hover:shadow-md"
-              title="Upload documents (PDF, DOCX, TXT, images)"
-            >
-              <Upload className="w-5 h-5 text-purple-600 hover:text-purple-700 transition-colors" />
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept=".pdf,.docx,.txt,.png,.jpg,.jpeg"
-              onChange={(e) => handleFileSelect(e.target.files)}
-              className="hidden"
-            />
-            
             {/* Text Input - Centered and aligned with chat content */}
             <div className="flex-1 relative">
               <textarea
@@ -921,8 +565,8 @@ export default function AskBlocIQ({
                     handleSubmit(e as any);
                   }
                 }}
-                placeholder={buildingContext ? 
-                  `Ask about ${buildingContext.name}, upload documents, or request analysis...` :
+                placeholder={buildingContext ?
+                  `Ask about ${buildingContext.name} or search existing documents...` :
                   placeholder || "Ask me anything about your properties, leases, or compliance..."
                 }
                 className="w-full px-5 py-4 pr-16 bg-white border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-3 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 resize-none shadow-sm"
@@ -930,13 +574,13 @@ export default function AskBlocIQ({
                 rows={1}
               />
             </div>
-            
+
             {/* Send Button */}
             <button
               onClick={handleSubmit}
-              disabled={!question.trim() && uploadedFiles.filter(f => f.status === 'completed').length === 0}
+              disabled={!question.trim()}
               className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
-                (question.trim() || uploadedFiles.filter(f => f.status === 'completed').length > 0)
+                question.trim()
                   ? 'bg-gradient-to-r from-[#14b8a6] to-[#8b5cf6] text-white hover:shadow-lg transform hover:scale-105'
                   : 'bg-gray-200 text-gray-400 cursor-not-allowed'
               }`}

@@ -294,7 +294,7 @@ export default function BuildingDetailClient({
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-8">
+    <div className="space-y-8">
       {/* Success Notification */}
       {showSuccess && (
         <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2">
@@ -302,40 +302,6 @@ export default function BuildingDetailClient({
           <span>Changes saved successfully!</span>
         </div>
       )}
-
-      {/* Hero Banner - UNTOUCHED */}
-      <section className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] py-16 mb-8 rounded-2xl shadow-xl">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center">
-            <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl">
-              <Building2 className="h-10 w-10 text-white" />
-            </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">{building.name || 'Building Information'}</h1>
-            <p className="text-lg text-white/90 max-w-2xl mx-auto">
-              Manage building details, access information, and leaseholder data
-            </p>
-          </div>
-        </div>
-        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-          <div className="absolute top-10 left-10 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-10 right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
-        </div>
-      </section>
-
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-800">Building Details</h2>
-          <p className="text-gray-600 mt-1">Manage building details and access information</p>
-        </div>
-                  <Link
-            href="/buildings"
-            className="inline-flex items-center gap-2 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50"
-          >
-          <ChevronLeft className="h-4 w-4" />
-          Back to Buildings
-        </Link>
-      </div>
 
       {/* General Info Section */}
       <SectionCard className="group">

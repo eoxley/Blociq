@@ -1,6 +1,7 @@
 import { ReactNode } from 'react'
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
+import BuildingNavigation from './components/BuildingNavigation'
 
 interface BuildingLayoutProps {
   children: ReactNode
@@ -9,22 +10,21 @@ interface BuildingLayoutProps {
   }
 }
 
-export default async function BuildingLayout({ 
-  children, 
-  params 
+export default async function BuildingLayout({
+  children,
+  params
 }: BuildingLayoutProps) {
-  const cookieStore = cookies()
-  const supabase = createServerComponentClient({ cookies: () => cookieStore })
+  const supabase = createClient(cookies())
 
   // Get building name
-  let buildingName = ''
+  let buildingName = 'Building'
   try {
     const { data: building } = await supabase
       .from('buildings')
       .select('name')
       .eq('id', params.id)
       .single()
-    
+
     if (building) {
       buildingName = building.name
     }
@@ -33,9 +33,14 @@ export default async function BuildingLayout({
   }
 
   return (
-    <div className="space-y-6">
-      {/* Building Content */}
-      {children}
+    <div className="min-h-screen bg-gray-50">
+      {/* Navigation */}
+      <BuildingNavigation buildingId={params.id} buildingName={buildingName} />
+
+      {/* Page Content */}
+      <div className="max-w-7xl mx-auto p-6">
+        {children}
+      </div>
     </div>
   )
 }
