@@ -616,21 +616,6 @@ export default function AskBlocIQ({
         </div>
       </div>
 
-        {/* Simple OCR Test Section */}
-        <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm mx-4 mb-4">
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-white text-sm">🔍</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm text-gray-500 mb-2">Quick OCR Test</div>
-              <div className="text-sm text-gray-600 mb-3">
-                Test document text extraction. Upload a PDF to see the raw extracted text.
-              </div>
-              
-            </div>
-          </div>
-        </div>
 
         {/* Document Search Results */}
         {isDocumentSearch && documentResults.length > 0 && (

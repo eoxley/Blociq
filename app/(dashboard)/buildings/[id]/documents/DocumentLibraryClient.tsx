@@ -53,7 +53,9 @@ const DOCUMENT_CATEGORIES = {
   leases: {
     name: 'Leases',
     icon: '📋',
-    color: 'from-blue-500 to-indigo-600'
+    color: 'from-blue-500 to-indigo-600',
+    isSpecialized: true,
+    specializedText: 'Lease Lab - Advanced Analysis'
   },
   insurance: {
     name: 'Insurance',
@@ -161,6 +163,18 @@ export default function DocumentLibraryClient({
           category = 'compliance'
         } else if (lowerName.includes('lease')) {
           category = 'leases'
+          // For lease documents, trigger specialized Lease Lab processing
+          setTimeout(() => {
+            fetch('/api/lease-lab/process', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                documentId: documentData.id,
+                buildingId,
+                performLeaseAnalysis: true
+              })
+            }).catch(console.error)
+          }, 1000)
         } else if (lowerName.includes('insurance')) {
           category = 'insurance'
         } else if (lowerName.includes('major') || lowerName.includes('works')) {
@@ -341,6 +355,9 @@ export default function DocumentLibraryClient({
                     <span className="text-2xl">{category.icon}</span>
                     <div>
                       <h3 className="font-semibold text-white">{category.name}</h3>
+                      {category.isSpecialized ? (
+                        <p className="text-white/90 text-sm font-medium">{category.specializedText}</p>
+                      ) : null}
                       <p className="text-white/80 text-sm">{categoryDocs.length} documents</p>
                     </div>
                   </div>
@@ -376,6 +393,9 @@ export default function DocumentLibraryClient({
                                 {new Date(doc.upload_date).toLocaleDateString()}
                               </span>
                               {getOCRStatusIcon(doc.ocr_status)}
+                              {doc.category === 'leases' && (
+                                <span className="text-xs text-blue-600 font-medium">Lease Lab</span>
+                              )}
                             </div>
                           </div>
                         </div>

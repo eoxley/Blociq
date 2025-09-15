@@ -16,7 +16,7 @@ import { useLeaseSystemReadiness } from '@/hooks/useLeaseSystemReadiness';
 
 const navItems = [
   { label: "Home", icon: Home, href: "/home", comingSoon: false, description: "Dashboard overview", aiPowered: false },
-  { label: "Lease Lab", icon: Microscope, href: "/lease-lab", comingSoon: false, description: "Deep document analysis", aiPowered: true },
+  { label: "Lease Lab", icon: Microscope, href: "/lease-lab", comingSoon: false, description: "Specialized lease analysis", aiPowered: true },
   { label: "Buildings", icon: Building2, href: "/buildings", comingSoon: false, description: "Property portfolio", aiPowered: false },
   { label: "Compliance", icon: Shield, href: "/compliance", comingSoon: false, description: "Regulatory tracking", aiPowered: true },
   { label: "Communications", icon: Megaphone, href: "/communications", comingSoon: false, description: "Letter & email templates", aiPowered: false },

@@ -28,14 +28,7 @@ const NAVIGATION_ITEMS = [
     label: 'Document Library',
     icon: FileText,
     href: '/documents',
-    description: 'Manage building documents'
-  },
-  {
-    key: 'lease-mode',
-    label: 'Lease Mode',
-    icon: ScrollText,
-    href: '/lease-mode',
-    description: 'Lease analysis and management'
+    description: 'Manage documents • Lease Lab included'
   },
   {
     key: 'compliance',
