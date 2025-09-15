@@ -332,6 +332,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     fetchEvents()
     checkOutlook()
     checkOutlookStatus()
+    loadOutlookEvents()
     fetchEmails()
     fetchUserFirstName()
   }, [])
@@ -537,29 +538,40 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
   const loadOutlookEvents = async () => {
     try {
-      const events = await fetchOutlookEvents()
-      
-      // Transform Outlook events to match PropertyEvent type with proper null checks
-      const transformedOutlookEvents: PropertyEvent[] = events.map((event: any) => {
+      // Query calendar_events table instead of using fetchOutlookEvents
+      const { data: calendarEvents, error } = await supabase
+        .from('calendar_events')
+        .select('*')
+        .gte('start_time', new Date().toISOString())
+        .order('start_time', { ascending: true })
+        .limit(10)
+
+      if (error) {
+        console.error('Error fetching calendar events:', error)
+        return
+      }
+
+      // Transform calendar events to match PropertyEvent type with proper null checks
+      const transformedOutlookEvents: PropertyEvent[] = (calendarEvents || []).map((event: any) => {
         // Add null checks for all event properties
         const safeEvent = {
-          start_time: event.start_time || event.start?.dateTime || null,
-          end_time: event.end_time || event.end?.dateTime || event.start_time || null,
-          timeZone: event.timeZone || event.start?.timeZone || 'Europe/London',
-          title: event.title || event.subject || 'Untitled Event',
+          start_time: event.start_time || null,
+          end_time: event.end_time || null,
+          timeZone: event.time_zone || 'Europe/London',
+          title: event.subject || event.title || 'Untitled Event',
           categories: event.categories || [],
           location: event.location || null,
-          organiser_name: event.organiser_name || null,
+          organiser_name: event.organiser || null,
           online_meeting: event.online_meeting || null
         }
 
         // Only process events that have valid start times
         if (!safeEvent.start_time) {
-          console.warn('⚠️ Skipping event with no start time:', event.title || 'Unknown')
+          console.warn('⚠️ Skipping event with no start time:', event.subject || 'Unknown')
           return null
         }
 
-        // Ensure proper timezone handling for Outlook events
+        // Ensure proper timezone handling for calendar events
         const normalizedTimes = normalizeEventTimes({
           start: { 
             dateTime: safeEvent.start_time, 
@@ -604,6 +616,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         return sorted.slice(0, 5)
       })
 
+      console.log('📅 Loaded calendar events:', transformedOutlookEvents.length)
       // toast.success('Outlook calendar synced successfully!')
     } catch (error) {
       console.error('Error syncing Outlook:', error)
@@ -632,8 +645,9 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   const handleCalendarSync = async () => {
     setCalendarSyncing(true)
     try {
-      const response = await fetch('/api/calendar/sync', {
-        method: 'POST',
+      // Use the same sync endpoint as UpcomingEventsWidget
+      const response = await fetch('/api/cron/sync-calendar', {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -642,13 +656,13 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       const data = await response.json()
 
       if (response.ok) {
-        toast.success(`Calendar synced successfully! ${data.synced} events added.`)
+        toast.success(`Calendar synced successfully! ${data.count || 0} events updated.`)
         setLastSyncTime(new Date().toISOString())
-        setSyncEventCount(prev => prev + data.synced)
+        setSyncEventCount(prev => prev + (data.count || 0))
         // Refresh events to show the new synced events
-        await fetchEvents()
+        await loadOutlookEvents()
       } else {
-        toast.error(data.message || 'Failed to sync calendar')
+        toast.error(data.error || 'Failed to sync calendar')
       }
     } catch (error) {
       console.error('Calendar sync error:', error)
