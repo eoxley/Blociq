@@ -46,7 +46,15 @@ export function AgencyProvider({ children }: { children: ReactNode }) {
         
         // Auto-select agency (handles default selection)
         const agencySession = await autoSelectAgency(user.id)
-        setSession(agencySession)
+        
+        // Only update if the agency has actually changed
+        setSession(prevSession => {
+          if (prevSession?.currentAgencyId === agencySession.currentAgencyId && 
+              prevSession?.currentAgency?.name === agencySession.currentAgency?.name) {
+            return prevSession // No change, keep existing session
+          }
+          return agencySession
+        })
         
         console.log('✅ Agency session loaded:', {
           currentAgency: agencySession.currentAgency?.name,

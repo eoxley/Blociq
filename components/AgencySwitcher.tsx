@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { useAgency, useCurrentAgency } from '@/hooks/useAgency'
 import { ChevronDownIcon, BuildingOfficeIcon, CheckIcon } from '@heroicons/react/24/outline'
 
@@ -9,7 +9,7 @@ interface AgencySwitcherProps {
   showLabel?: boolean
 }
 
-export default function AgencySwitcher({ 
+const AgencySwitcher = memo(function AgencySwitcher({ 
   className = "", 
   showLabel = true 
 }: AgencySwitcherProps) {
@@ -79,7 +79,7 @@ export default function AgencySwitcher({
   }
 
   return (
-    <div className={`relative ${className}`}>
+    <div className={`relative ${className}`} key={agency?.id || 'default'}>
       <button
         onClick={() => setIsOpen(!isOpen)}
         disabled={switching}
@@ -87,15 +87,19 @@ export default function AgencySwitcher({
       >
         {/* Agency Logo/Icon */}
         <div className="w-8 h-8 bg-[#4f46e5] rounded-lg flex items-center justify-center flex-shrink-0">
-          {agency.logo_url ? (
+          {agency?.logo_url ? (
             <img 
               src={agency.logo_url} 
-              alt={agency.name}
+              alt={agency.name || 'Agency'}
               className="w-6 h-6 rounded object-cover"
+              onError={(e) => {
+                // Fallback to icon if image fails to load
+                e.currentTarget.style.display = 'none'
+                e.currentTarget.nextElementSibling?.classList.remove('hidden')
+              }}
             />
-          ) : (
-            <BuildingOfficeIcon className="w-5 h-5 text-white" />
-          )}
+          ) : null}
+          <BuildingOfficeIcon className={`w-5 h-5 text-white ${agency?.logo_url ? 'hidden' : ''}`} />
         </div>
 
         {/* Agency Name */}
@@ -189,4 +193,6 @@ export default function AgencySwitcher({
       )}
     </div>
   )
-}
+})
+
+export default AgencySwitcher
