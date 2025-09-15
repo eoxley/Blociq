@@ -416,8 +416,9 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
       // Transform property events (handle missing data gracefully)
       const propertyEvents: PropertyEvent[] = (propertyEventsResponse.data || []).map(event => {
-        // Add null checks for property events
-        if (!event.date) {
+        // Check for either 'date' or 'start_time' field
+        const eventDate = event.date || event.start_time
+        if (!eventDate) {
           console.warn('⚠️ Skipping property event with no date:', event.title || 'Unknown')
           return null
         }
@@ -425,18 +426,18 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         // Ensure proper timezone handling for property events
         const normalizedTimes = normalizeEventTimes({
           start: { 
-            dateTime: event.date, 
+            dateTime: eventDate, 
             timeZone: 'Europe/London' 
           },
           end: { 
-            dateTime: event.date, 
+            dateTime: event.end_time || eventDate, 
             timeZone: 'Europe/London' 
           }
         })
         
         return {
           building: event.building_name || 'General',
-          date: event.date,
+          date: eventDate,
           title: event.title || 'Untitled Event',
           category: event.category || 'General',
           source: 'property',
