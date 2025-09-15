@@ -194,20 +194,34 @@ export default function BuildingLeaseMode({ building }: { building: Building }) 
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Lease Mode</h1>
-          <p className="text-gray-600 mt-1">{building.name}</p>
+    <div className="space-y-8">
+      {/* Modern Hero Banner */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-3xl p-8 text-white">
+        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-40 h-40 bg-white/5 rounded-full blur-3xl"></div>
+        
+        <div className="relative z-10">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-bold drop-shadow-lg">Lease Mode</h1>
+              <p className="text-xl text-white/90 mt-2">{building.name}</p>
+              <p className="text-white/80 mt-1">Specialized analysis and management for all lease documents</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-3 px-6 py-3 bg-white text-[#4f46e5] rounded-xl font-semibold hover:bg-white/90 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              >
+                <Plus className="h-5 w-5" />
+                Upload Lease
+              </button>
+              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-2xl">
+                <FileText className="h-8 w-8 text-white" />
+              </div>
+            </div>
+          </div>
         </div>
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Upload Lease
-        </button>
       </div>
 
       {/* Search */}
