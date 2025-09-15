@@ -32,6 +32,7 @@ import { HybridLeaseProcessor } from '@/lib/hybrid-lease-processor'
 import ClientOnly from '@/components/ClientOnly'
 import EmailSummaryCard from '@/components/home/EmailSummaryCard'
 import CalendarSyncWidget from '@/components/CalendarSyncWidget'
+import UpcomingEventsWidget from '@/components/UpcomingEventsWidget'
 
 
 type PropertyEvent = {
@@ -1030,12 +1031,106 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       </section>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-12">
-        {/* 🧠 Modern Rectangular Ask BlocIQ Widget */}
-        <div className="flex justify-center">
-          <div
-            className={`relative transition-all duration-500 ${showChat ? 'w-[800px]' : 'w-full max-w-4xl'} bg-white rounded-3xl shadow-2xl hover:shadow-3xl border border-gray-100 overflow-hidden group`}
-          >
+      <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
+
+        {/* Daily Overview - 2x2 Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Total Properties */}
+          <div className="bg-white rounded-2xl shadow-lg border-0 p-6 hover:shadow-xl transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-medium text-gray-600 mb-1">Total Properties</h3>
+                <p className="text-2xl font-bold text-gray-900">{buildings.length}</p>
+              </div>
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                <Building className="h-6 w-6 text-blue-600" />
+              </div>
+            </div>
+          </div>
+
+          {/* Upcoming Events */}
+          <div className="bg-white rounded-2xl shadow-lg border-0 p-6 hover:shadow-xl transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-medium text-gray-600 mb-1">Upcoming Events</h3>
+                <p className="text-2xl font-bold text-gray-900">{upcomingEvents.length}</p>
+              </div>
+              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                <Calendar className="h-6 w-6 text-purple-600" />
+              </div>
+            </div>
+          </div>
+
+          {/* Unread Emails */}
+          <div className="bg-white rounded-2xl shadow-lg border-0 p-6 hover:shadow-xl transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-medium text-gray-600 mb-1">Unread Emails</h3>
+                <p className="text-2xl font-bold text-gray-900">{recentEmails.length}</p>
+              </div>
+              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                <MessageCircle className="h-6 w-6 text-green-600" />
+              </div>
+            </div>
+          </div>
+
+          {/* Calendar Status */}
+          <div className="bg-white rounded-2xl shadow-lg border-0 p-6 hover:shadow-xl transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-medium text-gray-600 mb-1">Calendar Status</h3>
+                <p className="text-2xl font-bold text-gray-900">{outlookConnected ? 'Connected' : 'Not Connected'}</p>
+              </div>
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${outlookConnected ? 'bg-green-100' : 'bg-red-100'}`}>
+                {outlookConnected ? (
+                  <CheckCircle className="h-6 w-6 text-green-600" />
+                ) : (
+                  <AlertCircle className="h-6 w-6 text-red-600" />
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Search Section - Full Width */}
+        <div className="bg-white rounded-2xl shadow-lg border-0 p-6">
+          <div className="text-center">
+            <h2 className="text-xl font-semibold text-gray-900 mb-3">Search Properties & Documents</h2>
+            <div className="relative max-w-2xl mx-auto">
+              <input
+                type="text"
+                placeholder="Search for properties, documents, tenants..."
+                className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                <HelpCircle className="h-5 w-5 text-gray-400" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Property Events & Building To-Do - 2 Columns */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Upcoming Events Widget */}
+          <div className="h-full">
+            <UpcomingEventsWidget />
+          </div>
+
+          {/* Building To-Do Widget */}
+          <div className="h-full">
+            <BuildingTodoList maxItems={5} showBuildingName={true} className="h-full" />
+          </div>
+        </div>
+
+        {/* Email Summary Card */}
+        <EmailSummaryCard />
+
+        {/* Calendar Sync Widget */}
+        <CalendarSyncWidget />
+
+        {/* 🧠 Ask BlocIQ Widget - Full Width */}
+        <div className="bg-white rounded-2xl shadow-lg border-0 overflow-hidden">
+          <div className={`relative transition-all duration-500 ${showChat ? 'w-full' : 'w-full'}`}>
             {/* Header Section with Brand Gradient */}
             <div className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] p-8 relative overflow-hidden">
               {/* Decorative Background Elements */}
@@ -1045,17 +1140,239 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
               </div>
 
               {/* Header Content */}
-              <div className="relative z-10 text-center">
-                <div className="flex items-center justify-center mb-6">
-                  <div>
-                    <h2 className="text-2xl font-bold text-white mb-2">Ask BlocIQ</h2>
-                    <p className="text-white/90">Your AI property management assistant</p>
+              <div className="relative z-10">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                      <Brain className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-white mb-1">Ask BlocIQ</h2>
+                      <p className="text-white/90">Your AI property management assistant</p>
+                    </div>
                   </div>
+                  {showChat && (
+                    <button
+                      onClick={() => setShowChat(false)}
+                      className="text-white/80 hover:text-white transition-colors p-2 rounded-lg hover:bg-white/10"
+                    >
+                      <Minimize2 className="h-5 w-5" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
+
+            {/* Chat Interface or Input */}
+            <div className="p-6">
+              {!showChat ? (
+                <div>
+                  {/* Example Prompts */}
+                  <div className="mb-6">
+                    <h3 className="text-sm font-medium text-gray-700 mb-3">Popular Questions</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <button
+                        onClick={() => handleExampleClick("What compliance items are due this month?")}
+                        className="text-left p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                      >
+                        <span className="text-sm text-gray-700">What compliance items are due this month?</span>
+                      </button>
+                      <button
+                        onClick={() => handleExampleClick("Show me upcoming property inspections")}
+                        className="text-left p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                      >
+                        <span className="text-sm text-gray-700">Show me upcoming property inspections</span>
+                      </button>
+                      <button
+                        onClick={() => handleExampleClick("Generate a lease summary report")}
+                        className="text-left p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                      >
+                        <span className="text-sm text-gray-700">Generate a lease summary report</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Input Field */}
+                  <div className="relative">
+                    <input
+                      ref={askInputRef}
+                      type="text"
+                      value={askInput}
+                      onChange={(e) => setAskInput(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder="Ask BlocIQ anything about your properties, compliance, or tenants..."
+                      className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      disabled={isSubmitting}
+                    />
+                    <button
+                      onClick={() => handleAskSubmit(askInput)}
+                      disabled={isSubmitting || !askInput.trim()}
+                      className="absolute inset-y-0 right-0 flex items-center pr-3"
+                    >
+                      {isSubmitting ? (
+                        <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
+                      ) : (
+                        <Send className="h-5 w-5 text-blue-500 hover:text-blue-600 transition-colors" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="max-h-96 overflow-y-auto space-y-4">
+                  {messages.map((message, index) => (
+                    <div
+                      key={index}
+                      className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div
+                        className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl ${
+                          message.sender === 'user'
+                            ? 'bg-blue-500 text-white'
+                            : 'bg-gray-100 text-gray-900'
+                        }`}
+                        style={{
+                          animation: `fadeIn 0.3s ease-in-out ${index * 0.1}s both`
+                        }}
+                      >
+                        <p className="text-sm">{message.text}</p>
+                        <p className="text-xs mt-1 opacity-70">
+                          {message.timestamp.toLocaleTimeString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                  <div ref={messagesEndRef} />
+
+                  {/* Input at bottom of chat */}
+                  <div className="relative mt-4 pt-4 border-t">
+                    <input
+                      ref={askInputRef}
+                      type="text"
+                      value={askInput}
+                      onChange={(e) => setAskInput(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder="Continue the conversation..."
+                      className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      disabled={isSubmitting}
+                    />
+                    <button
+                      onClick={() => handleAskSubmit(askInput)}
+                      disabled={isSubmitting || !askInput.trim()}
+                      className="absolute inset-y-0 right-0 flex items-center pr-3"
+                    >
+                      {isSubmitting ? (
+                        <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
+                      ) : (
+                        <Send className="h-5 w-5 text-blue-500 hover:text-blue-600 transition-colors" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
+
+        {/* Communication Modal */}
+        {showCommunicationModal && communicationModalData && (
+          <CommunicationModal
+            isOpen={showCommunicationModal}
+            onClose={() => {
+              setShowCommunicationModal(false)
+              setCommunicationModalData(null)
+            }}
+            aiContent={communicationModalData.aiContent}
+            templateType={communicationModalData.templateType}
+            buildingName={communicationModalData.buildingName}
+            leaseholderName={communicationModalData.leaseholderName || undefined}
+            unitNumber={communicationModalData.unitNumber || undefined}
+          />
+        )}
+
+        {/* Document QA Modal */}
+        {showDocumentQA && activeDocument && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+              {/* Modal Header */}
+              <div className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] p-6 text-white">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                      <FileText className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold">Document Analysis</h2>
+                      <p className="text-white/90 text-sm">{activeDocument.filename}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    {/* View Toggle */}
+                    <div className="flex bg-white/20 rounded-lg p-1">
+                      <button
+                        onClick={() => setCurrentView('summary')}
+                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                          currentView === 'summary'
+                            ? 'bg-white text-[#4f46e5]'
+                            : 'text-white/80 hover:text-white'
+                        }`}
+                      >
+                        Summary
+                      </button>
+                      <button
+                        onClick={() => setCurrentView('qa')}
+                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                          currentView === 'qa'
+                            ? 'bg-white text-[#4f46e5]'
+                            : 'text-white/80 hover:text-white'
+                        }`}
+                      >
+                        Q&A
+                      </button>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        setShowDocumentQA(false)
+                        setActiveDocument(null)
+                        setDocumentSummary(null)
+                      }}
+                      className="text-white/80 hover:text-white transition-colors p-2 rounded-lg hover:bg-white/10"
+                    >
+                      <XIcon className="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-6 max-h-[70vh] overflow-y-auto">
+                {currentView === 'summary' && documentSummary ? (
+                  <DocumentSummary summary={documentSummary} />
+                ) : currentView === 'qa' && isLeaseDocument(activeDocument.extractedText) ? (
+                  <LeaseDocumentQA
+                    extractedText={activeDocument.extractedText}
+                    filename={activeDocument.filename}
+                    onAnalysisComplete={(analysis) => {
+                      console.log('Lease analysis completed:', analysis)
+                    }}
+                  />
+                ) : currentView === 'qa' ? (
+                  <DocumentQA
+                    extractedText={activeDocument.extractedText}
+                    filename={activeDocument.filename}
+                  />
+                ) : (
+                  <div className="text-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-[#4f46e5]" />
+                    <p className="text-gray-600">Generating summary...</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   )
