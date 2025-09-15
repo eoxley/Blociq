@@ -1529,23 +1529,12 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                   </div>
                 </div>
                 
-                {/* Upload Area - Only show when chat is closed */}
+                {/* Brain Icon - Only show when chat is closed */}
                 {!showChat && (
                   <div className="flex flex-col items-center">
-                    <div 
-                      className="cursor-pointer hover:opacity-80 transition-all duration-200 p-4 rounded-2xl hover:bg-white/20 backdrop-blur-sm shadow-lg border border-white/30" 
-                      title="Upload documents to Ask BlocIQ (PDF, DOCX, TXT)"
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      <Upload className="text-white w-8 h-8" />
+                    <div className="p-4 rounded-2xl bg-white/20 backdrop-blur-sm shadow-lg border border-white/30">
+                      <Brain className="text-white w-8 h-8" />
                     </div>
-                    
-                    {/* File count indicator */}
-                    {uploadedFiles.length > 0 && (
-                      <div className="mt-4 text-sm text-white/90 bg-white/25 backdrop-blur-sm px-4 py-2 rounded-xl border border-white/30 shadow-lg">
-                        {uploadedFiles.length} file{uploadedFiles.length !== 1 ? 's' : ''} ready
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
@@ -1568,15 +1557,6 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                       onKeyPress={handleKeyPress}
                     />
                     
-                    {/* Hidden file input for upload functionality */}
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      multiple
-                      accept=".pdf,.docx,.txt"
-                      onChange={(e) => handleFileSelect(e.target.files)}
-                      className="hidden"
-                    />
                     
                     {/* Clear Button */}
                     {askInput && (
