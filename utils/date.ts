@@ -1,6 +1,10 @@
 export const UK_TZ = 'Europe/London';
 
 function normalizeISO(isoLike: string) {
+  if (!isoLike || typeof isoLike !== 'string') {
+    return { iso: new Date().toISOString(), allDay: false };
+  }
+  
   // If it's date-only (all-day), keep as-is
   if (/^\d{4}-\d{2}-\d{2}$/.test(isoLike)) return { iso: isoLike, allDay: true };
   // If no timezone information, assume UTC to avoid host-local drift
@@ -9,12 +13,17 @@ function normalizeISO(isoLike: string) {
 }
 
 export function formatEventTimeUK(isoLike: string, opts?: Intl.DateTimeFormatOptions) {
+  if (!isoLike || typeof isoLike !== 'string') {
+    return 'Time TBD';
+  }
+  
   const { iso, allDay } = normalizeISO(isoLike);
   if (allDay) return 'All day';
   const d = new Date(iso);
   
-  // Add 1 hour for GMT+1 display as requested
-  d.setHours(d.getHours() + 1);
+  if (isNaN(d.getTime())) {
+    return 'Invalid time';
+  }
   
   const options: Intl.DateTimeFormatOptions = {
     hour: '2-digit',
@@ -27,6 +36,10 @@ export function formatEventTimeUK(isoLike: string, opts?: Intl.DateTimeFormatOpt
 }
 
 export function formatEventRangeUK(startISO: string, endISO: string) {
+  if (!startISO || !endISO) {
+    return 'Time TBD';
+  }
+  
   const start = formatEventTimeUK(startISO);
   const end = formatEventTimeUK(endISO);
   if (start === 'All day' || end === 'All day') return 'All day';
@@ -119,17 +132,12 @@ export function formatEventDateUK(dateString: string) {
       month: 'short',
       timeZone: UK_TZ
     }),
-    time: (() => {
-      // Add 1 hour for GMT+1 display as requested
-      const timeDate = new Date(d);
-      timeDate.setHours(timeDate.getHours() + 1);
-      return timeDate.toLocaleTimeString('en-GB', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-        timeZone: UK_TZ
-      });
-    })(),
+    time: d.toLocaleTimeString('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: UK_TZ
+    }),
     fullDate: d.toLocaleDateString('en-GB', {
       weekday: 'long',
       day: 'numeric',

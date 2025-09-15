@@ -45,7 +45,7 @@ export default function CommunicationModal({
   const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
-    if (isOpen && aiContent) {
+    if (isOpen && aiContent && typeof aiContent === 'string') {
       // Clean the AI content
       const cleanContent = aiContent.replace(/\*\*Used Context:\*\*[\s\S]*$/, '').trim()
       setContent(cleanContent)
@@ -80,9 +80,15 @@ export default function CommunicationModal({
       }, [isOpen, aiContent, templateType, buildingName, leaseholderName, unitNumber])
 
   const replacePlaceholders = (text: string) => {
+    if (!text || typeof text !== 'string') {
+      return text || ''
+    }
+    
     let result = text
     Object.entries(selectedPlaceholders).forEach(([key, value]) => {
-      result = result.replace(new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), value)
+      if (key && typeof key === 'string' && value !== undefined) {
+        result = result.replace(new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), value || '')
+      }
     })
     return result
   }

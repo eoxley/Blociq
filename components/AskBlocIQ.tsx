@@ -753,7 +753,11 @@ export default function AskBlocIQ({
                         
                         {/* Content with formatting */}
                         <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                          {message.content.split('\n').map((line, index) => {
+                          {message.content?.split('\n').map((line, index) => {
+                            if (!line || typeof line !== 'string') {
+                              return <div key={index}></div>;
+                            }
+                            
                             if (line.startsWith('**') && line.endsWith('**')) {
                               return (
                                 <h4 key={index} className={`font-semibold mt-3 mb-2 first:mt-0 ${

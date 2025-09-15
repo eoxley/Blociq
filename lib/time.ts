@@ -32,10 +32,20 @@ export function graphToUTCISO(
   if (typeof start === 'string') {
     // If it already has a 'Z' or offset, trust it.
     if (/[zZ]|[+\-]\d{2}:\d{2}$/.test(start)) {
-      return DateTime.fromISO(start, { setZone: true }).toUTC().toISO()
+      try {
+        return DateTime.fromISO(start, { setZone: true }).toUTC().toISO()
+      } catch (error) {
+        console.warn('Failed to parse ISO string with timezone:', start, error)
+        return null
+      }
     }
     // Naive ISO -> assume it's in fallback zone, convert to UTC
-    return DateTime.fromISO(start, { zone: fallbackIana }).toUTC().toISO()
+    try {
+      return DateTime.fromISO(start, { zone: fallbackIana }).toUTC().toISO()
+    } catch (error) {
+      console.warn('Failed to parse ISO string:', start, error)
+      return null
+    }
   }
 
   const { dateTime, timeZone } = start
@@ -47,13 +57,18 @@ export function graphToUTCISO(
     iana = toIanaZone(timeZone) || fallbackIana
   }
   
-  const dt = DateTime.fromISO(dateTime, { zone: iana })
-  if (!dt.isValid) {
-    console.warn('Invalid date:', dateTime, 'with zone:', iana)
+  try {
+    const dt = DateTime.fromISO(dateTime, { zone: iana })
+    if (!dt.isValid) {
+      console.warn('Invalid date:', dateTime, 'with zone:', iana)
+      return null
+    }
+    
+    return dt.toUTC().toISO()
+  } catch (error) {
+    console.warn('Failed to parse date:', dateTime, 'with zone:', iana, error)
     return null
   }
-  
-  return dt.toUTC().toISO()
 }
 
 /** Format a UTC ISO string into a local zone. */
@@ -101,8 +116,29 @@ export function isAllDayEvent(start: any, end?: any): boolean {
  * Convert Graph/Outlook event times to standardized format
  */
 export function normalizeEventTimes(event: any) {
+  // Add null checks for event data
+  if (!event) {
+    return {
+      startUtc: null,
+      endUtc: null,
+      timeZoneIana: DEFAULT_TZ,
+      isAllDay: false
+    }
+  }
+
   const start = event.start || event.startTime
   const end = event.end || event.endTime
+  
+  // Add null checks for start/end times
+  if (!start || !start.dateTime) {
+    return {
+      startUtc: null,
+      endUtc: null,
+      timeZoneIana: DEFAULT_TZ,
+      isAllDay: false
+    }
+  }
+
   const isAllDay = isAllDayEvent(start, end)
   
   if (isAllDay) {
@@ -125,7 +161,9 @@ export function normalizeEventTimes(event: any) {
       if (dt.isValid) {
         startUtc = dt.toUTC().toISO()
       }
-    } catch {}
+    } catch (error) {
+      console.warn('Failed to parse start time:', start.dateTime, error)
+    }
   }
   
   if (!endUtc && end?.dateTime) {
@@ -134,7 +172,9 @@ export function normalizeEventTimes(event: any) {
       if (dt.isValid) {
         endUtc = dt.toUTC().toISO()
       }
-    } catch {}
+    } catch (error) {
+      console.warn('Failed to parse end time:', end.dateTime, error)
+    }
   }
   
   const timeZoneIana = toIanaZone(start?.timeZone) || DEFAULT_TZ

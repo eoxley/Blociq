@@ -203,9 +203,11 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       const matches = text.match(pattern);
       if (matches) {
         matches.forEach(match => {
-          const party = match.replace(/(?:Lessor|Lessee|Landlord|Tenant|PARTIES):\s*/gi, '').trim();
-          if (party && !parties.includes(party)) {
-            parties.push(party);
+          if (match && typeof match === 'string') {
+            const party = match.replace(/(?:Lessor|Lessee|Landlord|Tenant|PARTIES):\s*/gi, '').trim();
+            if (party && !parties.includes(party)) {
+              parties.push(party);
+            }
           }
         });
       }
@@ -414,6 +416,12 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
       // Transform property events (handle missing data gracefully)
       const propertyEvents: PropertyEvent[] = (propertyEventsResponse.data || []).map(event => {
+        // Add null checks for property events
+        if (!event.date) {
+          console.warn('⚠️ Skipping property event with no date:', event.title || 'Unknown')
+          return null
+        }
+
         // Ensure proper timezone handling for property events
         const normalizedTimes = normalizeEventTimes({
           start: { 
@@ -429,21 +437,27 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         return {
           building: event.building_name || 'General',
           date: event.date,
-          title: event.title,
+          title: event.title || 'Untitled Event',
           category: event.category || 'General',
           source: 'property',
           event_type: 'manual',
-          location: event.location,
-          organiser_name: event.organiser_name,
+          location: event.location || null,
+          organiser_name: event.organiser_name || null,
           startUtc: normalizedTimes.startUtc || undefined,
           endUtc: normalizedTimes.endUtc || undefined,
           timeZoneIana: normalizedTimes.timeZoneIana || 'Europe/London',
           isAllDay: normalizedTimes.isAllDay || false
         }
-      })
+      }).filter(Boolean) // Remove null entries
 
       // Transform manual events (handle missing data gracefully)
       const manualEvents: PropertyEvent[] = (manualEventsResponse.data || []).map(event => {
+        // Add null checks for manual events
+        if (!event.start_time) {
+          console.warn('⚠️ Skipping manual event with no start time:', event.title || 'Unknown')
+          return null
+        }
+
         // Ensure proper timezone handling for manual events
         const normalizedTimes = normalizeEventTimes({
           start: { 
@@ -459,18 +473,18 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         return {
           building: event.building_id ? `Building ${event.building_id}` : 'General',
           date: event.start_time,
-          title: event.title,
+          title: event.title || 'Untitled Event',
           category: event.category || 'Manual Entry',
           source: 'property',
           event_type: 'manual',
-          location: event.location,
-          organiser_name: event.organiser_name,
+          location: event.location || null,
+          organiser_name: event.organiser_name || null,
           startUtc: normalizedTimes.startUtc || undefined,
           endUtc: normalizedTimes.endUtc || undefined,
           timeZoneIana: normalizedTimes.timeZoneIana || 'Europe/London',
           isAllDay: normalizedTimes.isAllDay || false
         }
-      })
+      }).filter(Boolean) // Remove null entries
 
       // Get compliance events from API response
       const complianceEvents: PropertyEvent[] = complianceResponse.success ? (complianceResponse.data || []) : []
@@ -524,36 +538,54 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     try {
       const events = await fetchOutlookEvents()
       
-      // Transform Outlook events to match PropertyEvent type
+      // Transform Outlook events to match PropertyEvent type with proper null checks
       const transformedOutlookEvents: PropertyEvent[] = events.map((event: any) => {
+        // Add null checks for all event properties
+        const safeEvent = {
+          start_time: event.start_time || event.start?.dateTime || null,
+          end_time: event.end_time || event.end?.dateTime || event.start_time || null,
+          timeZone: event.timeZone || event.start?.timeZone || 'Europe/London',
+          title: event.title || event.subject || 'Untitled Event',
+          categories: event.categories || [],
+          location: event.location || null,
+          organiser_name: event.organiser_name || null,
+          online_meeting: event.online_meeting || null
+        }
+
+        // Only process events that have valid start times
+        if (!safeEvent.start_time) {
+          console.warn('⚠️ Skipping event with no start time:', event.title || 'Unknown')
+          return null
+        }
+
         // Ensure proper timezone handling for Outlook events
         const normalizedTimes = normalizeEventTimes({
           start: { 
-            dateTime: event.start_time, 
-            timeZone: event.timeZone || 'Europe/London' 
+            dateTime: safeEvent.start_time, 
+            timeZone: safeEvent.timeZone
           },
           end: { 
-            dateTime: event.end_time || event.start_time, 
-            timeZone: event.timeZone || 'Europe/London' 
+            dateTime: safeEvent.end_time, 
+            timeZone: safeEvent.timeZone
           }
         })
         
         return {
           building: 'Outlook Calendar',
-          date: event.start_time,
-          title: event.title || event.subject || 'Untitled Event',
-          category: event.categories?.join(', ') || '📅 Outlook Event',
+          date: safeEvent.start_time,
+          title: safeEvent.title,
+          category: Array.isArray(safeEvent.categories) ? safeEvent.categories.join(', ') : '📅 Outlook Event',
           source: 'outlook',
           event_type: 'outlook',
-          location: event.location,
-          organiser_name: event.organiser_name,
-          online_meeting: event.online_meeting,
+          location: safeEvent.location,
+          organiser_name: safeEvent.organiser_name,
+          online_meeting: safeEvent.online_meeting,
           startUtc: normalizedTimes.startUtc || undefined,
           endUtc: normalizedTimes.endUtc || undefined,
           timeZoneIana: normalizedTimes.timeZoneIana || 'Europe/London',
           isAllDay: normalizedTimes.isAllDay || false
         }
-      })
+      }).filter(Boolean) // Remove null entries
 
       // Replace existing Outlook events with new ones, filter out past events
       setUpcomingEvents(prev => {
