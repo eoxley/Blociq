@@ -1,4 +1,4 @@
-import { getServerClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 
 export interface CommunicationLogEntry {
   id?: string;
@@ -17,7 +17,7 @@ export async function logCommunication(
   entry: Omit<CommunicationLogEntry, 'id' | 'created_at' | 'updated_at'>
 ): Promise<CommunicationLogEntry | null> {
   try {
-    const supabase = getServerClient();
+    const supabase = await createClient();
     
     const { data, error } = await supabase
       .from('communications_log')
@@ -42,7 +42,7 @@ export async function updateCommunicationLog(
   updates: Partial<Pick<CommunicationLogEntry, 'status' | 'error_message' | 'metadata'>>
 ): Promise<CommunicationLogEntry | null> {
   try {
-    const supabase = getServerClient();
+    const supabase = await createClient();
     
     const { data, error } = await supabase
       .from('communications_log')
@@ -72,7 +72,7 @@ export async function getCommunicationLogs(
   offset: number = 0
 ): Promise<CommunicationLogEntry[]> {
   try {
-    const supabase = getServerClient();
+    const supabase = await createClient();
     
     const { data, error } = await supabase
       .from('communications_log')
@@ -103,7 +103,7 @@ export async function getCommunicationStats(agencyId: string): Promise<{
   last_30_days: number;
 }> {
   try {
-    const supabase = getServerClient();
+    const supabase = await createClient();
     
     // Get total counts
     const { data: totalData, error: totalError } = await supabase

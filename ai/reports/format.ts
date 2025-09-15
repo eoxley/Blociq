@@ -4,7 +4,7 @@
  */
 
 import { ReportResult } from './registry';
-import { getServiceClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 
 export interface TableFormat {
   columns: string[];
@@ -101,7 +101,7 @@ export async function saveCSVToStorage(
   agencyId: string
 ): Promise<{ signedUrl: string; filename: string }> {
   try {
-    const supabase = getServiceClient();
+    const supabase = await createClient();
     
     // Create storage path
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');

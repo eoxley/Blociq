@@ -3,8 +3,7 @@
  * Fetches the most recent document of a specific type for a building/unit
  */
 
-import { getServiceClient } from '@/lib/supabase/server';
-import { createApiClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 
 export interface LatestDocumentResult {
   document_id: string;
@@ -29,7 +28,7 @@ export interface DocumentRequest {
  * Generate signed URL for document access
  */
 async function generateSignedUrl(storagePath: string, expiresIn: number = 900): Promise<{ url: string; expires_at: string }> {
-  const supabase = getServiceClient();
+  const supabase = await createClient();
   
   const { data, error } = await supabase.storage
     .from('building_documents')
@@ -59,7 +58,7 @@ async function logDocumentAccess(
   documentId: string
 ): Promise<void> {
   try {
-    const supabase = getServiceClient();
+    const supabase = await createClient();
     
     await supabase
       .from('ai_logs')
@@ -91,7 +90,7 @@ export async function getLatestBuildingDocument(request: DocumentRequest): Promi
     throw new Error('Building ID is required for document lookup');
   }
   
-  const supabase = createApiClient();
+  const supabase = await createClient();
   
   try {
     // Query the latest document view
@@ -158,7 +157,7 @@ export async function getLatestUnitDocument(request: DocumentRequest): Promise<L
     throw new Error('Building ID and Unit ID are required for unit document lookup');
   }
   
-  const supabase = createApiClient();
+  const supabase = await createClient();
   
   try {
     // Query the latest unit document view

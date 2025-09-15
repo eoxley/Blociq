@@ -13,10 +13,10 @@ interface DashboardLayoutProps {
   children: ReactNode
 }
 
-export default async function DashboardLayout({ 
-  children 
+export default async function DashboardLayout({
+  children
 }: DashboardLayoutProps) {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   // Redirect to login if user is not authenticated

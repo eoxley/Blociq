@@ -5,14 +5,14 @@
 
 import { ReportIntent } from '../intent/report';
 import { ReportHandler, ReportResult, registerReportHandler } from './registry';
-import { getServiceClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 import { formatPeriod, generateReportTitle, getBuildingContext, getUnitContext } from './engine';
 
 /**
  * Compliance Overview Handler
  */
 async function complianceOverviewHandler(intent: ReportIntent, agencyId: string): Promise<ReportResult> {
-  const supabase = getServiceClient();
+  const supabase = await createClient();
   
   let query = supabase
     .from('building_compliance_status_v')
@@ -80,7 +80,7 @@ async function complianceOverviewHandler(intent: ReportIntent, agencyId: string)
  * Compliance Overdue Handler
  */
 async function complianceOverdueHandler(intent: ReportIntent, agencyId: string): Promise<ReportResult> {
-  const supabase = getServiceClient();
+  const supabase = await createClient();
   
   let query = supabase
     .from('compliance_overdue_v')
@@ -141,7 +141,7 @@ async function complianceOverdueHandler(intent: ReportIntent, agencyId: string):
  * Compliance Upcoming Handler
  */
 async function complianceUpcomingHandler(intent: ReportIntent, agencyId: string): Promise<ReportResult> {
-  const supabase = getServiceClient();
+  const supabase = await createClient();
   
   let query = supabase
     .from('compliance_upcoming_v')
@@ -202,7 +202,7 @@ async function complianceUpcomingHandler(intent: ReportIntent, agencyId: string)
  * Compliance By Type Handler
  */
 async function complianceByTypeHandler(intent: ReportIntent, agencyId: string): Promise<ReportResult> {
-  const supabase = getServiceClient();
+  const supabase = await createClient();
   
   // Extract asset type from subject
   const assetType = intent.subject.toUpperCase();
@@ -268,7 +268,7 @@ async function complianceByTypeHandler(intent: ReportIntent, agencyId: string): 
  * Documents Latest By Type Handler
  */
 async function documentsLatestByTypeHandler(intent: ReportIntent, agencyId: string): Promise<ReportResult> {
-  const supabase = getServiceClient();
+  const supabase = await createClient();
   
   // Map subject to document type
   const docTypeMap: Record<string, string> = {
@@ -344,7 +344,7 @@ async function documentsLatestByTypeHandler(intent: ReportIntent, agencyId: stri
  * Documents All For Building Handler
  */
 async function documentsAllForBuildingHandler(intent: ReportIntent, agencyId: string): Promise<ReportResult> {
-  const supabase = getServiceClient();
+  const supabase = await createClient();
   
   if (!intent.buildingId) {
     throw new Error('Building ID is required for building-specific document reports');

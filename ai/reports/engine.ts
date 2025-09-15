@@ -5,7 +5,7 @@
 
 import { ReportIntent } from '../intent/report';
 import { ReportHandler, ReportResult, findReportHandler, validateReportIntent } from './registry';
-import { getServiceClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 
 export interface ReportContext {
   agencyId: string;
@@ -96,7 +96,7 @@ export async function executeQuery(
   agencyId: string
 ): Promise<{ data: any[]; error: any }> {
   try {
-    const supabase = getServiceClient();
+    const supabase = await createClient();
     
     // Add agency filter to ensure RLS compliance
     const queryWithAgency = `${query} AND agency_id = $agencyId`;
@@ -130,7 +130,7 @@ export async function getBuildingContext(buildingId: string, agencyId: string): 
   address: string;
 } | null> {
   try {
-    const supabase = getServiceClient();
+    const supabase = await createClient();
     
     const { data, error } = await supabase
       .from('buildings_min_v')
@@ -165,7 +165,7 @@ export async function getUnitContext(unitId: string, buildingId: string, agencyI
   unitType: string;
 } | null> {
   try {
-    const supabase = getServiceClient();
+    const supabase = await createClient();
     
     const { data, error } = await supabase
       .from('units_min_v')

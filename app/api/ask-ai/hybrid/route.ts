@@ -6,10 +6,12 @@ export const runtime = 'nodejs';
 export const maxDuration = 300; // 5 minutes for hybrid processing
 
 // Initialize Supabase client
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getSupabaseServiceClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 export async function POST(req: NextRequest) {
   console.log('🎯 Hybrid Ask AI processing request');
@@ -25,7 +27,7 @@ export async function POST(req: NextRequest) {
     }
     
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const { data: { user }, error: authError } = await getSupabaseServiceClient().auth.getUser(token);
     
     if (authError || !user) {
       return NextResponse.json({ 
@@ -174,7 +176,7 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     // Get current processing statistics
-    const { data: stats } = await supabase
+    const { data: stats } = await getSupabaseServiceClient()
       .rpc('get_lease_processing_stats', {
         user_uuid: null,
         hours_back: 1

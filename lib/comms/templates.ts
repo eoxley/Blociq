@@ -3,7 +3,7 @@
  * Manages templates for letters and emails with merge field support
  */
 
-import { getServiceClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 
 export interface CommunicationTemplate {
   id: string;
@@ -45,7 +45,7 @@ export interface UpdateTemplateData {
  * Get all templates for an agency
  */
 export async function getTemplates(agencyId: string, type?: 'letter' | 'email'): Promise<CommunicationTemplate[]> {
-  const supabase = getServiceClient();
+  const supabase = await createClient();
   
   let query = supabase
     .from('communication_templates')
@@ -71,7 +71,7 @@ export async function getTemplates(agencyId: string, type?: 'letter' | 'email'):
  * Get a specific template by ID
  */
 export async function getTemplate(templateId: string, agencyId: string): Promise<CommunicationTemplate | null> {
-  const supabase = getServiceClient();
+  const supabase = await createClient();
   
   const { data, error } = await supabase
     .from('communication_templates')
@@ -98,7 +98,7 @@ export async function createTemplate(
   agencyId: string,
   userId: string
 ): Promise<CommunicationTemplate> {
-  const supabase = getServiceClient();
+  const supabase = await createClient();
   
   // Validate required fields
   const requiredFields = extractRequiredFields(templateData.body_html, templateData.body_text);
@@ -129,7 +129,7 @@ export async function updateTemplate(
   templateData: UpdateTemplateData,
   agencyId: string
 ): Promise<CommunicationTemplate> {
-  const supabase = getServiceClient();
+  const supabase = await createClient();
   
   // If body_html or body_text is being updated, recalculate required fields
   let requiredFields = templateData.required_fields;
@@ -165,7 +165,7 @@ export async function updateTemplate(
  * Delete a template (soft delete by setting is_active = false)
  */
 export async function deleteTemplate(templateId: string, agencyId: string): Promise<void> {
-  const supabase = getServiceClient();
+  const supabase = await createClient();
   
   const { error } = await supabase
     .from('communication_templates')
@@ -294,7 +294,7 @@ export async function getTemplateStats(agencyId: string): Promise<{
   active: number;
   inactive: number;
 }> {
-  const supabase = getServiceClient();
+  const supabase = await createClient();
   
   const { data, error } = await supabase
     .from('communication_templates')

@@ -1,13 +1,9 @@
 // app/api/analyze-document/route.ts - Document Summary API
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import { getOpenAIClient } from '@/lib/openai';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 interface DocumentSummaryRequest {
   extractedText: string;
@@ -293,7 +289,7 @@ ${text.substring(0, 4000)}${text.length > 4000 ? '...[truncated]' : ''}
 Analyze this document and provide a complete JSON response with all the fields specified in the system prompt.`;
 
   try {
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAIClient().chat.completions.create({
       model: "gpt-4o",
       messages: [
         { role: "system", content: systemPrompt },
