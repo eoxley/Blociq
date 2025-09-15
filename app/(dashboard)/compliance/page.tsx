@@ -517,227 +517,140 @@ export default function CompliancePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f8fafc] via-white to-[#f1f5f9]">
-      {/* Hero Banner with Master Brand Kit */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-purple-600 to-blue-800 py-24 mx-6 mt-6 rounded-3xl shadow-2xl">
-        {/* Animated Background Elements */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-20 right-20 w-96 h-96 bg-white/5 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-20 left-20 w-80 h-80 bg-blue-400/10 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-purple-400/5 rounded-full blur-2xl animate-pulse" style={{animationDelay: '2s'}}></div>
-          
-          {/* Floating Icons */}
-          <div className="absolute top-32 left-32 w-8 h-8 text-white/20 animate-bounce" style={{animationDelay: '0.5s'}}>
-            <Shield className="w-full h-full" />
-          </div>
-          <div className="absolute top-40 right-40 w-6 h-6 text-white/15 animate-bounce" style={{animationDelay: '1.5s'}}>
-            <CheckCircle className="w-full h-full" />
-          </div>
-          <div className="absolute bottom-32 left-1/4 w-7 h-7 text-white/10 animate-bounce" style={{animationDelay: '2.5s'}}>
-            <AlertTriangle className="w-full h-full" />
-          </div>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+      {/* Modern Hero Section */}
+      <section className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] py-16 mx-6 mt-6 rounded-3xl shadow-2xl">
+        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-40 h-40 bg-white/5 rounded-full blur-3xl"></div>
         
-        <div className="max-w-7xl mx-auto px-8 relative z-10">
-          <div className="text-center">
-            {/* Hero Icon with Enhanced Animation */}
-            <div className="relative w-24 h-24 mx-auto mb-8">
-              <div className="absolute inset-0 bg-gradient-to-r from-white/30 to-white/20 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/40 animate-pulse"></div>
-              <div className="relative w-full h-full bg-gradient-to-br from-white/25 to-white/15 backdrop-blur-sm rounded-3xl flex items-center justify-center shadow-xl border border-white/30">
-                <Shield className="h-12 w-12 text-white drop-shadow-lg" />
-              </div>
-              {/* Rotating ring */}
-              <div className="absolute -inset-2 border-2 border-white/20 rounded-3xl animate-spin" style={{animationDuration: '8s'}}></div>
+        <div className="relative z-10 max-w-7xl mx-auto px-8 text-center">
+          <div className="flex justify-center mb-8">
+            <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-2xl border border-white/30">
+              <Shield className="h-10 w-10 text-white" />
             </div>
-            
-            {/* Hero Title with Enhanced Typography */}
-            <h1 className="text-5xl md:text-7xl font-black text-white mb-6 tracking-tight drop-shadow-2xl">
-              <span className="bg-gradient-to-r from-white via-white/95 to-white/90 bg-clip-text text-transparent">
-                Compliance
-              </span>
-              <br />
-              <span className="bg-gradient-to-r from-white/90 via-white/95 to-white bg-clip-text text-transparent">
-                Dashboard
-              </span>
-            </h1>
-            
-            {/* Hero Subtitle */}
-            <p className="text-xl md:text-2xl text-white/95 max-w-4xl mx-auto leading-relaxed mb-10 drop-shadow-lg font-medium">
-              Intelligent compliance monitoring, automated tracking, and comprehensive risk management for your entire property portfolio.
-            </p>
-            
-            {/* Enhanced Hero Stats */}
-            {summary.total_buildings > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-5xl mx-auto mb-10">
-                <div className="group bg-white/15 backdrop-blur-lg rounded-2xl p-6 border border-white/30 hover:bg-white/20 transition-all duration-300 hover:scale-105 shadow-xl">
-                  <div className="flex items-center justify-between mb-2">
-                    <Building2 className="h-8 w-8 text-white/80" />
-                    <div className="w-3 h-3 bg-emerald-400 rounded-full animate-pulse"></div>
-                  </div>
-                  <p className="text-white/90 text-sm font-semibold mb-1">Properties</p>
-                  <p className="text-3xl font-black text-white">{summary.total_buildings}</p>
-                </div>
-                <div className="group bg-white/15 backdrop-blur-lg rounded-2xl p-6 border border-white/30 hover:bg-white/20 transition-all duration-300 hover:scale-105 shadow-xl">
-                  <div className="flex items-center justify-between mb-2">
-                    <Shield className="h-8 w-8 text-white/80" />
-                    <div className="w-3 h-3 bg-blue-400 rounded-full animate-pulse" style={{animationDelay: '0.5s'}}></div>
-                  </div>
-                  <p className="text-white/90 text-sm font-semibold mb-1">Assets</p>
-                  <p className="text-3xl font-black text-white">{summary.total_assets}</p>
-                </div>
-                <div className="group bg-white/15 backdrop-blur-lg rounded-2xl p-6 border border-white/30 hover:bg-white/20 transition-all duration-300 hover:scale-105 shadow-xl">
-                  <div className="flex items-center justify-between mb-2">
-                    <CheckCircle className="h-8 w-8 text-white/80" />
-                    <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse" style={{animationDelay: '1s'}}></div>
-                  </div>
-                  <p className="text-white/90 text-sm font-semibold mb-1">Compliant</p>
-                  <p className="text-3xl font-black text-white">{summary.compliant_count}</p>
-                </div>
-                <div className="group bg-white/15 backdrop-blur-lg rounded-2xl p-6 border border-white/30 hover:bg-white/20 transition-all duration-300 hover:scale-105 shadow-xl">
-                  <div className="flex items-center justify-between mb-2">
-                    <TrendingUp className="h-8 w-8 text-white/80" />
-                    <div className="w-3 h-3 bg-purple-400 rounded-full animate-pulse" style={{animationDelay: '1.5s'}}></div>
-                  </div>
-                  <p className="text-white/90 text-sm font-semibold mb-1">Success Rate</p>
-                  <p className="text-3xl font-black text-white">{summary.compliance_percentage}%</p>
-                </div>
+          </div>
+          
+          <h1 className="text-4xl md:text-5xl font-bold text-white mb-6 drop-shadow-lg">
+            Compliance Dashboard
+          </h1>
+          
+          <p className="text-xl text-white/90 mb-8 max-w-3xl mx-auto">
+            Monitor compliance status across your property portfolio with intelligent tracking and automated alerts
+          </p>
+          
+          {/* Quick Stats */}
+          {summary.total_buildings > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto mb-8">
+              <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-6 border border-white/30">
+                <Building2 className="h-8 w-8 text-white mx-auto mb-2" />
+                <p className="text-2xl font-bold text-white">{summary.total_buildings}</p>
+                <p className="text-white/80 text-sm">Properties</p>
               </div>
-            )}
-            
-            {/* Enhanced Hero Actions */}
-            <div className="flex flex-col sm:flex-row gap-6 justify-center">
-              <BlocIQButton
-                onClick={() => {
-                  if (buildings.length > 0) {
-                    router.push(`/buildings/${buildings[0].id}/compliance`);
-                  } else {
-                    router.push('/buildings');
-                  }
-                }}
-                size="lg"
-                className="group bg-white/20 backdrop-blur-lg hover:bg-white/30 text-white border-white/40 hover:border-white/60 transform hover:scale-105 hover:-translate-y-1 shadow-2xl hover:shadow-3xl"
-              >
-                <div className="flex items-center justify-center gap-3">
-                  <Shield className="h-6 w-6 group-hover:animate-pulse" />
-                  <span className="text-lg">Setup Compliance</span>
-                </div>
-              </BlocIQButton>
-              <BlocIQButton 
-                onClick={fetchComplianceData}
-                variant="secondary"
-                size="lg"
-                className="group bg-white/20 backdrop-blur-lg hover:bg-white/30 text-white border-white/40 hover:border-white/60 transform hover:scale-105 hover:-translate-y-1 shadow-2xl hover:shadow-3xl"
-              >
-                <div className="flex items-center justify-center gap-3">
-                  <RefreshCw className="h-6 w-6 group-hover:animate-spin" />
-                  <span className="text-lg">Refresh Data</span>
-                </div>
-              </BlocIQButton>
+              <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-6 border border-white/30">
+                <Shield className="h-8 w-8 text-white mx-auto mb-2" />
+                <p className="text-2xl font-bold text-white">{summary.total_assets}</p>
+                <p className="text-white/80 text-sm">Assets</p>
+              </div>
+              <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-6 border border-white/30">
+                <CheckCircle className="h-8 w-8 text-white mx-auto mb-2" />
+                <p className="text-2xl font-bold text-white">{summary.compliant_count}</p>
+                <p className="text-white/80 text-sm">Compliant</p>
+              </div>
+              <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-6 border border-white/30">
+                <TrendingUp className="h-8 w-8 text-white mx-auto mb-2" />
+                <p className="text-2xl font-bold text-white">{summary.compliance_percentage}%</p>
+                <p className="text-white/80 text-sm">Success Rate</p>
+              </div>
             </div>
+          )}
+          
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <button
+              onClick={() => {
+                if (buildings.length > 0) {
+                  router.push(`/buildings/${buildings[0].id}/compliance`);
+                } else {
+                  router.push('/buildings');
+                }
+              }}
+              className="px-8 py-3 bg-white text-[#4f46e5] rounded-xl font-semibold hover:bg-white/90 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            >
+              Setup Compliance
+            </button>
+            <button 
+              onClick={fetchComplianceData}
+              className="px-8 py-3 bg-white/20 backdrop-blur-sm text-white rounded-xl font-semibold hover:bg-white/30 transition-all duration-200 border border-white/30"
+            >
+              Refresh Data
+            </button>
           </div>
         </div>
       </section>
 
       {/* Main Content Section */}
       <div className="max-w-7xl mx-auto px-6 py-16">
-        {/* Compliance Overview Section */}
-        <BlocIQCard variant="elevated" className="mb-12">
-          <BlocIQCardHeader>
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-4 mb-6">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-xl">
-                  <TrendingUp className="h-6 w-6 text-white" />
-                </div>
-                <h2 className="text-3xl font-black bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 bg-clip-text text-transparent">
-                  Portfolio Compliance Overview
-                </h2>
+        {/* Compliance Status Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-lg transition-all duration-200">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                <CheckCircle className="h-6 w-6 text-green-600" />
               </div>
-              <p className="text-lg text-gray-600 max-w-2xl mx-auto font-medium">
-                Real-time monitoring and comprehensive status tracking across your entire property portfolio
-              </p>
+              <div>
+                <p className="text-sm font-medium text-gray-600">Compliant</p>
+                <p className="text-2xl font-bold text-gray-900">{summary.compliant_count}</p>
+              </div>
             </div>
-          </BlocIQCardHeader>
+            <p className="text-xs text-gray-500">Assets up to standard</p>
+          </div>
           
-          <BlocIQCardContent>
-            {/* Enhanced Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
-              <div className="group relative bg-gradient-to-br from-emerald-50 via-white to-green-50 border-2 border-emerald-200/60 rounded-3xl p-8 hover:shadow-2xl transition-all duration-500 hover:scale-105 hover:-translate-y-2">
-                <div className="absolute top-4 right-4 w-3 h-3 bg-emerald-400 rounded-full animate-pulse shadow-lg"></div>
-                <div className="flex items-start justify-between mb-6">
-                  <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-green-500 rounded-2xl flex items-center justify-center shadow-xl group-hover:shadow-2xl transition-all duration-300">
-                    <CheckCircle className="h-8 w-8 text-white" />
-                  </div>
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-emerald-600 mb-2 uppercase tracking-wider">Fully Compliant</p>
-                  <p className="text-4xl font-black text-emerald-700 mb-2">{summary.compliant_count}</p>
-                  <p className="text-xs text-emerald-600/80 font-medium">Assets up to standard</p>
-                </div>
-                <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-green-500 rounded-b-3xl"></div>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-lg transition-all duration-200">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+                <AlertTriangle className="h-6 w-6 text-red-600" />
               </div>
-              
-              <div className="group relative bg-gradient-to-br from-red-50 via-white to-rose-50 border-2 border-red-200/60 rounded-3xl p-8 hover:shadow-2xl transition-all duration-500 hover:scale-105 hover:-translate-y-2">
-                <div className="absolute top-4 right-4 w-3 h-3 bg-red-400 rounded-full animate-pulse shadow-lg"></div>
-                <div className="flex items-start justify-between mb-6">
-                  <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-rose-500 rounded-2xl flex items-center justify-center shadow-xl group-hover:shadow-2xl transition-all duration-300">
-                    <AlertTriangle className="h-8 w-8 text-white" />
-                  </div>
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-red-600 mb-2 uppercase tracking-wider">Overdue</p>
-                  <p className="text-4xl font-black text-red-700 mb-2">{summary.overdue_count}</p>
-                  <p className="text-xs text-red-600/80 font-medium">Require immediate attention</p>
-                </div>
-                <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 to-rose-500 rounded-b-3xl"></div>
-              </div>
-              
-              <div className="group relative bg-gradient-to-br from-amber-50 via-white to-yellow-50 border-2 border-amber-200/60 rounded-3xl p-8 hover:shadow-2xl transition-all duration-500 hover:scale-105 hover:-translate-y-2">
-                <div className="absolute top-4 right-4 w-3 h-3 bg-amber-400 rounded-full animate-pulse shadow-lg"></div>
-                <div className="flex items-start justify-between mb-6">
-                  <div className="w-16 h-16 bg-gradient-to-br from-amber-500 to-yellow-500 rounded-2xl flex items-center justify-center shadow-xl group-hover:shadow-2xl transition-all duration-300">
-                    <Clock className="h-8 w-8 text-white" />
-                  </div>
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-amber-600 mb-2 uppercase tracking-wider">Due Soon</p>
-                  <p className="text-4xl font-black text-amber-700 mb-2">{summary.upcoming_count}</p>
-                  <p className="text-xs text-amber-600/80 font-medium">Within next 30 days</p>
-                </div>
-                <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500 to-yellow-500 rounded-b-3xl"></div>
-              </div>
-              
-              <div className="group relative bg-gradient-to-br from-slate-50 via-white to-gray-50 border-2 border-slate-200/60 rounded-3xl p-8 hover:shadow-2xl transition-all duration-500 hover:scale-105 hover:-translate-y-2">
-                <div className="absolute top-4 right-4 w-3 h-3 bg-slate-400 rounded-full animate-pulse shadow-lg"></div>
-                <div className="flex items-start justify-between mb-6">
-                  <div className="w-16 h-16 bg-gradient-to-br from-slate-500 to-gray-500 rounded-2xl flex items-center justify-center shadow-xl group-hover:shadow-2xl transition-all duration-300">
-                    <AlertCircle className="h-8 w-8 text-white" />
-                  </div>
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-slate-600 mb-2 uppercase tracking-wider">Not Applied</p>
-                  <p className="text-4xl font-black text-slate-700 mb-2">{summary.not_applied_count}</p>
-                  <p className="text-xs text-slate-600/80 font-medium">Need setup</p>
-                </div>
-                <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-slate-500 to-gray-500 rounded-b-3xl"></div>
+              <div>
+                <p className="text-sm font-medium text-gray-600">Overdue</p>
+                <p className="text-2xl font-bold text-gray-900">{summary.overdue_count}</p>
               </div>
             </div>
-          </BlocIQCardContent>
-        </BlocIQCard>
-
-
-
-
-        {/* Filters */}
-        <BlocIQCard variant="elevated" className="mb-12">
-          <BlocIQCardHeader>
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-gray-900 mb-3">Filter & Search</h2>
-              <p className="text-gray-600">Find specific compliance information across your portfolio</p>
-            </div>
-          </BlocIQCardHeader>
+            <p className="text-xs text-gray-500">Require immediate attention</p>
+          </div>
           
-          <BlocIQCardContent>
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-lg transition-all duration-200">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
+                <Clock className="h-6 w-6 text-yellow-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-600">Due Soon</p>
+                <p className="text-2xl font-bold text-gray-900">{summary.upcoming_count}</p>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500">Within next 30 days</p>
+          </div>
+          
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-lg transition-all duration-200">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center">
+                <AlertCircle className="h-6 w-6 text-gray-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-600">Not Applied</p>
+                <p className="text-2xl font-bold text-gray-900">{summary.not_applied_count}</p>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500">Need setup</p>
+          </div>
+        </div>
+
+
+
+
+        {/* Search and Filters */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-12">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
             <div className="lg:col-span-2">
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -746,7 +659,7 @@ export default function CompliancePage() {
                   placeholder="Search buildings, assets, or descriptions..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-[#4f46e5] transition-all duration-300 bg-gray-50 focus:bg-white shadow-sm hover:shadow-md"
+                  className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-[#4f46e5] transition-all duration-200 bg-gray-50 focus:bg-white"
                 />
               </div>
             </div>
@@ -754,7 +667,7 @@ export default function CompliancePage() {
             <select
               value={filterBuilding}
               onChange={(e) => setFilterBuilding(e.target.value)}
-              className="px-4 py-4 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-[#4f46e5] transition-all duration-300 bg-gray-50 focus:bg-white shadow-sm hover:shadow-md"
+              className="px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-[#4f46e5] transition-all duration-200 bg-gray-50 focus:bg-white"
             >
               <option value="all">All Buildings</option>
               {buildings.map(building => (
@@ -767,7 +680,7 @@ export default function CompliancePage() {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-4 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-[#4f46e5] transition-all duration-300 bg-gray-50 focus:bg-white shadow-sm hover:shadow-md"
+              className="px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-[#4f46e5] transition-all duration-200 bg-gray-50 focus:bg-white"
             >
               <option value="all">All Statuses</option>
               <option value="compliant">Compliant</option>
@@ -776,427 +689,184 @@ export default function CompliancePage() {
               <option value="not_applied">Not Applied</option>
             </select>
           </div>
-          </BlocIQCardContent>
-        </BlocIQCard>
+        </div>
 
         {/* Buildings Grid */}
-        <BlocIQCard variant="elevated" className="mb-12">
-          <BlocIQCardHeader>
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-gray-900 mb-3">Building Compliance Overview</h2>
-              <p className="text-gray-600">Monitor compliance status across your property portfolio</p>
-            </div>
-          </BlocIQCardHeader>
+        <div className="mb-12">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-gray-900 mb-3">Building Compliance Overview</h2>
+            <p className="text-gray-600">Monitor compliance status across your property portfolio</p>
+          </div>
           
-                      <BlocIQCardContent>
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
             {filteredBuildings.map(building => (
-              <div key={building.id} className="bg-white rounded-3xl shadow-2xl border-0 overflow-hidden hover:shadow-3xl transition-all duration-300 transform hover:-translate-y-2">
-                <div className="p-8">
-                  {/* Building Header */}
-                  <div className="flex items-start justify-between mb-6">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-3">
-                        <h3 className="text-xl font-bold text-gray-900">{building.name}</h3>
-                        {building.is_hrb && (
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg">
-                            🏢 HRB
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-gray-600 font-medium">
-                        {building.compliance_assets_count} compliance assets
-                      </p>
+              <div key={building.id} className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-lg transition-all duration-200">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="text-xl font-bold text-gray-900">{building.name}</h3>
+                      {building.is_hrb && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800">
+                          🏢 HRB
+                        </span>
+                      )}
                     </div>
-                    
-                    <button
-                      onClick={() => router.push(`/buildings/${building.id}/compliance`)}
-                      className="inline-flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white text-sm rounded-2xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-                    >
-                      <Shield className="h-4 w-4" />
-                      View Details
-                    </button>
+                    <p className="text-gray-600 text-sm">
+                      {building.compliance_assets_count} compliance assets
+                    </p>
                   </div>
                   
-                  {/* Building Compliance Summary */}
-                  <div className="grid grid-cols-2 gap-4 mb-6">
-                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-4 text-center hover:shadow-lg transition-all duration-300">
-                      <p className="text-sm text-green-600 font-semibold mb-1">Compliant</p>
-                      <p className="text-2xl font-bold text-green-700">{building.compliant_count}</p>
-                    </div>
-                    
-                    <div className="bg-gradient-to-r from-red-50 to-rose-50 border border-red-200 rounded-2xl p-4 text-center hover:shadow-lg transition-all duration-300">
-                      <p className="text-sm text-red-600 font-semibold mb-1">Overdue</p>
-                      <p className="text-2xl font-bold text-red-700">{building.overdue_count}</p>
-                    </div>
-                    
-                    <div className="bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-200 rounded-2xl p-4 text-center hover:shadow-lg transition-all duration-300">
-                      <p className="text-sm text-yellow-600 font-semibold mb-1">Upcoming</p>
-                      <p className="text-2xl font-bold text-yellow-700">{building.upcoming_count}</p>
-                    </div>
-                    
-                    <div className="bg-gradient-to-r from-gray-50 to-slate-50 border border-gray-200 rounded-2xl p-4 text-center hover:shadow-lg transition-all duration-300">
-                      <p className="text-sm text-gray-600 font-semibold mb-1">Not Applied</p>
-                      <p className="text-2xl font-bold text-gray-700">{building.not_applied_count}</p>
-                    </div>
+                  <button
+                    onClick={() => router.push(`/buildings/${building.id}/compliance`)}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white text-sm rounded-xl font-semibold transition-all duration-200"
+                  >
+                    <Shield className="h-4 w-4" />
+                    View Details
+                  </button>
+                </div>
+                
+                {/* Building Compliance Summary */}
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-center">
+                    <p className="text-xs text-green-600 font-semibold mb-1">Compliant</p>
+                    <p className="text-lg font-bold text-green-700">{building.compliant_count}</p>
                   </div>
                   
-                  {/* Quick Actions */}
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => router.push(`/buildings/${building.id}/compliance`)}
-                      className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-[#14b8a6] to-[#3b82f6] hover:brightness-110 text-white text-sm rounded-2xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
-                    >
-                      <Shield className="h-4 w-4" />
-                      View Compliance
-                    </button>
-                    
-                    <button
-                      onClick={() => router.push(`/buildings/${building.id}`)}
-                      className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm rounded-2xl font-semibold transition-all duration-300"
-                    >
-                      <Building2 className="h-4 w-4" />
-                      Building
-                    </button>
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-center">
+                    <p className="text-xs text-red-600 font-semibold mb-1">Overdue</p>
+                    <p className="text-lg font-bold text-red-700">{building.overdue_count}</p>
                   </div>
+                  
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-center">
+                    <p className="text-xs text-yellow-600 font-semibold mb-1">Upcoming</p>
+                    <p className="text-lg font-bold text-yellow-700">{building.upcoming_count}</p>
+                  </div>
+                  
+                  <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-center">
+                    <p className="text-xs text-gray-600 font-semibold mb-1">Not Applied</p>
+                    <p className="text-lg font-bold text-gray-700">{building.not_applied_count}</p>
+                  </div>
+                </div>
+                
+                {/* Quick Actions */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => router.push(`/buildings/${building.id}/compliance`)}
+                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#4f46e5] hover:bg-[#4338ca] text-white text-sm rounded-xl font-semibold transition-all duration-200"
+                  >
+                    <Shield className="h-4 w-4" />
+                    View Compliance
+                  </button>
+                  
+                  <button
+                    onClick={() => router.push(`/buildings/${building.id}`)}
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm rounded-xl font-semibold transition-all duration-200"
+                  >
+                    <Building2 className="h-4 w-4" />
+                    Building
+                  </button>
                 </div>
               </div>
             ))}
-              </div>
-            </BlocIQCardContent>
-          </BlocIQCard>
+          </div>
+        </div>
 
         {/* Compliance Assets List */}
-        <BlocIQCard variant="elevated" className="mt-8">
-          <BlocIQCardHeader>
-            <h2 className="text-lg font-semibold text-gray-900">All Compliance Assets</h2>
-          </BlocIQCardHeader>
-            
-          <BlocIQCardContent>
-            {filteredComplianceData.length > 0 ? (
-              <div className="divide-y divide-gray-100">
-                {filteredComplianceData.map(item => (
-                  <div key={item.id} className="p-6 hover:bg-gray-50 transition-colors">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          {getStatusIcon(item.status)}
-                          <h3 className="text-lg font-medium text-gray-900">
-                            {item.compliance_assets?.name || 'Unknown Asset'}
-                          </h3>
-                          {getStatusBadge(item.status)}
-                        </div>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">All Compliance Assets</h2>
+          
+          {filteredComplianceData.length > 0 ? (
+            <div className="space-y-4">
+              {filteredComplianceData.map(item => (
+                <div key={item.id} className="p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        {getStatusIcon(item.status)}
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          {item.compliance_assets?.name || 'Unknown Asset'}
+                        </h3>
+                        {getStatusBadge(item.status)}
+                      </div>
+                      
+                      <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
+                        <span className="flex items-center gap-1">
+                          <Building2 className="h-4 w-4" />
+                          {item.buildings?.name || 'Unknown Building'}
+                        </span>
                         
-                        <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getCategoryColor(item.compliance_assets?.category)}`}>
+                          {item.compliance_assets?.category || 'Unknown'}
+                        </span>
+                        
+                        {item.next_due_date && (
                           <span className="flex items-center gap-1">
-                            <Building2 className="h-4 w-4" />
-                            {item.buildings?.name || 'Unknown Building'}
+                            <Calendar className="h-4 w-4" />
+                            Due: {new Date(item.next_due_date).toLocaleDateString()}
                           </span>
-                          
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getCategoryColor(item.compliance_assets?.category)}`}>
-                            {item.compliance_assets?.category || 'Unknown'}
-                          </span>
-                          
-                          {item.next_due_date && (
-                            <span className="flex items-center gap-1">
-                              <Calendar className="h-4 w-4" />
-                              Due: {new Date(item.next_due_date).toLocaleDateString()}
-                            </span>
-                          )}
-                        </div>
-                        
-                        <p className="text-gray-700 mb-3">
-                          {item.compliance_assets?.description || 'No description available'}
-                        </p>
-                        
-                        {item.notes && (
-                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
-                            <p className="text-sm text-blue-800">
-                              <strong>Notes:</strong> {item.notes}
-                            </p>
-                          </div>
                         )}
                       </div>
                       
-                      <div className="flex items-center gap-2 ml-4">
-                        {item.compliance_documents && (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                            <FileText className="h-3 w-3" />
-                            Document
-                          </span>
-                        )}
-                        
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => setEditingAsset(item)}
-                            className="inline-flex items-center gap-2 px-3 py-2 bg-green-50 text-green-700 text-sm rounded-lg hover:bg-green-100 transition-colors"
-                            title="Edit compliance asset"
-                          >
-                            <Settings className="h-4 w-4" />
-                            Edit
-                          </button>
-                          
-                          <button
-                            onClick={() => router.push(`/buildings/${item.building_id}/compliance`)}
-                            className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 text-sm rounded-lg hover:bg-blue-100 transition-colors"
-                          >
-                            <Shield className="h-4 w-4" />
-                            View Building
-                          </button>
-                        </div>
-                      </div>
+                      <p className="text-gray-700 text-sm">
+                        {item.compliance_assets?.description || 'No description available'}
+                      </p>
                     </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <Shield className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No Compliance Assets Found</h3>
-                <p className="text-gray-600 mb-6">
-                  {complianceData.length === 0 
-                    ? "No compliance assets have been set up yet. Add some compliance assets to get started."
-                    : "No assets match your current filters. Try adjusting your search criteria."
-                  }
-                </p>
-                <div className="flex items-center justify-center gap-3">
-                  <button
-                    onClick={() => {
-                      setFilterBuilding('all')
-                      setFilterCategory('all')
-                      setFilterStatus('all')
-                      setSearchQuery('')
-                    }}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    Clear Filters
-                  </button>
-                  {complianceData.length === 0 && (
-                    <button
-                      onClick={() => router.push('/buildings')}
-                      className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                    >
-                      Go to Buildings
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-          </BlocIQCardContent>
-        </BlocIQCard>
-
-        {/* Sync Results */}
-        {syncResults && (
-          <BlocIQCard className="mb-6">
-            <BlocIQCardHeader>
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold">Calendar Sync Results</h2>
-                <button
-                  onClick={() => setSyncResults(null)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  ✕
-                </button>
-              </div>
-            </BlocIQCardHeader>
-            <BlocIQCardContent>
-              {syncResults.success ? (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="bg-blue-50 p-4 rounded-lg text-center">
-                      <div className="text-2xl font-bold text-blue-600">{syncResults.data?.synced || 0}</div>
-                      <div className="text-sm text-blue-800">Total Synced</div>
+                    
+                    <div className="flex items-center gap-2 ml-4">
+                      <button
+                        onClick={() => setEditingAsset(item)}
+                        className="px-3 py-2 bg-[#4f46e5] text-white text-sm rounded-lg hover:bg-[#4338ca] transition-colors"
+                        title="Edit compliance asset"
+                      >
+                        <Settings className="h-4 w-4" />
+                      </button>
+                      
+                      <button
+                        onClick={() => router.push(`/buildings/${item.building_id}/compliance`)}
+                        className="px-3 py-2 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200 transition-colors"
+                      >
+                        <Shield className="h-4 w-4" />
+                      </button>
                     </div>
-                    <div className="bg-green-50 p-4 rounded-lg text-center">
-                      <div className="text-2xl font-bold text-green-600">{syncResults.data?.created || 0}</div>
-                      <div className="text-sm text-green-800">Created</div>
-                    </div>
-                    <div className="bg-yellow-50 p-4 rounded-lg text-center">
-                      <div className="text-2xl font-bold text-yellow-600">{syncResults.data?.updated || 0}</div>
-                      <div className="text-sm text-yellow-800">Updated</div>
-                    </div>
-                    <div className="bg-red-50 p-4 rounded-lg text-center">
-                      <div className="text-2xl font-bold text-red-600">{syncResults.data?.errors || 0}</div>
-                      <div className="text-sm text-red-800">Errors</div>
-                    </div>
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    <strong>Message:</strong> {syncResults.message}
                   </div>
                 </div>
-              ) : (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <div className="text-red-800">
-                    <strong>Error:</strong> {syncResults.error}
-                  </div>
-                  {syncResults.details && (
-                    <div className="text-red-600 text-sm mt-2">
-                      <strong>Details:</strong> {JSON.stringify(syncResults.details, null, 2)}
-                    </div>
-                  )}
-                </div>
-              )}
-            </BlocIQCardContent>
-          </BlocIQCard>
-        )}
-
-        {/* Test Data Button */}
-        <BlocIQCard className="mb-6">
-          <BlocIQCardHeader>
-            <h2 className="text-xl font-semibold">Debug & Test</h2>
-          </BlocIQCardHeader>
-          <BlocIQCardContent>
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => setDebugMode(!debugMode)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                {debugMode ? 'Hide Debug' : 'Show Debug'}
-              </button>
-              
-              <button
-                onClick={async () => {
-                  try {
-                    const response = await fetch('/api/compliance/test-data');
-                    const data = await response.json();
-                    console.log('🧪 Test data result:', data);
-                    alert(`Test completed! Check console for details.\n\nSummary:\n- Compliance Assets: ${data.data?.complianceAssets?.count || 0}\n- Buildings: ${data.data?.buildings?.count || 0}\n- Building Assets: ${data.data?.buildingAssets?.count || 0}\n- User Buildings: ${data.data?.userBuildings?.count || 0}`);
-                  } catch (error) {
-                    console.error('Test failed:', error);
-                    alert('Test failed: ' + error);
-                  }
-                }}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-              >
-                Test Data
-              </button>
-              
-              <button
-                onClick={async () => {
-                  try {
-                    const response = await fetch('/api/compliance/test-comprehensive');
-                    const data = await response.json();
-                    console.log('🧪 Comprehensive test result:', data);
-                    
-                    const summary = data.data?.summary;
-                    const message = `Comprehensive Test Results:
-                    
-✅ Compliance Assets: ${data.data?.complianceAssets?.count || 0}
-✅ User Buildings: ${data.data?.userBuildings?.count || 0}
-✅ Building Assets: ${data.data?.buildingAssets?.count || 0}
-✅ Detailed API: ${summary?.detailedApiWorking ? 'Working' : 'Failed'}
-✅ Overview API: ${summary?.overviewApiWorking ? 'Working' : 'Failed'}
-
-Ready for Testing: ${summary?.readyForTesting ? 'YES' : 'NO'}
-
-Check console for full details.`;
-                    
-                    alert(message);
-                  } catch (error) {
-                    console.error('Comprehensive test failed:', error);
-                    alert('Comprehensive test failed: ' + error);
-                  }
-                }}
-                className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
-              >
-                Full Test
-              </button>
-              
-              <button
-                onClick={async () => {
-                  try {
-                    const response = await fetch('/api/compliance/seed', { method: 'POST' });
-                    const data = await response.json();
-                    console.log('🌱 Seed result:', data);
-                    alert(`Seed completed! Check console for details.\n\nMessage: ${data.message || 'Unknown'}`);
-                    // Refresh the page data
-                    await fetchComplianceData();
-                  } catch (error) {
-                    console.error('Seed failed:', error);
-                    alert('Seed failed: ' + error);
-                  }
-                }}
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-              >
-                Seed Data
-              </button>
+              ))}
             </div>
-          </BlocIQCardContent>
-        </BlocIQCard>
-
-        {/* Debug Section */}
-        {debugMode && (
-          <BlocIQCard className="mb-6">
-            <BlocIQCardHeader>
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold">Debug Information</h2>
+          ) : (
+            <div className="text-center py-12">
+              <Shield className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Compliance Assets Found</h3>
+              <p className="text-gray-600 mb-6">
+                {complianceData.length === 0 
+                  ? "No compliance assets have been set up yet. Add some compliance assets to get started."
+                  : "No assets match your current filters. Try adjusting your search criteria."
+                }
+              </p>
+              <div className="flex items-center justify-center gap-3">
                 <button
-                  onClick={() => setDebugMode(false)}
-                  className="text-gray-500 hover:text-gray-700"
+                  onClick={() => {
+                    setFilterBuilding('all')
+                    setFilterCategory('all')
+                    setFilterStatus('all')
+                    setSearchQuery('')
+                  }}
+                  className="px-4 py-2 bg-[#4f46e5] text-white rounded-lg hover:bg-[#4338ca] transition-colors"
                 >
-                  ✕
+                  Clear Filters
                 </button>
-              </div>
-            </BlocIQCardHeader>
-            <BlocIQCardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <h3 className="font-semibold mb-2">Buildings ({buildings.length})</h3>
-                  <pre className="bg-gray-100 p-2 rounded text-xs overflow-auto max-h-32">
-                    {JSON.stringify(buildings, null, 2)}
-                  </pre>
-                </div>
-                <div>
-                  <h3 className="font-semibold mb-2">Compliance Data ({complianceData.length})</h3>
-                  <pre className="bg-gray-100 p-2 rounded text-xs overflow-auto max-h-32">
-                    {JSON.stringify(complianceData.slice(0, 3), null, 2)}
-                  </pre>
-                </div>
-              </div>
-              <div className="mt-4">
-                <h3 className="font-semibold mb-2">Summary</h3>
-                <pre className="bg-gray-100 p-2 rounded text-xs">
-                  {JSON.stringify(summary, null, 2)}
-                </pre>
-              </div>
-            </BlocIQCardContent>
-          </BlocIQCard>
-        )}
-
-        {/* Empty State */}
-        {filteredComplianceData.length === 0 && !loading && (
-          <div className="text-center py-12">
-            <Shield className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No compliance assets found</h3>
-            <p className="text-gray-500 mb-4">
-              {searchQuery || filterBuilding !== 'all' || filterCategory !== 'all' || filterStatus !== 'all'
-                ? 'Try adjusting your filters or search terms'
-                : 'Get started by adding compliance assets to your buildings'
-              }
-            </p>
-            {!searchQuery && filterBuilding === 'all' && filterCategory === 'all' && filterStatus === 'all' && (
-              <div className="space-y-4">
-                <div className="text-sm text-gray-500">
-                  Navigate to individual building pages to set up compliance assets
-                </div>
-                <div className="flex gap-4 justify-center">
+                {complianceData.length === 0 && (
                   <button
-                    onClick={() => setDebugMode(!debugMode)}
-                    className="text-sm text-blue-600 hover:text-blue-800 underline"
+                    onClick={() => router.push('/buildings')}
+                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
                   >
-                    {debugMode ? 'Hide' : 'Show'} Debug Info
+                    Go to Buildings
                   </button>
-                  <a
-                    href="/test-compliance"
-                    className="text-sm text-blue-600 hover:text-blue-800 underline"
-                  >
-                    Test Compliance Data
-                  </a>
-                </div>
+                )}
               </div>
-            )}
-          </div>
-        )}
+            </div>
+          )}
+        </div>
+
 
 
       </div>

@@ -1357,11 +1357,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
               
               {/* Header Content */}
               <div className="relative z-10 text-center">
-                {/* Icon and Title Row */}
-                <div className="flex items-center justify-center gap-4 mb-6">
-                  <div className="w-16 h-16 bg-white/25 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-                    <Brain className={`h-8 w-8 text-white ${isSubmitting ? 'animate-bounce' : ''}`} />
-                  </div>
+                {/* Title Row */}
+                <div className="flex items-center justify-center mb-6">
                   <div>
                     <h2 className="text-4xl font-bold text-white drop-shadow-lg">
                       Ask BlocIQ

@@ -202,155 +202,197 @@ export default function BuildingDocumentLibrary({ building }: { building: Buildi
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Document Library</h1>
-          <p className="text-gray-600 mt-1">{building.name}</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
-            className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
-          >
-            {viewMode === 'grid' ? <List className="h-5 w-5" /> : <Grid className="h-5 w-5" />}
-          </button>
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            Upload Document
-          </button>
-        </div>
-      </div>
-
-      {/* Search and Filter */}
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search documents..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <Filter className="h-5 w-5 text-gray-400" />
-          <select
-            value={selectedFolder || ''}
-            onChange={(e) => setSelectedFolder(e.target.value || null)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">All Categories</option>
-            {FOLDERS.map(folder => (
-              <option key={folder.id} value={folder.category}>
-                {folder.name}
-              </option>
-            ))}
-          </select>
+    <div className="space-y-8">
+      {/* Modern Header with Gradient */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-3xl p-8 text-white">
+        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-40 h-40 bg-white/5 rounded-full blur-3xl"></div>
+        
+        <div className="relative z-10">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-bold drop-shadow-lg">Document Library</h1>
+              <p className="text-xl text-white/90 mt-2">{building.name}</p>
+              <p className="text-white/80 mt-1">Upload, organize, and manage your building documents</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+                className="p-3 bg-white/20 backdrop-blur-sm rounded-xl border border-white/30 hover:bg-white/30 transition-all duration-200"
+              >
+                {viewMode === 'grid' ? <List className="h-5 w-5" /> : <Grid className="h-5 w-5" />}
+              </button>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-3 px-6 py-3 bg-white text-[#4f46e5] rounded-xl font-semibold hover:bg-white/90 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              >
+                <Plus className="h-5 w-5" />
+                Upload Document
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Upload Area */}
+      {/* Modern Search and Filter */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+        <div className="flex items-center gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search documents..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-[#4f46e5] transition-all duration-200 bg-gray-50 focus:bg-white"
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            <Filter className="h-5 w-5 text-gray-500" />
+            <select
+              value={selectedFolder || ''}
+              onChange={(e) => setSelectedFolder(e.target.value || null)}
+              className="px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] bg-gray-50 focus:bg-white transition-all duration-200"
+            >
+              <option value="">All Categories</option>
+              {FOLDERS.map(folder => (
+                <option key={folder.id} value={folder.category}>
+                  {folder.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Modern Upload Area */}
       <div
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+        className={`border-2 border-dashed rounded-2xl p-12 text-center transition-all duration-200 ${
           isDragOver
-            ? 'border-blue-500 bg-blue-50'
-            : 'border-gray-300 hover:border-gray-400'
+            ? 'border-[#4f46e5] bg-gradient-to-br from-[#4f46e5]/5 to-[#a855f7]/5'
+            : 'border-gray-200 hover:border-[#4f46e5]/50 hover:bg-gray-50'
         }`}
       >
-        <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-        <p className="text-lg font-medium text-gray-900 mb-2">
-          Drag and drop files here, or click to browse
-        </p>
-        <p className="text-gray-500">
+        <div className="w-20 h-20 bg-gradient-to-br from-[#4f46e5] to-[#a855f7] rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+          <Upload className="h-10 w-10 text-white" />
+        </div>
+        <h3 className="text-2xl font-bold text-gray-900 mb-3">
+          Drag and drop files here
+        </h3>
+        <p className="text-gray-600 mb-6 text-lg">
           Supports PDF, DOC, DOCX, TXT, and image files
         </p>
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="px-8 py-3 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white rounded-xl font-semibold hover:brightness-110 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
         >
           Choose Files
         </button>
       </div>
 
-      {/* Folders Grid */}
+      {/* Modern Folders Grid */}
       {!selectedFolder && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
           {FOLDERS.map(folder => {
             const count = documents.filter(doc => doc.category === folder.category).length
             return (
               <button
                 key={folder.id}
                 onClick={() => setSelectedFolder(folder.category)}
-                className="p-4 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all text-left group"
+                className="group p-6 bg-white rounded-2xl border border-gray-200 hover:border-[#4f46e5]/30 hover:shadow-xl transition-all duration-200 text-left transform hover:-translate-y-1"
               >
-                <div className={`${folder.color} mb-2`}>
+                <div className={`${folder.color} mb-4 p-3 bg-gray-50 rounded-xl group-hover:bg-gradient-to-br group-hover:from-[#4f46e5]/10 group-hover:to-[#a855f7]/10 transition-all duration-200`}>
                   {folder.icon}
                 </div>
-                <h3 className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
+                <h3 className="font-bold text-gray-900 group-hover:text-[#4f46e5] transition-colors text-lg mb-2">
                   {folder.name}
                 </h3>
-                <p className="text-sm text-gray-500">{count} document{count !== 1 ? 's' : ''}</p>
+                <p className="text-sm text-gray-500 font-medium">{count} document{count !== 1 ? 's' : ''}</p>
               </button>
             )
           })}
         </div>
       )}
 
-      {/* Documents List */}
+      {/* Modern Documents List */}
       {selectedFolder && (
-        <div className="bg-white rounded-lg border border-gray-200">
-          <div className="p-4 border-b border-gray-200">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">
-                {FOLDERS.find(f => f.category === selectedFolder)?.name} Documents
-              </h2>
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-gradient-to-br from-[#4f46e5] to-[#a855f7] rounded-xl">
+                  {FOLDERS.find(f => f.category === selectedFolder)?.icon}
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    {FOLDERS.find(f => f.category === selectedFolder)?.name} Documents
+                  </h2>
+                  <p className="text-gray-600 mt-1">
+                    {filteredDocuments.length} document{filteredDocuments.length !== 1 ? 's' : ''} found
+                  </p>
+                </div>
+              </div>
               <button
                 onClick={() => setSelectedFolder(null)}
-                className="p-1 hover:bg-gray-100 rounded"
+                className="p-3 hover:bg-gray-100 rounded-xl transition-colors"
               >
-                <X className="h-4 w-4" />
+                <X className="h-5 w-5 text-gray-500" />
               </button>
             </div>
           </div>
           
           {filteredDocuments.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
-              <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-              <p>No documents found in this category</p>
+            <div className="p-12 text-center text-gray-500">
+              <div className="w-20 h-20 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <FileText className="h-10 w-10 text-gray-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">No documents found</h3>
+              <p className="text-gray-600">Upload some documents to get started with this category</p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-200">
+            <div className="divide-y divide-gray-100">
               {filteredDocuments.map(doc => (
-                <div key={doc.id} className="p-4 hover:bg-gray-50 transition-colors">
+                <div key={doc.id} className="p-6 hover:bg-gray-50 transition-colors group">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <FileText className="h-5 w-5 text-gray-400" />
-                      <div>
-                        <h3 className="font-medium text-gray-900">{doc.name}</h3>
-                        <div className="flex items-center gap-4 text-sm text-gray-500">
-                          <span>{doc.type}</span>
-                          <span>{formatFileSize(doc.file_size)}</span>
-                          <span>{formatDate(doc.uploaded_at)}</span>
-                          <span>by {doc.uploaded_by}</span>
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-gradient-to-br from-[#4f46e5]/10 to-[#a855f7]/10 rounded-xl flex items-center justify-center">
+                        <FileText className="h-6 w-6 text-[#4f46e5]" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-bold text-gray-900 text-lg mb-1 group-hover:text-[#4f46e5] transition-colors">
+                          {doc.name}
+                        </h3>
+                        <div className="flex items-center gap-6 text-sm text-gray-500">
+                          <span className="flex items-center gap-1">
+                            <span className="w-2 h-2 bg-gray-400 rounded-full"></span>
+                            {doc.type}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <span className="w-2 h-2 bg-gray-400 rounded-full"></span>
+                            {formatFileSize(doc.file_size)}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-4 w-4" />
+                            {formatDate(doc.uploaded_at)}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <User className="h-4 w-4" />
+                            {doc.uploaded_by}
+                          </span>
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
                       {getStatusIcon(doc.ocr_status)}
-                      <button className="p-1 hover:bg-gray-100 rounded">
-                        <Eye className="h-4 w-4 text-gray-400" />
+                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors group/btn">
+                        <Eye className="h-5 w-5 text-gray-400 group-hover/btn:text-[#4f46e5]" />
                       </button>
-                      <button className="p-1 hover:bg-gray-100 rounded">
-                        <Download className="h-4 w-4 text-gray-400" />
+                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors group/btn">
+                        <Download className="h-5 w-5 text-gray-400 group-hover/btn:text-[#4f46e5]" />
                       </button>
                     </div>
                   </div>
