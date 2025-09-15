@@ -5,9 +5,10 @@ import LoginForm from './LoginForm'
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: { message: string; error: string }
+  searchParams: Promise<{ message: string; error: string }>
 }) {
-  const supabase = createClient()
+  const resolvedSearchParams = await searchParams
+  const supabase = await createClient()
 
   const {
     data: { user },
@@ -25,7 +26,7 @@ export default async function LoginPage({
           <p className="mt-2 text-gray-600">Sign in to your account</p>
         </div>
         
-        <LoginForm searchParams={searchParams} />
+        <LoginForm searchParams={resolvedSearchParams} />
       </div>
     </div>
   )
