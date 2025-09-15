@@ -1058,7 +1058,6 @@ Notes & Instructions: ${buildingData.notes || 'No notes added yet'}
     // 📄 Document Context
     const wantStructured = isSummariseLike(prompt) || contextType === "document_analysis" || (Array.isArray(documentIds) && documentIds.length > 0);
     let usedDocs: Array<{id: string, file_name: string, text_content: string | null, type: string | null, created_at: string}> = [];
-    let documentContext = "";
     
     if (Array.isArray(documentIds) && documentIds.length > 0) {
       try {
