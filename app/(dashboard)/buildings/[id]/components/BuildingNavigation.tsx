@@ -28,7 +28,7 @@ const NAVIGATION_ITEMS = [
     label: 'Document Library',
     icon: FileText,
     href: '/documents',
-    description: 'Manage documents • Lease Lab included'
+    description: 'Upload & manage documents • AI-powered'
   },
   {
     key: 'compliance',

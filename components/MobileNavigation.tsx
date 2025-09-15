@@ -5,13 +5,14 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSupabase } from '@/components/SupabaseProvider';
 import { useRouter } from 'next/navigation';
-import { Menu, X, Bell, Settings, User, HelpCircle, LogOut, Home, Inbox, Building2, Shield, Megaphone, Wrench, Brain } from 'lucide-react';
+import { Menu, X, Bell, Settings, User, HelpCircle, LogOut, Home, Inbox, Building2, Shield, Megaphone, Wrench, Brain, FileText } from 'lucide-react';
 import BlocIQLogo from './BlocIQLogo';
 import { BlocIQButton } from '@/components/ui/blociq-button';
 import { BlocIQBadge } from '@/components/ui/blociq-badge';
 
 const navItems = [
   { label: "Home", icon: Home, href: "/home", comingSoon: false, description: "Dashboard overview" },
+  { label: "Document Library", icon: FileText, href: "/documents", comingSoon: false, description: "Upload & manage documents" },
   { label: "Buildings", icon: Building2, href: "/buildings", comingSoon: false, description: "Property portfolio" },
   { label: "Compliance", icon: Shield, href: "/compliance", comingSoon: false, description: "Regulatory tracking" },
   { label: "Communications", icon: Megaphone, href: "/communications", comingSoon: false, description: "Letter & email templates" },
