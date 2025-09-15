@@ -65,16 +65,6 @@ export default function SearchableUnitsTable({ units, buildingId }: SearchableUn
           >
             View All Units
           </a>
-          <div className="text-sm text-gray-500">
-            <a 
-              href={`/api/test-units?buildingId=${buildingId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-teal-600 hover:text-teal-700 underline"
-            >
-              Debug: Check database data
-            </a>
-          </div>
         </div>
       </div>
     )

@@ -45,7 +45,7 @@ export default function CleanupPage() {
     setSuccess(null)
 
     try {
-      const response = await fetch('/api/cleanup-test-data', {
+      const response = await fetch('/api/admin/cleanup-test-data', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -78,7 +78,7 @@ export default function CleanupPage() {
     setCleanupResults(null)
 
     try {
-      const response = await fetch('/api/cleanup-test-data', {
+      const response = await fetch('/api/admin/cleanup-test-data', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -233,16 +233,6 @@ export default function LeaseholdersTable({ buildingId, className = "" }: Leaseh
             >
               Try Again
             </button>
-            <div className="text-sm text-gray-500">
-              <a 
-                href={`/api/test-leaseholders?buildingId=${buildingId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-teal-600 hover:text-teal-700 underline"
-              >
-                Debug: Check leaseholders data
-              </a>
-            </div>
           </div>
         </div>
       </div>
@@ -313,16 +303,6 @@ export default function LeaseholdersTable({ buildingId, className = "" }: Leaseh
                 <p className="text-gray-600 mb-8 max-w-md mx-auto">
                   No leaseholders are currently associated with this building. Leaseholders will appear here once leases are added to units.
                 </p>
-                <div className="text-sm text-gray-500">
-                  <a 
-                    href={`/api/test-leaseholders?buildingId=${buildingId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-teal-600 hover:text-teal-700 underline"
-                  >
-                    Debug: Check leaseholders data
-                  </a>
-                </div>
               </div>
             ) : filteredLeaseholders.length === 0 ? (
               <div className="text-center py-12">

@@ -172,17 +172,6 @@ export default function BuildingUnitsClient({ building, units, buildingId }: Bui
             <p>Check the browser console for detailed debugging information.</p>
           </div>
           
-          {/* Debug Link */}
-          <div className="mt-4">
-            <a 
-              href={`/api/test-units?buildingId=${buildingId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors duration-200"
-            >
-              🔍 Debug: Test Units API
-            </a>
-          </div>
         </div>
       )}
 
