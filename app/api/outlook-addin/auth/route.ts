@@ -71,84 +71,64 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    // Add request timeout handling
-    const timeoutId = setTimeout(() => {
-      throw new Error('Request timed out');
-    }, 8000); // 8 second timeout
+    // Check required environment variables
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL environment variable');
+    }
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY environment variable');
+    }
 
     const body = await req.json();
-    clearTimeout(timeoutId);
-
-    // Check for email-based authentication bypass - simplified approach
+    
+    // Check for email-based authentication bypass
     if (body.bypass_auth && body.email) {
-      console.log('🔍 Attempting simplified email-based authentication for:', body.email);
-
-      // For development/testing, allow any email temporarily
-      if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 Attempting email-based authentication for:', body.email);
+      
+      const supabase = createSupabaseClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+      
+      console.log('🔍 Using profiles table for user lookup');
+      
+      // Look up user by email in Supabase
+      const { data: user, error: userError } = await supabase
+        .from('profiles')
+        .select('id, full_name, email')
+        .eq('email', body.email.toLowerCase())
+        .single();
+      
+      if (userError || !user) {
+        // User not found in profiles table - check if this might be a valid user
+        console.log('❌ User not found in profiles for email:', body.email);
+        console.log('Profile lookup error:', userError?.message);
+        
+        // Instead of using admin API, return appropriate response for unknown users
+        return NextResponse.json({ 
+          error: 'User not found', 
+          message: `No BlocIQ account found for ${body.email}. Please sign up first.`,
+          needsSignup: true
+        }, { status: 404 });
+      } else {
+        // User found in profiles
         const tempToken = Buffer.from(JSON.stringify({
-          user_id: 'dev-user-' + Date.now(),
-          email: body.email,
+          user_id: user.id,
+          email: user.email,
           timestamp: Date.now(),
           context: 'outlook_email_auth'
         })).toString('base64');
-
-        console.log('✅ Development mode: allowing any email');
+        
         return NextResponse.json({
           success: true,
           token: tempToken,
+          user_id: user.id,
           user: {
-            id: 'dev-user',
-            email: body.email,
-            name: body.email.split('@')[0]
+            id: user.id,
+            email: user.email,
+            name: user.full_name || body.display_name || user.email.split('@')[0]
           }
         });
-      }
-
-      // Production lookup (simplified)
-      if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-        try {
-          const supabase = createSupabaseClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.SUPABASE_SERVICE_ROLE_KEY!
-          );
-
-          const { data: user, error: userError } = await supabase
-            .from('users')
-            .select('id, full_name, email, first_name, last_name')
-            .eq('email', body.email.toLowerCase())
-            .single();
-
-          if (userError || !user) {
-            return NextResponse.json({
-              error: 'User not found',
-              message: `No BlocIQ account found for ${body.email}. Please sign up first.`,
-              needsSignup: true
-            }, { status: 404 });
-          }
-
-          const tempToken = Buffer.from(JSON.stringify({
-            user_id: user.id,
-            email: user.email,
-            timestamp: Date.now(),
-            context: 'outlook_email_auth'
-          })).toString('base64');
-
-          return NextResponse.json({
-            success: true,
-            token: tempToken,
-            user: {
-              id: user.id,
-              email: user.email,
-              name: user.full_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email.split('@')[0]
-            }
-          });
-        } catch (dbError) {
-          console.error('❌ Database error:', dbError);
-          return NextResponse.json({
-            error: 'Database connection failed',
-            message: 'Unable to verify user. Please try again later.'
-          }, { status: 500 });
-        }
       }
     }
     
