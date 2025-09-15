@@ -36,7 +36,7 @@
   <FormSettings>
     <Form xsi:type="ItemRead">
       <DesktopSettings>
-        <SourceLocation DefaultValue="https://www.blociq.co.uk/outlook-addin/chat/taskpane.html"/>
+        <SourceLocation DefaultValue="http://localhost:3000/outlook-addin/chat/taskpane.html"/>
         <RequestedHeight>450</RequestedHeight>
       </DesktopSettings>
     </Form>
@@ -150,8 +150,8 @@
         </bt:Images>
 
         <bt:Urls>
-          <bt:Url id="taskpaneUrl" DefaultValue="https://www.blociq.co.uk/outlook-addin/chat/taskpane.html"/>
-          <bt:Url id="functionFile" DefaultValue="https://www.blociq.co.uk/outlook-addin/reply/functions.html"/>
+          <bt:Url id="taskpaneUrl" DefaultValue="http://localhost:3000/outlook-addin/chat/taskpane.html"/>
+          <bt:Url id="functionFile" DefaultValue="http://localhost:3000/outlook-addin/reply/functions.html"/>
         </bt:Urls>
 
         <bt:ShortStrings>

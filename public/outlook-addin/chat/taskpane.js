@@ -57,7 +57,13 @@ async function authenticateWithEmail(email) {
     try {
         console.log('🔐 Authenticating with email:', email);
         
-        const response = await fetch('https://www.blociq.co.uk/api/outlook-addin/auth', {
+        const baseUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://www.blociq.co.uk';
+
+        // Create AbortController for timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+        const response = await fetch(`${baseUrl}/api/outlook-addin/auth`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -65,8 +71,11 @@ async function authenticateWithEmail(email) {
             body: JSON.stringify({
                 bypass_auth: true,
                 email: email
-            })
+            }),
+            signal: controller.signal
         });
+
+        clearTimeout(timeoutId);
         
         const data = await response.json();
         
@@ -88,7 +97,11 @@ async function authenticateWithEmail(email) {
         
     } catch (error) {
         console.error('❌ Authentication request failed:', error);
-        showError('Unable to authenticate. Please check your internet connection.');
+        if (error.name === 'AbortError') {
+            showError('Authentication request timed out. Please check your connection and try again.');
+        } else {
+            showError('Unable to authenticate. Please check your internet connection.');
+        }
     }
 }
 
@@ -153,9 +166,14 @@ async function sendMessage() {
     showLoading();
     
     try {
-        console.log('Making API request to:', 'https://www.blociq.co.uk/api/outlook-addin/ask-ai');
-        
-        const response = await fetch('https://www.blociq.co.uk/api/outlook-addin/ask-ai', {
+        const baseUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://www.blociq.co.uk';
+        console.log('Making API request to:', `${baseUrl}/api/outlook-addin/ask-ai`);
+
+        // Create AbortController for timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout for AI requests
+
+        const response = await fetch(`${baseUrl}/api/outlook-addin/ask-ai`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -165,8 +183,11 @@ async function sendMessage() {
                 token: authToken,
                 is_outlook_addin: true,
                 context: 'outlook-addin'
-            })
+            }),
+            signal: controller.signal
         });
+
+        clearTimeout(timeoutId);
 
         console.log('Response status:', response.status);
         console.log('Response headers:', Object.fromEntries(response.headers.entries()));
@@ -196,7 +217,11 @@ async function sendMessage() {
     } catch (error) {
         console.error('Error sending message:', error);
         hideLoading();
-        showError(`Sorry, I encountered an error: ${error.message}. Please try again or check your connection.`);
+        if (error.name === 'AbortError') {
+            showError(`Request timed out. The server may be busy. Please try again.`);
+        } else {
+            showError(`Sorry, I encountered an error: ${error.message}. Please try again or check your connection.`);
+        }
     }
 }
 

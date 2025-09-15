@@ -1,9 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getSupabaseClient() {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.warn('Supabase credentials not available for ai_logs');
+    return null;
+  }
+
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 export async function insertAiLog({
   user_id,
@@ -25,6 +32,12 @@ export async function insertAiLog({
   email_thread_id?: string;
 }): Promise<string | null> {
   try {
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      console.warn('Supabase not available, skipping ai_logs insert');
+      return null;
+    }
+
     const { data, error } = await supabase
       .from('ai_logs')
       .insert({
