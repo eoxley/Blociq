@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { useSupabase } from '@/components/SupabaseProvider';
-import { Bell, Settings, User, HelpCircle, ExternalLink, LogOut, Lock, Home, Brain, Microscope, Building2, Shield, Megaphone, Wrench, PoundSterling, HardHat, ClipboardList, Monitor } from 'lucide-react';
+import { Bell, Settings, User, HelpCircle, ExternalLink, LogOut, Lock, Home, Brain, Microscope, Building2, Shield, Megaphone, Wrench, PoundSterling, HardHat, ClipboardList, Monitor, FileText } from 'lucide-react';
 import BlocIQLogo from './BlocIQLogo';
 import { BlocIQBadge } from '@/components/ui/blociq-badge';
 import AgencySwitcher from './AgencySwitcher';
@@ -16,7 +16,7 @@ import { useLeaseSystemReadiness } from '@/hooks/useLeaseSystemReadiness';
 
 const navItems = [
   { label: "Home", icon: Home, href: "/home", comingSoon: false, description: "Dashboard overview", aiPowered: false },
-  { label: "Lease Lab", icon: Microscope, href: "/lease-lab", comingSoon: false, description: "Specialized lease analysis", aiPowered: true },
+  { label: "Document Library", icon: FileText, href: "/documents", comingSoon: false, description: "Upload & manage documents", aiPowered: true },
   { label: "Buildings", icon: Building2, href: "/buildings", comingSoon: false, description: "Property portfolio", aiPowered: false },
   { label: "Compliance", icon: Shield, href: "/compliance", comingSoon: false, description: "Regulatory tracking", aiPowered: true },
   { label: "Communications", icon: Megaphone, href: "/communications", comingSoon: false, description: "Letter & email templates", aiPowered: false },

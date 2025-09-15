@@ -4,10 +4,12 @@ import path from 'path';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
+  const resolvedParams = await params;
+
   try {
-    const filePath = params.path.join('/');
+    const filePath = resolvedParams.path.join('/');
     const fullPath = path.join(process.cwd(), 'public/outlook-addin', filePath);
 
     // Security check - ensure path is within the outlook-addin directory
@@ -44,7 +46,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error(`Error serving ${params.path}:`, error);
+    console.error(`Error serving ${resolvedParams.path}:`, error);
     return new NextResponse('File not found', { status: 404 });
   }
 }
