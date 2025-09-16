@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
-import { createClient } from '@/utils/supabase/server';
-import { cookies } from 'next/headers';
+import { createClient } from '@/lib/supabase/server';
 
 export async function GET() {
   try {
-    const supabase = createClient(cookies());
+    const supabase = await createClient();
     
     // Check authentication
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -40,7 +39,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const supabase = createClient(cookies());
+    const supabase = await createClient();
     
     // Check authentication
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();

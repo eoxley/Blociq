@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
-import { cookies } from 'next/headers';
+import { createClient } from '@/lib/supabase/server';
 
 export async function GET(request: NextRequest) {
   try {
     console.log('📊 Fetching detailed compliance data for portfolio...');
-    const supabase = createClient(cookies());
+    const supabase = await createClient();
     
     // Get the current user - Safe destructuring to prevent "Right side of assignment cannot be destructured" error
     const sessionResult = await supabase.auth.getSession();
