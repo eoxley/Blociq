@@ -32,6 +32,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabaseClient'
+import CommunicationsLog from '@/components/communications/CommunicationsLog'
 
 interface Unit {
   id: string
@@ -750,6 +751,18 @@ export default function LeaseholderInfoClient({
           </div>
         </div>
       </div>
+
+      {/* Communications Section */}
+      {leaseholder && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+          <CommunicationsLog
+            leaseholderId={leaseholder.id}
+            title={`Communications with ${leaseholder.full_name || 'Leaseholder'}`}
+            showFilters={true}
+            limit={50}
+          />
+        </div>
+      )}
 
       {/* Add/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

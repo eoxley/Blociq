@@ -35,11 +35,13 @@ export default function GenerateReplyAddin() {
         setStatus('loading')
         setMessage('Generating AI reply...')
 
-        // Get current email context
+        // Get current email context and metadata
         let emailContext = 'No email context available'
+        let emailMetadata: any = {}
 
         if (typeof Office !== 'undefined' && Office.context?.mailbox?.item) {
           try {
+            // Get email body
             await new Promise<void>((resolve, reject) => {
               Office.context.mailbox.item.body.getAsync('text', (result) => {
                 if (result.status === Office.AsyncResultStatus.Succeeded) {
@@ -51,6 +53,17 @@ export default function GenerateReplyAddin() {
                 }
               })
             })
+
+            // Get email metadata
+            const item = Office.context.mailbox.item
+            emailMetadata = {
+              subject: item.subject || 'No subject',
+              from: item.from?.emailAddress || item.sender?.emailAddress || 'Unknown sender',
+              to: item.to?.map((t: any) => t.emailAddress) || [],
+              cc: item.cc?.map((c: any) => c.emailAddress) || [],
+              messageId: item.internetMessageId || 'Unknown',
+              conversationId: item.conversationId || 'Unknown'
+            }
           } catch (contextError) {
             console.warn('Using fallback context due to error:', contextError)
             emailContext = 'Email context unavailable'
@@ -89,6 +102,41 @@ export default function GenerateReplyAddin() {
               }
             })
           })
+
+          // 📧 LOG OUTBOUND EMAIL TO COMMUNICATIONS_LOG
+          try {
+            setMessage('Logging communication...')
+
+            const logResponse = await fetch('/api/log-email', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                subject: emailMetadata.subject ? `Re: ${emailMetadata.subject}` : 'Reply (no subject)',
+                body: replyText,
+                recipients: [emailMetadata.from, ...emailMetadata.to, ...emailMetadata.cc].filter(Boolean),
+                direction: 'outbound',
+                metadata: {
+                  source: 'outlook_addin',
+                  original_message_id: emailMetadata.messageId,
+                  conversation_id: emailMetadata.conversationId,
+                  generated_by_ai: true,
+                  addin_version: '1.0'
+                }
+              }),
+            })
+
+            if (!logResponse.ok) {
+              console.warn('Failed to log outbound email:', await logResponse.text())
+            } else {
+              const logData = await logResponse.json()
+              console.log('✅ Outbound email logged successfully:', logData.id)
+            }
+          } catch (logError) {
+            console.warn('Error logging outbound email:', logError)
+            // Don't fail the main operation if logging fails
+          }
 
           setStatus('success')
           setMessage('AI reply generated and inserted successfully!')

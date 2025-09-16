@@ -34,6 +34,7 @@ import EmptyValue from '@/components/ui/EmptyValue'
 import Revealable from '@/components/ui/Revealable'
 import UnitsTable from '@/components/buildings/UnitsTable'
 import ActionTracker from '@/components/buildings/ActionTracker'
+import CommunicationsLog from '@/components/communications/CommunicationsLog'
 
 interface Building {
   id: string
@@ -532,6 +533,35 @@ export default function BuildingDetailClient({
 
       {/* Action Tracker Section */}
       <ActionTracker buildingId={buildingId} />
+
+      {/* Communications Section */}
+      <SectionCard className="group">
+        <div className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] px-4 py-3 rounded-t-2xl">
+          <div className="flex items-center justify-between text-white">
+            <div className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              <h3 className="font-semibold">Recent Communications</h3>
+            </div>
+            <Link
+              href={`/buildings/${buildingId}/communications`}
+              className="text-white/90 hover:text-white text-sm font-medium transition-colors"
+            >
+              View All Communications
+            </Link>
+          </div>
+          {/* Decorative elements */}
+          <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-full blur-xl"></div>
+          <div className="absolute bottom-0 left-4 w-8 h-8 bg-white/5 rounded-full blur-lg"></div>
+        </div>
+
+        <div className="p-4">
+          <CommunicationsLog
+            buildingId={buildingId}
+            showFilters={false}
+            limit={5}
+          />
+        </div>
+      </SectionCard>
 
       {/* Compliance Summary Section */}
       <SectionCard className="group">

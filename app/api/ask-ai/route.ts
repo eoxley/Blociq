@@ -221,13 +221,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Dynamic imports to prevent build-time execution
-    const { createClient } = await import('@/utils/supabase/server');
+    const { createClient } = await import('@/lib/supabase/server');
     const { default: OpenAI } = await import('openai');
     const { MAX_CHARS_PER_DOC, MAX_TOTAL_DOC_CHARS, truncate, isSummariseLike } = await import("../../../lib/ask/text");
     const { searchBuildingAndUnits, searchLeaseholderDirect } = await import('../../../lib/supabase/buildingSearch');
     const { searchEntireDatabase, formatSearchResultsForAI, extractRelevantContext } = await import('../../../lib/supabase/comprehensiveDataSearch');
+    const { getRecentCommunicationsForContext } = await import('../../../lib/utils/communications-logger');
 
-    const supabase = createClient(cookies());
+    const supabase = createClient();
     
     // Get current user (optional for public access) - Safe destructuring to prevent "Right side of assignment cannot be destructured" error
     let user = null;
@@ -755,6 +756,45 @@ Notes & Instructions: ${buildingData.notes || 'No notes added yet'}
       } catch (error) {
         console.warn('Could not fetch building context:', error);
       }
+    }
+
+    // 📧 COMMUNICATIONS CONTEXT
+    // Add recent communications for better context in responses
+    let communicationsContext = "";
+    try {
+      console.log('📧 Fetching recent communications for context...');
+
+      const recentCommunications = await getRecentCommunicationsForContext(building_id, 10);
+
+      if (recentCommunications.length > 0) {
+        console.log('✅ Found recent communications:', recentCommunications.length);
+
+        communicationsContext = `\n\nRecent Communications:
+${recentCommunications.map(comm => {
+  const direction = comm.direction === 'inbound' ? '📨 Received' : '📤 Sent';
+  const from = comm.direction === 'inbound'
+    ? (comm.leaseholder?.name ? `from ${comm.leaseholder.name}` : 'from leaseholder')
+    : (comm.leaseholder?.name ? `to ${comm.leaseholder.name}` : 'to leaseholder');
+  const building = comm.building?.name ? ` (${comm.building.name})` : '';
+  const date = new Date(comm.sent_at).toLocaleDateString('en-GB');
+
+  return `- ${direction} ${from}${building} - ${date}
+  Subject: ${comm.subject || 'No subject'}
+  ${comm.body ? comm.body.substring(0, 200) + (comm.body.length > 200 ? '...' : '') : 'No content'}`;
+}).join('\n\n')}
+
+`;
+
+        contextMetadata.communicationsCount = recentCommunications.length;
+        contextMetadata.hasInboundEmails = recentCommunications.some(c => c.direction === 'inbound');
+        contextMetadata.hasOutboundEmails = recentCommunications.some(c => c.direction === 'outbound');
+
+        // Add communications context to building context
+        buildingContext += communicationsContext;
+        console.log('✅ Added communications context to building information');
+      }
+    } catch (error) {
+      console.warn('Could not fetch communications context:', error);
     }
 
     // 📄 DOCUMENT RETRIEVAL FOR ASK BLOCIQ

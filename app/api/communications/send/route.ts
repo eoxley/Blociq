@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
-import { cookies } from 'next/headers'
+import { createClient } from '@/lib/supabase/server'
+import { logCommunication } from '@/lib/utils/communications-logger'
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient(cookies())
-    
+    const supabase = createClient()
+
     // Check authentication
     const { data: { session }, error: authError } = await supabase.auth.getSession()
     if (authError || !session) {
@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
       content,
       leaseholder_id,
       leaseholder_name,
+      building_id,
       building_name,
       unit_number,
       is_bulk = false
@@ -50,26 +51,23 @@ export async function POST(request: NextRequest) {
       is_bulk
     })
 
-    // Log the communication
-    const { error: logError } = await supabase
-      .from('communications_log')
-      .insert({
-        type: 'email',
-        leaseholder_id: leaseholder_id || 'unknown',
-        leaseholder_name: leaseholder_name || to_email,
-        building_name: building_name || 'Unknown',
-        unit_number: unit_number || 'Unknown',
-        subject,
-        content,
-        status: 'sent',
-        user_id: session.user.id,
-        created_at: new Date().toISOString()
-      })
-
-    if (logError) {
-      console.error('Error logging email communication:', logError)
-      // Don't fail the request if logging fails
-    }
+    // Log the outbound communication using the new logging system
+    await logCommunication({
+      building_id: building_id,
+      leaseholder_id: leaseholder_id,
+      user_id: session.user.id,
+      direction: 'outbound',
+      subject: subject,
+      body: content,
+      metadata: {
+        to_email,
+        leaseholder_name,
+        building_name,
+        unit_number,
+        is_bulk,
+        email_type: 'standard_communication'
+      }
+    })
 
     // Simulate email sending delay
     await new Promise(resolve => setTimeout(resolve, 1000))
@@ -96,7 +94,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient(cookies())
+    const supabase = createClient()
     
     // Check authentication
     const { data: { session }, error: authError } = await supabase.auth.getSession()

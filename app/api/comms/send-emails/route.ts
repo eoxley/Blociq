@@ -4,12 +4,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
-import { cookies } from 'next/headers';
+import { createClient } from '@/lib/supabase/server';
+import { logCommunication } from '@/lib/utils/communications-logger';
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = createClient(cookies());
+    const supabase = createClient();
     
     // Get current user
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -110,26 +110,25 @@ export async function POST(req: NextRequest) {
         console.log(`Sending email to ${recipient.email}: ${subject}`);
       }
       
-      // Log the communication
-      const { error: logError } = await supabase
-        .from('communications_log')
-        .insert({
-          type: 'email',
-          building_id: buildingId,
+      // Log the outbound communication using the new logging system
+      await logCommunication({
+        building_id: buildingId,
+        leaseholder_id: recipient.leaseholder_id,
+        user_id: user.id,
+        direction: 'outbound',
+        subject: subject,
+        body: html,
+        metadata: {
+          recipient_email: recipient.email,
+          recipient_name: recipient.leaseholder_name,
+          building_name: recipient.units?.buildings?.name,
+          unit_number: recipient.units?.unit_number,
           unit_id: recipient.units?.unit_id,
-          leaseholder_id: recipient.leaseholder_id,
-          subject: subject,
-          content: html,
-          sent_at: new Date().toISOString(),
-          sent_by: user.id,
-          building_name: recipient.units?.buildings?.name || 'Unknown',
-          leaseholder_name: recipient.leaseholder_name,
-          unit_number: recipient.units?.unit_number || 'Unknown'
-        });
-      
-      if (logError) {
-        console.error('Error logging communication:', logError);
-      }
+          template_id: templateId,
+          email_type: 'bulk_email',
+          test_mode: testMode
+        }
+      })
       
       sentEmails.push({
         recipient_id: recipient.leaseholder_id,
