@@ -170,13 +170,12 @@ export default function CompliancePage() {
         setComplianceData(debugAssets)
         console.log('🔧 Set debug compliance data:', debugAssets.length, 'assets')
       } else {
-        console.log('⚠️ No detailed data available, setting empty array')
-        setComplianceData([])
+        console.log('⚠️ No detailed data available, keeping existing compliance data')
+        // Don't clear existing data - just skip the update
       }
     } catch (err) {
       console.warn('Could not fetch detailed compliance data:', err)
-      // Don't throw error - continue with overview data only
-      setComplianceData([])
+      // Don't throw error and don't clear existing data - continue with what we have
     }
   }
 

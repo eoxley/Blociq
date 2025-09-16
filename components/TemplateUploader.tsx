@@ -74,15 +74,16 @@ export default function TemplateUploader({ onUploadComplete }: TemplateUploaderP
   });
 
   const extractFromDocx = async (file: File): Promise<ExtractedData> => {
-    // For now, we'll use a simple text extraction
-    // In production, you'd want to use a proper DOCX parser
-    const text = await file.text();
-    
+    // For now, we'll create a simple placeholder analysis without full DOCX parsing
+    // The actual content will be stored as binary and processed server-side
+    const arrayBuffer = await file.arrayBuffer();
+    const text = new TextDecoder().decode(arrayBuffer);
+
     // Extract placeholders using regex
     const placeholderRegex = /\{\{([^}]+)\}\}/g;
     const placeholders: string[] = [];
     let match;
-    
+
     while ((match = placeholderRegex.exec(text)) !== null) {
       const placeholder = match[1].trim();
       if (!placeholders.includes(placeholder)) {
@@ -90,8 +91,9 @@ export default function TemplateUploader({ onUploadComplete }: TemplateUploaderP
       }
     }
 
+    // Store filename and basic info instead of raw binary content
     return {
-      content: text,
+      content: `Template file: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`,
       placeholders: placeholders
     };
   };
@@ -125,7 +127,7 @@ export default function TemplateUploader({ onUploadComplete }: TemplateUploaderP
       const filePath = `templates/${filename}`;
 
       const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('templates')
+        .from('documents')
         .upload(filePath, uploadedFile, {
           contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
           upsert: false
@@ -137,13 +139,12 @@ export default function TemplateUploader({ onUploadComplete }: TemplateUploaderP
 
       // 2. Save template metadata to database
       const { data: template, error: dbError } = await supabase
-        .from('templates')
+        .from('communication_templates')
         .insert({
           name: formData.name,
           type: formData.type,
           description: formData.description,
-          storage_path: filePath,
-          content_text: extractedData.content,
+          body: extractedData.content,
           placeholders: extractedData.placeholders
         })
         .select()
