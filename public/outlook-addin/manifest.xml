@@ -7,7 +7,7 @@
   xsi:type="MailApp">
 
   <!-- General Add-in Information -->
-  <Id>8b8fe65f-2c9e-4d8a-b8c3-1234567890ab</Id>
+  <Id>4d0c84d9-b66b-44fc-ac47-4d956580ed15</Id>
   <Version>1.0.0.0</Version>
   <ProviderName>BlocIQ</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
@@ -21,9 +21,6 @@
   <!-- Icon URLs -->
   <IconUrl DefaultValue="https://www.blociq.co.uk/icons/icon-32.png" />
   <HighResolutionIconUrl DefaultValue="https://www.blociq.co.uk/icons/icon-64.png" />
-
-  <!-- Add-in Source Location -->
-  <SourceLocation DefaultValue="https://www.blociq.co.uk/addin/ask" />
 
   <!-- Support URL -->
   <SupportUrl DefaultValue="https://www.blociq.co.uk" />
