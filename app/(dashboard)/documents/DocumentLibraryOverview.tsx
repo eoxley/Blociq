@@ -57,58 +57,118 @@ export default function DocumentLibraryOverview() {
     try {
       setLoading(true)
       
-      // Fetch buildings with document counts
+      // Fetch buildings
       const { data: buildingsData, error: buildingsError } = await supabase
         .from('buildings')
-        .select(`
-          id,
-          name,
-          building_documents(count)
-        `)
+        .select('id, name')
         .order('name')
 
       if (buildingsError) throw buildingsError
 
-      const buildingsWithCounts = buildingsData?.map(building => ({
-        id: building.id,
-        name: building.name,
-        document_count: building.building_documents?.[0]?.count || 0,
-        recent_uploads: 0 // We'll calculate this separately
-      })) || []
+      // Fetch document counts for each building separately
+      const buildingsWithCounts = await Promise.all(
+        (buildingsData || []).map(async (building) => {
+          try {
+            const { count: documentCount, error: countError } = await supabase
+              .from('building_documents')
+              .select('id', { count: 'exact', head: true })
+              .eq('building_id', building.id)
+
+            if (countError) {
+              // Log error but don't show toast for missing tables
+              console.error(`Error counting documents for building ${building.id}:`, countError)
+              return {
+                id: building.id,
+                name: building.name,
+                document_count: 0,
+                recent_uploads: 0
+              }
+            }
+
+            return {
+              id: building.id,
+              name: building.name,
+              document_count: documentCount || 0,
+              recent_uploads: 0 // We'll calculate this separately
+            }
+          } catch (error) {
+            console.error(`Exception counting documents for building ${building.id}:`, error)
+            return {
+              id: building.id,
+              name: building.name,
+              document_count: 0,
+              recent_uploads: 0
+            }
+          }
+        })
+      )
 
       setBuildings(buildingsWithCounts)
 
-      // Fetch overall document stats
-      const { data: documentsData, error: documentsError } = await supabase
-        .from('building_documents')
-        .select('id, upload_date, ocr_status')
+      // Fetch overall document stats with better error handling
+      try {
+        const { data: documentsData, error: documentsError } = await supabase
+          .from('building_documents')
+          .select('id, upload_date, ocr_status')
 
-      if (documentsError) throw documentsError
+        if (documentsError) {
+          console.error('Error fetching document stats:', documentsError)
+          // Set default stats instead of throwing
+          setStats({
+            total_documents: 0,
+            recent_uploads: 0,
+            pending_ocr: 0,
+            completed_ocr: 0
+          })
+        } else {
+          const now = new Date()
+          const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
 
-      const now = new Date()
-      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+          const totalDocuments = documentsData?.length || 0
+          const recentUploads = documentsData?.filter(doc =>
+            doc.upload_date && new Date(doc.upload_date) > sevenDaysAgo
+          ).length || 0
+          const pendingOcr = documentsData?.filter(doc =>
+            doc.ocr_status === 'pending' || doc.ocr_status === 'processing'
+          ).length || 0
+          const completedOcr = documentsData?.filter(doc =>
+            doc.ocr_status === 'completed'
+          ).length || 0
 
-      const totalDocuments = documentsData?.length || 0
-      const recentUploads = documentsData?.filter(doc => 
-        new Date(doc.upload_date) > sevenDaysAgo
-      ).length || 0
-      const pendingOcr = documentsData?.filter(doc => 
-        doc.ocr_status === 'pending' || doc.ocr_status === 'processing'
-      ).length || 0
-      const completedOcr = documentsData?.filter(doc => 
-        doc.ocr_status === 'completed'
-      ).length || 0
-
-      setStats({
-        total_documents: totalDocuments,
-        recent_uploads: recentUploads,
-        pending_ocr: pendingOcr,
-        completed_ocr: completedOcr
-      })
+          setStats({
+            total_documents: totalDocuments,
+            recent_uploads: recentUploads,
+            pending_ocr: pendingOcr,
+            completed_ocr: completedOcr
+          })
+        }
+      } catch (statsError) {
+        console.error('Exception fetching document stats:', statsError)
+        // Set default stats on exception
+        setStats({
+          total_documents: 0,
+          recent_uploads: 0,
+          pending_ocr: 0,
+          completed_ocr: 0
+        })
+      }
 
     } catch (error) {
       console.error('Error fetching document library data:', error)
-      toast.error('Failed to load document library data')
+
+      // Set fallback data to prevent UI crashes
+      setBuildings([])
+      setStats({
+        total_documents: 0,
+        recent_uploads: 0,
+        pending_ocr: 0,
+        completed_ocr: 0
+      })
+
+      // Only show toast for unexpected errors, not missing tables
+      if (error instanceof Error && !error.message.includes('does not exist')) {
+        toast.error('Failed to load document library data')
+      }
     } finally {
       setLoading(false)
     }

@@ -91,11 +91,25 @@ export default function BuildingDocumentLibrary({ building }: { building: Buildi
         .eq('building_id', building.id)
         .order('uploaded_at', { ascending: false })
 
-      if (error) throw error
+      if (error) {
+        console.error('Database error fetching documents:', error)
+        // Don't show error toast for missing table, just log it
+        if (error.code !== 'PGRST106' && !error.message?.includes('does not exist')) {
+          toast.error('Failed to load documents')
+        }
+        setDocuments([])
+        return
+      }
+
       setDocuments(data || [])
     } catch (error) {
-      console.error('Error fetching documents:', error)
-      toast.error('Failed to load documents')
+      console.error('Unexpected error fetching documents:', error)
+      // Set empty array instead of showing error to prevent UI crashes
+      setDocuments([])
+      // Only show toast for unexpected errors, not missing tables
+      if (error instanceof Error && !error.message.includes('does not exist')) {
+        toast.error('Failed to load documents')
+      }
     }
   }
 

@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { cookies } from 'next/headers';
 
 export async function GET(req: NextRequest) {
   try {
-    const supabase = createClient(cookies());
+    const supabase = await createClient();
     
     // Get the current user
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -30,23 +29,43 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20');
     const offset = (page - 1) * limit;
 
-    // Fetch jobs for the user
+    // Check if document_jobs table exists and fetch jobs for the user
     console.log('🔍 Querying jobs for user_id:', user.id);
-    const query = supabase
-      .from('document_jobs')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
 
-    const { data: jobs, error: jobsError } = await query;
+    let jobs = [];
+    let jobsError = null;
+
+    try {
+      const { data, error } = await supabase
+        .from('document_jobs')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
+
+      jobs = data;
+      jobsError = error;
+    } catch (tableError) {
+      console.error('Document_jobs table may not exist:', tableError);
+      // Return empty array if table doesn't exist rather than error
+      jobs = [];
+      jobsError = null;
+    }
 
     if (jobsError) {
       console.error('Error fetching jobs:', jobsError);
-      return NextResponse.json({ 
-        error: 'Failed to fetch jobs',
-        message: 'Unable to retrieve job list. Please try again.'
-      }, { status: 500 });
+
+      // If it's a table not found error, return empty array instead of 500
+      if (jobsError.code === 'PGRST106' || jobsError.message?.includes('does not exist')) {
+        console.warn('Document_jobs table does not exist, returning empty array');
+        jobs = [];
+      } else {
+        return NextResponse.json({
+          error: 'Failed to fetch jobs',
+          message: 'Unable to retrieve job list. Please try again.',
+          details: jobsError.message
+        }, { status: 500 });
+      }
     }
 
     console.log('📋 Returning jobs from API:', jobs?.length || 0, 'jobs');

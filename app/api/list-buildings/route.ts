@@ -10,12 +10,17 @@ import { NextResponse } from 'next/server'
 
 export async function GET() {
   try {
-    const supabase = createClient()
-    
+    const supabase = await createClient()
+
     // Test authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+      console.error('Authentication error in list-buildings:', authError)
+      return NextResponse.json({
+        success: false,
+        error: 'Not authenticated',
+        buildings: []
+      }, { status: 401 })
     }
 
     console.log('🔍 Listing all buildings with dynamic unit counts...')
@@ -35,35 +40,55 @@ export async function GET() {
       }, { status: 500 })
     }
 
-    // Calculate unit counts dynamically for each building
-    const buildingsWithUnitCounts = await Promise.all(
+    // Calculate unit counts dynamically for each building with better error handling
+    const buildingsWithUnitCounts = await Promise.allSettled(
       (buildings || []).map(async (building) => {
-        // Count units where unit_number is not null for this building
-        const { count: unitCount, error: countError } = await supabase
-          .from('units')
-          .select('id', { count: 'exact', head: true })
-          .eq('building_id', building.id)
-          .not('unit_number', 'is', null)
+        try {
+          // Count units where unit_number is not null for this building
+          const { count: unitCount, error: countError } = await supabase
+            .from('units')
+            .select('id', { count: 'exact', head: true })
+            .eq('building_id', building.id)
+            .not('unit_number', 'is', null)
 
-        if (countError) {
-          console.error(`❌ Error counting units for building ${building.id}:`, countError)
+          if (countError) {
+            console.error(`❌ Error counting units for building ${building.id}:`, countError)
+            return {
+              ...building,
+              unit_count: 0 // Fallback to 0 if count fails
+            }
+          }
+
           return {
             ...building,
-            unit_count: 0 // Fallback to 0 if count fails
+            unit_count: unitCount || 0
           }
-        }
-
-        return {
-          ...building,
-          unit_count: unitCount || 0
+        } catch (error) {
+          console.error(`❌ Exception counting units for building ${building.id}:`, error)
+          return {
+            ...building,
+            unit_count: 0 // Fallback to 0 if exception occurs
+          }
         }
       })
     )
 
-    console.log('📋 Buildings found with dynamic unit counts:', buildingsWithUnitCounts)
+    // Process settled promises and extract successful results
+    const processedBuildings = buildingsWithUnitCounts
+      .map(result => {
+        if (result.status === 'fulfilled') {
+          return result.value
+        } else {
+          console.error('❌ Promise rejected for building unit count:', result.reason)
+          return null
+        }
+      })
+      .filter(building => building !== null)
+
+    console.log('📋 Buildings found with dynamic unit counts:', processedBuildings)
 
     // Ensure we always return an array
-    const safeBuildings = Array.isArray(buildingsWithUnitCounts) ? buildingsWithUnitCounts : []
+    const safeBuildings = Array.isArray(processedBuildings) ? processedBuildings : []
 
     return NextResponse.json({
       success: true,
