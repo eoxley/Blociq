@@ -85,50 +85,57 @@ function BuildingsList() {
 
   return (
     <div>
-      {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 py-20 mx-6 rounded-3xl shadow-2xl">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.05%22%3E%3Ccircle%20cx%3D%2230%22%20cy%3D%2230%22%20r%3D%222%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20"></div>
-        
-        <div className="relative z-10 max-w-6xl mx-auto text-center px-6">
-          <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-            Building Management
-          </h1>
-          <p className="text-xl md:text-2xl text-white/90 mb-10 max-w-3xl mx-auto leading-relaxed">
-            Manage your property portfolio, track compliance, and oversee building operations from one central dashboard.
-          </p>
-          
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10 max-w-4xl mx-auto">
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
-              <div className="text-3xl font-bold text-white mb-2">{combinedBuildings.length}</div>
-              <div className="text-white/80 text-sm">Total Buildings</div>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
-              <div className="text-3xl font-bold text-white mb-2">{hrbBuildings.length}</div>
-              <div className="text-white/80 text-sm">High-Risk Buildings</div>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
-              <div className="text-3xl font-bold text-white mb-2">{totalUnits}</div>
-              <div className="text-white/80 text-sm">Total Units</div>
-            </div>
-          </div>
-          
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button
-              onClick={() => alert('Building creation feature coming soon!')}
-              className="bg-gradient-to-r from-white to-white/90 hover:from-white/90 hover:to-white text-blue-600 px-10 py-4 rounded-2xl font-bold shadow-2xl hover:shadow-3xl transition-all duration-300 border-2 border-white/50 hover:border-white transform hover:scale-105"
-            >
-              <Plus className="h-6 w-6 mr-3 inline" />
-              Create New Building
-            </button>
-            <button className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white px-10 py-4 rounded-2xl font-bold shadow-xl hover:shadow-2xl transition-all duration-300 border-2 border-white/30 hover:border-white/50 transform hover:scale-105">
-              <Sparkles className="h-6 w-6 mr-3 inline" />
-              AI Building Assistant
-            </button>
+      {/* Hero Banner */}
+      <section className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] py-16 mx-6 rounded-3xl">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center">
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
+              Building Management
+            </h1>
+            <p className="text-xl text-white/90 max-w-3xl mx-auto leading-relaxed">
+              Manage your property portfolio, track compliance, and oversee building operations from one central dashboard.
+            </p>
           </div>
         </div>
+
+        {/* Decorative Elements */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+          <div className="absolute top-10 left-10 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-10 right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+        </div>
       </section>
+
+      {/* Stats Cards */}
+      <div className="max-w-7xl mx-auto px-6 -mt-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+          <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+            <div className="text-3xl font-bold text-gray-900 mb-2">{combinedBuildings.length}</div>
+            <div className="text-gray-600 text-sm">Total Buildings</div>
+          </div>
+          <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+            <div className="text-3xl font-bold text-gray-900 mb-2">{hrbBuildings.length}</div>
+            <div className="text-gray-600 text-sm">High-Risk Buildings</div>
+          </div>
+          <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+            <div className="text-3xl font-bold text-gray-900 mb-2">{totalUnits}</div>
+            <div className="text-gray-600 text-sm">Total Units</div>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-4 justify-center mb-10">
+          <button
+            onClick={() => alert('Building creation feature coming soon!')}
+            className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5"
+          >
+            <Plus className="h-5 w-5 mr-2 inline" />
+            Create New Building
+          </button>
+          <button className="bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
+            <Sparkles className="h-5 w-5 mr-2 inline" />
+            AI Building Assistant
+          </button>
+        </div>
+      </div>
 
       {/* Search and Create Section */}
       <div className="max-w-4xl mx-auto px-6 mb-12">

@@ -290,13 +290,10 @@ export default function MajorWorksPortfolio({ userData, filters }: MajorWorksPor
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Enhanced Hero Banner - BlocIQ Landing Page Style */}
-      <section className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] py-16">
+      {/* Hero Banner */}
+      <section className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] py-16 mx-6 rounded-3xl">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center">
-            <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-2xl">
-              <Construction className="h-10 w-10 text-white" />
-            </div>
             <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
               Major Works Portfolio
             </h1>
@@ -305,12 +302,11 @@ export default function MajorWorksPortfolio({ userData, filters }: MajorWorksPor
             </p>
           </div>
         </div>
-        
+
         {/* Decorative Elements */}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
           <div className="absolute top-10 left-10 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
           <div className="absolute bottom-10 right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
-          <div className="absolute top-1/2 left-1/4 w-24 h-24 bg-white/5 rounded-full blur-2xl"></div>
         </div>
       </section>
 

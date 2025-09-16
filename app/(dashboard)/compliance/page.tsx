@@ -389,51 +389,23 @@ export default function CompliancePage() {
   if (!loading && !error && (buildings.length === 0 || summary.total_assets === 0)) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#f8fafc] via-white to-[#f1f5f9]">
-        {/* Hero Banner with Master Brand Kit */}
-        <section className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-purple-600 to-blue-800 py-24 mx-6 mt-6 rounded-3xl shadow-2xl">
-          {/* Animated Background Elements */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <div className="absolute top-20 right-20 w-96 h-96 bg-white/5 rounded-full blur-3xl animate-pulse"></div>
-            <div className="absolute bottom-20 left-20 w-80 h-80 bg-white/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-white/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+        {/* Hero Banner */}
+        <section className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] py-16 mx-6 rounded-3xl">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="text-center">
+              <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
+                Compliance Overview
+              </h1>
+              <p className="text-xl text-white/90 max-w-3xl mx-auto leading-relaxed">
+                Manage your property compliance requirements with confidence
+              </p>
+            </div>
           </div>
-          
-          {/* Hero Content */}
-          <div className="relative z-10 max-w-7xl mx-auto px-6 text-center">
-            <div className="flex justify-center mb-8">
-              <div className="relative">
-                <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-3xl flex items-center justify-center shadow-2xl border border-white/30">
-                  <Shield className="h-10 w-10 text-white" />
-                </div>
-                <div className="absolute -top-2 -right-2 w-4 h-4 bg-yellow-400 rounded-full animate-pulse shadow-lg"></div>
-                <div className="absolute -bottom-2 -left-2 w-3 h-3 bg-cyan-400 rounded-full animate-pulse shadow-lg" style={{ animationDelay: '0.5s' }}></div>
-              </div>
-            </div>
-            
-            <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-              Compliance Overview
-            </h1>
-            
-            <p className="text-xl md:text-2xl text-blue-100 mb-8 max-w-3xl mx-auto leading-relaxed">
-              Manage your property compliance requirements with confidence
-            </p>
-            
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <div className="flex items-center gap-2 text-blue-100">
-                <Shield className="h-5 w-5" />
-                <span className="text-sm font-medium">Asset Management</span>
-              </div>
-              <div className="hidden sm:block w-1 h-1 bg-blue-300 rounded-full"></div>
-              <div className="flex items-center gap-2 text-blue-100">
-                <Calendar className="h-5 w-5" />
-                <span className="text-sm font-medium">Due Date Tracking</span>
-              </div>
-              <div className="hidden sm:block w-1 h-1 bg-blue-300 rounded-full"></div>
-              <div className="flex items-center gap-2 text-blue-100">
-                <AlertTriangle className="h-5 w-5" />
-                <span className="text-sm font-medium">Risk Monitoring</span>
-              </div>
-            </div>
+
+          {/* Decorative Elements */}
+          <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+            <div className="absolute top-10 left-10 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
+            <div className="absolute bottom-10 right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
           </div>
         </section>
 
@@ -518,53 +490,52 @@ export default function CompliancePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
-      {/* Modern Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] py-16 mx-6 mt-6 rounded-3xl shadow-2xl">
-        <div className="absolute inset-0 bg-black/10"></div>
-        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-40 h-40 bg-white/5 rounded-full blur-3xl"></div>
-        
-        <div className="relative z-10 max-w-7xl mx-auto px-8 text-center">
-          <div className="flex justify-center mb-8">
-            <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-2xl border border-white/30">
-              <Shield className="h-10 w-10 text-white" />
+      {/* Hero Banner */}
+      <section className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] py-16 mx-6 rounded-3xl">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center">
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
+              Compliance Dashboard
+            </h1>
+            <p className="text-xl text-white/90 max-w-3xl mx-auto leading-relaxed">
+              Monitor compliance status across your property portfolio with intelligent tracking and automated alerts
+            </p>
+          </div>
+        </div>
+
+        {/* Decorative Elements */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+          <div className="absolute top-10 left-10 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-10 right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+        </div>
+      </section>
+
+      {/* Quick Stats */}
+      {summary.total_buildings > 0 && (
+        <div className="max-w-7xl mx-auto px-6 -mt-8 mb-16">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+            <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+              <Building2 className="h-8 w-8 text-gray-600 mx-auto mb-2" />
+              <p className="text-2xl font-bold text-gray-900">{summary.total_buildings}</p>
+              <p className="text-gray-600 text-sm">Properties</p>
+            </div>
+            <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+              <Shield className="h-8 w-8 text-gray-600 mx-auto mb-2" />
+              <p className="text-2xl font-bold text-gray-900">{summary.total_assets}</p>
+              <p className="text-gray-600 text-sm">Assets</p>
+            </div>
+            <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+              <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
+              <p className="text-2xl font-bold text-gray-900">{summary.compliant_count}</p>
+              <p className="text-gray-600 text-sm">Compliant</p>
+            </div>
+            <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+              <TrendingUp className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+              <p className="text-2xl font-bold text-gray-900">{summary.compliance_percentage}%</p>
+              <p className="text-gray-600 text-sm">Success Rate</p>
             </div>
           </div>
-          
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-6 drop-shadow-lg">
-            Compliance Dashboard
-          </h1>
-          
-          <p className="text-xl text-white/90 mb-8 max-w-3xl mx-auto">
-            Monitor compliance status across your property portfolio with intelligent tracking and automated alerts
-          </p>
-          
-          {/* Quick Stats */}
-          {summary.total_buildings > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto mb-8">
-              <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-6 border border-white/30">
-                <Building2 className="h-8 w-8 text-white mx-auto mb-2" />
-                <p className="text-2xl font-bold text-white">{summary.total_buildings}</p>
-                <p className="text-white/80 text-sm">Properties</p>
-              </div>
-              <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-6 border border-white/30">
-                <Shield className="h-8 w-8 text-white mx-auto mb-2" />
-                <p className="text-2xl font-bold text-white">{summary.total_assets}</p>
-                <p className="text-white/80 text-sm">Assets</p>
-              </div>
-              <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-6 border border-white/30">
-                <CheckCircle className="h-8 w-8 text-white mx-auto mb-2" />
-                <p className="text-2xl font-bold text-white">{summary.compliant_count}</p>
-                <p className="text-white/80 text-sm">Compliant</p>
-              </div>
-              <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-6 border border-white/30">
-                <TrendingUp className="h-8 w-8 text-white mx-auto mb-2" />
-                <p className="text-2xl font-bold text-white">{summary.compliance_percentage}%</p>
-                <p className="text-white/80 text-sm">Success Rate</p>
-              </div>
-            </div>
-          )}
-          
+
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
               onClick={() => {
@@ -574,19 +545,19 @@ export default function CompliancePage() {
                   router.push('/buildings');
                 }
               }}
-              className="px-8 py-3 bg-white text-[#4f46e5] rounded-xl font-semibold hover:bg-white/90 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5"
             >
               Setup Compliance
             </button>
-            <button 
+            <button
               onClick={fetchComplianceData}
-              className="px-8 py-3 bg-white/20 backdrop-blur-sm text-white rounded-xl font-semibold hover:bg-white/30 transition-all duration-200 border border-white/30"
+              className="bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5"
             >
               Refresh Data
             </button>
           </div>
         </div>
-      </section>
+      )}
 
       {/* Main Content Section */}
       <div className="max-w-7xl mx-auto px-6 py-16">
