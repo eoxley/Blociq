@@ -62,6 +62,7 @@ type PropertyEvent = {
 type Building = {
   id: number
   name: string
+  address?: string
 }
 
 type CalendarEvent = {
@@ -350,7 +351,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     return buildings.map(building => ({
       id: building.id.toString(),
       name: building.name,
-      address: building.address
+      address: building.address || '' // Handle missing address property
     }))
   }
 
@@ -405,7 +406,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
       const data = await response.json()
       console.log('🏢 Buildings data:', data)
-      setBuildings(data || [])
+      // API returns buildings wrapped in an object with buildings property
+      setBuildings(data.buildings || [])
     } catch (error) {
       console.warn('⚠️ Error in fetchBuildings:', error)
       setBuildings([])
