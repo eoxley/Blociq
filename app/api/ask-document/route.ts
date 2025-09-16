@@ -32,7 +32,8 @@ export async function POST(request: NextRequest) {
     console.log("🏢 Building ID:", buildingId);
     console.log("📋 Document type filter:", documentType);
 
-    const supabase = createServerComponentClient({ cookies });
+    const cookieStore = await cookies()
+    const supabase = createServerComponentClient({ cookies: () => cookieStore });
 
     // Get current user for RLS
     const { data: { user } } = await supabase.auth.getUser();

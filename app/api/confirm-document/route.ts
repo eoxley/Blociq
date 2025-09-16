@@ -4,7 +4,8 @@ import { cookies } from 'next/headers'
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createServerComponentClient({ cookies })
+    const cookieStore = await cookies()
+    const supabase = createServerComponentClient({ cookies: () => cookieStore })
     
     // Check authentication
     const { data: { user } } = await supabase.auth.getUser()
@@ -82,12 +83,13 @@ export async function POST(request: NextRequest) {
 }
 
 async function linkToComplianceAsset(
-  buildingId: string, 
-  documentId: string, 
-  complianceAssetType: string, 
+  buildingId: string,
+  documentId: string,
+  complianceAssetType: string,
   nextDueDate: string | null
 ) {
-  const supabase = createServerComponentClient({ cookies })
+  const cookieStore = await cookies()
+  const supabase = createServerComponentClient({ cookies: () => cookieStore })
 
   try {
     // Find the relevant compliance asset

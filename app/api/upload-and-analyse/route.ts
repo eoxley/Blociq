@@ -61,8 +61,9 @@ export async function POST(request: NextRequest) {
     console.log("📄 Processing PDF:", file.name)
 
     // 1. Upload file to Supabase storage
-    const supabase = createServerComponentClient({ cookies })
-    
+    const cookieStore = await cookies()
+    const supabase = createServerComponentClient({ cookies: () => cookieStore })
+
     // Get current user for storage path
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {

@@ -20,6 +20,7 @@ import { useSupabase } from '@/components/SupabaseProvider'
 import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui/blociq-card'
 import { BlocIQBadge } from '@/components/ui/blociq-badge'
 import { toast } from 'sonner'
+import DocumentUploadModal from '@/components/documents/DocumentUploadModal'
 
 interface MajorWorksDocument {
   id: string
@@ -39,6 +40,7 @@ export default function MajorWorksDocumentsPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterType, setFilterType] = useState('all')
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
 
   useEffect(() => {
     fetchMajorWorksDocuments()
@@ -190,6 +192,14 @@ export default function MajorWorksDocumentsPage() {
           <BlocIQBadge variant="secondary">
             {filteredDocuments.length} document{filteredDocuments.length !== 1 ? 's' : ''}
           </BlocIQBadge>
+
+          <button
+            onClick={() => setIsUploadModalOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+          >
+            <Upload className="h-4 w-4" />
+            Upload
+          </button>
         </div>
       </div>
 
@@ -206,13 +216,13 @@ export default function MajorWorksDocumentsPage() {
                   : 'Upload project documentation to get started'
                 }
               </p>
-              <Link
-                href="/buildings"
+              <button
+                onClick={() => setIsUploadModalOpen(true)}
                 className="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
               >
                 <Upload className="h-4 w-4 mr-2" />
                 Upload Documents
-              </Link>
+              </button>
             </BlocIQCardContent>
           </BlocIQCard>
         ) : (
@@ -282,6 +292,20 @@ export default function MajorWorksDocumentsPage() {
           ))
         )}
       </div>
+
+      {/* Upload Modal */}
+      <DocumentUploadModal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+        documentCategory="major-works"
+        onUploadComplete={(documents) => {
+          setIsUploadModalOpen(false)
+          // Refresh the documents list
+          fetchMajorWorksDocuments()
+          toast.success(`Successfully uploaded ${documents.length} document(s)`)
+        }}
+        acceptedFileTypes={['.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx', '.xlsx', '.csv', '.dwg']}
+      />
     </div>
   )
 }

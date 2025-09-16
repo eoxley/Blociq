@@ -7,7 +7,8 @@ import { cookies } from 'next/headers'
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createServerComponentClient({ cookies })
+    const cookieStore = await cookies()
+    const supabase = createServerComponentClient({ cookies: () => cookieStore })
     
     // Check authentication
     const { data: { user } } = await supabase.auth.getUser()
@@ -35,7 +36,8 @@ export async function GET(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const supabase = createServerComponentClient({ cookies })
+    const cookieStore = await cookies()
+    const supabase = createServerComponentClient({ cookies: () => cookieStore })
     
     // Check authentication
     const { data: { user } } = await supabase.auth.getUser()

@@ -21,6 +21,7 @@ import { useSupabase } from '@/components/SupabaseProvider'
 import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui/blociq-card'
 import { BlocIQBadge } from '@/components/ui/blociq-badge'
 import { toast } from 'sonner'
+import DocumentUploadModal from '@/components/documents/DocumentUploadModal'
 
 interface GeneralDocument {
   id: string
@@ -40,6 +41,7 @@ export default function GeneralDocumentsPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterType, setFilterType] = useState('all')
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
 
   useEffect(() => {
     fetchGeneralDocuments()
@@ -215,6 +217,14 @@ export default function GeneralDocumentsPage() {
           <BlocIQBadge variant="secondary">
             {filteredDocuments.length} document{filteredDocuments.length !== 1 ? 's' : ''}
           </BlocIQBadge>
+
+          <button
+            onClick={() => setIsUploadModalOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+          >
+            <Upload className="h-4 w-4" />
+            Upload
+          </button>
         </div>
       </div>
 
@@ -231,13 +241,13 @@ export default function GeneralDocumentsPage() {
                   : 'Upload general documents to get started'
                 }
               </p>
-              <Link
-                href="/buildings"
+              <button
+                onClick={() => setIsUploadModalOpen(true)}
                 className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
               >
                 <Upload className="h-4 w-4 mr-2" />
                 Upload Documents
-              </Link>
+              </button>
             </BlocIQCardContent>
           </BlocIQCard>
         ) : (
@@ -304,6 +314,20 @@ export default function GeneralDocumentsPage() {
           })
         )}
       </div>
+
+      {/* Upload Modal */}
+      <DocumentUploadModal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+        documentCategory="general"
+        onUploadComplete={(documents) => {
+          setIsUploadModalOpen(false)
+          // Refresh the documents list
+          fetchGeneralDocuments()
+          toast.success(`Successfully uploaded ${documents.length} document(s)`)
+        }}
+        acceptedFileTypes={['.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx', '.xlsx', '.csv', '.txt']}
+      />
     </div>
   )
 }
