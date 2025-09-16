@@ -1,8 +1,8 @@
-import { createClient } from '@/utils/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 
 export async function listLeaseJobs(userId: string, limit = 50) {
   try {
-    const supa = createClient();
+    const supa = await createClient();
     const { data, error } = await supa
       .from("lease_processing_jobs")
       .select(`
@@ -29,7 +29,7 @@ export async function listLeaseJobs(userId: string, limit = 50) {
 
 export async function getCompletedAndFailedJobs(userId: string, limit = 20) {
   try {
-    const supa = createClient();
+    const supa = await createClient();
     const { data, error } = await supa
       .from("lease_processing_jobs")
       .select(`
@@ -57,7 +57,7 @@ export async function getCompletedAndFailedJobs(userId: string, limit = 20) {
 
 export async function getLeaseJobById(jobId: string, userId: string) {
   try {
-    const supa = createClient();
+    const supa = await createClient();
     const { data, error } = await supa
       .from("lease_processing_jobs")
       .select('*')

@@ -1092,19 +1092,143 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
           </div>
         </div>
 
-        {/* Search Section - Full Width */}
-        <div className="bg-white rounded-2xl shadow-lg border-0 p-6">
-          <div className="text-center">
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">Search Properties & Documents</h2>
-            <div className="relative max-w-2xl mx-auto">
-              <input
-                type="text"
-                placeholder="Search for properties, documents, tenants..."
-                className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-              <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                <HelpCircle className="h-5 w-5 text-gray-400" />
+        {/* 🧠 Ask BlocIQ Widget - Full Width */}
+        <div className="bg-white rounded-2xl shadow-lg border-0 overflow-hidden">
+          <div className={`relative transition-all duration-500 ${showChat ? 'w-full' : 'w-full'}`}>
+            {/* Header Section with Brand Gradient */}
+            <div className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] p-8 relative overflow-hidden">
+              {/* Decorative Background Elements */}
+              <div className="absolute inset-0">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
+                <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
               </div>
+
+              {/* Header Content */}
+              <div className="relative z-10">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                      <Brain className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-white mb-1">Ask BlocIQ</h2>
+                      <p className="text-white/90">Your AI property management assistant</p>
+                    </div>
+                  </div>
+                  {showChat && (
+                    <button
+                      onClick={() => setShowChat(false)}
+                      className="text-white/80 hover:text-white transition-colors p-2 rounded-lg hover:bg-white/10"
+                    >
+                      <Minimize2 className="h-5 w-5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Chat Interface or Input */}
+            <div className="p-6">
+              {!showChat ? (
+                <div>
+                  {/* Example Prompts */}
+                  <div className="mb-6">
+                    <h3 className="text-sm font-medium text-gray-700 mb-3">Try asking:</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {[
+                        "What are my upcoming compliance deadlines?",
+                        "Show me all properties with recent issues",
+                        "What emails need my attention today?",
+                        "Generate a summary of this week's events"
+                      ].map((prompt, index) => (
+                        <button
+                          key={index}
+                          onClick={() => handleExampleClick(prompt)}
+                          className="text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors text-sm text-gray-700 hover:text-gray-900"
+                        >
+                          {prompt}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Input Field */}
+                  <div className="relative">
+                    <input
+                      ref={askInputRef}
+                      type="text"
+                      value={askInput}
+                      onChange={(e) => setAskInput(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder="Ask BlocIQ anything about your properties, compliance, or tenants..."
+                      className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      disabled={isSubmitting}
+                    />
+                    <button
+                      onClick={() => handleAskSubmit(askInput)}
+                      disabled={isSubmitting || !askInput.trim()}
+                      className="absolute inset-y-0 right-0 flex items-center pr-3"
+                    >
+                      {isSubmitting ? (
+                        <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
+                      ) : (
+                        <Send className="h-5 w-5 text-blue-500 hover:text-blue-600 transition-colors" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Chat Messages */}
+                  <div className="h-96 overflow-y-auto space-y-4 pr-2">
+                    {messages.map((message, index) => (
+                      <div
+                        key={index}
+                        className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div
+                          className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                            message.sender === 'user'
+                              ? 'bg-blue-500 text-white'
+                              : 'bg-gray-100 text-gray-900'
+                          }`}
+                        >
+                          <p className="text-sm">{message.text}</p>
+                          <p className="text-xs opacity-70 mt-1">
+                            {message.timestamp.toLocaleTimeString()}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                    <div ref={messagesEndRef} />
+                  </div>
+
+                  {/* Input at bottom of chat */}
+                  <div className="relative mt-4 pt-4 border-t">
+                    <input
+                      ref={askInputRef}
+                      type="text"
+                      value={askInput}
+                      onChange={(e) => setAskInput(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder="Continue the conversation..."
+                      className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      disabled={isSubmitting}
+                    />
+                    <button
+                      onClick={() => handleAskSubmit(askInput)}
+                      disabled={isSubmitting || !askInput.trim()}
+                      className="absolute inset-y-0 right-0 flex items-center pr-3"
+                    >
+                      {isSubmitting ? (
+                        <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
+                      ) : (
+                        <Send className="h-5 w-5 text-blue-500 hover:text-blue-600 transition-colors" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
