@@ -22,8 +22,11 @@
   <IconUrl DefaultValue="https://www.blociq.co.uk/icons/icon-32.png" />
   <HighResolutionIconUrl DefaultValue="https://www.blociq.co.uk/icons/icon-64.png" />
 
-  <!-- Function File -->
-  <FunctionFile resid="FunctionFile" />
+  <!-- Add-in Source Location - REQUIRED -->
+  <SourceLocation DefaultValue="https://www.blociq.co.uk/addin/reply" />
+
+  <!-- Support URL - REQUIRED -->
+  <SupportUrl DefaultValue="https://www.blociq.co.uk" />
 
   <!-- Add-in Permissions -->
   <Permissions>ReadWriteMailbox</Permissions>
