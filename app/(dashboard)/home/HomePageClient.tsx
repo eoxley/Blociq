@@ -859,10 +859,12 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     await loadOutlookEvents()
   }
 
-  // Scroll to bottom of messages
+  // Scroll to bottom of messages only when chat is open
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+    if (showChat && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [messages, showChat])
 
   // Handle Ask BlocIQ submission
   const handleAskSubmit = async (prompt: string) => {
@@ -968,12 +970,6 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     askInputRef.current?.focus()
   }
 
-  // Auto-scroll to bottom when new messages are added
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
-    }
-  }, [messages])
 
   // Preload compliance summary on component mount
   useEffect(() => {
@@ -1111,19 +1107,15 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
             </div>
           </div>
 
-          {/* Calendar Status */}
+          {/* Active Tasks */}
           <div className="bg-white rounded-2xl shadow-lg border-0 p-6 hover:shadow-xl transition-shadow">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-medium text-gray-600 mb-1">Calendar Status</h3>
-                <p className="text-2xl font-bold text-gray-900">{outlookConnected ? 'Connected' : 'Not Connected'}</p>
+                <h3 className="text-sm font-medium text-gray-600 mb-1">Active Tasks</h3>
+                <p className="text-2xl font-bold text-gray-900">-</p>
               </div>
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${outlookConnected ? 'bg-green-100' : 'bg-red-100'}`}>
-                {outlookConnected ? (
-                  <CheckCircle className="h-6 w-6 text-green-600" />
-                ) : (
-                  <AlertCircle className="h-6 w-6 text-red-600" />
-                )}
+              <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+                <Clock className="h-6 w-6 text-orange-600" />
               </div>
             </div>
           </div>
