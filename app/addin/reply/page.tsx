@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import Script from 'next/script';
 import { useSearchParams } from 'next/navigation';
 
-export default function GenerateReplyTaskpane() {
+function GenerateReplyContent() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedReply, setGeneratedReply] = useState('');
   const [error, setError] = useState('');
@@ -171,108 +171,132 @@ export default function GenerateReplyTaskpane() {
   };
 
   return (
+    <div className="h-screen flex flex-col bg-white">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 text-center shadow-lg">
+        <h1 className="text-lg font-semibold m-0">⚡ Generate Reply</h1>
+        <p className="text-xs opacity-90 mt-1 mb-0">AI-powered email response generation</p>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 flex flex-col p-5 overflow-hidden">
+        {mode === 'generating' && isGenerating && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 text-center">
+            <div className="w-8 h-8 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin mx-auto mb-3"></div>
+            <p className="text-blue-800 font-medium">Generating your reply...</p>
+            <p className="text-blue-600 text-sm mt-1">Analyzing email content and crafting response</p>
+          </div>
+        )}
+
+        {!mode && !isGenerating && !generatedReply && (
+          <div className="text-center py-8">
+            <div className="text-6xl mb-4">🤖</div>
+            <h2 className="text-xl font-semibold text-gray-800 mb-3">Ready to Generate</h2>
+            <p className="text-gray-600 mb-6 leading-relaxed">
+              I'll analyze the current email and generate a professional reply for you.
+              Click the button below to get started.
+            </p>
+            <button
+              onClick={generateReplyFromEmail}
+              disabled={!officeReady}
+              className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-3 rounded-lg font-medium transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {officeReady ? 'Generate Reply' : 'Loading...'}
+            </button>
+          </div>
+        )}
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+            <div className="flex items-start">
+              <span className="text-red-500 text-xl mr-3">⚠️</span>
+              <div>
+                <h3 className="font-semibold text-red-800">Error</h3>
+                <p className="text-red-700 text-sm mt-1">{error}</p>
+                <button
+                  onClick={regenerateReply}
+                  className="mt-3 bg-red-100 text-red-800 px-4 py-2 rounded text-sm hover:bg-red-200 transition-colors"
+                >
+                  Try Again
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {generatedReply && (
+          <div className="flex-1 flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-gray-800">Generated Reply</h3>
+              <button
+                onClick={regenerateReply}
+                className="text-indigo-600 text-sm hover:text-indigo-800 transition-colors"
+              >
+                🔄 Regenerate
+              </button>
+            </div>
+            
+            <div className="flex-1 bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4 overflow-y-auto">
+              <pre className="whitespace-pre-wrap text-sm text-gray-800 font-sans">
+                {generatedReply}
+              </pre>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={useGeneratedReply}
+                className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-lg font-medium transition-all hover:shadow-lg"
+              >
+                ✉️ Use This Reply
+              </button>
+              <button
+                onClick={regenerateReply}
+                className="px-6 bg-gray-100 text-gray-700 py-3 rounded-lg font-medium border border-gray-300 transition-all hover:bg-gray-200"
+              >
+                🔄 Regenerate
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="border-t border-gray-200 p-3 bg-gray-50 text-center">
+        <p className="text-xs text-gray-500">
+          💡 The generated reply will open in a new compose window for you to review and edit
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// Loading fallback component
+function LoadingFallback() {
+  return (
+    <div className="h-screen flex flex-col bg-white">
+      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 text-center shadow-lg">
+        <h1 className="text-lg font-semibold m-0">⚡ Generate Reply</h1>
+        <p className="text-xs opacity-90 mt-1 mb-0">AI-powered email response generation</p>
+      </div>
+      <div className="flex-1 flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-indigo-300 border-t-indigo-600 rounded-full animate-spin"></div>
+      </div>
+    </div>
+  );
+}
+
+// Main component with Suspense wrapper
+export default function GenerateReplyTaskpane() {
+  return (
     <>
       <Script 
         src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js" 
         strategy="beforeInteractive"
       />
       
-      <div className="h-screen flex flex-col bg-white">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 text-center shadow-lg">
-          <h1 className="text-lg font-semibold m-0">⚡ Generate Reply</h1>
-          <p className="text-xs opacity-90 mt-1 mb-0">AI-powered email response generation</p>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 flex flex-col p-5 overflow-hidden">
-          {mode === 'generating' && isGenerating && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 text-center">
-              <div className="w-8 h-8 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin mx-auto mb-3"></div>
-              <p className="text-blue-800 font-medium">Generating your reply...</p>
-              <p className="text-blue-600 text-sm mt-1">Analyzing email content and crafting response</p>
-            </div>
-          )}
-
-          {!mode && !isGenerating && !generatedReply && (
-            <div className="text-center py-8">
-              <div className="text-6xl mb-4">🤖</div>
-              <h2 className="text-xl font-semibold text-gray-800 mb-3">Ready to Generate</h2>
-              <p className="text-gray-600 mb-6 leading-relaxed">
-                I'll analyze the current email and generate a professional reply for you.
-                Click the button below to get started.
-              </p>
-              <button
-                onClick={generateReplyFromEmail}
-                disabled={!officeReady}
-                className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-3 rounded-lg font-medium transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {officeReady ? 'Generate Reply' : 'Loading...'}
-              </button>
-            </div>
-          )}
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-              <div className="flex items-start">
-                <span className="text-red-500 text-xl mr-3">⚠️</span>
-                <div>
-                  <h3 className="font-semibold text-red-800">Error</h3>
-                  <p className="text-red-700 text-sm mt-1">{error}</p>
-                  <button
-                    onClick={regenerateReply}
-                    className="mt-3 bg-red-100 text-red-800 px-4 py-2 rounded text-sm hover:bg-red-200 transition-colors"
-                  >
-                    Try Again
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {generatedReply && (
-            <div className="flex-1 flex flex-col">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-gray-800">Generated Reply</h3>
-                <button
-                  onClick={regenerateReply}
-                  className="text-indigo-600 text-sm hover:text-indigo-800 transition-colors"
-                >
-                  🔄 Regenerate
-                </button>
-              </div>
-              
-              <div className="flex-1 bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4 overflow-y-auto">
-                <pre className="whitespace-pre-wrap text-sm text-gray-800 font-sans">
-                  {generatedReply}
-                </pre>
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={useGeneratedReply}
-                  className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-lg font-medium transition-all hover:shadow-lg"
-                >
-                  ✉️ Use This Reply
-                </button>
-                <button
-                  onClick={regenerateReply}
-                  className="px-6 bg-gray-100 text-gray-700 py-3 rounded-lg font-medium border border-gray-300 transition-all hover:bg-gray-200"
-                >
-                  🔄 Regenerate
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="border-t border-gray-200 p-3 bg-gray-50 text-center">
-          <p className="text-xs text-gray-500">
-            💡 The generated reply will open in a new compose window for you to review and edit
-          </p>
-        </div>
-      </div>
+      <Suspense fallback={<LoadingFallback />}>
+        <GenerateReplyContent />
+      </Suspense>
     </>
   );
 }
