@@ -454,7 +454,13 @@ export default function BuildingCompliancePage() {
             )}
           </div>
         </div>
-      </div>
+
+        {/* Decorative Elements */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+          <div className="absolute top-10 left-10 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-10 right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+        </div>
+      </section>
 
       {/* Compliance Overview Section */}
       <div className="max-w-7xl mx-auto px-6 -mt-8 relative z-10">
@@ -598,13 +604,7 @@ export default function BuildingCompliancePage() {
             </div>
           </div>
         </div>
-
-        {/* Decorative Elements */}
-        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-          <div className="absolute top-10 left-10 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-10 right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
-        </div>
-      </section>
+      </div>
 
       {/* Compliance Assets List */}
       <div className="max-w-7xl mx-auto px-6 mt-8 mb-12">

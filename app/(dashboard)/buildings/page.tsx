@@ -123,22 +123,20 @@ function BuildingsList() {
         </div>
       </div>
 
-      {/* Search and Create Section */}
+      {/* Search Section */}
       <div className="max-w-4xl mx-auto px-6 mb-12">
-        <div className="flex flex-col lg:flex-row gap-6 items-center justify-between">
+        <div className="flex justify-center">
           {/* Search Bar */}
-          <div className="relative flex-1 max-w-lg">
+          <div className="relative w-full max-w-2xl">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
             <input
               type="text"
               placeholder="Search buildings by name or address..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-3 focus:ring-[#4f46e5]/20 focus:border-[#4f46e5] transition-all duration-300 bg-white shadow-lg hover:shadow-xl hover:shadow-[#4f46e5]/10 focus:shadow-2xl focus:shadow-[#4f46e5]/20"
+              className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-3 focus:ring-[#4f46e5]/20 focus:border-[#4f46e5] transition-all duration-300 bg-white shadow-lg hover:shadow-xl hover:shadow-[#4f46e5]/10 focus:shadow-2xl focus:shadow-[#4f46e5]/20 text-center"
             />
           </div>
-          
-
         </div>
       </div>
 
