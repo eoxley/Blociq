@@ -1,0 +1,287 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import {
+  Wrench,
+  ArrowLeft,
+  FileText,
+  Search,
+  Filter,
+  Building2,
+  Calendar,
+  CheckCircle,
+  AlertTriangle,
+  Clock,
+  Upload,
+  DollarSign
+} from 'lucide-react'
+import { useSupabase } from '@/components/SupabaseProvider'
+import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui/blociq-card'
+import { BlocIQBadge } from '@/components/ui/blociq-badge'
+import { toast } from 'sonner'
+
+interface MajorWorksDocument {
+  id: string
+  title: string
+  type: string
+  building_name: string
+  building_id: string
+  upload_date: string
+  status: string
+  project_value?: string
+  ocr_status: string
+}
+
+export default function MajorWorksDocumentsPage() {
+  const { supabase } = useSupabase()
+  const [documents, setDocuments] = useState<MajorWorksDocument[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filterType, setFilterType] = useState('all')
+
+  useEffect(() => {
+    fetchMajorWorksDocuments()
+  }, [])
+
+  const fetchMajorWorksDocuments = async () => {
+    try {
+      setLoading(true)
+
+      // Fetch major works related documents
+      const { data, error } = await supabase
+        .from('building_documents')
+        .select(`
+          id,
+          title,
+          type,
+          upload_date,
+          ocr_status,
+          building:buildings(name)
+        `)
+        .or('type.ilike.%major%,type.ilike.%works%,type.ilike.%contract%,type.ilike.%tender%,type.ilike.%project%')
+        .order('upload_date', { ascending: false })
+
+      if (error) {
+        console.error('Error fetching major works documents:', error)
+        setDocuments([])
+      } else {
+        const formattedDocuments = (data || []).map(doc => ({
+          id: doc.id,
+          title: doc.title || 'Untitled Document',
+          type: doc.type || 'Unknown',
+          building_name: doc.building?.name || 'Unknown Building',
+          building_id: doc.building?.id || '',
+          upload_date: doc.upload_date,
+          status: 'active',
+          ocr_status: doc.ocr_status || 'pending'
+        }))
+        setDocuments(formattedDocuments)
+      }
+    } catch (error) {
+      console.error('Exception fetching major works documents:', error)
+      setDocuments([])
+      toast.error('Failed to load major works documents')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const filteredDocuments = documents.filter(doc => {
+    const matchesSearch = doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         doc.building_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         doc.type.toLowerCase().includes(searchTerm.toLowerCase())
+
+    const matchesFilter = filterType === 'all' ||
+                         doc.type.toLowerCase().includes(filterType.toLowerCase())
+
+    return matchesSearch && matchesFilter
+  })
+
+  const documentTypes = [
+    { value: 'all', label: 'All Types' },
+    { value: 'contract', label: 'Contracts' },
+    { value: 'tender', label: 'Tenders' },
+    { value: 'project', label: 'Project Plans' },
+    { value: 'invoice', label: 'Invoices' },
+    { value: 'report', label: 'Reports' }
+  ]
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="animate-pulse">
+          <div className="bg-gray-200 h-64 rounded-lg"></div>
+        </div>
+        <div className="grid grid-cols-1 gap-4">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="animate-pulse">
+              <div className="bg-gray-200 h-24 rounded-lg"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-8">
+      {/* Hero Banner */}
+      <section className="relative overflow-hidden bg-gradient-to-r from-[#ea580c] to-[#c2410c] py-16 mx-6 rounded-3xl">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex items-center mb-6">
+            <Link
+              href="/documents"
+              className="flex items-center text-white/80 hover:text-white transition-colors mr-4"
+            >
+              <ArrowLeft className="h-5 w-5 mr-2" />
+              Back to Document Library
+            </Link>
+          </div>
+          <div className="text-center">
+            <div className="flex justify-center mb-6">
+              <div className="p-4 rounded-full bg-white/20 backdrop-blur-sm">
+                <Wrench className="h-12 w-12 text-white" />
+              </div>
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
+              Major Works Documents
+            </h1>
+            <p className="text-xl text-white/90 max-w-3xl mx-auto leading-relaxed">
+              Project documentation, contracts, tenders, and construction-related documents
+            </p>
+          </div>
+        </div>
+
+        {/* Decorative Elements */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+          <div className="absolute top-10 left-10 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-10 right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+        </div>
+      </section>
+
+      {/* Search and Filter */}
+      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search major works documents..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+          />
+        </div>
+
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+              className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent appearance-none bg-white"
+            >
+              {documentTypes.map(type => (
+                <option key={type.value} value={type.value}>{type.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <BlocIQBadge variant="secondary">
+            {filteredDocuments.length} document{filteredDocuments.length !== 1 ? 's' : ''}
+          </BlocIQBadge>
+        </div>
+      </div>
+
+      {/* Documents List */}
+      <div className="space-y-4">
+        {filteredDocuments.length === 0 ? (
+          <BlocIQCard>
+            <BlocIQCardContent className="p-12 text-center">
+              <Wrench className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No major works documents found</h3>
+              <p className="text-gray-500 mb-6">
+                {searchTerm || filterType !== 'all'
+                  ? 'Try adjusting your search or filter criteria'
+                  : 'Upload project documentation to get started'
+                }
+              </p>
+              <Link
+                href="/buildings"
+                className="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Upload Documents
+              </Link>
+            </BlocIQCardContent>
+          </BlocIQCard>
+        ) : (
+          filteredDocuments.map((document) => (
+            <BlocIQCard key={document.id} className="hover:shadow-lg transition-shadow">
+              <BlocIQCardContent className="p-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <FileText className="h-5 w-5 text-orange-600" />
+                      <h3 className="text-lg font-semibold text-gray-900">{document.title}</h3>
+                      <BlocIQBadge variant="outline" className="text-xs">
+                        {document.type}
+                      </BlocIQBadge>
+                    </div>
+
+                    <div className="flex items-center gap-6 text-sm text-gray-500 mb-3">
+                      <div className="flex items-center gap-1">
+                        <Building2 className="h-4 w-4" />
+                        <span>{document.building_name}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-4 w-4" />
+                        <span>Uploaded {new Date(document.upload_date).toLocaleDateString()}</span>
+                      </div>
+                      {document.project_value && (
+                        <div className="flex items-center gap-1">
+                          <DollarSign className="h-4 w-4" />
+                          <span>{document.project_value}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {document.ocr_status === 'completed' && (
+                        <BlocIQBadge variant="default" className="text-xs bg-green-100 text-green-800">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          AI Ready
+                        </BlocIQBadge>
+                      )}
+                      {document.ocr_status === 'processing' && (
+                        <BlocIQBadge variant="secondary" className="text-xs">
+                          <Clock className="h-3 w-3 mr-1" />
+                          Processing
+                        </BlocIQBadge>
+                      )}
+                      {document.ocr_status === 'pending' && (
+                        <BlocIQBadge variant="outline" className="text-xs">
+                          <AlertTriangle className="h-3 w-3 mr-1" />
+                          Pending OCR
+                        </BlocIQBadge>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 ml-4">
+                    <Link
+                      href={`/buildings/${document.building_id}/documents`}
+                      className="px-3 py-1.5 text-sm font-medium text-orange-600 hover:text-orange-800 transition-colors"
+                    >
+                      View in Building
+                    </Link>
+                  </div>
+                </div>
+              </BlocIQCardContent>
+            </BlocIQCard>
+          ))
+        )}
+      </div>
+    </div>
+  )
+}
