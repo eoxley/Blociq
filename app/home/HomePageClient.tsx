@@ -321,6 +321,39 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     category: 'General'
   })
 
+  // Convert PropertyEvent to Event type for UpcomingEventsWidget
+  const convertPropertyEventsToEvents = (propertyEvents: PropertyEvent[]) => {
+    return propertyEvents.map((event, index) => ({
+      id: `event-${index}-${Date.now()}`,
+      subject: event.title,
+      title: event.title,
+      location: event.location || null,
+      start_time: event.date,
+      end_time: event.date, // Use same time for end if not available
+      outlook_id: event.source === 'outlook' ? `outlook-${index}` : undefined,
+      is_all_day: false,
+      organiser_name: event.organiser_name || null,
+      description: null,
+      online_meeting: event.online_meeting || null,
+      category: event.category,
+      priority: 'normal',
+      notes: undefined,
+      user_id: undefined,
+      created_at: undefined,
+      updated_at: undefined,
+      event_type: event.event_type || 'manual'
+    }))
+  }
+
+  // Convert Building type for UpcomingEventsWidget
+  const convertBuildings = (buildings: Building[]) => {
+    return buildings.map(building => ({
+      id: building.id.toString(),
+      name: building.name,
+      address: building.address
+    }))
+  }
+
   // Set random welcome message on page load
   useEffect(() => {
     setCurrentWelcomeMessage(getRandomWelcomeMessage())
@@ -535,6 +568,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         new Date(a.date).getTime() - new Date(b.date).getTime()
       )
 
+
       setUpcomingEvents(allEvents.slice(0, 8)) // Increased limit to accommodate compliance events
     } catch (error) {
       console.error('Error in fetchEvents:', error)
@@ -626,6 +660,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       setUpcomingEvents(prev => {
         const now = new Date()
         const propertyEvents = prev.filter(event => event.source === 'property')
+        
         const futureOutlookEvents = transformedOutlookEvents.filter(event => {
           const eventDate = new Date(event.date)
           return eventDate >= now // Only include future events
@@ -1237,7 +1272,11 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Upcoming Events Widget */}
           <div className="h-full">
-            <UpcomingEventsWidget />
+            <UpcomingEventsWidget 
+              events={convertPropertyEventsToEvents(upcomingEvents)}
+              buildings={convertBuildings(buildings)}
+              loading={false}
+            />
           </div>
 
           {/* Building To-Do Widget */}
@@ -1251,151 +1290,6 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
         {/* Calendar Sync Widget */}
         <CalendarSyncWidget />
-
-        {/* 🧠 Ask BlocIQ Widget - Full Width */}
-        <div className="bg-white rounded-2xl shadow-lg border-0 overflow-hidden">
-          <div className={`relative transition-all duration-500 ${showChat ? 'w-full' : 'w-full'}`}>
-            {/* Header Section with Brand Gradient */}
-            <div className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] p-8 relative overflow-hidden">
-              {/* Decorative Background Elements */}
-              <div className="absolute inset-0">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
-                <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
-              </div>
-
-              {/* Header Content */}
-              <div className="relative z-10">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-                      <Brain className="h-6 w-6 text-white" />
-                    </div>
-                    <div>
-                      <h2 className="text-2xl font-bold text-white mb-1">Ask BlocIQ</h2>
-                      <p className="text-white/90">Your AI property management assistant</p>
-                    </div>
-                  </div>
-                  {showChat && (
-                    <button
-                      onClick={() => setShowChat(false)}
-                      className="text-white/80 hover:text-white transition-colors p-2 rounded-lg hover:bg-white/10"
-                    >
-                      <Minimize2 className="h-5 w-5" />
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Chat Interface or Input */}
-            <div className="p-6">
-              {!showChat ? (
-                <div>
-                  {/* Example Prompts */}
-                  <div className="mb-6">
-                    <h3 className="text-sm font-medium text-gray-700 mb-3">Popular Questions</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <button
-                        onClick={() => handleExampleClick("What compliance items are due this month?")}
-                        className="text-left p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                      >
-                        <span className="text-sm text-gray-700">What compliance items are due this month?</span>
-                      </button>
-                      <button
-                        onClick={() => handleExampleClick("Show me upcoming property inspections")}
-                        className="text-left p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                      >
-                        <span className="text-sm text-gray-700">Show me upcoming property inspections</span>
-                      </button>
-                      <button
-                        onClick={() => handleExampleClick("Generate a lease summary report")}
-                        className="text-left p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                      >
-                        <span className="text-sm text-gray-700">Generate a lease summary report</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Input Field */}
-                  <div className="relative">
-                    <input
-                      ref={askInputRef}
-                      type="text"
-                      value={askInput}
-                      onChange={(e) => setAskInput(e.target.value)}
-                      onKeyPress={handleKeyPress}
-                      placeholder="Ask BlocIQ anything about your properties, compliance, or tenants..."
-                      className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      disabled={isSubmitting}
-                    />
-                    <button
-                      onClick={() => handleAskSubmit(askInput)}
-                      disabled={isSubmitting || !askInput.trim()}
-                      className="absolute inset-y-0 right-0 flex items-center pr-3"
-                    >
-                      {isSubmitting ? (
-                        <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
-                      ) : (
-                        <Send className="h-5 w-5 text-blue-500 hover:text-blue-600 transition-colors" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="max-h-96 overflow-y-auto space-y-4">
-                  {messages.map((message, index) => (
-                    <div
-                      key={index}
-                      className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div
-                        className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl ${
-                          message.sender === 'user'
-                            ? 'bg-blue-500 text-white'
-                            : 'bg-gray-100 text-gray-900'
-                        }`}
-                        style={{
-                          animation: `fadeIn 0.3s ease-in-out ${index * 0.1}s both`
-                        }}
-                      >
-                        <p className="text-sm">{message.text}</p>
-                        <p className="text-xs mt-1 opacity-70">
-                          {message.timestamp.toLocaleTimeString()}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                  <div ref={messagesEndRef} />
-
-                  {/* Input at bottom of chat */}
-                  <div className="relative mt-4 pt-4 border-t">
-                    <input
-                      ref={askInputRef}
-                      type="text"
-                      value={askInput}
-                      onChange={(e) => setAskInput(e.target.value)}
-                      onKeyPress={handleKeyPress}
-                      placeholder="Continue the conversation..."
-                      className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      disabled={isSubmitting}
-                    />
-                    <button
-                      onClick={() => handleAskSubmit(askInput)}
-                      disabled={isSubmitting || !askInput.trim()}
-                      className="absolute inset-y-0 right-0 flex items-center pr-3"
-                    >
-                      {isSubmitting ? (
-                        <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
-                      ) : (
-                        <Send className="h-5 w-5 text-blue-500 hover:text-blue-600 transition-colors" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
 
         {/* Communication Modal */}
         {showCommunicationModal && communicationModalData && (

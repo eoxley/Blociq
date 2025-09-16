@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from '@/lib/supabaseClient';
-import { Calendar, MapPin, Clock, Building, Loader2, RefreshCw, Plus, AlertCircle, CheckCircle2, CalendarDays } from "lucide-react";
+import { Calendar, MapPin, Clock, Building, Loader2, Plus, AlertCircle, CheckCircle2, CalendarDays } from "lucide-react";
 import { BlocIQButton } from "@/components/ui/blociq-button";
 import { BlocIQBadge } from "@/components/ui/blociq-badge";
 import ManualDiaryInput from "./ManualDiaryInput";
@@ -41,15 +41,30 @@ type Building = {
   address?: string;
 };
 
-export default function UpcomingEventsWidget() {
-  const [events, setEvents] = useState<Event[]>([]);
-  const [buildings, setBuildings] = useState<Building[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
+interface UpcomingEventsWidgetProps {
+  events?: Event[];
+  buildings?: Building[];
+  loading?: boolean;
+}
+
+export default function UpcomingEventsWidget({ 
+  events: propEvents, 
+  buildings: propBuildings, 
+  loading: propLoading 
+}: UpcomingEventsWidgetProps = {}) {
+  const [events, setEvents] = useState<Event[]>(propEvents || []);
+  const [buildings, setBuildings] = useState<Building[]>(propBuildings || []);
+  const [loading, setLoading] = useState(propLoading !== undefined ? propLoading : true);
   const [aiMatches, setAiMatches] = useState<Record<string, AIMatch>>({});
   const [matchingInProgress, setMatchingInProgress] = useState<Record<string, boolean>>({});
 
   const loadData = async () => {
+    // If props are provided, don't fetch data
+    if (propEvents !== undefined && propBuildings !== undefined) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
       // Load buildings and events in parallel
@@ -109,34 +124,19 @@ export default function UpcomingEventsWidget() {
     loadData();
   }, []);
 
-  const syncCalendar = async () => {
-    setSyncing(true);
-    try {
-      // Call the actual Outlook sync API
-      const response = await fetch('/api/sync-calendar', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to sync calendar');
-      }
-
-      const result = await response.json();
-      console.log('Calendar sync result:', result);
-      
-      // Reload the data to show new events
-      await loadData();
-    } catch (error) {
-      console.error("Error syncing calendar:", error);
-      // You might want to add toast notifications here
-    } finally {
-      setSyncing(false);
+  // Update state when props change
+  useEffect(() => {
+    if (propEvents !== undefined) {
+      setEvents(propEvents);
     }
-  };
+    if (propBuildings !== undefined) {
+      setBuildings(propBuildings);
+    }
+    if (propLoading !== undefined) {
+      setLoading(propLoading);
+    }
+  }, [propEvents, propBuildings, propLoading]);
+
 
   const matchBuilding = (event: Event): Building | null => {
     if (!event.location) return null;
@@ -286,20 +286,6 @@ export default function UpcomingEventsWidget() {
               onEventCreated={loadData}
               buildings={buildings}
             />
-            <BlocIQButton
-              onClick={syncCalendar}
-              disabled={syncing}
-              variant="outline"
-              size="sm"
-              className="text-white border-white/30 hover:bg-white/10 backdrop-blur-sm"
-            >
-              {syncing ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <RefreshCw className="h-4 w-4 mr-2" />
-              )}
-              {syncing ? 'Syncing...' : 'Sync'}
-            </BlocIQButton>
           </div>
         </div>
       </div>
@@ -312,19 +298,7 @@ export default function UpcomingEventsWidget() {
               <Calendar className="h-10 w-10 text-gray-400" />
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">No upcoming events</h3>
-            <p className="text-gray-500 mb-4">Sync your Outlook calendar to see events here</p>
-            <BlocIQButton
-              onClick={syncCalendar}
-              disabled={syncing}
-              className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white hover:brightness-110"
-            >
-              {syncing ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <Calendar className="h-4 w-4 mr-2" />
-              )}
-              {syncing ? 'Syncing...' : 'Sync Calendar'}
-            </BlocIQButton>
+            <p className="text-gray-500 mb-4">Add a manual event to get started</p>
           </div>
         ) : (
           <div className="space-y-4">
