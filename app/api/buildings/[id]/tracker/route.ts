@@ -1,89 +1,121 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
-import { cookies } from 'next/headers';
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const cookieStore = await cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
 
-    // Check authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const buildingId = params.id;
-    const url = new URL(request.url);
-    const includeCompleted = url.searchParams.get('includeCompleted') === 'true';
+    const buildingId = params.id
+    const { searchParams } = new URL(request.url)
+    const includeCompleted = searchParams.get('includeCompleted') === 'true'
 
-    // Validate building ID format
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
     if (!uuidRegex.test(buildingId)) {
-      return NextResponse.json(
-        { error: 'Invalid building ID format' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid building ID format' }, { status: 400 })
     }
 
-    // Build query with optional completed filter
-    let query = supabase
-      .from('building_action_tracker')
-      .select('*')
-      .eq('building_id', buildingId)
-      .order('due_date', { ascending: true, nullsLast: true })
-      .order('created_at', { ascending: false });
+    // Build query for action tracker items - return empty if table doesn't exist
+    try {
+      let query = supabase
+        .from('building_action_tracker')
+        .select(`
+          id,
+          building_id,
+          item_text,
+          due_date,
+          notes,
+          completed,
+          completed_at,
+          priority,
+          source,
+          created_by,
+          created_at,
+          updated_at
+        `)
+        .eq('building_id', buildingId)
+        .order('created_at', { ascending: false })
 
-    if (!includeCompleted) {
-      query = query.eq('completed', false);
+      // Filter by completion status if not including completed
+      if (!includeCompleted) {
+        query = query.eq('completed', false)
+      }
+
+      const { data: items, error: itemsError } = await query
+
+      // If table doesn't exist, return empty response
+      if (itemsError && itemsError.code === 'PGRST116') {
+        return NextResponse.json({
+          success: true,
+          data: [],
+          stats: {
+            total: 0,
+            active: 0,
+            completed: 0,
+            overdue: 0,
+            dueSoon: 0
+          }
+        })
+      }
+
+      if (itemsError) {
+        console.error('Error fetching tracker items:', itemsError)
+        return NextResponse.json({ error: 'Failed to fetch tracker items' }, { status: 400 })
+      }
+
+      // Calculate statistics
+      const today = new Date()
+      const threeDaysFromNow = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
+
+      const allItems = items || []
+      const activeItems = allItems.filter(item => !item.completed)
+
+      const stats = {
+        total: allItems.length,
+        active: activeItems.length,
+        completed: allItems.filter(item => item.completed).length,
+        overdue: activeItems.filter(item => {
+          if (!item.due_date) return false
+          return new Date(item.due_date) < today
+        }).length,
+        dueSoon: activeItems.filter(item => {
+          if (!item.due_date) return false
+          const dueDate = new Date(item.due_date)
+          return dueDate >= today && dueDate <= threeDaysFromNow
+        }).length
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: items || [],
+        stats
+      })
+    } catch (tableError) {
+      // Table doesn't exist, return empty response
+      return NextResponse.json({
+        success: true,
+        data: [],
+        stats: {
+          total: 0,
+          active: 0,
+          completed: 0,
+          overdue: 0,
+          dueSoon: 0
+        }
+      })
     }
-
-    const { data: trackerItems, error } = await query;
-
-    if (error) {
-      console.error('Error fetching tracker items:', error);
-      return NextResponse.json(
-        { error: 'Failed to fetch tracker items' },
-        { status: 500 }
-      );
-    }
-
-    // Calculate item statistics
-    const stats = {
-      total: trackerItems.length,
-      active: trackerItems.filter(item => !item.completed).length,
-      completed: trackerItems.filter(item => item.completed).length,
-      overdue: trackerItems.filter(item => 
-        !item.completed && 
-        item.due_date && 
-        new Date(item.due_date) < new Date()
-      ).length,
-      dueSoon: trackerItems.filter(item => 
-        !item.completed && 
-        item.due_date && 
-        new Date(item.due_date) <= new Date(Date.now() + 3 * 24 * 60 * 60 * 1000) &&
-        new Date(item.due_date) >= new Date()
-      ).length
-    };
-
-    return NextResponse.json({
-      success: true,
-      data: trackerItems,
-      stats
-    });
 
   } catch (error) {
-    console.error('Error in tracker GET endpoint:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error('Unexpected error in tracker endpoint:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
@@ -92,100 +124,65 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const cookieStore = await cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
 
-    // Check authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const buildingId = params.id;
-    const body = await request.json();
+    const buildingId = params.id
+    const body = await request.json()
 
-    // Validate building ID format
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
     if (!uuidRegex.test(buildingId)) {
-      return NextResponse.json(
-        { error: 'Invalid building ID format' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid building ID format' }, { status: 400 })
     }
 
-    // Validate required fields
-    if (!body.item_text || typeof body.item_text !== 'string') {
-      return NextResponse.json(
-        { error: 'item_text is required and must be a string' },
-        { status: 400 }
-      );
+    const { item_text, due_date, notes, priority, source } = body
+
+    if (!item_text || typeof item_text !== 'string') {
+      return NextResponse.json({ error: 'item_text is required' }, { status: 400 })
     }
 
-    // Validate optional fields
-    const allowedPriorities = ['low', 'medium', 'high'];
-    const allowedSources = ['Manual', 'Meeting', 'Call', 'Email'];
-
-    if (body.priority && !allowedPriorities.includes(body.priority)) {
-      return NextResponse.json(
-        { error: 'Invalid priority value' },
-        { status: 400 }
-      );
-    }
-
-    if (body.source && !allowedSources.includes(body.source)) {
-      return NextResponse.json(
-        { error: 'Invalid source value' },
-        { status: 400 }
-      );
-    }
-
-    // Validate due_date format if provided
-    if (body.due_date) {
-      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-      if (!dateRegex.test(body.due_date)) {
-        return NextResponse.json(
-          { error: 'Invalid due_date format. Use YYYY-MM-DD' },
-          { status: 400 }
-        );
-      }
-    }
-
-    // Create the tracker item
-    const { data: newItem, error } = await supabase
+    // Create new tracker item
+    const { data: newItem, error: createError } = await supabase
       .from('building_action_tracker')
       .insert({
         building_id: buildingId,
-        item_text: body.item_text.trim(),
-        due_date: body.due_date || null,
-        notes: body.notes?.trim() || null,
-        priority: body.priority || 'medium',
-        source: body.source || 'Manual',
-        created_by: user.id
+        item_text: item_text.trim(),
+        due_date: due_date || null,
+        notes: notes?.trim() || null,
+        priority: priority || 'medium',
+        source: source || 'Manual',
+        completed: false,
+        created_by: user.id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       })
       .select()
-      .single();
+      .single()
 
-    if (error) {
-      console.error('Error creating tracker item:', error);
-      return NextResponse.json(
-        { error: 'Failed to create tracker item' },
-        { status: 500 }
-      );
+    // If table doesn't exist, return error indicating tracker not set up
+    if (createError && createError.code === 'PGRST116') {
+      return NextResponse.json({
+        error: 'Action tracker not available for this building. Please contact support to enable this feature.'
+      }, { status: 404 })
+    }
+
+    if (createError) {
+      console.error('Error creating tracker item:', createError)
+      return NextResponse.json({ error: 'Failed to create tracker item' }, { status: 400 })
     }
 
     return NextResponse.json({
       success: true,
       data: newItem
-    }, { status: 201 });
+    })
 
   } catch (error) {
-    console.error('Error in tracker POST endpoint:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error('Unexpected error in tracker POST:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

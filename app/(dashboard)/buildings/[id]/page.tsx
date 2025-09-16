@@ -1,4 +1,3 @@
-import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import { AlertTriangle } from 'lucide-react'
@@ -59,12 +58,25 @@ interface ComplianceSummary {
 }
 
 export default async function BuildingDetailPage({ params }: BuildingDetailPageProps) {
-  const supabase = createClient(cookies())
-  
+  let supabase: any;
+  let session: any;
+
   try {
-    // Check authentication first
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) redirect('/login')
+    supabase = await createClient()
+
+    // Check authentication first with better error handling
+    try {
+      const authResult = await supabase.auth.getSession()
+      session = authResult.data?.session
+
+      if (!session) {
+        console.log('No session found, redirecting to login')
+        redirect('/login')
+      }
+    } catch (authError) {
+      console.error('Authentication error:', authError)
+      redirect('/login')
+    }
 
     // Validate building ID format
     if (!params.id || typeof params.id !== 'string') {
@@ -79,16 +91,28 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
       notFound()
     }
 
-    // Fetch building with all required fields
-    const { data: building, error: buildingError } = await supabase
-      .from('buildings')
-      .select('*')
-      .eq('id', params.id)
-      .maybeSingle()
+    // Fetch building with all required fields and better error handling
+    let building = null;
+    try {
+      const buildingResult = await supabase
+        .from('buildings')
+        .select('*')
+        .eq('id', params.id)
+        .maybeSingle()
 
-    if (buildingError) {
-      console.error('Error fetching building:', buildingError)
-      throw new Error('Failed to fetch building data')
+      if (buildingResult.error) {
+        console.error('Database error fetching building:', buildingResult.error)
+        if (buildingResult.error.code === 'PGRST116') {
+          // Table doesn't exist
+          throw new Error('Database not properly configured')
+        }
+        throw new Error('Failed to fetch building data')
+      }
+
+      building = buildingResult.data
+    } catch (fetchError) {
+      console.error('Exception fetching building:', fetchError)
+      throw new Error('Failed to connect to database')
     }
 
     if (!building) {
@@ -96,52 +120,73 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
       return <NotFound title="Building Not Found" message="We couldn't find the building you're looking for." />
     }
 
-    // Fetch building setup
-    const { data: buildingSetup, error: setupError } = await supabase
-      .from('building_setup')
-      .select('id, building_id, structure_type, operational_notes, client_type, client_name, client_contact, client_email, keys_location, emergency_access, site_staff, site_staff_updated_at, insurance_contact, cleaners, contractors')
-      .eq('building_id', params.id)
-      .maybeSingle()
+    // Fetch building setup with error handling
+    let buildingSetup = null;
+    try {
+      const setupResult = await supabase
+        .from('building_setup')
+        .select('id, building_id, structure_type, operational_notes, client_type, client_name, client_contact, client_email, keys_location, emergency_access, site_staff, site_staff_updated_at, insurance_contact, cleaners, contractors')
+        .eq('building_id', params.id)
+        .maybeSingle()
 
-    if (setupError) {
-      console.error('Error fetching building setup:', setupError)
+      if (setupResult.error && setupResult.error.code !== 'PGRST116') {
+        console.error('Error fetching building setup:', setupResult.error)
+      } else {
+        buildingSetup = setupResult.data
+      }
+    } catch (setupFetchError) {
+      console.error('Exception fetching building setup:', setupFetchError)
     }
 
-    // Fetch units with simple query (no leaseholder joins)
-    const { data: units = [], error: unitsError } = await supabase
-      .from('units')
-      .select('id, unit_number, type, floor, building_id, leaseholder_id, created_at')
-      .eq('building_id', params.id)
-      .order('unit_number')
+    // Fetch units with simple query and error handling
+    let units: Unit[] = [];
+    try {
+      const unitsResult = await supabase
+        .from('units')
+        .select('id, unit_number, type, floor, building_id, leaseholder_id, created_at')
+        .eq('building_id', params.id)
+        .order('unit_number')
 
-    if (unitsError) {
-      console.error('Error fetching units:', unitsError)
+      if (unitsResult.error && unitsResult.error.code !== 'PGRST116') {
+        console.error('Error fetching units:', unitsResult.error)
+      } else {
+        units = unitsResult.data || []
+      }
+    } catch (unitsFetchError) {
+      console.error('Exception fetching units:', unitsFetchError)
     }
 
     // Debug log for development
-    console.log("Units loaded:", units)
+    console.log("Units loaded:", units.length, "units")
 
-    // Fetch compliance assets for summary
-    const { data: complianceAssets = [], error: complianceError } = await supabase
-      .from('building_compliance_assets')
-      .select(`
-        id,
-        status,
-        due_date,
-        priority,
-        notes,
-        compliance_assets (
+    // Fetch compliance assets for summary with error handling
+    let complianceAssets: any[] = [];
+    try {
+      const complianceResult = await supabase
+        .from('building_compliance_assets')
+        .select(`
           id,
-          category,
-          title,
-          description,
-          frequency_months
-        )
-      `)
-      .eq('building_id', params.id)
+          status,
+          due_date,
+          priority,
+          notes,
+          compliance_assets (
+            id,
+            category,
+            title,
+            description,
+            frequency_months
+          )
+        `)
+        .eq('building_id', params.id)
 
-    if (complianceError) {
-      console.error('Error fetching compliance assets:', complianceError)
+      if (complianceResult.error && complianceResult.error.code !== 'PGRST116') {
+        console.error('Error fetching compliance assets:', complianceResult.error)
+      } else {
+        complianceAssets = complianceResult.data || []
+      }
+    } catch (complianceFetchError) {
+      console.error('Exception fetching compliance assets:', complianceFetchError)
     }
 
     // Calculate compliance summary with safe guards
