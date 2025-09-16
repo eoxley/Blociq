@@ -25,6 +25,9 @@
   <!-- Add-in Source Location - Required for function-based add-ins -->
   <SourceLocation DefaultValue="https://www.blociq.co.uk/addin/reply" />
 
+  <!-- Support URL -->
+  <SupportUrl DefaultValue="https://www.blociq.co.uk" />
+
   <!-- Function File -->
   <FunctionFile resid="FunctionFile" />
 
