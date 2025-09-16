@@ -39,6 +39,7 @@
   <Rule xsi:type="RuleCollection" Mode="Or">
     <Rule xsi:type="ItemIs" ItemType="Message" FormType="Read" />
     <Rule xsi:type="ItemIs" ItemType="Message" FormType="Edit" />
+    <Rule xsi:type="ItemIs" ItemType="Message" FormType="ReadOrEdit" />
   </Rule>
 
   <!-- Version Overrides -->
@@ -83,6 +84,27 @@
             </ExtensionPoint>
           </DesktopFormFactor>
 
+          <!-- Mobile Form Factor -->
+          <MobileFormFactor>
+            <FunctionFile resid="TaskpaneUrl" />
+            <ExtensionPoint xsi:type="MobileMessageReadCommandSurface">
+              <Group id="MobileChatGroup">
+                <Label resid="GroupLabel" />
+                <Control xsi:type="MobileButton" id="MobileChatButton">
+                  <Label resid="TaskpaneButtonLabel" />
+                  <Icon>
+                    <bt:Image size="25" resid="Icon25" />
+                    <bt:Image size="32" resid="Icon32" />
+                    <bt:Image size="48" resid="Icon48" />
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <SourceLocation resid="TaskpaneUrl" />
+                  </Action>
+                </Control>
+              </Group>
+            </ExtensionPoint>
+          </MobileFormFactor>
+
         </Host>
       </Hosts>
 
@@ -90,7 +112,9 @@
       <Resources>
         <bt:Images>
           <bt:Image id="Icon16" DefaultValue="https://www.blociq.co.uk/icons/icon-16.png" />
+          <bt:Image id="Icon25" DefaultValue="https://www.blociq.co.uk/icons/icon-25.png" />
           <bt:Image id="Icon32" DefaultValue="https://www.blociq.co.uk/icons/icon-32.png" />
+          <bt:Image id="Icon48" DefaultValue="https://www.blociq.co.uk/icons/icon-48.png" />
           <bt:Image id="Icon80" DefaultValue="https://www.blociq.co.uk/icons/icon-80.png" />
         </bt:Images>
 

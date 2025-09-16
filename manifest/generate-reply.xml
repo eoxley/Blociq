@@ -22,6 +22,9 @@
   <IconUrl DefaultValue="https://www.blociq.co.uk/icons/icon-32.png" />
   <HighResolutionIconUrl DefaultValue="https://www.blociq.co.uk/icons/icon-64.png" />
 
+  <!-- Add-in Source Location - Required for function-based add-ins -->
+  <SourceLocation DefaultValue="https://www.blociq.co.uk/addin/reply" />
+
   <!-- Function File -->
   <FunctionFile resid="FunctionFile" />
 
@@ -39,6 +42,7 @@
   <Rule xsi:type="RuleCollection" Mode="Or">
     <Rule xsi:type="ItemIs" ItemType="Message" FormType="Read" />
     <Rule xsi:type="ItemIs" ItemType="Message" FormType="Edit" />
+    <Rule xsi:type="ItemIs" ItemType="Message" FormType="ReadOrEdit" />
   </Rule>
 
   <!-- Version Overrides -->
@@ -55,6 +59,9 @@
       <!-- Hosts -->
       <Hosts>
         <Host xsi:type="MailHost">
+
+          <!-- Function File -->
+          <FunctionFile resid="FunctionFile" />
 
           <!-- Desktop Form Factor -->
           <DesktopFormFactor>
@@ -109,6 +116,27 @@
 
           </DesktopFormFactor>
 
+          <!-- Mobile Form Factor -->
+          <MobileFormFactor>
+            <FunctionFile resid="FunctionFile" />
+            <ExtensionPoint xsi:type="MobileMessageReadCommandSurface">
+              <Group id="MobileReplyGroup">
+                <Label resid="GroupLabel" />
+                <Control xsi:type="MobileButton" id="MobileReplyButton">
+                  <Label resid="ButtonLabel" />
+                  <Icon>
+                    <bt:Image size="25" resid="Icon25" />
+                    <bt:Image size="32" resid="Icon32" />
+                    <bt:Image size="48" resid="Icon48" />
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>generateReply</FunctionName>
+                  </Action>
+                </Control>
+              </Group>
+            </ExtensionPoint>
+          </MobileFormFactor>
+
         </Host>
       </Hosts>
 
@@ -116,12 +144,14 @@
       <Resources>
         <bt:Images>
           <bt:Image id="Icon16" DefaultValue="https://www.blociq.co.uk/icons/icon-16.png" />
+          <bt:Image id="Icon25" DefaultValue="https://www.blociq.co.uk/icons/icon-25.png" />
           <bt:Image id="Icon32" DefaultValue="https://www.blociq.co.uk/icons/icon-32.png" />
+          <bt:Image id="Icon48" DefaultValue="https://www.blociq.co.uk/icons/icon-48.png" />
           <bt:Image id="Icon80" DefaultValue="https://www.blociq.co.uk/icons/icon-80.png" />
         </bt:Images>
 
         <bt:Urls>
-          <bt:Url id="FunctionFile" DefaultValue="https://www.blociq.co.uk/addin/reply" />
+          <bt:Url id="FunctionFile" DefaultValue="https://www.blociq.co.uk/addin/reply/functions.js" />
         </bt:Urls>
 
         <bt:ShortStrings>

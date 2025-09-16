@@ -3,25 +3,25 @@
 ## Pre-Deployment Checklist
 
 ### ✅ Manifest Files
-- [ ] **ask-blociq-fixed.xml** - Fixed manifest for Ask BlocIQ add-in
-- [ ] **generate-reply-fixed.xml** - Fixed manifest for Generate Reply add-in
-- [ ] Both manifests use correct GUIDs:
-  - Ask BlocIQ: `8b8fe65f-2c9e-4d8a-b8c3-1234567890ab`
-  - Generate Reply: `9c9fe65f-3d0f-4e9b-c9d4-2345678901bc`
+- [x] **ask-blociq.xml** - Fixed manifest for Ask BlocIQ add-in ✅
+- [x] **generate-reply.xml** - Fixed manifest for Generate Reply add-in ✅
+- [x] Both manifests use correct GUIDs:
+  - Ask BlocIQ: `8b8fe65f-2c9e-4d8a-b8c3-1234567890ab` ✅
+  - Generate Reply: `9c9fe65f-3d0f-4e9b-c9d4-2345678901bc` ✅
 
 ### ✅ Icon Assets Status
-- [x] **icon-16.png** - Available ✅
-- [x] **icon-32.png** - Available ✅
-- [ ] **icon-25.png** - Need to create ❌
-- [x] **icon-48.png** - Available ✅
-- [x] **icon-64.png** - Available ✅
-- [x] **icon-80.png** - Available ✅
+- [x] **icon-16.png** - Available ✅ (16x16)
+- [x] **icon-25.png** - Available ✅ (25x25)
+- [x] **icon-32.png** - Available ✅ (32x32)
+- [x] **icon-48.png** - Available ✅ (48x48)
+- [x] **icon-64.png** - Available ✅ (64x64)
+- [x] **icon-80.png** - Available ✅ (80x80)
 
 ### ✅ Web Endpoints
 - [x] **https://www.blociq.co.uk/addin/ask** - Available ✅
 - [x] **https://www.blociq.co.uk/addin/reply** - Available ✅
-- [ ] **https://www.blociq.co.uk/addin/reply/functions.js** - Need to deploy ❌
-- [ ] **https://www.blociq.co.uk/api/addin/generate-reply** - Need to implement ❌
+- [x] **https://www.blociq.co.uk/addin/reply/functions.js** - Available ✅
+- [x] **https://www.blociq.co.uk/api/addin/generate-reply** - Available ✅
 
 ### ✅ Security Headers
 - [x] CSP headers present on addin pages ✅
@@ -38,11 +38,11 @@ cp /public/icons/icon-32.png /public/icons/icon-25.png  # Resize to 25px
 cp /public/icons/icon-48.png /public/icons/icon-48.png  # Already exists, verify size
 ```
 
-### 2. Deploy Function File
+### 2. Deploy Function File ✅
 ```bash
-# Copy functions.js to public folder
-cp /public/addin/reply/functions.js /public/addin/reply/functions.js
-# Ensure it's accessible at: https://www.blociq.co.uk/addin/reply/functions.js
+# ✅ COMPLETED: functions.js deployed to public folder
+# File is now accessible at: https://www.blociq.co.uk/addin/reply/functions.js
+# Status: 200 OK with proper JavaScript content-type and CORS headers
 ```
 
 ### 3. Implement API Endpoint
