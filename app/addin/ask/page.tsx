@@ -1,246 +1,233 @@
-'use client'
+'use client';
 
-import React, { useState, useEffect } from 'react'
-import { Send, Sparkles, Mail, AlertCircle, Loader2 } from 'lucide-react'
+import { useEffect, useState } from 'react';
+import Script from 'next/script';
 
-interface MessageType {
-  role: 'user' | 'assistant'
-  content: string
-  timestamp: Date
+interface EmailContext {
+  subject?: string;
+  from?: string;
+  itemType?: string;
 }
 
-export default function AskBlocIQAddin() {
-  const [prompt, setPrompt] = useState('')
-  const [messages, setMessages] = useState<MessageType[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [emailContext, setEmailContext] = useState<string | null>(null)
-  const [isOfficeReady, setIsOfficeReady] = useState(false)
+interface Message {
+  text: string;
+  sender: 'user' | 'ai';
+}
 
-  // Initialize Office add-in
+export default function AskBlocIQTaskpane() {
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      text: "👋 Hi! I'm your BlocIQ AI assistant. I can help you with property management questions, email analysis, and drafting replies. How can I assist you today?",
+      sender: 'ai'
+    }
+  ]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [emailContext, setEmailContext] = useState<EmailContext | null>(null);
+  const [officeReady, setOfficeReady] = useState(false);
+
   useEffect(() => {
-    const initializeOffice = () => {
-      if (typeof Office !== 'undefined') {
-        Office.onReady(() => {
-          setIsOfficeReady(true)
-          loadEmailContext()
-        })
-      } else {
-        // Fallback for development/testing
-        setIsOfficeReady(true)
-      }
-    }
-
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initializeOffice)
-    } else {
-      initializeOffice()
-    }
-
-    return () => {
-      document.removeEventListener('DOMContentLoaded', initializeOffice)
-    }
-  }, [])
-
-  // Load current email context
-  const loadEmailContext = async () => {
-    try {
-      if (typeof Office !== 'undefined' && Office.context?.mailbox?.item) {
-        Office.context.mailbox.item.body.getAsync('text', (result) => {
-          if (result.status === Office.AsyncResultStatus.Succeeded) {
-            setEmailContext(result.value)
-          } else {
-            console.warn('Could not load email context:', result.error)
-            setEmailContext(null)
+    // Wait for Office.js to load
+    const checkOffice = () => {
+      if (typeof window !== 'undefined' && (window as any).Office) {
+        (window as any).Office.onReady((info: any) => {
+          console.log('Office.js ready, host:', info.host);
+          setOfficeReady(true);
+          
+          if (info.host === (window as any).Office.HostApplication.Outlook) {
+            loadEmailContext();
           }
-        })
+        });
       } else {
-        // Fallback for development
-        setEmailContext('Email context not available in development mode')
+        setTimeout(checkOffice, 100);
+      }
+    };
+
+    checkOffice();
+  }, []);
+
+  const loadEmailContext = () => {
+    try {
+      const Office = (window as any).Office;
+      const item = Office?.context?.mailbox?.item;
+      
+      if (item) {
+        const context: EmailContext = {
+          subject: item.subject || '',
+          from: item.from ? item.from.emailAddress : '',
+          itemType: item.itemType || 'Email'
+        };
+        
+        setEmailContext(context);
+        console.log('Email context loaded:', context);
       }
     } catch (error) {
-      console.error('Error loading email context:', error)
-      setEmailContext(null)
+      console.error('Error loading email context:', error);
     }
-  }
+  };
 
-  // Handle form submission
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const sendMessage = async () => {
+    const message = inputMessage.trim();
+    if (!message || isLoading) return;
 
-    if (!prompt.trim() || isLoading) return
-
-    const userMessage: MessageType = {
-      role: 'user',
-      content: prompt,
-      timestamp: new Date()
-    }
-
-    setMessages(prev => [...prev, userMessage])
-    setIsLoading(true)
-    setPrompt('')
+    // Add user message
+    setMessages(prev => [...prev, { text: message, sender: 'user' }]);
+    setInputMessage('');
+    setIsLoading(true);
 
     try {
-      const response = await fetch('/api/ask-ai', {
+      const response = await fetch('/api/addin/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          prompt: prompt.trim(),
-          context: emailContext || 'No email context available'
+          message: message,
+          emailContext: emailContext,
+          source: 'outlook_addin'
         }),
-      })
+      });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        throw new Error(`HTTP ${response.status}`);
       }
 
-      const data = await response.json()
+      const result = await response.json();
 
-      const assistantMessage: MessageType = {
-        role: 'assistant',
-        content: data.response || data.message || 'No response received',
-        timestamp: new Date()
+      if (result.success) {
+        setMessages(prev => [...prev, { text: result.response, sender: 'ai' }]);
+      } else {
+        throw new Error(result.error || 'Unknown error');
       }
-
-      setMessages(prev => [...prev, assistantMessage])
     } catch (error) {
-      console.error('Error calling Ask AI:', error)
-
-      const errorMessage: MessageType = {
-        role: 'assistant',
-        content: 'Sorry, I encountered an error while processing your request. Please try again.',
-        timestamp: new Date()
-      }
-
-      setMessages(prev => [...prev, errorMessage])
+      console.error('Error sending message:', error);
+      setMessages(prev => [...prev, { 
+        text: "Sorry, I'm having trouble connecting. Please check your internet connection and try again.", 
+        sender: 'ai' 
+      }]);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
+
+  const sendQuickMessage = (message: string) => {
+    setInputMessage(message);
+    setTimeout(() => sendMessage(), 100);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      sendMessage();
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-teal-600 to-teal-700 text-white p-4 shadow-lg">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-            <Sparkles className="h-5 w-5" />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold">Ask BlocIQ</h1>
-            <p className="text-sm text-teal-100">AI Property Management Assistant</p>
-          </div>
+    <>
+      <Script 
+        src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js" 
+        strategy="beforeInteractive"
+      />
+      
+      <div className="h-screen flex flex-col bg-white overflow-hidden">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 text-center shadow-lg">
+          <h1 className="text-lg font-semibold m-0">🏠 Ask BlocIQ</h1>
+          <p className="text-xs opacity-90 mt-1 mb-0">Your AI Property Management Assistant</p>
         </div>
-      </div>
 
-      {/* Status Bar */}
-      <div className="px-4 py-2 bg-gray-50 border-b border-gray-200">
-        <div className="flex items-center gap-2 text-sm">
-          <div className={`w-2 h-2 rounded-full ${isOfficeReady ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
-          <span className="text-gray-600">
-            {isOfficeReady ? 'Connected to Outlook' : 'Initializing...'}
-          </span>
-          {emailContext && (
-            <>
-              <span className="text-gray-400">•</span>
-              <Mail className="h-3 w-3 text-gray-400" />
-              <span className="text-gray-600">Email context loaded</span>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 bg-teal-100 rounded-xl flex items-center justify-center mx-auto mb-4">
-              <Sparkles className="h-8 w-8 text-teal-600" />
+        {/* Email Context */}
+        {emailContext && (emailContext.subject || emailContext.from) && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mx-5 my-3 text-xs">
+            <strong className="text-yellow-800">📧 Email Context:</strong>
+            <div className="mt-1">
+              {emailContext.subject && (
+                <div><strong>Subject:</strong> {emailContext.subject}</div>
+              )}
+              {emailContext.from && (
+                <div><strong>From:</strong> {emailContext.from}</div>
+              )}
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Welcome to Ask BlocIQ</h3>
-            <p className="text-gray-600 max-w-md mx-auto">
-              Ask me anything about property management, compliance, or get help with your current email.
-            </p>
-            {!emailContext && (
-              <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-xl max-w-md mx-auto">
-                <div className="flex items-center gap-2 text-yellow-800">
-                  <AlertCircle className="h-4 w-4" />
-                  <span className="text-sm">No email context available</span>
-                </div>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {messages.map((message, index) => (
-              <div
-                key={index}
-                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`max-w-[80%] p-3 rounded-xl shadow-sm ${
-                    message.role === 'user'
-                      ? 'bg-teal-600 text-white'
-                      : 'bg-gray-100 text-gray-900 border border-gray-200'
-                  }`}
-                >
-                  <p className="text-sm leading-relaxed">{message.content}</p>
-                  <p className={`text-xs mt-1 ${
-                    message.role === 'user' ? 'text-teal-100' : 'text-gray-500'
-                  }`}>
-                    {message.timestamp.toLocaleTimeString()}
-                  </p>
-                </div>
-              </div>
-            ))}
-            {isLoading && (
-              <div className="flex justify-start">
-                <div className="bg-gray-100 text-gray-900 border border-gray-200 p-3 rounded-xl shadow-sm">
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin text-teal-600" />
-                    <span className="text-sm text-gray-600">BlocIQ is thinking...</span>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         )}
-      </div>
 
-      {/* Input Form */}
-      <div className="border-t border-gray-200 bg-white p-4">
-        <form onSubmit={handleSubmit} className="flex gap-3">
-          <div className="flex-1">
+        {/* Quick Actions */}
+        <div className="p-4 border-b border-gray-200 bg-gray-50">
+          <div className="flex flex-wrap gap-2">
+            <button 
+              onClick={() => sendQuickMessage('Analyze this email')}
+              className="bg-white border border-gray-300 rounded-full px-3 py-1 text-xs cursor-pointer transition-all hover:bg-indigo-600 hover:text-white hover:border-indigo-600"
+            >
+              📊 Analyze Email
+            </button>
+            <button 
+              onClick={() => sendQuickMessage('Draft a reply')}
+              className="bg-white border border-gray-300 rounded-full px-3 py-1 text-xs cursor-pointer transition-all hover:bg-indigo-600 hover:text-white hover:border-indigo-600"
+            >
+              ✍️ Draft Reply
+            </button>
+            <button 
+              onClick={() => sendQuickMessage('What action is needed?')}
+              className="bg-white border border-gray-300 rounded-full px-3 py-1 text-xs cursor-pointer transition-all hover:bg-indigo-600 hover:text-white hover:border-indigo-600"
+            >
+              ⚡ Action Items
+            </button>
+            <button 
+              onClick={() => sendQuickMessage('Property management advice')}
+              className="bg-white border border-gray-300 rounded-full px-3 py-1 text-xs cursor-pointer transition-all hover:bg-indigo-600 hover:text-white hover:border-indigo-600"
+            >
+              🏠 Property Help
+            </button>
+          </div>
+        </div>
+
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto p-5 bg-gray-50">
+          {messages.map((message, index) => (
+            <div 
+              key={index}
+              className={`mb-4 ${message.sender === 'user' ? 'text-right' : 'text-left'}`}
+            >
+              <div 
+                className={`inline-block max-w-[80%] p-3 rounded-2xl text-sm leading-relaxed whitespace-pre-line ${
+                  message.sender === 'user' 
+                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white' 
+                    : 'bg-gray-100 text-gray-800 border border-gray-200'
+                }`}
+              >
+                {message.text}
+              </div>
+            </div>
+          ))}
+          
+          {isLoading && (
+            <div className="flex justify-center items-center p-5">
+              <div className="w-5 h-5 border-2 border-gray-300 border-t-indigo-600 rounded-full animate-spin"></div>
+            </div>
+          )}
+        </div>
+
+        {/* Input Area */}
+        <div className="border-t border-gray-200 p-4 bg-white">
+          <div className="flex gap-3 items-center">
             <input
               type="text"
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Ask BlocIQ about property management, compliance, or this email..."
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Ask me anything about property management..."
+              className="flex-1 px-4 py-3 border border-gray-300 rounded-full text-sm outline-none focus:border-indigo-600 transition-colors"
               disabled={isLoading}
             />
+            <button
+              onClick={sendMessage}
+              disabled={isLoading || !inputMessage.trim()}
+              className="w-10 h-10 bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-0 rounded-full cursor-pointer text-base flex items-center justify-center transition-transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            >
+              ➤
+            </button>
           </div>
-          <button
-            type="submit"
-            disabled={!prompt.trim() || isLoading}
-            className="px-6 py-3 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-400 text-white font-semibold rounded-xl transition-colors flex items-center gap-2 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
-          >
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-            {isLoading ? 'Sending...' : 'Ask'}
-          </button>
-        </form>
-
-        <div className="mt-3 text-center">
-          <p className="text-xs text-gray-500">
-            Powered by BlocIQ AI • Property Management Assistant
-          </p>
         </div>
       </div>
-    </div>
-  )
+    </>
+  );
 }

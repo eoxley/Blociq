@@ -1,279 +1,278 @@
-'use client'
+'use client';
 
-import React, { useEffect, useState } from 'react'
-import { Sparkles, Mail, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
+import { useEffect, useState } from 'react';
+import Script from 'next/script';
+import { useSearchParams } from 'next/navigation';
 
-declare global {
-  interface Window {
-    generateReply: () => Promise<void>
-  }
-}
+export default function GenerateReplyTaskpane() {
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedReply, setGeneratedReply] = useState('');
+  const [error, setError] = useState('');
+  const [officeReady, setOfficeReady] = useState(false);
+  const searchParams = useSearchParams();
+  const mode = searchParams.get('mode');
 
-export default function GenerateReplyAddin() {
-  const [status, setStatus] = useState<'ready' | 'loading' | 'success' | 'error'>('ready')
-  const [message, setMessage] = useState<string>('BlocIQ Generate Reply ready.')
-  const [isOfficeReady, setIsOfficeReady] = useState(false)
-
-  // Initialize Office add-in and expose global function
   useEffect(() => {
-    const initializeOffice = () => {
-      if (typeof Office !== 'undefined') {
-        Office.onReady(() => {
-          setIsOfficeReady(true)
-          setMessage('BlocIQ Generate Reply ready.')
-        })
+    // Wait for Office.js to load
+    const checkOffice = () => {
+      if (typeof window !== 'undefined' && (window as any).Office) {
+        (window as any).Office.onReady((info: any) => {
+          console.log('Office.js ready, host:', info.host);
+          setOfficeReady(true);
+          
+          // Auto-generate if in generating mode
+          if (mode === 'generating') {
+            generateReplyFromEmail();
+          }
+        });
       } else {
-        // Fallback for development/testing
-        setIsOfficeReady(true)
-        setMessage('BlocIQ Generate Reply ready (development mode).')
+        setTimeout(checkOffice, 100);
       }
-    }
+    };
 
-    // Expose generateReply function globally
-    window.generateReply = async () => {
-      try {
-        setStatus('loading')
-        setMessage('Generating AI reply...')
+    checkOffice();
+  }, [mode]);
 
-        // Get current email context and metadata
-        let emailContext = 'No email context available'
-        let emailMetadata: any = {}
+  const generateReplyFromEmail = async () => {
+    if (isGenerating) return;
+    
+    setIsGenerating(true);
+    setError('');
+    setGeneratedReply('');
 
-        if (typeof Office !== 'undefined' && Office.context?.mailbox?.item) {
-          try {
-            // Get email body
-            await new Promise<void>((resolve, reject) => {
-              Office.context.mailbox.item.body.getAsync('text', (result) => {
-                if (result.status === Office.AsyncResultStatus.Succeeded) {
-                  emailContext = result.value || 'No email content found'
-                  resolve()
-                } else {
-                  console.warn('Could not load email context:', result.error)
-                  reject(new Error('Failed to load email context'))
-                }
-              })
-            })
+    try {
+      const Office = (window as any).Office;
+      const item = Office?.context?.mailbox?.item;
+      
+      if (!item) {
+        throw new Error('No email item found');
+      }
 
-            // Get email metadata
-            const item = Office.context.mailbox.item
-            emailMetadata = {
-              subject: item.subject || 'No subject',
-              from: item.from?.emailAddress || item.sender?.emailAddress || 'Unknown sender',
-              to: item.to?.map((t: any) => t.emailAddress) || [],
-              cc: item.cc?.map((c: any) => c.emailAddress) || [],
-              messageId: item.internetMessageId || 'Unknown',
-              conversationId: item.conversationId || 'Unknown'
-            }
-          } catch (contextError) {
-            console.warn('Using fallback context due to error:', contextError)
-            emailContext = 'Email context unavailable'
+      // Get email body
+      const bodyResult = await new Promise<any>((resolve, reject) => {
+        item.body.getAsync(Office.CoercionType.Text, (result: any) => {
+          if (result.status === Office.AsyncResultStatus.Succeeded) {
+            resolve(result);
+          } else {
+            reject(new Error(result.error.message));
           }
-        }
+        });
+      });
 
-        // Call API to generate reply
-        const response = await fetch('/api/generate-draft', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            context: emailContext
-          }),
-        })
+      const emailData = {
+        originalSubject: item.subject || '',
+        originalSender: item.from ? item.from.emailAddress : '',
+        originalBody: bodyResult.value || '',
+        context: 'outlook_addin'
+      };
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
-        }
+      console.log('Generating reply for email:', {
+        subject: emailData.originalSubject,
+        sender: emailData.originalSender,
+        bodyLength: emailData.originalBody.length
+      });
 
-        const data = await response.json()
-        const replyText = data.reply || data.response || data.message || 'Generated reply not available'
+      const response = await fetch('/api/addin/generate-reply', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(emailData),
+      });
 
-        // Insert AI-generated reply into Outlook compose box
-        if (typeof Office !== 'undefined' && Office.context?.mailbox?.item) {
-          await new Promise<void>((resolve, reject) => {
-            const htmlReply = `<div style="font-family: Segoe UI, Tahoma, Geneva, Verdana, sans-serif; font-size: 14px; line-height: 1.6; color: #333;">${replyText.replace(/\n/g, '<br>')}</div>`
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
 
-            Office.context.mailbox.item.body.setAsync(htmlReply, { coercionType: Office.CoercionType.Html }, (result) => {
-              if (result.status === Office.AsyncResultStatus.Succeeded) {
-                resolve()
-              } else {
-                console.error('Error setting reply text:', result.error)
-                reject(new Error('Failed to insert reply'))
-              }
-            })
-          })
+      const result = await response.json();
 
-          // 📧 LOG OUTBOUND EMAIL TO COMMUNICATIONS_LOG
-          try {
-            setMessage('Logging communication...')
+      if (result.success) {
+        setGeneratedReply(result.reply);
+      } else {
+        throw new Error(result.error || 'Failed to generate reply');
+      }
 
-            const logResponse = await fetch('/api/log-email', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                subject: emailMetadata.subject ? `Re: ${emailMetadata.subject}` : 'Reply (no subject)',
-                body: replyText,
-                recipients: [emailMetadata.from, ...emailMetadata.to, ...emailMetadata.cc].filter(Boolean),
-                direction: 'outbound',
-                metadata: {
-                  source: 'outlook_addin',
-                  original_message_id: emailMetadata.messageId,
-                  conversation_id: emailMetadata.conversationId,
-                  generated_by_ai: true,
-                  addin_version: '1.0'
-                }
-              }),
-            })
+    } catch (error) {
+      console.error('Error generating reply:', error);
+      setError(`Failed to generate reply: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
-            if (!logResponse.ok) {
-              console.warn('Failed to log outbound email:', await logResponse.text())
+  const useGeneratedReply = async () => {
+    if (!generatedReply) return;
+
+    try {
+      const Office = (window as any).Office;
+      const item = Office?.context?.mailbox?.item;
+      
+      if (!item) {
+        throw new Error('No email item found');
+      }
+
+      // Create reply with generated content
+      const htmlBody = `
+        <div style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.5;">
+          ${generatedReply.split('\n').map(line => `<p>${line || '<br>'}</p>`).join('')}
+          <br>
+          <div style="font-size: 12px; color: #666; border-top: 1px solid #ccc; padding-top: 10px; margin-top: 20px;">
+            <em>Generated by BlocIQ AI Assistant</em>
+          </div>
+        </div>
+      `;
+
+      await new Promise<void>((resolve, reject) => {
+        item.reply.displayAsync(
+          { htmlBody },
+          (result: any) => {
+            if (result.status === Office.AsyncResultStatus.Succeeded) {
+              resolve();
             } else {
-              const logData = await logResponse.json()
-              console.log('✅ Outbound email logged successfully:', logData.id)
+              reject(new Error(result.error.message));
             }
-          } catch (logError) {
-            console.warn('Error logging outbound email:', logError)
-            // Don't fail the main operation if logging fails
           }
+        );
+      });
 
-          setStatus('success')
-          setMessage('AI reply generated and inserted successfully!')
-        } else {
-          // Development mode fallback
-          setStatus('success')
-          setMessage(`AI reply generated: "${replyText}"`)
-        }
-
-      } catch (error) {
-        console.error('Error generating reply:', error)
-        setStatus('error')
-        setMessage('Failed to generate reply. Please try again.')
-      }
-
-      // Reset status after 3 seconds
+      // Show success message
+      showNotification('Success', 'Reply generated and opened for review');
+      
+      // Close the taskpane after a short delay
       setTimeout(() => {
-        setStatus('ready')
-        setMessage('BlocIQ Generate Reply ready.')
-      }, 3000)
-    }
+        window.close();
+      }, 2000);
 
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initializeOffice)
-    } else {
-      initializeOffice()
+    } catch (error) {
+      console.error('Error using generated reply:', error);
+      setError(`Failed to create reply: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  };
 
-    return () => {
-      document.removeEventListener('DOMContentLoaded', initializeOffice)
-      // Clean up global function
-      if (typeof window !== 'undefined' && window.generateReply) {
-        delete window.generateReply
-      }
+  const showNotification = (title: string, message: string) => {
+    try {
+      const Office = (window as any).Office;
+      Office?.context?.mailbox?.item?.notificationMessages?.addAsync?.(
+        'blociq_notification',
+        {
+          type: Office.MailboxEnums.ItemNotificationMessageType.InformationalMessage,
+          message: message,
+          icon: 'Icon.16x16',
+          persistent: false
+        }
+      );
+    } catch (error) {
+      console.error('Error showing notification:', error);
     }
-  }, [])
+  };
 
-  const getStatusIcon = () => {
-    switch (status) {
-      case 'loading':
-        return <Loader2 className="h-6 w-6 animate-spin text-teal-600" />
-      case 'success':
-        return <CheckCircle className="h-6 w-6 text-green-600" />
-      case 'error':
-        return <AlertCircle className="h-6 w-6 text-red-600" />
-      default:
-        return <Sparkles className="h-6 w-6 text-teal-600" />
-    }
-  }
-
-  const getStatusColor = () => {
-    switch (status) {
-      case 'loading':
-        return 'border-teal-200 bg-teal-50'
-      case 'success':
-        return 'border-green-200 bg-green-50'
-      case 'error':
-        return 'border-red-200 bg-red-50'
-      default:
-        return 'border-gray-200 bg-white'
-    }
-  }
+  const regenerateReply = () => {
+    generateReplyFromEmail();
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-md mx-auto">
+    <>
+      <Script 
+        src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js" 
+        strategy="beforeInteractive"
+      />
+      
+      <div className="h-screen flex flex-col bg-white">
         {/* Header */}
-        <div className="bg-gradient-to-r from-teal-600 to-teal-700 text-white p-6 rounded-t-xl shadow-lg">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-              <Sparkles className="h-6 w-6" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold">BlocIQ Generate Reply</h1>
-              <p className="text-sm text-teal-100">AI-Powered Email Assistant</p>
-            </div>
-          </div>
+        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 text-center shadow-lg">
+          <h1 className="text-lg font-semibold m-0">⚡ Generate Reply</h1>
+          <p className="text-xs opacity-90 mt-1 mb-0">AI-powered email response generation</p>
         </div>
 
-        {/* Status Card */}
-        <div className={`border-x border-b rounded-b-xl p-6 shadow-lg ${getStatusColor()}`}>
-          <div className="text-center">
-            <div className="mb-4">
-              {getStatusIcon()}
+        {/* Content */}
+        <div className="flex-1 flex flex-col p-5 overflow-hidden">
+          {mode === 'generating' && isGenerating && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 text-center">
+              <div className="w-8 h-8 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin mx-auto mb-3"></div>
+              <p className="text-blue-800 font-medium">Generating your reply...</p>
+              <p className="text-blue-600 text-sm mt-1">Analyzing email content and crafting response</p>
             </div>
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">
-              {status === 'loading' && 'Generating Reply...'}
-              {status === 'success' && 'Reply Generated!'}
-              {status === 'error' && 'Error Occurred'}
-              {status === 'ready' && 'Ready to Generate'}
-            </h2>
-            <p className="text-gray-700 text-sm leading-relaxed mb-4">
-              {message}
-            </p>
+          )}
 
-            {/* Connection Status */}
-            <div className="flex items-center justify-center gap-2 text-sm mb-4">
-              <div className={`w-2 h-2 rounded-full ${isOfficeReady ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
-              <span className="text-gray-600">
-                {isOfficeReady ? 'Connected to Outlook' : 'Initializing...'}
-              </span>
-            </div>
-
-            {/* Test Button for Development */}
-            {process.env.NODE_ENV === 'development' && (
+          {!mode && !isGenerating && !generatedReply && (
+            <div className="text-center py-8">
+              <div className="text-6xl mb-4">🤖</div>
+              <h2 className="text-xl font-semibold text-gray-800 mb-3">Ready to Generate</h2>
+              <p className="text-gray-600 mb-6 leading-relaxed">
+                I'll analyze the current email and generate a professional reply for you.
+                Click the button below to get started.
+              </p>
               <button
-                onClick={() => window.generateReply?.()}
-                disabled={status === 'loading'}
-                className="px-6 py-2 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-400 text-white font-semibold rounded-lg transition-colors shadow-md hover:shadow-lg"
+                onClick={generateReplyFromEmail}
+                disabled={!officeReady}
+                className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-3 rounded-lg font-medium transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {status === 'loading' ? 'Generating...' : 'Test Generate Reply'}
+                {officeReady ? 'Generate Reply' : 'Loading...'}
               </button>
-            )}
-          </div>
-        </div>
+            </div>
+          )}
 
-        {/* Instructions */}
-        <div className="mt-6 p-4 bg-white rounded-xl shadow-sm border border-gray-200">
-          <h3 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
-            <Mail className="h-4 w-4 text-teal-600" />
-            How to Use
-          </h3>
-          <ul className="text-sm text-gray-600 space-y-1">
-            <li>• Open or reply to an email in Outlook</li>
-            <li>• Click the "Generate Reply" button in the ribbon</li>
-            <li>• BlocIQ will analyze the email and generate a professional response</li>
-            <li>• Review and edit the generated reply as needed</li>
-          </ul>
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+              <div className="flex items-start">
+                <span className="text-red-500 text-xl mr-3">⚠️</span>
+                <div>
+                  <h3 className="font-semibold text-red-800">Error</h3>
+                  <p className="text-red-700 text-sm mt-1">{error}</p>
+                  <button
+                    onClick={regenerateReply}
+                    className="mt-3 bg-red-100 text-red-800 px-4 py-2 rounded text-sm hover:bg-red-200 transition-colors"
+                  >
+                    Try Again
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {generatedReply && (
+            <div className="flex-1 flex flex-col">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-gray-800">Generated Reply</h3>
+                <button
+                  onClick={regenerateReply}
+                  className="text-indigo-600 text-sm hover:text-indigo-800 transition-colors"
+                >
+                  🔄 Regenerate
+                </button>
+              </div>
+              
+              <div className="flex-1 bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4 overflow-y-auto">
+                <pre className="whitespace-pre-wrap text-sm text-gray-800 font-sans">
+                  {generatedReply}
+                </pre>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={useGeneratedReply}
+                  className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-lg font-medium transition-all hover:shadow-lg"
+                >
+                  ✉️ Use This Reply
+                </button>
+                <button
+                  onClick={regenerateReply}
+                  className="px-6 bg-gray-100 text-gray-700 py-3 rounded-lg font-medium border border-gray-300 transition-all hover:bg-gray-200"
+                >
+                  🔄 Regenerate
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
-        <div className="mt-6 text-center">
+        <div className="border-t border-gray-200 p-3 bg-gray-50 text-center">
           <p className="text-xs text-gray-500">
-            Powered by BlocIQ AI • Property Management Assistant
+            💡 The generated reply will open in a new compose window for you to review and edit
           </p>
         </div>
       </div>
-    </div>
-  )
+    </>
+  );
 }

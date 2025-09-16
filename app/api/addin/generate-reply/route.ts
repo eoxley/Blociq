@@ -1,109 +1,164 @@
-/**
- * Outlook Add-in Generate Reply API Route
- * 
- * Dedicated endpoint for generating email replies with strict domain locking
- * and deterministic fact-based responses.
- */
-
+// app/api/addin/generate-reply/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { createAddinReplyAdapter } from '@/ai/adapters/addinReplyAdapter';
-import { processUserInput } from '@/ai/prompt/addinPrompt';
 
 export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { 
-      userInput, 
-      outlookContext, 
-      userSettings,
-      buildingContext 
-    } = body;
+    try {
+        const body = await request.json();
+        const { originalSubject, originalSender, originalBody, context } = body;
 
-    if (!userInput || typeof userInput !== 'string') {
-      return NextResponse.json({
-        success: false,
-        error: 'Invalid input',
-        message: 'User input is required'
-      }, { status: 400 });
-    }
+        console.log('Generate reply request received:', {
+            subject: originalSubject,
+            sender: originalSender,
+            bodyLength: originalBody?.length || 0,
+            context
+        });
 
-    // Process user input for acronyms and domain validation
-    const processed = processUserInput(userInput);
-    
-    // Check if out of scope
-    if (processed.isOutOfScope) {
-      return NextResponse.json({
-        success: true,
-        type: 'out_of_scope',
-        response: "Out of scope for BlocIQ add-in. I only handle UK leasehold and building-safety topics.",
-        confidence: 'high',
-        sources: [],
-        facts: [],
-        suggestions: ['Ask about property management, lease terms, or building safety instead']
-      });
-    }
-    
-    // Check for clarification needs
-    if (processed.needsClarification.length > 0) {
-      const clarification = processed.needsClarification[0];
-      return NextResponse.json({
-        success: true,
-        type: 'clarification_needed',
-        response: `In BlocIQ, ${clarification} could mean different things. Could you clarify what you mean by "${clarification}"?`,
-        confidence: 'medium',
-        sources: [],
-        facts: [],
-        suggestions: ['Be more specific about what you\'re asking about']
-      });
-    }
+        // Validate required fields
+        if (!originalBody && !originalSubject) {
+            return NextResponse.json({
+                success: false,
+                error: 'Missing email content'
+            }, { status: 400 });
+        }
 
-    // Validate Outlook context for reply generation
-    if (!outlookContext || !outlookContext.from) {
-      return NextResponse.json({
-        success: false,
-        error: 'Missing context',
-        message: 'Outlook message context is required for reply generation'
-      }, { status: 400 });
-    }
+        // Generate reply using your AI service
+        // Replace this with your actual BlocIQ AI API call
+        const reply = await generateAIReply({
+            subject: originalSubject,
+            sender: originalSender,
+            body: originalBody
+        });
 
-    // Create reply adapter
-    const replyAdapter = createAddinReplyAdapter();
-    
-    // Generate reply
-    const result = await replyAdapter.generateReply({
-      userInput: processed.processedInput,
-      outlookContext,
-      buildingContext,
-      userSettings
-    });
-    
-    return NextResponse.json({
-      success: true,
-      type: 'reply',
-      subjectSuggestion: result.subjectSuggestion,
-      bodyHtml: result.bodyHtml,
-      usedFacts: result.usedFacts,
-      sources: result.sources,
-      metadata: result.metadata
-    });
-    
-  } catch (error) {
-    console.error('Generate Reply API error:', error);
-    return NextResponse.json({
-      success: false,
-      error: 'Internal server error',
-      message: 'An unexpected error occurred while generating the reply'
-    }, { status: 500 });
-  }
+        return NextResponse.json({
+            success: true,
+            reply: reply,
+            timestamp: new Date().toISOString()
+        });
+
+    } catch (error) {
+        console.error('Error generating reply:', error);
+        
+        return NextResponse.json({
+            success: false,
+            error: 'Failed to generate reply'
+        }, { status: 500 });
+    }
 }
 
-/**
- * GET endpoint for health check
- */
-export async function GET() {
-  return NextResponse.json({
-    success: true,
-    message: 'Generate Reply API is healthy',
-    timestamp: new Date().toISOString()
-  });
+// CORS headers for Outlook add-in
+export async function OPTIONS(request: NextRequest) {
+    return new NextResponse(null, {
+        status: 200,
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            'Access-Control-Max-Age': '86400',
+        },
+    });
+}
+
+async function generateAIReply(emailData: {
+    subject: string;
+    sender: string;
+    body: string;
+}) {
+    // This is where you'd integrate with your actual AI service
+    // For now, I'll provide a template-based response
+    
+    const { subject, sender, body } = emailData;
+    
+    // Simple AI reply generation logic
+    // Replace this with your actual BlocIQ AI API call
+    
+    let replyTemplate = '';
+    
+    // Detect email type and generate appropriate response
+    if (body.toLowerCase().includes('property') || body.toLowerCase().includes('rent')) {
+        replyTemplate = `Thank you for your inquiry regarding the property matter.
+
+I've reviewed your message and will address your concerns promptly. Based on the information provided, I'll need to:
+
+• Review the relevant property details
+• Check current regulations and requirements  
+• Prepare a comprehensive response with next steps
+
+I'll get back to you within 24 hours with a detailed update.
+
+Best regards`;
+        
+    } else if (body.toLowerCase().includes('urgent') || body.toLowerCase().includes('asap')) {
+        replyTemplate = `Thank you for reaching out with this urgent matter.
+
+I understand the time-sensitive nature of your request and will prioritize this accordingly. I'm currently reviewing the details you've provided and will respond with a full update within the next few hours.
+
+In the meantime, please don't hesitate to call if you need immediate assistance.
+
+Best regards`;
+        
+    } else if (body.toLowerCase().includes('meeting') || body.toLowerCase().includes('schedule')) {
+        replyTemplate = `Thank you for your message regarding scheduling.
+
+I'd be happy to arrange a meeting to discuss this further. Based on your availability mentioned, I can offer the following time slots:
+
+• [Time slot 1]
+• [Time slot 2] 
+• [Time slot 3]
+
+Please let me know which works best for you, or suggest alternative times if none of these are suitable.
+
+Best regards`;
+        
+    } else {
+        replyTemplate = `Thank you for your email.
+
+I've received your message and will review the details carefully. I'll provide you with a comprehensive response addressing all your points within 24 hours.
+
+If you need any immediate assistance or have additional questions in the meantime, please don't hesitate to reach out.
+
+Best regards`;
+    }
+    
+    return replyTemplate;
+}
+
+// Alternative: Integration with your actual AI service
+async function generateAIReplyWithService(emailData: {
+    subject: string;
+    sender: string;
+    body: string;
+}) {
+    // Example integration with your AI service
+    try {
+        const response = await fetch('https://api.blociq.co.uk/ai/generate-reply', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${process.env.BLOCIQ_AI_API_KEY}`,
+            },
+            body: JSON.stringify({
+                prompt: `Generate a professional email reply for this property management email:
+                
+Subject: ${emailData.subject}
+From: ${emailData.sender}
+Message: ${emailData.body}
+
+Generate a helpful, professional reply that addresses the sender's needs.`,
+                maxTokens: 200,
+                temperature: 0.7
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error('AI service failed');
+        }
+
+        const result = await response.json();
+        return result.generatedText || 'Thank you for your email. I will review and respond shortly.';
+        
+    } catch (error) {
+        console.error('AI service error:', error);
+        // Fallback to template
+        return 'Thank you for your email. I will review and respond shortly.';
+    }
 }
