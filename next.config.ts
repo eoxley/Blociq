@@ -245,6 +245,24 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      // Office manifest XML files
+      {
+        source: '/:file*.xml',
+        headers: [
+          {
+            key: 'Content-Type',
+            value: 'application/xml; charset=utf-8',
+          },
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: '*',
+          },
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=300',
+          },
+        ],
+      },
     ];
   },
   // Add output configuration for better deployment
