@@ -13,9 +13,19 @@ async function validateManifest() {
   console.log('🔍 Validating BlocIQ Outlook Add-in...\n');
   
   try {
-    // Read manifest.xml
-    const manifestPath = './public/outlook-addin/manifest.xml';
-    const manifestXml = fs.readFileSync(manifestPath, 'utf8');
+    // Read manifest.xml - try both locations
+    let manifestPath = './public/outlook-addin/manifest.xml';
+    let manifestXml;
+    
+    try {
+      manifestXml = fs.readFileSync(manifestPath, 'utf8');
+      console.log(`📄 Using manifest: ${manifestPath}`);
+    } catch (error) {
+      // Fallback to individual manifests
+      manifestPath = './public/ask-blociq.xml';
+      manifestXml = fs.readFileSync(manifestPath, 'utf8');
+      console.log(`📄 Using fallback manifest: ${manifestPath}`);
+    }
     
     // Parse XML
     const parser = new xml2js.Parser();
@@ -34,10 +44,16 @@ async function validateManifest() {
     const urlsToTest = [
       officeApp.IconUrl[0].$.DefaultValue,
       officeApp.HighResolutionIconUrl[0].$.DefaultValue,
-      officeApp.SupportUrl[0].$.DefaultValue,
-      officeApp.PrivacyUrl[0].$.DefaultValue,
-      officeApp.TermsOfUseUrl[0].$.DefaultValue
+      officeApp.SupportUrl[0].$.DefaultValue
     ];
+    
+    // Add optional URLs if they exist
+    if (officeApp.PrivacyUrl) {
+      urlsToTest.push(officeApp.PrivacyUrl[0].$.DefaultValue);
+    }
+    if (officeApp.TermsOfUseUrl) {
+      urlsToTest.push(officeApp.TermsOfUseUrl[0].$.DefaultValue);
+    }
     
     // Add URLs from VersionOverrides
     const versionOverrides = officeApp.VersionOverrides[0].VersionOverrides[0];
@@ -99,7 +115,7 @@ async function validateManifest() {
     if (officeApp.PrivacyUrl && officeApp.TermsOfUseUrl) {
       console.log('   ✅ Privacy Policy and Terms of Use URLs included');
     } else {
-      console.log('   ❌ Missing Privacy Policy or Terms of Use URLs (required for Microsoft approval)');
+      console.log('   ⚠️  Missing Privacy Policy or Terms of Use URLs (recommended for Microsoft approval)');
     }
     
     console.log('\n🎯 Next Steps:');

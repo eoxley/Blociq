@@ -159,11 +159,11 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Content-Security-Policy',
-            value: "frame-ancestors 'self' https://outlook.office.com https://outlook.office365.com https://*.office.com https://*.office365.com;",
+            value: "frame-ancestors 'self' https://outlook.office.com https://outlook.office365.com https://outlook.live.com https://*.office.com https://*.office365.com https://*.live.com;",
           },
           {
             key: 'Access-Control-Allow-Origin',
-            value: 'https://outlook.office.com',
+            value: '*',
           },
           {
             key: 'Access-Control-Allow-Methods',
@@ -185,11 +185,11 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Content-Security-Policy',
-            value: "frame-ancestors 'self' https://outlook.office.com https://outlook.office365.com https://*.office.com https://*.office365.com;",
+            value: "frame-ancestors 'self' https://outlook.office.com https://outlook.office365.com https://outlook.live.com https://*.office.com https://*.office365.com https://*.live.com;",
           },
           {
             key: 'Access-Control-Allow-Origin',
-            value: 'https://outlook.office.com',
+            value: '*',
           },
           {
             key: 'Access-Control-Allow-Methods',
@@ -211,7 +211,7 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Access-Control-Allow-Origin',
-            value: 'https://outlook.office.com',
+            value: '*',
           },
           {
             key: 'Access-Control-Allow-Methods',
