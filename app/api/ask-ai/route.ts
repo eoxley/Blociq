@@ -471,6 +471,76 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // 🔍 Check for building information intent
+    try {
+      const { detectBuildingInfoQuery, searchBuildingInfo, generateBuildingInfoResponse } = await import('../../../lib/ai/buildingInfoHandler');
+
+      const buildingInfoQuery = detectBuildingInfoQuery(prompt);
+
+      if (buildingInfoQuery && buildingInfoQuery.confidence >= 80) {
+        console.log('🏢 Building info intent detected:', buildingInfoQuery);
+
+        const buildingInfo = await searchBuildingInfo(buildingInfoQuery.buildingName!, supabase);
+
+        if (buildingInfo) {
+          console.log('✅ Building info found:', buildingInfo.name);
+
+          const response = generateBuildingInfoResponse(
+            buildingInfo,
+            buildingInfoQuery.type,
+            buildingInfoQuery.unitNumber || undefined
+          );
+
+          return NextResponse.json({
+            success: true,
+            result: response,
+            response: response,
+            conversationId: null,
+            context_type: 'building_info',
+            building_id: buildingInfo.id,
+            document_count: 0,
+            has_email_thread: false,
+            has_leaseholder: false,
+            context: {
+              source: 'building_info_handler',
+              confidence: buildingInfoQuery.confidence,
+              query_type: buildingInfoQuery.type,
+              building_name: buildingInfo.name,
+              unit_count: buildingInfo.unit_count
+            },
+            metadata: {
+              source: 'building_info_handler',
+              specialized_handler: true,
+              quality_score: 95
+            }
+          });
+        } else {
+          console.log('❌ Building not found:', buildingInfoQuery.buildingName);
+
+          return NextResponse.json({
+            success: true,
+            result: `I couldn't find a building named "${buildingInfoQuery.buildingName}" in the system. Please check the building name and try again.`,
+            response: `I couldn't find a building named "${buildingInfoQuery.buildingName}" in the system. Please check the building name and try again.`,
+            conversationId: null,
+            context_type: 'building_info',
+            building_id: null,
+            document_count: 0,
+            has_email_thread: false,
+            has_leaseholder: false,
+            context: {
+              source: 'building_info_handler',
+              confidence: buildingInfoQuery.confidence,
+              query_type: buildingInfoQuery.type,
+              building_not_found: true
+            }
+          });
+        }
+      }
+    } catch (error) {
+      console.error('❌ Building info processing failed:', error);
+      // Continue with normal AI processing
+    }
+
     // 🔍 Check for report intent
     if (!isPublic && user) {
       try {
@@ -478,22 +548,22 @@ export async function POST(req: NextRequest) {
         const { executeReport } = await import('../../../ai/reports/engine');
         const { formatReportResponse, generateDownloadActions, generateReportSummary } = await import('../../../ai/reports/format');
         const { registerAllHandlers } = await import('../../../ai/reports/handlers');
-        
+
         // Register report handlers
         registerAllHandlers();
-        
+
         const reportIntent = detectReportIntent(prompt, building_id);
-        
+
         if (reportIntent) {
           console.log('📊 Report intent detected:', reportIntent);
-          
+
           // Get user's agency
           const { data: userProfile } = await supabase
             .from('profiles')
             .select('agency_id')
             .eq('id', user.id)
             .single();
-          
+
           if (!userProfile?.agency_id) {
             return NextResponse.json({
               success: false,
@@ -501,10 +571,10 @@ export async function POST(req: NextRequest) {
               message: 'Please complete your profile setup'
             }, { status: 400 });
           }
-          
+
           // Execute the report
           const reportResult = await executeReport(reportIntent, userProfile.agency_id);
-          
+
           if (!reportResult.success) {
             return NextResponse.json({
               success: false,
@@ -512,7 +582,7 @@ export async function POST(req: NextRequest) {
               message: 'Please try rephrasing your request or contact support if the issue persists'
             }, { status: 500 });
           }
-          
+
           if (!reportResult.result) {
             return NextResponse.json({
               success: false,
@@ -520,7 +590,7 @@ export async function POST(req: NextRequest) {
               message: 'Please try a different report request'
             }, { status: 500 });
           }
-          
+
           // Format the response
           const response = formatReportResponse(
             reportResult.result,
@@ -529,10 +599,10 @@ export async function POST(req: NextRequest) {
             reportResult.result.meta?.period || 'N/A',
             reportIntent.format === 'csv' ? generateDownloadActions('report', reportResult.result.meta?.title || 'Report', ['csv']) : undefined
           );
-          
+
           // Generate summary text for the AI response
           const summaryText = generateReportSummary(reportResult.result, reportResult.result.meta?.title || 'Report');
-          
+
           const aiResponse = {
             success: true,
             answer: `**${response.title}**\n\n${summaryText}\n\n${response.table ? `**Data:**\n${JSON.stringify(response.table, null, 2)}` : ''}`,
@@ -541,7 +611,7 @@ export async function POST(req: NextRequest) {
             result: response,
             response: `**${response.title}**\n\n${summaryText}`
           };
-          
+
           console.log('✅ Report generated successfully:', reportResult.result.meta?.title);
           return NextResponse.json(aiResponse);
         }
