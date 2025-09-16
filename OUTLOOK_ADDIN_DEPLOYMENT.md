@@ -2,9 +2,9 @@
 
 ## ✅ Issues Fixed
 
-### 1. **Merged Manifests** 
-- ✅ Combined `ask-blociq.xml` and `generate-reply.xml` into single unified manifest
-- ✅ Created `public/outlook-addin/manifest.xml` with both task pane and command functionality
+### 1. **Unified Manifest** 
+- ✅ Created single unified manifest at `public/outlook-addin/manifest.xml`
+- ✅ Combined task pane and command functionality in one add-in
 - ✅ Single add-in ID: `8b8fe65f-2c9e-4d8a-b8c3-1234567890ab`
 
 ### 2. **Fixed CORS Headers**
