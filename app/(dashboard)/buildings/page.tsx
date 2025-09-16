@@ -106,8 +106,8 @@ function BuildingsList() {
       </section>
 
       {/* Stats Cards */}
-      <div className="max-w-7xl mx-auto px-6 -mt-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
             <div className="text-3xl font-bold text-gray-900 mb-2">{combinedBuildings.length}</div>
             <div className="text-gray-600 text-sm">Total Buildings</div>
@@ -120,20 +120,6 @@ function BuildingsList() {
             <div className="text-3xl font-bold text-gray-900 mb-2">{totalUnits}</div>
             <div className="text-gray-600 text-sm">Total Units</div>
           </div>
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-4 justify-center mb-10">
-          <button
-            onClick={() => alert('Building creation feature coming soon!')}
-            className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5"
-          >
-            <Plus className="h-5 w-5 mr-2 inline" />
-            Create New Building
-          </button>
-          <button className="bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
-            <Sparkles className="h-5 w-5 mr-2 inline" />
-            AI Building Assistant
-          </button>
         </div>
       </div>
 
@@ -260,39 +246,6 @@ export default function BuildingsPage() {
       {/* Buildings List */}
       <BuildingsList />
 
-      {/* Enhanced CTA Section - Matching Landing Page Style */}
-      <section className="hero-banner py-16 mx-6" style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)' }}>
-        <div className="max-w-4xl mx-auto px-6">
-          <div className="bg-white rounded-3xl p-12 shadow-2xl border-2 border-gray-100 text-center">
-            <div className="w-20 h-20 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-2xl">
-              <Plus className="h-10 w-10 text-white" />
-            </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-6">
-              Add Another Building
-            </h2>
-            <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto leading-relaxed">
-              Expand your portfolio by adding more properties to manage with BlocIQ's intelligent platform.
-            </p>
-            <div className="relative inline-block">
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  alert('Building creation feature coming soon!');
-                }}
-                className="inline-flex items-center gap-3 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white px-8 py-4 rounded-2xl cursor-not-allowed opacity-75 hover:opacity-75 transition-all duration-300 font-bold text-lg shadow-2xl transform"
-              >
-                <Plus className="h-6 w-6" />
-                Add New Building
-                <ArrowRight className="h-5 w-5" />
-              </button>
-              {/* Coming Soon Badge */}
-              <div className="absolute -top-2 -right-2 bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-xl border-2 border-white">
-                COMING SOON
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
     </div>
   )
 } 
