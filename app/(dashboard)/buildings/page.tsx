@@ -29,11 +29,13 @@ function BuildingsList() {
         
         if (response.ok) {
           const data = await response.json()
+          // Ensure data and data.buildings are properly structured
+          const buildingsArray = Array.isArray(data?.buildings) ? data.buildings : []
           // Transform real buildings to match the expected format
-          const transformedBuildings = (data.buildings || []).map((building: any) => ({
+          const transformedBuildings = buildingsArray.map((building: any) => ({
             id: building.id.toString(),
-            name: building.name,
-            address: building.address,
+            name: building.name || 'Unknown Building',
+            address: building.address || 'Unknown Address',
             units: building.unit_count || 0, // Use dynamically calculated unit_count
             unit_count: building.unit_count || 0, // Also store as unit_count for consistency
             isDummy: false,
@@ -42,9 +44,11 @@ function BuildingsList() {
           setRealBuildings(transformedBuildings)
         } else {
           console.error('Failed to fetch real buildings:', response.statusText)
+          setRealBuildings([]) // Set empty array on error
         }
       } catch (error) {
         console.error('Error fetching real buildings:', error)
+        setRealBuildings([]) // Set empty array on error
       } finally {
         setIsLoading(false)
       }

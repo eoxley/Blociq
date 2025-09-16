@@ -30,13 +30,13 @@ export async function GET(req: NextRequest) {
 
     if (error) {
       console.error('Error fetching building assets:', error)
-      return NextResponse.json({ error: 'Failed to fetch building assets' }, { status: 500 })
+      return NextResponse.json({ error: 'Failed to fetch building assets', assets: [] }, { status: 500 })
     }
 
     return NextResponse.json({ assets: data || [] })
   } catch (error) {
     console.error('Error in building assets GET:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error', assets: [] }, { status: 500 })
   }
 }
 

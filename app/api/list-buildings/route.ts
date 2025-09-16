@@ -27,9 +27,11 @@ export async function GET() {
       .order('name')
 
     if (buildingsError) {
-      return NextResponse.json({ 
-        error: 'Failed to fetch buildings', 
-        details: buildingsError
+      return NextResponse.json({
+        success: false,
+        error: 'Failed to fetch buildings',
+        details: buildingsError,
+        buildings: []  // Always provide empty array even on error
       }, { status: 500 })
     }
 
@@ -60,17 +62,22 @@ export async function GET() {
 
     console.log('📋 Buildings found with dynamic unit counts:', buildingsWithUnitCounts)
 
+    // Ensure we always return an array
+    const safeBuildings = Array.isArray(buildingsWithUnitCounts) ? buildingsWithUnitCounts : []
+
     return NextResponse.json({
       success: true,
-      count: buildingsWithUnitCounts?.length || 0,
-      buildings: buildingsWithUnitCounts || []
+      count: safeBuildings.length,
+      buildings: safeBuildings
     })
 
   } catch (error) {
     console.error('❌ List buildings error:', error)
-    return NextResponse.json({ 
-      error: 'Unexpected error', 
-      details: error instanceof Error ? error.message : 'Unknown error'
+    return NextResponse.json({
+      success: false,
+      error: 'Unexpected error',
+      details: error instanceof Error ? error.message : 'Unknown error',
+      buildings: []  // Always provide empty array even on error
     }, { status: 500 })
   }
 } 
