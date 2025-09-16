@@ -351,17 +351,10 @@ export default function BuildingCompliancePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-[#f8fafc] via-white to-[#f1f5f9]">
       {/* Hero Banner */}
-      <div className="relative bg-gradient-to-r from-[#004AAD] via-[#7209B7] to-[#004AAD] overflow-hidden">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0" style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-          }}></div>
-        </div>
-        
-        <div className="relative max-w-7xl mx-auto px-6 py-12">
+      <section className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] py-16 mx-6 rounded-3xl">
+        <div className="max-w-7xl mx-auto px-6">
           {/* Navigation */}
           <div className="flex items-center justify-between mb-8">
             <button
@@ -419,12 +412,9 @@ export default function BuildingCompliancePage() {
 
           {/* Hero Content */}
           <div className="text-center text-white">
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <Shield className="h-12 w-12 text-white/90" />
-              <h1 className="text-4xl font-bold">
-                {building?.name || 'Building'} Compliance
-              </h1>
-            </div>
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
+              {building?.name || 'Building'} Compliance
+            </h1>
             
             <p className="text-xl text-white/90 mb-6 max-w-2xl mx-auto">
               Comprehensive compliance management and monitoring for your property
@@ -608,7 +598,13 @@ export default function BuildingCompliancePage() {
             </div>
           </div>
         </div>
-      </div>
+
+        {/* Decorative Elements */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+          <div className="absolute top-10 left-10 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-10 right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+        </div>
+      </section>
 
       {/* Compliance Assets List */}
       <div className="max-w-7xl mx-auto px-6 mt-8 mb-12">

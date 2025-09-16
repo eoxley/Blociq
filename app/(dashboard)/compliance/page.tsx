@@ -510,54 +510,6 @@ export default function CompliancePage() {
         </div>
       </section>
 
-      {/* Quick Stats */}
-      {summary.total_buildings > 0 && (
-        <div className="max-w-7xl mx-auto px-6 -mt-8 mb-16">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-              <Building2 className="h-8 w-8 text-gray-600 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-gray-900">{summary.total_buildings}</p>
-              <p className="text-gray-600 text-sm">Properties</p>
-            </div>
-            <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-              <Shield className="h-8 w-8 text-gray-600 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-gray-900">{summary.total_assets}</p>
-              <p className="text-gray-600 text-sm">Assets</p>
-            </div>
-            <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-              <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-gray-900">{summary.compliant_count}</p>
-              <p className="text-gray-600 text-sm">Compliant</p>
-            </div>
-            <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-              <TrendingUp className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-gray-900">{summary.compliance_percentage}%</p>
-              <p className="text-gray-600 text-sm">Success Rate</p>
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button
-              onClick={() => {
-                if (buildings.length > 0) {
-                  router.push(`/buildings/${buildings[0].id}/compliance`);
-                } else {
-                  router.push('/buildings');
-                }
-              }}
-              className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5"
-            >
-              Setup Compliance
-            </button>
-            <button
-              onClick={fetchComplianceData}
-              className="bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5"
-            >
-              Refresh Data
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Main Content Section */}
       <div className="max-w-7xl mx-auto px-6 py-16">
