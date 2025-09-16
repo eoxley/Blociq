@@ -224,11 +224,18 @@ export default function PricingPage() {
               </div>
               <p className="mt-6 text-sm text-gray-500 text-center">*Example pricing excludes VAT. Annual discounts available. Contact us for current rates.</p>
               <div className="mt-8 text-center">
-                <Link href="/onboarding">
+                {/* Temporarily disabled - Onboarding page */}
+                {/* <Link href="/onboarding">
                   <Button className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white px-8 py-3 rounded-2xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
                     View onboarding steps <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
-                </Link>
+                </Link> */}
+                <Button 
+                  disabled
+                  className="bg-gray-300 text-gray-500 px-8 py-3 rounded-2xl font-semibold cursor-not-allowed"
+                >
+                  View onboarding steps <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
               </div>
             </CardContent>
           </Card>

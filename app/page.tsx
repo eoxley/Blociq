@@ -28,12 +28,13 @@ export default function LandingPage() {
               </span>
             </div>
             <div className="hidden md:flex items-center gap-6 text-sm">
-              <Link href="/pricing" className="text-gray-700 hover:text-[#6A00F5] transition-colors font-medium">
+              {/* Temporarily disabled - Pricing and Onboarding pages */}
+              {/* <Link href="/pricing" className="text-gray-700 hover:text-[#6A00F5] transition-colors font-medium">
                 Pricing
               </Link>
               <Link href="/onboarding" className="text-gray-700 hover:text-[#6A00F5] transition-colors font-medium">
                 Onboarding
-              </Link>
+              </Link> */}
             </div>
             <Link 
               href="/login"
@@ -574,8 +575,9 @@ export default function LandingPage() {
             <div>
               <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
               <ul className="space-y-2">
-                <li><Link href="/pricing" className="text-gray-400 hover:text-white transition-colors">Pricing</Link></li>
-                <li><Link href="/onboarding" className="text-gray-400 hover:text-white transition-colors">Onboarding</Link></li>
+                {/* Temporarily disabled - Pricing and Onboarding pages */}
+                {/* <li><Link href="/pricing" className="text-gray-400 hover:text-white transition-colors">Pricing</Link></li>
+                <li><Link href="/onboarding" className="text-gray-400 hover:text-white transition-colors">Onboarding</Link></li> */}
                 <li><Link href="/privacy" className="text-gray-400 hover:text-white transition-colors">Privacy Policy</Link></li>
                 <li><Link href="/terms" className="text-gray-400 hover:text-white transition-colors">Terms</Link></li>
                 <li><Link href="/cookies" className="text-gray-400 hover:text-white transition-colors">Cookies</Link></li>
