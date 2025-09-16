@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from '@/utils/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 import { cookies } from "next/headers";
 
 export const runtime = 'nodejs';
@@ -28,12 +28,14 @@ export async function GET(
 
     console.log('🔍 [Asset API] Fetching asset:', { buildingId, assetId, userId: user.id });
 
-    // Get building compliance asset with related data
-    const { data: assetData, error: assetError } = await supabase
+    // First, try to fetch by building_compliance_assets.id (direct ID)
+    let assetData, assetError;
+
+    const { data: directAsset, error: directError } = await supabase
       .from('building_compliance_assets')
       .select(`
         *,
-        compliance_assets (
+        compliance_assets!asset_id (
           id,
           name,
           category,
@@ -42,8 +44,33 @@ export async function GET(
         )
       `)
       .eq('building_id', buildingId)
-      .eq('compliance_asset_id', assetId)
+      .eq('id', assetId)
       .single();
+
+    if (directAsset) {
+      assetData = directAsset;
+      assetError = directError;
+    } else {
+      // Fallback: try by compliance_asset_id (asset reference)
+      const { data: refAsset, error: refError } = await supabase
+        .from('building_compliance_assets')
+        .select(`
+          *,
+          compliance_assets!asset_id (
+            id,
+            name,
+            category,
+            description,
+            frequency_months
+          )
+        `)
+        .eq('building_id', buildingId)
+        .eq('asset_id', assetId)
+        .single();
+
+      assetData = refAsset;
+      assetError = refError;
+    }
 
     console.log('🔍 [Asset API] Query result:', { assetData, assetError });
 
@@ -55,6 +82,9 @@ export async function GET(
     }
 
     // Get documents separately to avoid complex join issues
+    // Use the actual asset_id from the building compliance asset
+    const actualAssetId = assetData.asset_id || assetId;
+
     const { data: documents, error: docError } = await supabase
       .from('compliance_documents')
       .select(`
@@ -70,7 +100,7 @@ export async function GET(
         is_current_version
       `)
       .eq('building_id', buildingId)
-      .eq('compliance_asset_id', assetId)
+      .eq('compliance_asset_id', actualAssetId)
       .order('upload_date', { ascending: false });
 
     console.log('🔍 [Asset API] Documents query:', { documents, docError });
@@ -173,25 +203,48 @@ export async function PUT(
     }
 
     // Update building compliance asset
-    const { data: updatedAsset, error: updateError } = await supabase
+    // Try updating by ID first, then by asset_id if that fails
+    let updatedAsset, updateError;
+
+    const updateData = {
+      status,
+      last_renewed_date: lastRenewedDate,
+      last_carried_out: lastCarriedOut,
+      next_due_date: calculatedNextDue,
+      notes,
+      contractor,
+      inspector_provider: inspectorProvider,
+      certificate_reference: certificateReference,
+      override_reason: overrideReason,
+      frequency_months: frequencyMonths,
+      updated_at: new Date().toISOString()
+    };
+
+    // First try by building_compliance_assets.id
+    const { data: directUpdate, error: directUpdateError } = await supabase
       .from('building_compliance_assets')
-      .update({
-        status,
-        last_renewed_date: lastRenewedDate,
-        last_carried_out: lastCarriedOut,
-        next_due_date: calculatedNextDue,
-        notes,
-        contractor,
-        inspector_provider: inspectorProvider,
-        certificate_reference: certificateReference,
-        override_reason: overrideReason,
-        frequency_months: frequencyMonths,
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('building_id', buildingId)
-      .eq('compliance_asset_id', params.assetId)
+      .eq('id', params.assetId)
       .select()
       .single();
+
+    if (directUpdate) {
+      updatedAsset = directUpdate;
+      updateError = directUpdateError;
+    } else {
+      // Fallback: try by asset_id
+      const { data: refUpdate, error: refUpdateError } = await supabase
+        .from('building_compliance_assets')
+        .update(updateData)
+        .eq('building_id', buildingId)
+        .eq('asset_id', params.assetId)
+        .select()
+        .single();
+
+      updatedAsset = refUpdate;
+      updateError = refUpdateError;
+    }
 
     if (updateError || !updatedAsset) {
       console.error('Asset update error:', updateError);
