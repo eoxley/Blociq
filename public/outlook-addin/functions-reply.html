@@ -6,66 +6,51 @@
   <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
 </head>
 <body>
+  <h3 style="font-family: sans-serif; color: #444;">BlocIQ Reply Functions Loaded ✅</h3>
+  <p style="font-family: sans-serif; color: #666; font-size: 12px;">
+    This page is used by Outlook as the FunctionFile entry point for the BlocIQ Reply add-in.
+  </p>
+
   <script>
-    /**
-     * Generate contextual reply using BlocIQ AI and insert into compose window.
-     * Triggered when the user clicks the "Generate Reply" button.
-     */
     function generateBlocIQReply(event) {
-      console.log('🤖 BlocIQ Reply: Starting AI reply generation...');
+      const userEmail = Office.context.mailbox.userProfile.emailAddress || "";
+      console.log("BlocIQ Reply triggered for user:", userEmail);
 
-      try {
-        const userEmail = Office.context.mailbox.userProfile.emailAddress;
-        if (!userEmail) {
-          console.error('❌ No user email available from Office context');
+      fetch("https://www.blociq.co.uk/api/ask-ai-outlook", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-User-Email": userEmail
+        },
+        body: JSON.stringify({
+          question: "Generate a professional property management email reply",
+          contextType: "outlook_reply",
+          is_outlook_addin: true
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.ok && data.answer) {
+          Office.context.mailbox.item.body.setSelectedDataAsync(
+            data.answer,
+            { coercionType: Office.CoercionType.Html },
+            () => event.completed()
+          );
+        } else {
+          console.error("BlocIQ reply failed:", data.error);
           event.completed();
-          return;
         }
-
-        // Build question
-        const question = "Generate a professional property management email reply";
-
-        // Call backend
-        fetch("https://www.blociq.co.uk/api/ask-ai-outlook", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-User-Email": userEmail
-          },
-          body: JSON.stringify({
-            question,
-            contextType: "outlook_reply",
-            is_outlook_addin: true
-          })
-        })
-        .then(resp => resp.json())
-        .then(data => {
-          if (data.ok && data.answer) {
-            Office.context.mailbox.item.body.setSelectedDataAsync(
-              data.answer,
-              { coercionType: Office.CoercionType.Html },
-              () => event.completed()
-            );
-          } else {
-            console.error("❌ AI reply failed:", data.error);
-            event.completed();
-          }
-        })
-        .catch(err => {
-          console.error("❌ Fetch failed:", err);
-          event.completed();
-        });
-
-      } catch (error) {
-        console.error("❌ Error in generateBlocIQReply:", error);
+      })
+      .catch(err => {
+        console.error("BlocIQ API call failed:", err);
         event.completed();
-      }
+      });
     }
 
-    // Modern registration
+    // Modern Office runtime registration
     Office.onReady(() => {
       Office.actions.associate("generateBlocIQReply", generateBlocIQReply);
-      console.log("✅ Registered generateBlocIQReply with Office.actions");
+      console.log("✅ BlocIQ reply function registered");
     });
 
     // Legacy fallback
