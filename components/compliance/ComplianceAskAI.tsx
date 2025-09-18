@@ -70,13 +70,14 @@ const ComplianceAskAI: React.FC<ComplianceAskAIProps> = ({
     }
   }, [buildingId, buildingName])
 
-  useEffect(() => {
-    scrollToBottom()
-  }, [messages])
+  // Auto-scroll removed - let users control their own scrolling
+  // useEffect(() => {
+  //   scrollToBottom()
+  // }, [messages])
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
+  // const scrollToBottom = () => {
+  //   messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  // }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

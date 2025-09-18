@@ -53,10 +53,10 @@ export default function PublicAskBlocIQ({ isPublic = true, isVisible = false }: 
     inputRef.current?.focus();
   }, []);
 
-  // Scroll to bottom when new messages are added
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  // Auto-scroll removed - let users control their own scrolling
+  // useEffect(() => {
+  //   messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  // }, [messages]);
 
   const validateFile = (file: File): boolean => {
     if (!acceptedFileTypes.includes(file.type)) {

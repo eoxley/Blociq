@@ -37,10 +37,10 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-scroll to bottom when new messages are added
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  // Auto-scroll removed - let users control their own scrolling
+  // useEffect(() => {
+  //   messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  // }, [messages]);
 
   // Auto-focus input when chat opens
   useEffect(() => {

@@ -220,10 +220,10 @@ export default function AskBlocIQ({
     textarea.style.height = `${newHeight}px`;
   };
 
-  // Scroll to bottom when new messages are added
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  // Auto-scroll removed - let users control their own scrolling
+  // useEffect(() => {
+  //   messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  // }, [messages]);
 
 
   const handleSuggestedPrompt = (prompt: string) => {
