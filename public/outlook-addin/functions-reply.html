@@ -47,14 +47,18 @@
       });
     }
 
-    // Modern Office runtime registration
+    // Initialize Office.js and register function
     Office.onReady(() => {
-      Office.actions.associate("generateBlocIQReply", generateBlocIQReply);
+      if (Office.actions && Office.actions.associate) {
+        Office.actions.associate("generateBlocIQReply", generateBlocIQReply);
+      }
       console.log("✅ BlocIQ reply function registered");
     });
 
-    // Legacy fallback
-    window.generateBlocIQReply = generateBlocIQReply;
+    // Global function registration for legacy support
+    if (typeof window !== 'undefined') {
+      window.generateBlocIQReply = generateBlocIQReply;
+    }
   </script>
 </body>
 </html>

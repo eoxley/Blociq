@@ -46,6 +46,7 @@
     <Hosts>
       <Host xsi:type="MailHost">
         <DesktopFormFactor>
+          <FunctionFile resid="blocIQReplyFunctions"/>
           <ExtensionPoint xsi:type="MessageComposeCommandSurface">
             <OfficeTab id="TabDefault">
               <Group id="msgComposeGroup">
@@ -94,9 +95,6 @@
         <bt:String id="buttonSuperTipDescription" DefaultValue="Generate an AI-powered reply for this email using BlocIQ."/>
       </bt:LongStrings>
     </Resources>
-
-    <!-- Bind FunctionFile to ExecuteFunction -->
-    <FunctionFile resid="blocIQReplyFunctions"/>
 
   </VersionOverrides>
 </OfficeApp>
