@@ -1,26 +1,106 @@
-async function generateBlocIQReply(event) {
-  try {
-    const email = Office.context.mailbox.userProfile.emailAddress;
+<?xml version="1.0" encoding="UTF-8"?>
+<OfficeApp 
+  xmlns="http://schemas.microsoft.com/office/appforoffice/1.1" 
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+  xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0" 
+  xmlns:mailappor="http://schemas.microsoft.com/office/mailappversionoverrides" 
+  xsi:type="MailApp">
 
-    const res = await fetch("https://www.blociq.co.uk/api/ask-ai-outlook", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-User-Email": email
-      },
-      body: JSON.stringify({ question: "Generate reply for this email" })
-    });
-    const data = await res.json();
+  <Id>85e47bf9-847d-4fa6-ab0b-7d73531345dc</Id>
+  <Version>1.0.0.0</Version>
+  <ProviderName>BlocIQ</ProviderName>
+  <DefaultLocale>en-US</DefaultLocale>
+  <DisplayName DefaultValue="BlocIQ Reply Generator"/>
+  <Description DefaultValue="AI-powered email reply generation for Outlook"/>
 
-    if (data.ok) {
-      Office.context.mailbox.item.body.setSelectedDataAsync(
-        data.answer,
-        { coercionType: Office.CoercionType.Html }
-      );
-    }
-  } catch (err) {
-    console.error("BlocIQ reply error", err);
-  } finally {
-    event.completed();
-  }
-}
+  <IconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-32.png"/>
+  <HighResolutionIconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-80.png"/>
+
+  <SupportUrl DefaultValue="https://www.blociq.co.uk"/>
+  
+  <AppDomains>
+    <AppDomain>https://blociq.co.uk</AppDomain>
+    <AppDomain>https://www.blociq.co.uk</AppDomain>
+  </AppDomains>
+
+  <Hosts>
+    <Host Name="Mailbox"/>
+  </Hosts>
+
+  <Requirements>
+    <Sets>
+      <Set Name="Mailbox" MinVersion="1.3"/>
+    </Sets>
+  </Requirements>
+
+  <Permissions>ReadWriteMailbox</Permissions>
+
+  <Rule xsi:type="RuleCollection" Mode="Or">
+    <Rule xsi:type="ItemIs" ItemType="Message" FormType="Edit"/>
+  </Rule>
+
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1" xsi:type="VersionOverridesV1_1">
+
+    <Requirements>
+      <bt:Sets DefaultMinVersion="1.3">
+        <bt:Set Name="Mailbox"/>
+      </bt:Sets>
+    </Requirements>
+
+    <Hosts>
+      <Host xsi:type="MailHost">
+        <DesktopFormFactor>
+          <ExtensionPoint xsi:type="MessageComposeCommandSurface">
+            <OfficeTab id="TabDefault">
+              <Group id="msgComposeGroup">
+                <Label resid="groupLabel"/>
+
+                <Control xsi:type="Button" id="msgComposeGenerateReplyButton">
+                  <Label resid="buttonLabel"/>
+                  <Supertip>
+                    <Title resid="buttonSuperTipTitle"/>
+                    <Description resid="buttonSuperTipDescription"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="icon16"/>
+                    <bt:Image size="32" resid="icon32"/>
+                    <bt:Image size="80" resid="icon80"/>
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>generateBlocIQReply</FunctionName>
+                  </Action>
+                </Control>
+
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </DesktopFormFactor>
+      </Host>
+    </Hosts>
+
+    <Resources>
+      <bt:Images>
+        <bt:Image id="icon16" DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-16.png"/>
+        <bt:Image id="icon32" DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-32.png"/>
+        <bt:Image id="icon80" DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-80.png"/>
+      </bt:Images>
+
+      <bt:Urls>
+        <bt:Url id="functionFile" DefaultValue="https://www.blociq.co.uk/outlook-addin/functions.html"/>
+      </bt:Urls>
+
+      <bt:ShortStrings>
+        <bt:String id="groupLabel" DefaultValue="BlocIQ Reply"/>
+        <bt:String id="buttonLabel" DefaultValue="Generate Reply"/>
+        <bt:String id="buttonSuperTipTitle" DefaultValue="Generate AI Reply"/>
+      </bt:ShortStrings>
+
+      <bt:LongStrings>
+        <bt:String id="buttonSuperTipDescription" DefaultValue="Generate an AI-powered reply for this email using BlocIQ."/>
+      </bt:LongStrings>
+    </Resources>
+
+    <FunctionFile resid="functionFile"/>
+
+  </VersionOverrides>
+</OfficeApp>
