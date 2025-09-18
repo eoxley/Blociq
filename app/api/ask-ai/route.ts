@@ -228,7 +228,7 @@ export async function POST(req: NextRequest) {
     const { searchEntireDatabase, formatSearchResultsForAI, extractRelevantContext } = await import('../../../lib/supabase/comprehensiveDataSearch');
     const { getRecentCommunicationsForContext } = await import('../../../lib/utils/communications-logger');
 
-    const supabase = createClient();
+    const supabase = await createClient();
     
     // Get current user (optional for public access) - Safe destructuring to prevent "Right side of assignment cannot be destructured" error
     let user = null;
