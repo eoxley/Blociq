@@ -24,15 +24,23 @@ export default function LoginForm({
     setMessage('')
     setError('')
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
-    if (error) {
-      setError(error.message)
-    } else {
-      setMessage('Check your email for the login link!')
+      if (error) {
+        setError(error.message)
+      } else if (data.user) {
+        // Successfully signed in, redirect to home
+        setMessage('Successfully signed in! Redirecting...')
+        window.location.href = '/home'
+      } else {
+        setError('Authentication failed. Please try again.')
+      }
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.')
     }
 
     setIsLoading(false)
@@ -44,18 +52,38 @@ export default function LoginForm({
     setMessage('')
     setError('')
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
+    try {
+      // Direct signup without email confirmation
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      })
 
-    if (error) {
-      setError(error.message)
-    } else {
-      setMessage('Check your email for the confirmation link!')
+      if (error) {
+        setError(error.message)
+      } else if (data.user) {
+        // Check if user is immediately confirmed (no email confirmation required)
+        if (data.user.email_confirmed_at || !data.user.confirmation_sent_at) {
+          setMessage('Account created successfully! Signing you in...')
+          // Attempt to sign in immediately
+          const { error: signInError } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          })
+          if (!signInError) {
+            window.location.href = '/home'
+          }
+        } else {
+          setMessage('Account created! Please contact admin to activate your account.')
+        }
+      } else {
+        setError('Account creation failed. Please try again.')
+      }
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.')
     }
 
     setIsLoading(false)
@@ -66,7 +94,7 @@ export default function LoginForm({
       <CardHeader>
         <CardTitle>Sign In</CardTitle>
         <CardDescription>
-          Enter your email and password to sign in to your account
+          Enter your email and password to sign in to your account. No email confirmation required.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
