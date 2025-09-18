@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     const { data: emails, error: emailsError } = await supabase
       .from('incoming_emails')
       .select(`
-        id, subject, from_email, body_preview, received_at, handled, unread, tag, building_id
+        id, subject, from_email, body_preview, received_at, handled, unread, ai_tag, building_id
       `)
       .in('id', emailIds)
       .order('received_at', { ascending: true });
@@ -57,7 +57,7 @@ From: ${email.from_email}
 Subject: ${email.subject}
 Content: ${email.body_preview}
 Status: ${email.handled ? 'Handled' : 'Pending'} | ${email.unread ? 'Unread' : 'Read'}
-Tag: ${email.tag || 'None'}
+Tag: ${email.ai_tag || 'None'}
 ---`).join('\n\n');
 
     // Build context if requested
