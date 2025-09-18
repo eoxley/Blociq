@@ -10,10 +10,13 @@ import { cookies } from 'next/headers';
 export async function GET(request: NextRequest) {
   try {
     console.log('📅 Fetching property events for homepage...');
-    const supabase = createClient(cookies());
-    
-    // Get the current user
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    const supabase = await createClient();
+
+    // Get the current user - Safe destructuring to prevent "Right side of assignment cannot be destructured" error
+    const sessionResult = await supabase.auth.getSession();
+    const sessionData = sessionResult?.data || {}
+    const session = sessionData.session || null
+    const sessionError = sessionResult?.error || null
     const user = session?.user;
     
     if (sessionError || !user) {

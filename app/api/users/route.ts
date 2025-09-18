@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
   };
 
   try {
-    const supabase = createClient(cookies());
+    const supabase = await createClient();
     
     // Get the current user - Safe destructuring to prevent "Right side of assignment cannot be destructured" error
     const sessionResult = await supabase.auth.getSession();
