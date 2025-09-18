@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
 
 export async function PUT(
@@ -11,11 +11,11 @@ export async function PUT(
     const body = await req.json()
     console.log('🔍 [API] PUT request body:', body)
     console.log('🔍 [API] Building ID:', buildingId, 'Asset ID:', assetId)
-    
-    const { 
-      status, 
-      notes, 
-      next_due_date, 
+
+    const {
+      status,
+      notes,
+      next_due_date,
       last_renewed_date,
       last_carried_out,
       inspector_provider,
@@ -25,10 +25,13 @@ export async function PUT(
       frequency_months
     } = body
 
-    const supabase = createClient(cookies())
+    const supabase = await createClient()
 
-    // Check authentication
-    const { data: { session }, error: authError } = await supabase.auth.getSession()
+    // Check authentication - Safe destructuring to prevent "Right side of assignment cannot be destructured" error
+    const sessionResult = await supabase.auth.getSession()
+    const sessionData = sessionResult?.data || {}
+    const session = sessionData.session || null
+    const authError = sessionResult?.error || null
     
     if (authError || !session) {
       return NextResponse.json(
@@ -180,10 +183,13 @@ export async function DELETE(
   try {
     const { buildingId, assetId } = await params
 
-    const supabase = createClient(cookies())
+    const supabase = await createClient()
 
-    // Check authentication
-    const { data: { session }, error: authError } = await supabase.auth.getSession()
+    // Check authentication - Safe destructuring to prevent "Right side of assignment cannot be destructured" error
+    const sessionResult = await supabase.auth.getSession()
+    const sessionData = sessionResult?.data || {}
+    const session = sessionData.session || null
+    const authError = sessionResult?.error || null
     
     if (authError || !session) {
       return NextResponse.json(

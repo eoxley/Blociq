@@ -10,7 +10,7 @@ export async function GET(
   { params }: { params: { assetId: string } }
 ) {
   try {
-    const supabase = createClient(cookies());
+    const supabase = await createClient();
     
     // Check authentication
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -163,7 +163,7 @@ export async function PUT(
   { params }: { params: { assetId: string } }
 ) {
   try {
-    const supabase = createClient(cookies());
+    const supabase = await createClient();
     
     // Check authentication
     const { data: { user }, error: userError } = await supabase.auth.getUser();
