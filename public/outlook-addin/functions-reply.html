@@ -16,23 +16,55 @@
       const userEmail = Office.context.mailbox.userProfile.emailAddress || "";
       console.log("BlocIQ Reply triggered for user:", userEmail);
 
-      fetch("https://www.blociq.co.uk/api/ask-ai-outlook", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-User-Email": userEmail
-        },
-        body: JSON.stringify({
-          question: "Generate a professional property management email reply",
-          contextType: "outlook_reply",
-          is_outlook_addin: true
+      // Extract email context for better AI responses
+      Promise.all([
+        new Promise(resolve => {
+          Office.context.mailbox.item.subject.getAsync((result) => {
+            resolve(result.status === Office.AsyncResultStatus.Succeeded ? result.value : "");
+          });
+        }),
+        new Promise(resolve => {
+          Office.context.mailbox.item.body.getAsync(Office.CoercionType.Text, (result) => {
+            resolve(result.status === Office.AsyncResultStatus.Succeeded ? result.value : "");
+          });
         })
+      ])
+      .then(([subject, body]) => {
+        console.log("Email context extracted:", { subject: subject?.substring(0, 50) });
+
+        // Parse building/unit references from email content
+        const emailContent = `${subject}\n\n${body}`;
+        const building = extractBuildingReference(emailContent);
+        const unit = extractUnitReference(emailContent);
+
+        // Create contextual question for AI
+        const contextualQuestion = createContextualQuestion(subject, body, building, unit);
+
+        return fetch("https://www.blociq.co.uk/api/ask-ai-outlook", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-User-Email": userEmail
+          },
+          body: JSON.stringify({
+            question: contextualQuestion,
+            building: building,
+            unit: unit,
+            contextType: "outlook_reply",
+            is_outlook_addin: true,
+            email_subject: subject,
+            email_body: body?.substring(0, 500) // First 500 chars for context
+          })
+        });
       })
       .then(res => res.json())
       .then(data => {
         if (data.ok && data.answer) {
+          // Format the AI response with proper email formatting
+          const formattedReply = formatEmailReply(data.answer);
+
           Office.context.mailbox.item.body.setSelectedDataAsync(
-            data.answer,
+            formattedReply,
             { coercionType: Office.CoercionType.Html },
             () => event.completed()
           );
@@ -45,6 +77,130 @@
         console.error("BlocIQ API call failed:", err);
         event.completed();
       });
+    }
+
+    // Extract building references from email content
+    function extractBuildingReference(content) {
+      if (!content) return null;
+
+      // Common building reference patterns
+      const patterns = [
+        /(?:building|block|development|estate|court|house|towers?|apartments?|flats?)[:\s]+([a-zA-Z0-9\s,'-]+)/gi,
+        /([a-zA-Z0-9\s,'-]+)\s+(?:building|block|development|estate|court|house|towers?|apartments?|flats?)/gi,
+        /(?:at|@)\s+([a-zA-Z0-9\s,'-]+?)(?:\s+(?:flat|unit|apartment|building)|,|\.|\n|$)/gi
+      ];
+
+      for (const pattern of patterns) {
+        const matches = [...content.matchAll(pattern)];
+        if (matches.length > 0) {
+          return matches[0][1]?.trim().substring(0, 100); // First match, max 100 chars
+        }
+      }
+
+      return null;
+    }
+
+    // Extract unit references from email content
+    function extractUnitReference(content) {
+      if (!content) return null;
+
+      // Common unit reference patterns
+      const patterns = [
+        /(?:flat|unit|apartment|apt)\s*#?([a-zA-Z0-9]+)/gi,
+        /(?:flat|unit|apartment|apt)[:\s]+([a-zA-Z0-9]+)/gi,
+        /([a-zA-Z0-9]+[a-zA-Z]?)\s*(?:flat|unit|apartment|apt)/gi,
+        /#([a-zA-Z0-9]+)/g
+      ];
+
+      for (const pattern of patterns) {
+        const matches = [...content.matchAll(pattern)];
+        if (matches.length > 0) {
+          return matches[0][1]?.trim().substring(0, 20); // First match, max 20 chars
+        }
+      }
+
+      return null;
+    }
+
+    // Create a contextual question based on email content
+    function createContextualQuestion(subject, body, building, unit) {
+      const baseContext = [];
+
+      if (building) baseContext.push(`building "${building}"`);
+      if (unit) baseContext.push(`unit ${unit}`);
+
+      const contextStr = baseContext.length > 0 ? ` for ${baseContext.join(' ')}` : '';
+
+      // Determine response type based on email content
+      const content = `${subject} ${body}`.toLowerCase();
+
+      if (content.includes('repair') || content.includes('maintenance') || content.includes('fault') || content.includes('broken')) {
+        return `Generate a professional property management email reply regarding maintenance/repair issues${contextStr}. Address the concerns raised and provide next steps.`;
+      }
+
+      if (content.includes('service charge') || content.includes('billing') || content.includes('invoice') || content.includes('payment')) {
+        return `Generate a professional property management email reply regarding service charges or billing${contextStr}. Provide clear information about charges and payment processes.`;
+      }
+
+      if (content.includes('complaint') || content.includes('issue') || content.includes('problem') || content.includes('concern')) {
+        return `Generate a professional property management email reply addressing resident concerns${contextStr}. Show understanding and provide solutions or next steps.`;
+      }
+
+      if (content.includes('lease') || content.includes('tenancy') || content.includes('agreement')) {
+        return `Generate a professional property management email reply regarding lease or tenancy matters${contextStr}. Provide accurate leasehold information and guidance.`;
+      }
+
+      // Default contextual question
+      return `Generate a professional property management email reply${contextStr} based on the email content. Be helpful, professional, and provide specific next steps where appropriate.`;
+    }
+
+    // Format AI response with proper email formatting
+    function formatEmailReply(aiResponse) {
+      if (!aiResponse) return "";
+
+      // Add proper email greeting if not present
+      let formatted = aiResponse.trim();
+
+      // Ensure proper paragraph spacing by converting single newlines to double
+      formatted = formatted.replace(/\n\n+/g, '\n\n'); // Normalize multiple newlines
+      formatted = formatted.replace(/\n(?!\n)/g, '\n\n'); // Convert single newlines to double
+
+      // Convert to HTML with proper spacing
+      const paragraphs = formatted.split('\n\n').filter(p => p.trim());
+
+      const htmlParagraphs = paragraphs.map(paragraph => {
+        const trimmed = paragraph.trim();
+        if (!trimmed) return '';
+
+        // Handle lists (bullets or numbered)
+        if (trimmed.includes('\n- ') || trimmed.includes('\n• ') || /\n\d+\./.test(trimmed)) {
+          const lines = trimmed.split('\n');
+          const firstLine = lines[0];
+          const listItems = lines.slice(1).map(line => {
+            if (line.startsWith('- ') || line.startsWith('• ')) {
+              return `<li>${line.substring(2)}</li>`;
+            } else if (/^\d+\.\s/.test(line)) {
+              return `<li>${line.replace(/^\d+\.\s/, '')}</li>`;
+            }
+            return line;
+          }).join('');
+
+          const listType = /^\d+\./.test(lines[1]) ? 'ol' : 'ul';
+          return `<p>${firstLine}</p><${listType}>${listItems}</${listType}>`;
+        }
+
+        return `<p>${trimmed}</p>`;
+      });
+
+      // Join with proper spacing
+      let result = htmlParagraphs.join('<br><br>');
+
+      // Add professional closing if not present
+      if (!result.toLowerCase().includes('regards') && !result.toLowerCase().includes('yours')) {
+        result += '<br><br><p>Kind regards,<br>Property Management Team</p>';
+      }
+
+      return result;
     }
 
     // Initialize Office.js and register function
