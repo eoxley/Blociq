@@ -1,22 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<OfficeApp
-  xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
-  xmlns:mailappor="http://schemas.microsoft.com/office/mailappversionoverrides/1.1"
+<OfficeApp 
+  xmlns="http://schemas.microsoft.com/office/appforoffice/1.1" 
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+  xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0" 
+  xmlns:mailappor="http://schemas.microsoft.com/office/mailappversionoverrides" 
   xsi:type="MailApp">
 
   <Id>85e47bf9-847d-4fa6-ab0b-7d73531345db</Id>
-  <Version>1.1.0.0</Version>
+  <Version>1.0.3.0</Version>
   <ProviderName>BlocIQ</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="BlocIQ AI Assistant"/>
-  <Description DefaultValue="AI reply generation and inbox triage, right inside Outlook."/>
+  <Description DefaultValue="AI assistant with sidebar chat and email reply generation"/>
+
   <IconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-32.png"/>
   <HighResolutionIconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-80.png"/>
-  <SupportUrl DefaultValue="https://www.blociq.co.uk"/>
-  <SourceLocation DefaultValue="https://www.blociq.co.uk/outlook-addin/functions.html"/>
 
+  <SupportUrl DefaultValue="https://www.blociq.co.uk"/>
+  
   <AppDomains>
     <AppDomain>https://blociq.co.uk</AppDomain>
     <AppDomain>https://www.blociq.co.uk</AppDomain>
@@ -28,160 +29,86 @@
 
   <Requirements>
     <Sets>
-      <!-- Mailbox 1.3 enables command surface + dialog APIs -->
-      <Set Name="Mailbox" MinVersion="1.3"/>
+      <Set Name="Mailbox" MinVersion="1.1"/>
     </Sets>
   </Requirements>
 
-  <Permissions>ReadWriteMailbox</Permissions>
-
-  <!-- Form Settings (required even for command add-ins) -->
   <FormSettings>
     <Form xsi:type="ItemRead">
       <DesktopSettings>
-        <SourceLocation DefaultValue="https://www.blociq.co.uk/outlook-addin/functions.html"/>
-        <RequestedHeight>450</RequestedHeight>
-      </DesktopSettings>
-    </Form>
-    <Form xsi:type="ItemEdit">
-      <DesktopSettings>
-        <SourceLocation DefaultValue="https://www.blociq.co.uk/outlook-addin/functions.html"/>
+        <SourceLocation DefaultValue="https://www.blociq.co.uk/outlook-addin/taskpane.html"/>
         <RequestedHeight>450</RequestedHeight>
       </DesktopSettings>
     </Form>
   </FormSettings>
 
-  <!-- Rules -->
+  <Permissions>ReadWriteMailbox</Permissions>
+
   <Rule xsi:type="RuleCollection" Mode="Or">
-    <Rule xsi:type="ItemIs" ItemType="Message" FormType="Read" />
-    <Rule xsi:type="ItemIs" ItemType="Message" FormType="Edit" />
-    <Rule xsi:type="ItemIs" ItemType="Message" FormType="ReadOrEdit" />
+    <Rule xsi:type="ItemIs" ItemType="Message" FormType="Read"/>
   </Rule>
 
-  <!-- Modern command add-in definition -->
-  <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1" xsi:type="VersionOverridesV1_1">
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides" xsi:type="VersionOverridesV1_0">
+    <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1" xsi:type="VersionOverridesV1_1">
 
-    <Requirements>
-      <bt:Sets DefaultMinVersion="1.3">
-        <bt:Set Name="Mailbox"/>
-      </bt:Sets>
-    </Requirements>
+      <Requirements>
+        <bt:Sets DefaultMinVersion="1.3">
+          <bt:Set Name="Mailbox"/>
+        </bt:Sets>
+      </Requirements>
 
-    <Hosts>
-      <Host xsi:type="MailHost">
-        <DesktopFormFactor>
+      <Hosts>
+        <Host xsi:type="MailHost">
+          <DesktopFormFactor>
+            <ExtensionPoint xsi:type="MessageReadCommandSurface">
+              <OfficeTab id="TabDefault">
+                <Group id="msgReadGroup">
+                  <Label resid="groupLabel"/>
 
-          <!-- Message READ surface -->
-          <ExtensionPoint xsi:type="MessageReadCommandSurface">
-            <OfficeTab id="TabDefault">
-              <Group id="blociqReadGroup">
-                <Label resid="groupLabel"/>
-                <Control xsi:type="Button" id="btnReadAIReply">
-                  <Label resid="aiReplyLabel"/>
-                  <Supertip>
-                    <Title resid="aiReplyTitle"/>
-                    <Description resid="aiReplyDesc"/>
-                  </Supertip>
-                  <Icon>
-                    <bt:Image size="16" resid="icon16"/>
-                    <bt:Image size="32" resid="icon32"/>
-                    <bt:Image size="80" resid="icon80"/>
-                  </Icon>
-                  <Action xsi:type="ExecuteFunction">
-                    <FunctionName>generateAIReply</FunctionName>
-                  </Action>
-                </Control>
+                  <Control xsi:type="Button" id="msgReadOpenPaneButton">
+                    <Label resid="paneButtonLabel"/>
+                    <Supertip>
+                      <Title resid="paneSuperTipTitle"/>
+                      <Description resid="paneSuperTipDescription"/>
+                    </Supertip>
+                    <Icon>
+                      <bt:Image size="16" resid="icon16"/>
+                      <bt:Image size="32" resid="icon32"/>
+                      <bt:Image size="80" resid="icon80"/>
+                    </Icon>
+                    <Action xsi:type="ShowTaskpane">
+                      <SourceLocation resid="taskpaneUrl"/>
+                    </Action>
+                  </Control>
 
-                <Control xsi:type="Button" id="btnReadInboxTriage">
-                  <Label resid="triageLabel"/>
-                  <Supertip>
-                    <Title resid="triageTitle"/>
-                    <Description resid="triageDesc"/>
-                  </Supertip>
-                  <Icon>
-                    <bt:Image size="16" resid="icon16"/>
-                    <bt:Image size="32" resid="icon32"/>
-                    <bt:Image size="80" resid="icon80"/>
-                  </Icon>
-                  <Action xsi:type="ExecuteFunction">
-                    <FunctionName>showInboxTriage</FunctionName>
-                  </Action>
-                </Control>
-              </Group>
-            </OfficeTab>
-            <FunctionFile resid="functionsUrl"/>
-          </ExtensionPoint>
+                </Group>
+              </OfficeTab>
+            </ExtensionPoint>
+          </DesktopFormFactor>
+        </Host>
+      </Hosts>
 
-          <!-- Message COMPOSE surface (so the AI reply button is available while replying) -->
-          <ExtensionPoint xsi:type="MessageComposeCommandSurface">
-            <OfficeTab id="TabDefault">
-              <Group id="blociqComposeGroup">
-                <Label resid="groupLabel"/>
-                <Control xsi:type="Button" id="btnComposeAIReply">
-                  <Label resid="aiReplyLabel"/>
-                  <Supertip>
-                    <Title resid="aiReplyTitle"/>
-                    <Description resid="aiReplyDesc"/>
-                  </Supertip>
-                  <Icon>
-                    <bt:Image size="16" resid="icon16"/>
-                    <bt:Image size="32" resid="icon32"/>
-                    <bt:Image size="80" resid="icon80"/>
-                  </Icon>
-                  <Action xsi:type="ExecuteFunction">
-                    <FunctionName>generateAIReply</FunctionName>
-                  </Action>
-                </Control>
-                <Control xsi:type="Button" id="btnComposeInboxTriage">
-                  <Label resid="triageLabel"/>
-                  <Supertip>
-                    <Title resid="triageTitle"/>
-                    <Description resid="triageDesc"/>
-                  </Supertip>
-                  <Icon>
-                    <bt:Image size="16" resid="icon16"/>
-                    <bt:Image size="32" resid="icon32"/>
-                    <bt:Image size="80" resid="icon80"/>
-                  </Icon>
-                  <Action xsi:type="ExecuteFunction">
-                    <FunctionName>showInboxTriage</FunctionName>
-                  </Action>
-                </Control>
-              </Group>
-            </OfficeTab>
-            <FunctionFile resid="functionsUrl"/>
-          </ExtensionPoint>
+      <Resources>
+        <bt:Images>
+          <bt:Image id="icon16" DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-16.png"/>
+          <bt:Image id="icon32" DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-32.png"/>
+          <bt:Image id="icon80" DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-80.png"/>
+        </bt:Images>
 
-        </DesktopFormFactor>
-      </Host>
-    </Hosts>
+        <bt:Urls>
+          <bt:Url id="taskpaneUrl" DefaultValue="https://www.blociq.co.uk/outlook-addin/taskpane.html"/>
+        </bt:Urls>
 
-    <Resources>
-      <bt:Images>
-        <bt:Image id="icon16" DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-16.png"/>
-        <bt:Image id="icon32" DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-32.png"/>
-        <bt:Image id="icon80" DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-80.png"/>
-      </bt:Images>
+        <bt:ShortStrings>
+          <bt:String id="groupLabel" DefaultValue="BlocIQ Assistant"/>
+          <bt:String id="paneButtonLabel" DefaultValue="Open Assistant"/>
+          <bt:String id="paneSuperTipTitle" DefaultValue="BlocIQ Assistant"/>
+        </bt:ShortStrings>
 
-      <bt:Urls>
-        <bt:Url id="functionsUrl" DefaultValue="https://www.blociq.co.uk/outlook-addin/functions.html"/>
-      </bt:Urls>
-
-      <bt:ShortStrings>
-        <bt:String id="groupLabel" DefaultValue="BlocIQ Assistant"/>
-        <bt:String id="aiReplyLabel" DefaultValue="AI Reply"/>
-        <bt:String id="triageLabel" DefaultValue="Inbox Triage"/>
-        <bt:String id="aiReplyTitle" DefaultValue="Generate AI Reply"/>
-        <bt:String id="triageTitle" DefaultValue="Inbox Triage"/>
-      </bt:ShortStrings>
-
-      <bt:LongStrings>
-        <bt:String id="aiReplyDesc" DefaultValue="Open the BlocIQ AI reply generator and insert a drafted response."/>
-        <bt:String id="triageDesc" DefaultValue="Open BlocIQ inbox triage to analyse messages and produce drafts."/>
-      </bt:LongStrings>
-    </Resources>
-
-    <!-- No rule filters needed; buttons show when reading/compose contexts are active -->
-
+        <bt:LongStrings>
+          <bt:String id="paneSuperTipDescription" DefaultValue="Open BlocIQ Assistant with chat and draft reply functionality."/>
+        </bt:LongStrings>
+      </Resources>
+    </VersionOverrides>
   </VersionOverrides>
 </OfficeApp>
