@@ -65,9 +65,9 @@ export default function CommunicationsLog({
           content,
           sent_at,
           metadata,
-          building:buildings(id, name),
-          leaseholder:leaseholders(id, name, email),
-          user:users(email)
+          building_id,
+          leaseholder_id,
+          user_id
         `)
         .order('sent_at', { ascending: false })
         .limit(limit)
@@ -91,7 +91,57 @@ export default function CommunicationsLog({
         return
       }
 
-      setCommunications(data || [])
+      if (!data || data.length === 0) {
+        setCommunications([])
+        return
+      }
+
+      // Fetch related building data if needed
+      const buildingIds = [...new Set(data.map(comm => comm.building_id).filter(Boolean))]
+      let buildingsMap: Record<string, { id: string; name: string }> = {}
+
+      if (buildingIds.length > 0) {
+        const { data: buildings } = await supabase
+          .from('buildings')
+          .select('id, name')
+          .in('id', buildingIds)
+
+        if (buildings) {
+          buildingsMap = buildings.reduce((acc, building) => {
+            acc[building.id] = building
+            return acc
+          }, {} as Record<string, { id: string; name: string }>)
+        }
+      }
+
+      // Fetch related leaseholder data if needed
+      const leaseholderIds = [...new Set(data.map(comm => comm.leaseholder_id).filter(Boolean))]
+      let leaseholdersMap: Record<string, { id: string; name: string; email: string }> = {}
+
+      if (leaseholderIds.length > 0) {
+        const { data: leaseholders } = await supabase
+          .from('leaseholders')
+          .select('id, name, email')
+          .in('id', leaseholderIds)
+
+        if (leaseholders) {
+          leaseholdersMap = leaseholders.reduce((acc, leaseholder) => {
+            acc[leaseholder.id] = leaseholder
+            return acc
+          }, {} as Record<string, { id: string; name: string; email: string }>)
+        }
+      }
+
+      // Map the data with related entities
+      const enrichedCommunications = data.map(comm => ({
+        ...comm,
+        body: comm.content || '', // Map content to body field
+        building: comm.building_id ? buildingsMap[comm.building_id] || null : null,
+        leaseholder: comm.leaseholder_id ? leaseholdersMap[comm.leaseholder_id] || null : null,
+        user: null // User data can be fetched if needed
+      }))
+
+      setCommunications(enrichedCommunications)
     } catch (error) {
       console.error('Exception fetching communications:', error)
       toast.error('Error loading communications')

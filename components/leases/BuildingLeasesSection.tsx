@@ -61,9 +61,7 @@ export default function BuildingLeasesSection({ buildingId, buildingName }: Buil
           status,
           created_at,
           updated_at,
-          analysis_json,
-          buildings!inner(name, address),
-          units(unit_number, floor)
+          analysis_json
         `)
         .eq('building_id', buildingId)
         .order('scope', { ascending: true }) // Building-level leases first
@@ -73,8 +71,42 @@ export default function BuildingLeasesSection({ buildingId, buildingName }: Buil
         console.error('Error fetching leases:', error);
         toast.error('Failed to load leases');
         setLeases([]);
+      } else if (data && data.length > 0) {
+        // Fetch building data separately
+        const { data: buildingData } = await supabase
+          .from('buildings')
+          .select('id, name, address')
+          .eq('id', buildingId)
+          .single();
+
+        // Fetch unit data separately for unit_ids that exist
+        const unitIds = [...new Set(data.map(lease => lease.unit_id).filter(Boolean))];
+        let unitsMap: Record<number, { unit_number: string; floor?: string }> = {};
+
+        if (unitIds.length > 0) {
+          const { data: units } = await supabase
+            .from('units')
+            .select('id, unit_number, floor')
+            .in('id', unitIds);
+
+          if (units) {
+            unitsMap = units.reduce((acc, unit) => {
+              acc[unit.id] = unit;
+              return acc;
+            }, {} as Record<number, { unit_number: string; floor?: string }>);
+          }
+        }
+
+        // Enrich lease data with related entities
+        const enrichedLeases = data.map(lease => ({
+          ...lease,
+          buildings: buildingData ? { name: buildingData.name, address: buildingData.address } : undefined,
+          units: lease.unit_id ? unitsMap[lease.unit_id] : undefined
+        }));
+
+        setLeases(enrichedLeases);
       } else {
-        setLeases(data || []);
+        setLeases([]);
       }
     } catch (error) {
       console.error('Exception fetching leases:', error);

@@ -5,16 +5,17 @@ import BuildingNavigation from './components/BuildingNavigation'
 
 interface BuildingLayoutProps {
   children: ReactNode
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export default async function BuildingLayout({
   children,
   params
 }: BuildingLayoutProps) {
-  const supabase = createClient(cookies())
+  const resolvedParams = await params
+  const supabase = createClient()
 
   // Get building name
   let buildingName = 'Building'
@@ -22,7 +23,7 @@ export default async function BuildingLayout({
     const { data: building } = await supabase
       .from('buildings')
       .select('name')
-      .eq('id', params.id)
+      .eq('id', resolvedParams.id)
       .single()
 
     if (building) {
@@ -35,7 +36,7 @@ export default async function BuildingLayout({
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navigation */}
-      <BuildingNavigation buildingId={params.id} buildingName={buildingName} />
+      <BuildingNavigation buildingId={resolvedParams.id} buildingName={buildingName} />
 
       {/* Page Content */}
       <div className="max-w-7xl mx-auto p-6">

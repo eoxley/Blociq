@@ -5,9 +5,9 @@ import BuildingDetailClient from './components/BuildingDetailClient'
 import NotFound from '../../../../components/NotFound'
 
 interface BuildingDetailPageProps {
-  params: {
-    buildingId: string
-  }
+  params: Promise<{
+    id: string
+  }>
 }
 
 // Type definitions for better type safety
@@ -58,6 +58,7 @@ interface ComplianceSummary {
 }
 
 export default async function BuildingDetailPage({ params }: BuildingDetailPageProps) {
+  const resolvedParams = await params
   let supabase: any;
   let session: any;
 
@@ -79,15 +80,15 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
     }
 
     // Validate building ID format
-    if (!params.id || typeof params.id !== 'string') {
-      console.error('Invalid building ID:', params.id)
+    if (!resolvedParams.id || typeof resolvedParams.id !== 'string') {
+      console.error('Invalid building ID:', resolvedParams.id)
       notFound()
     }
 
     // Validate UUID format
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-    if (!uuidRegex.test(params.id)) {
-      console.error('Invalid UUID format for building ID:', params.id)
+    if (!uuidRegex.test(resolvedParams.id)) {
+      console.error('Invalid UUID format for building ID:', resolvedParams.id)
       notFound()
     }
 
@@ -97,7 +98,7 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
       const buildingResult = await supabase
         .from('buildings')
         .select('*')
-        .eq('id', params.id)
+        .eq('id', resolvedParams.id)
         .maybeSingle()
 
       if (buildingResult.error) {
@@ -116,7 +117,7 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
     }
 
     if (!building) {
-      console.error('Building not found:', params.id)
+      console.error('Building not found:', resolvedParams.id)
       return <NotFound title="Building Not Found" message="We couldn't find the building you're looking for." />
     }
 
@@ -126,7 +127,7 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
       const setupResult = await supabase
         .from('building_setup')
         .select('id, building_id, structure_type, operational_notes, client_type, client_name, client_contact, client_email, keys_location, emergency_access, site_staff, site_staff_updated_at, insurance_contact, cleaners, contractors')
-        .eq('building_id', params.id)
+        .eq('building_id', resolvedParams.id)
         .maybeSingle()
 
       if (setupResult.error && setupResult.error.code !== 'PGRST116') {
@@ -144,7 +145,7 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
       const unitsResult = await supabase
         .from('units')
         .select('id, unit_number, type, floor, building_id, leaseholder_id, created_at')
-        .eq('building_id', params.id)
+        .eq('building_id', resolvedParams.id)
         .order('unit_number')
 
       if (unitsResult.error && unitsResult.error.code !== 'PGRST116') {
@@ -178,7 +179,7 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
             frequency_months
           )
         `)
-        .eq('building_id', params.id)
+        .eq('building_id', resolvedParams.id)
 
       if (complianceResult.error && complianceResult.error.code !== 'PGRST116') {
         console.error('Error fetching compliance assets:', complianceResult.error)
@@ -204,7 +205,7 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
         buildingSetup={buildingSetup}
         units={units || []}
         complianceSummary={complianceSummary}
-        buildingId={params.id}
+        buildingId={resolvedParams.id}
       />
     )
 
