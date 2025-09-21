@@ -82,11 +82,35 @@ export async function POST(req: NextRequest) {
     // Verify user has access to the building
     console.log(`🏢 Checking building access for buildingId: ${buildingId}, userId: ${user.id}`);
 
-    const { data: building, error: buildingError } = await supabase
-      .from('buildings')
-      .select('id, name, created_by')
-      .eq('id', buildingId)
-      .single();
+    // Try to fetch building with created_by column, fallback if column doesn't exist
+    let building: any = null;
+    let buildingError: any = null;
+
+    try {
+      const result = await supabase
+        .from('buildings')
+        .select('id, name, created_by')
+        .eq('id', buildingId)
+        .single();
+
+      building = result.data;
+      buildingError = result.error;
+    } catch (error: any) {
+      // If created_by column doesn't exist, try without it
+      if (error?.code === '42703' || error?.message?.includes('created_by')) {
+        console.log('🔄 created_by column missing, trying without it...');
+        const fallbackResult = await supabase
+          .from('buildings')
+          .select('id, name')
+          .eq('id', buildingId)
+          .single();
+
+        building = fallbackResult.data ? { ...fallbackResult.data, created_by: null } : null;
+        buildingError = fallbackResult.error;
+      } else {
+        buildingError = error;
+      }
+    }
 
     console.log('🏢 Building query result:', { building, buildingError });
 

@@ -42,3 +42,19 @@ BEGIN
         COMMENT ON COLUMN communications_log.content IS 'Content/body of the communication';
     END IF;
 END $$;
+
+-- Add created_by column to buildings table if it doesn't exist (needed by lease linking API)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name = 'buildings' AND column_name = 'created_by') THEN
+        ALTER TABLE buildings ADD COLUMN created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL;
+        CREATE INDEX IF NOT EXISTS idx_buildings_created_by ON buildings(created_by);
+        COMMENT ON COLUMN buildings.created_by IS 'User who created this building record';
+
+        -- Set created_by to the first available user for existing buildings
+        UPDATE buildings
+        SET created_by = (SELECT id FROM auth.users LIMIT 1)
+        WHERE created_by IS NULL;
+    END IF;
+END $$;

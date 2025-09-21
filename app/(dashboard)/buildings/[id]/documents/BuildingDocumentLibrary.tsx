@@ -52,19 +52,50 @@ interface Folder {
   color: string
 }
 
-const FOLDERS: Folder[] = [
-  { id: 'compliance', name: 'Compliance', category: 'compliance', document_count: 0, icon: <CheckCircle className="h-5 w-5" />, color: 'text-green-600' },
-  { id: 'leases', name: 'Leases', category: 'leases', document_count: 0, icon: <FileText className="h-5 w-5" />, color: 'text-blue-600' },
-  { id: 'insurance', name: 'Insurance', category: 'insurance', document_count: 0, icon: <Folder className="h-5 w-5" />, color: 'text-purple-600' },
-  { id: 'major-works', name: 'Major Works', category: 'major_works', document_count: 0, icon: <Folder className="h-5 w-5" />, color: 'text-orange-600' },
-  { id: 'minutes', name: 'Minutes', category: 'minutes', document_count: 0, icon: <FileText className="h-5 w-5" />, color: 'text-gray-600' },
-  { id: 'other', name: 'Other', category: 'other', document_count: 0, icon: <Folder className="h-5 w-5" />, color: 'text-gray-500' },
-]
+// Function to get folder configuration for a category
+const getFolderConfig = (category: string): Folder => {
+  const configs: Record<string, Omit<Folder, 'id' | 'category' | 'document_count'>> = {
+    'General Documents': { name: 'General Documents', icon: <Folder className="h-5 w-5" />, color: 'text-gray-600' },
+    'Compliance - Fire Safety': { name: 'Fire Safety', icon: <AlertTriangle className="h-5 w-5" />, color: 'text-red-600' },
+    'Compliance - Electrical': { name: 'Electrical Safety', icon: <CheckCircle className="h-5 w-5" />, color: 'text-yellow-600' },
+    'Compliance - Gas Safety': { name: 'Gas Safety', icon: <CheckCircle className="h-5 w-5" />, color: 'text-blue-600' },
+    'Compliance - Legionella': { name: 'Legionella Control', icon: <CheckCircle className="h-5 w-5" />, color: 'text-cyan-600' },
+    'Compliance - Asbestos': { name: 'Asbestos Management', icon: <AlertTriangle className="h-5 w-5" />, color: 'text-orange-600' },
+    'Compliance - Lift Safety': { name: 'Lift Safety', icon: <CheckCircle className="h-5 w-5" />, color: 'text-purple-600' },
+    'Compliance - Insurance': { name: 'Insurance', icon: <Shield className="h-5 w-5" />, color: 'text-green-600' },
+    'Compliance - Other': { name: 'Other Compliance', icon: <CheckCircle className="h-5 w-5" />, color: 'text-gray-600' },
+    'Leases - Building Wide': { name: 'Building Wide Leases', icon: <FileText className="h-5 w-5" />, color: 'text-indigo-600' },
+    'Leases - Unit Specific': { name: 'Unit Specific Leases', icon: <FileText className="h-5 w-5" />, color: 'text-blue-600' },
+  };
+
+  const config = configs[category];
+  if (config) {
+    return {
+      id: category.toLowerCase().replace(/\s+/g, '_').replace(/[^\w]/g, ''),
+      name: config.name,
+      category,
+      document_count: 0,
+      icon: config.icon,
+      color: config.color
+    };
+  }
+
+  // Default folder config for unknown categories
+  return {
+    id: category.toLowerCase().replace(/\s+/g, '_').replace(/[^\w]/g, ''),
+    name: category,
+    category,
+    document_count: 0,
+    icon: <Folder className="h-5 w-5" />,
+    color: 'text-gray-500'
+  };
+}
 
 export default function BuildingDocumentLibrary({ building }: { building: Building }) {
   const { supabase } = useSupabase()
   const [documents, setDocuments] = useState<Document[]>([])
   const [filteredDocuments, setFilteredDocuments] = useState<Document[]>([])
+  const [folders, setFolders] = useState<Folder[]>([])
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [isUploading, setIsUploading] = useState(false)
@@ -72,7 +103,7 @@ export default function BuildingDocumentLibrary({ building }: { building: Buildi
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [uploadCategory, setUploadCategory] = useState('other')
+  const [uploadCategory, setUploadCategory] = useState('General Documents')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -85,31 +116,162 @@ export default function BuildingDocumentLibrary({ building }: { building: Buildi
 
   const fetchDocuments = async () => {
     try {
-      const { data, error } = await supabase
-        .from('building_documents')
-        .select('*')
-        .eq('building_id', building.id)
-        .order('uploaded_at', { ascending: false })
+      console.log(`📂 Fetching all documents for building: ${building.id}`)
 
-      if (error) {
-        console.error('Database error fetching documents:', error)
-        // Don't show error toast for missing table, just log it
-        if (error.code !== 'PGRST106' && !error.message?.includes('does not exist')) {
-          toast.error('Failed to load documents')
+      const allDocuments: Document[] = []
+
+      // 1. Fetch building documents (general uploads)
+      try {
+        const { data: buildingDocs, error: buildingError } = await supabase
+          .from('building_documents')
+          .select('*')
+          .eq('building_id', building.id)
+          .order('uploaded_at', { ascending: false })
+
+        if (!buildingError && buildingDocs) {
+          const formattedBuildingDocs = buildingDocs.map((doc: any) => ({
+            id: doc.id,
+            name: doc.original_filename || doc.name || 'Unnamed Document',
+            type: doc.file_type || 'application/pdf',
+            category: doc.category || 'General Documents',
+            file_path: doc.file_path,
+            file_size: doc.file_size || 0,
+            uploaded_at: doc.uploaded_at,
+            uploaded_by: doc.uploaded_by_user_id || 'Unknown',
+            ocr_status: doc.ocr_status || 'pending',
+            ocr_text: doc.ocr_text,
+            metadata: { source: 'building_documents', ...doc.metadata }
+          }))
+          allDocuments.push(...formattedBuildingDocs)
+          console.log(`📄 Found ${formattedBuildingDocs.length} building documents`)
         }
-        setDocuments([])
-        return
+      } catch (error) {
+        console.warn('Building documents table not accessible:', error)
       }
 
-      setDocuments(data || [])
+      // 2. Fetch compliance documents
+      try {
+        const { data: complianceDocs, error: complianceError } = await supabase
+          .from('compliance_documents')
+          .select(`
+            id,
+            original_filename,
+            file_type,
+            file_size,
+            file_path,
+            uploaded_at: created_at,
+            uploaded_by_user_id,
+            document_type,
+            document_category,
+            processing_status,
+            building_compliance_assets!inner(
+              building_id,
+              compliance_assets(name, category)
+            )
+          `)
+          .eq('building_compliance_assets.building_id', building.id)
+          .order('created_at', { ascending: false })
+
+        if (!complianceError && complianceDocs) {
+          const formattedComplianceDocs = complianceDocs.map((doc: any) => ({
+            id: doc.id,
+            name: doc.original_filename || 'Compliance Document',
+            type: doc.file_type || 'application/pdf',
+            category: `Compliance - ${doc.building_compliance_assets?.compliance_assets?.category || doc.document_category || 'Other'}`,
+            file_path: doc.file_path,
+            file_size: doc.file_size || 0,
+            uploaded_at: doc.uploaded_at,
+            uploaded_by: doc.uploaded_by_user_id || 'Unknown',
+            ocr_status: doc.processing_status === 'completed' ? 'completed' : 'pending',
+            metadata: {
+              source: 'compliance_documents',
+              document_type: doc.document_type,
+              asset_name: doc.building_compliance_assets?.compliance_assets?.name
+            }
+          }))
+          allDocuments.push(...formattedComplianceDocs)
+          console.log(`🛡️ Found ${formattedComplianceDocs.length} compliance documents`)
+        }
+      } catch (error) {
+        console.warn('Compliance documents not accessible:', error)
+      }
+
+      // 3. Fetch lease documents (from document_jobs and leases tables)
+      try {
+        // Get lease analysis jobs for this building
+        const { data: leaseJobs, error: leaseJobsError } = await supabase
+          .from('document_jobs')
+          .select('*')
+          .eq('status', 'completed')
+          .order('created_at', { ascending: false })
+
+        if (!leaseJobsError && leaseJobs) {
+          // Filter jobs that have been linked to this building
+          const { data: linkedLeases, error: leasesError } = await supabase
+            .from('leases')
+            .select('document_job_id, leaseholder_name, start_date, end_date, scope')
+            .eq('building_id', building.id)
+
+          if (!leasesError && linkedLeases) {
+            const linkedJobIds = linkedLeases.map(lease => lease.document_job_id).filter(Boolean)
+
+            const buildingLeaseJobs = leaseJobs.filter(job => linkedJobIds.includes(job.id))
+
+            const formattedLeaseJobs = buildingLeaseJobs.map((job: any) => {
+              const lease = linkedLeases.find(l => l.document_job_id === job.id)
+              return {
+                id: job.id,
+                name: job.filename || 'Lease Document',
+                type: 'application/pdf',
+                category: `Leases - ${lease?.scope === 'building' ? 'Building Wide' : 'Unit Specific'}`,
+                file_path: job.file_path || '',
+                file_size: job.file_size || 0,
+                uploaded_at: job.created_at,
+                uploaded_by: job.user_id || 'Unknown',
+                ocr_status: job.status === 'completed' ? 'completed' : 'pending',
+                metadata: {
+                  source: 'lease_documents',
+                  leaseholder: lease?.leaseholder_name,
+                  lease_period: lease?.start_date && lease?.end_date
+                    ? `${lease.start_date} to ${lease.end_date}`
+                    : null,
+                  scope: lease?.scope
+                }
+              }
+            })
+            allDocuments.push(...formattedLeaseJobs)
+            console.log(`📋 Found ${formattedLeaseJobs.length} lease documents`)
+          }
+        }
+      } catch (error) {
+        console.warn('Lease documents not accessible:', error)
+      }
+
+      // 4. Sort all documents by upload date (newest first)
+      allDocuments.sort((a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime())
+
+      console.log(`📊 Total documents found: ${allDocuments.length}`)
+
+      // 5. Generate dynamic folders based on found categories
+      const categories = [...new Set(allDocuments.map(doc => doc.category))]
+      const generatedFolders = categories.map(category => {
+        const folderConfig = getFolderConfig(category)
+        const documentCount = allDocuments.filter(doc => doc.category === category).length
+        return {
+          ...folderConfig,
+          document_count: documentCount
+        }
+      }).sort((a, b) => b.document_count - a.document_count) // Sort by document count, highest first
+
+      console.log('📋 Document categories:', categories)
+      console.log('📁 Generated folders:', generatedFolders.map(f => `${f.name} (${f.document_count})`))
+
+      setDocuments(allDocuments)
+      setFolders(generatedFolders)
     } catch (error) {
       console.error('Unexpected error fetching documents:', error)
-      // Set empty array instead of showing error to prevent UI crashes
       setDocuments([])
-      // Only show toast for unexpected errors, not missing tables
-      if (error instanceof Error && !error.message.includes('does not exist')) {
-        toast.error('Failed to load documents')
-      }
+      toast.error('Failed to load documents')
     }
   }
 
@@ -275,7 +437,7 @@ export default function BuildingDocumentLibrary({ building }: { building: Buildi
               className="px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] bg-gray-50 focus:bg-white transition-all duration-200"
             >
               <option value="">All Categories</option>
-              {FOLDERS.map(folder => (
+              {folders.map(folder => (
                 <option key={folder.id} value={folder.category}>
                   {folder.name}
                 </option>
@@ -316,24 +478,21 @@ export default function BuildingDocumentLibrary({ building }: { building: Buildi
       {/* Modern Folders Grid */}
       {!selectedFolder && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
-          {FOLDERS.map(folder => {
-            const count = documents.filter(doc => doc.category === folder.category).length
-            return (
-              <button
-                key={folder.id}
-                onClick={() => setSelectedFolder(folder.category)}
-                className="group p-6 bg-white rounded-2xl border border-gray-200 hover:border-[#4f46e5]/30 hover:shadow-xl transition-all duration-200 text-left transform hover:-translate-y-1"
-              >
-                <div className={`${folder.color} mb-4 p-3 bg-gray-50 rounded-xl group-hover:bg-gradient-to-br group-hover:from-[#4f46e5]/10 group-hover:to-[#a855f7]/10 transition-all duration-200`}>
-                  {folder.icon}
-                </div>
-                <h3 className="font-bold text-gray-900 group-hover:text-[#4f46e5] transition-colors text-lg mb-2">
-                  {folder.name}
-                </h3>
-                <p className="text-sm text-gray-500 font-medium">{count} document{count !== 1 ? 's' : ''}</p>
-              </button>
-            )
-          })}
+          {folders.map(folder => (
+            <button
+              key={folder.id}
+              onClick={() => setSelectedFolder(folder.category)}
+              className="group p-6 bg-white rounded-2xl border border-gray-200 hover:border-[#4f46e5]/30 hover:shadow-xl transition-all duration-200 text-left transform hover:-translate-y-1"
+            >
+              <div className={`${folder.color} mb-4 p-3 bg-gray-50 rounded-xl group-hover:bg-gradient-to-br group-hover:from-[#4f46e5]/10 group-hover:to-[#a855f7]/10 transition-all duration-200`}>
+                {folder.icon}
+              </div>
+              <h3 className="font-bold text-gray-900 group-hover:text-[#4f46e5] transition-colors text-lg mb-2">
+                {folder.name}
+              </h3>
+              <p className="text-sm text-gray-500 font-medium">{folder.document_count} document{folder.document_count !== 1 ? 's' : ''}</p>
+            </button>
+          ))}
         </div>
       )}
 
@@ -344,11 +503,11 @@ export default function BuildingDocumentLibrary({ building }: { building: Buildi
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-gradient-to-br from-[#4f46e5] to-[#a855f7] rounded-xl">
-                  {FOLDERS.find(f => f.category === selectedFolder)?.icon}
+                  {folders.find(f => f.category === selectedFolder)?.icon}
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900">
-                    {FOLDERS.find(f => f.category === selectedFolder)?.name} Documents
+                    {folders.find(f => f.category === selectedFolder)?.name} Documents
                   </h2>
                   <p className="text-gray-600 mt-1">
                     {filteredDocuments.length} document{filteredDocuments.length !== 1 ? 's' : ''} found
@@ -437,11 +596,12 @@ export default function BuildingDocumentLibrary({ building }: { building: Buildi
                   onChange={(e) => setUploadCategory(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  {FOLDERS.map(folder => (
+                  {folders.map(folder => (
                     <option key={folder.id} value={folder.category}>
                       {folder.name}
                     </option>
                   ))}
+                  <option value="General Documents">General Documents</option>
                 </select>
               </div>
               <div className="flex justify-end gap-3">
