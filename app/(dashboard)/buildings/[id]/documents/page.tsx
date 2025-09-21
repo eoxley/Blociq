@@ -1,5 +1,4 @@
 import { Suspense } from 'react';
-import { cookies } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import BuildingDocumentLibrary from './BuildingDocumentLibrary';
@@ -10,7 +9,7 @@ interface BuildingDocumentsPageProps {
 
 export default async function BuildingDocumentsPage({ params }: BuildingDocumentsPageProps) {
   const { id } = await params;
-  const supabase = createClient(cookies());
+  const supabase = createClient();
   
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) {

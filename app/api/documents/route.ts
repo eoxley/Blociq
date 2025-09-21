@@ -25,13 +25,12 @@ export async function GET(request: NextRequest) {
       .from('building_documents')
       .select(`
         id,
-        name as file_name,
-        file_path as doc_url,
-        category as doc_type,
+        name,
+        file_path,
+        category,
         uploaded_by,
         uploaded_at,
-        building_id,
-        buildings!inner(name as building_name)
+        building_id
       `)
       .eq('building_id', buildingId)
       .order('uploaded_at', { ascending: false })
@@ -42,14 +41,28 @@ export async function GET(request: NextRequest) {
       return NextResponse.json([])
     }
 
+    // Fetch building name separately if we have documents
+    let buildingName = 'Unknown Building'
+    if (documents && documents.length > 0) {
+      const { data: building } = await supabase
+        .from('buildings')
+        .select('name')
+        .eq('id', buildingId)
+        .single()
+
+      if (building) {
+        buildingName = building.name
+      }
+    }
+
     // Transform the data to match expected format
     const transformedDocuments = (documents || []).map(doc => ({
       id: doc.id,
-      file_name: doc.file_name,
-      doc_url: doc.doc_url,
-      doc_type: doc.doc_type,
+      file_name: doc.name,
+      doc_url: doc.file_path,
+      doc_type: doc.category,
       uploaded_by: doc.uploaded_by,
-      building_name: doc.buildings?.building_name || 'Unknown Building'
+      building_name: buildingName
     }))
 
     return NextResponse.json(transformedDocuments)
