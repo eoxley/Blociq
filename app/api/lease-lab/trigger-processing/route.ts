@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
     console.log('🔄 Calling processing endpoint with path:', filePath);
 
     // Call the processing endpoint directly
-    const processingResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.blociq.co.uk'}/api/lease-lab/process`, {
+    const processingResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/lease-lab/process`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
