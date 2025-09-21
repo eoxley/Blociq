@@ -177,9 +177,7 @@ export async function POST(request: NextRequest) {
           file_name: file.name,
           file_url: publicUrl,
           building_id: buildingId ? parseInt(buildingId) : null,
-          type: 'Lease Document', // Default classification
-          file_size: file.size,
-          created_by: user.id
+          type: 'Lease Document' // Default classification
         })
         .select('id')
         .single();
@@ -251,7 +249,61 @@ export async function POST(request: NextRequest) {
       // Don't fail the request if this fails
     }
 
-    // 6. Return analysis results for user confirmation
+    // 7. Store potential lease analysis for future linking
+    let leaseStorageResult = null;
+    if (aiAnalysis.classification === 'Lease Agreement' ||
+        aiAnalysis.document_type?.toLowerCase().includes('lease') ||
+        leaseAnalysis.sections?.length > 0) {
+
+      try {
+        // Prepare lease data for potential storage
+        const leaseData = {
+          building_id: buildingId ? parseInt(buildingId) : null,
+          unit_id: null, // Will be set when user links to specific unit
+          document_id: documentId,
+          leaseholder_name: aiAnalysis.leaseholder_name || leaseAnalysis.parties?.lessee || null,
+          lease_start_date: aiAnalysis.lease_start_date || leaseAnalysis.key_dates?.lease_start || null,
+          lease_end_date: aiAnalysis.lease_end_date || leaseAnalysis.key_dates?.lease_end || null,
+          apportionment: aiAnalysis.apportionment || leaseAnalysis.financial_terms?.service_charge_percentage || null,
+          ground_rent: leaseAnalysis.financial_terms?.ground_rent_amount || null,
+          analysis_json: {
+            // Store the complete structured analysis
+            lease_analysis: leaseAnalysis,
+            ai_analysis: aiAnalysis,
+            extraction_metadata: {
+              quality_score: extractionQuality.score,
+              method: extractionResult.method,
+              file_hash: generatedFileHash,
+              processed_at: new Date().toISOString()
+            }
+          },
+          scope: 'unit', // Default scope, can be changed when linking
+          created_by: user.id
+        };
+
+        // Only store if we have a building ID (indicates user intent to link)
+        if (buildingId) {
+          const { data: storedLease, error: leaseError } = await supabase
+            .from('leases')
+            .insert(leaseData)
+            .select('id')
+            .single();
+
+          if (leaseError) {
+            console.warn('⚠️ Could not auto-store lease analysis:', leaseError);
+            leaseStorageResult = { stored: false, error: leaseError.message };
+          } else {
+            console.log('✅ Lease analysis stored for future linking:', storedLease.id);
+            leaseStorageResult = { stored: true, leaseId: storedLease.id };
+          }
+        }
+      } catch (leaseStoreError) {
+        console.warn('⚠️ Error auto-storing lease analysis:', leaseStoreError);
+        leaseStorageResult = { stored: false, error: 'Auto-storage failed' };
+      }
+    }
+
+    // 8. Return analysis results for user confirmation
     return NextResponse.json({
       success: true,
       type: 'lease_analysis',
@@ -259,13 +311,13 @@ export async function POST(request: NextRequest) {
       fileHash: fileHash || generatedFileHash,
       processedAt: new Date().toISOString(),
       cached: extractionResult.fromCache || false,
-      
+
       // Structured lease analysis (primary response)
       leaseAnalysis: leaseAnalysis,
-      
+
       // Parsing statistics
       parsingStats: parsingStats,
-      
+
       // AI analysis (fallback/additional context)
       ai: {
         ...aiAnalysis,
@@ -276,14 +328,17 @@ export async function POST(request: NextRequest) {
         fullTextLength: extractedText.length, // Show full extraction stats
         file_url: publicUrl // Include the uploaded file URL
       },
-      
+
       // Quality metrics
       extractionQuality: {
         score: extractionQuality.score,
         level: extractionQuality.quality_level,
         completionRate: extractionQuality.completion_rate,
         warnings: extractionQuality.warnings
-      }
+      },
+
+      // Lease storage information
+      leaseStorage: leaseStorageResult
     }, { headers })
 
   } catch (error) {

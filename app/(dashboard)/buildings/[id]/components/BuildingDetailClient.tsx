@@ -35,6 +35,7 @@ import Revealable from '@/components/ui/Revealable'
 import UnitsTable from '@/components/buildings/UnitsTable'
 import ActionTracker from '@/components/buildings/ActionTracker'
 import CommunicationsLog from '@/components/communications/CommunicationsLog'
+import BuildingLeasesSection from '@/components/leases/BuildingLeasesSection'
 
 interface Building {
   id: string
@@ -582,7 +583,7 @@ export default function BuildingDetailClient({
           <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-full blur-xl"></div>
           <div className="absolute bottom-0 left-4 w-8 h-8 bg-white/5 rounded-full blur-lg"></div>
         </div>
-        
+
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4">
           <div className="bg-gray-50 rounded-xl p-4 text-center">
             <div className="text-2xl font-bold text-gray-900">{complianceSummary.total}</div>
@@ -600,6 +601,34 @@ export default function BuildingDetailClient({
             <div className="text-2xl font-bold text-red-600">{complianceSummary.overdue}</div>
             <div className="text-sm text-red-600">Overdue</div>
           </div>
+        </div>
+      </SectionCard>
+
+      {/* Leases Section */}
+      <SectionCard className="group">
+        <div className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] px-4 py-3 rounded-t-2xl">
+          <div className="flex items-center justify-between text-white">
+            <div className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              <h3 className="font-semibold">Leases</h3>
+            </div>
+            <Link
+              href={`/lease-lab`}
+              className="text-white/90 hover:text-white text-sm font-medium transition-colors"
+            >
+              Upload & Analyze
+            </Link>
+          </div>
+          {/* Decorative elements */}
+          <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-full blur-xl"></div>
+          <div className="absolute bottom-0 left-4 w-8 h-8 bg-white/5 rounded-full blur-lg"></div>
+        </div>
+
+        <div className="p-6">
+          <BuildingLeasesSection
+            buildingId={parseInt(buildingId)}
+            buildingName={building.name}
+          />
         </div>
       </SectionCard>
 

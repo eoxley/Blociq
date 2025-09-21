@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, FileText, Calendar, DollarSign, Shield, AlertTriangle, Edit3, CheckCircle, Link, Download, Minimize2, Maximize2 } from 'lucide-react';
+import { X, FileText, Calendar, DollarSign, Shield, AlertTriangle, Edit3, CheckCircle, Link, Download, Minimize2, Maximize2, Building2, Home } from 'lucide-react';
 import { DocumentJob } from '../LeaseLabClient';
 
 interface AnalysisDrawerProps {
@@ -14,6 +14,13 @@ export default function AnalysisDrawer({ job, onClose, onAttachToBuilding }: Ana
   const [activeTab, setActiveTab] = useState('overview');
   const [isAttaching, setIsAttaching] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [isLinking, setIsLinking] = useState(false);
+  const [buildings, setBuildings] = useState<any[]>([]);
+  const [units, setUnits] = useState<any[]>([]);
+  const [selectedBuilding, setSelectedBuilding] = useState('');
+  const [selectedUnit, setSelectedUnit] = useState('');
+  const [linkScope, setLinkScope] = useState<'building' | 'unit'>('unit');
 
   const summary = job.summary_json || {};
 
@@ -59,6 +66,86 @@ export default function AnalysisDrawer({ job, onClose, onAttachToBuilding }: Ana
   const handleClose = () => {
     setIsMinimized(false);
     onClose();
+  };
+
+  const fetchBuildings = async () => {
+    try {
+      const response = await fetch('/api/buildings');
+      if (response.ok) {
+        const data = await response.json();
+        setBuildings(data.buildings || []);
+      }
+    } catch (error) {
+      console.error('Error fetching buildings:', error);
+    }
+  };
+
+  const fetchUnits = async (buildingId: string) => {
+    try {
+      const response = await fetch(`/api/buildings/${buildingId}/units`);
+      if (response.ok) {
+        const data = await response.json();
+        setUnits(data.units || []);
+      }
+    } catch (error) {
+      console.error('Error fetching units:', error);
+    }
+  };
+
+  const handleShowLinkModal = () => {
+    setShowLinkModal(true);
+    fetchBuildings();
+  };
+
+  const handleLinkLease = async () => {
+    if (!selectedBuilding || (linkScope === 'unit' && !selectedUnit)) {
+      return;
+    }
+
+    setIsLinking(true);
+    try {
+      const response = await fetch('/api/leases/link', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          documentJobId: job.id,
+          buildingId: selectedBuilding,
+          unitId: linkScope === 'unit' ? selectedUnit : null,
+          scope: linkScope,
+          analysisJson: summary
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Lease linked successfully:', data);
+
+        // Show success message
+        alert(`Lease successfully linked to ${linkScope === 'building' ? 'building' : 'unit'}!`);
+
+        setShowLinkModal(false);
+        // Optionally refresh or update UI
+      } else {
+        const error = await response.json();
+        console.error('❌ Failed to link lease:', error);
+        alert(error.message || 'Failed to link lease');
+      }
+    } catch (error) {
+      console.error('❌ Error linking lease:', error);
+      alert('Failed to link lease');
+    } finally {
+      setIsLinking(false);
+    }
+  };
+
+  const handleBuildingChange = (buildingId: string) => {
+    setSelectedBuilding(buildingId);
+    if (buildingId) {
+      fetchUnits(buildingId);
+    }
+    setSelectedUnit('');
   };
 
   const renderOverview = () => (
@@ -315,6 +402,13 @@ export default function AnalysisDrawer({ job, onClose, onAttachToBuilding }: Ana
             </div>
             <div className="flex items-center space-x-2">
               <button
+                onClick={handleShowLinkModal}
+                className="flex items-center space-x-1 px-3 py-2 text-sm font-medium text-green-600 hover:text-green-500 hover:bg-green-50 rounded-lg transition-colors"
+              >
+                <Building2 className="h-4 w-4" />
+                <span>Link to Building/Unit</span>
+              </button>
+              <button
                 onClick={handleAttachToBuilding}
                 disabled={isAttaching || job.linked_building_id}
                 className="flex items-center space-x-1 px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
@@ -381,6 +475,120 @@ export default function AnalysisDrawer({ job, onClose, onAttachToBuilding }: Ana
           </div>
         </div>
       </div>
+
+      {/* Link to Building/Unit Modal */}
+      {showLinkModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h3 className="text-lg font-semibold text-gray-900">Link Lease to Building/Unit</h3>
+              <button
+                onClick={() => setShowLinkModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Scope Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Link Scope
+                </label>
+                <div className="flex space-x-4">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      value="building"
+                      checked={linkScope === 'building'}
+                      onChange={(e) => setLinkScope(e.target.value as 'building' | 'unit')}
+                      className="mr-2"
+                    />
+                    <span className="text-sm text-gray-700">Building-wide (head lease)</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      value="unit"
+                      checked={linkScope === 'unit'}
+                      onChange={(e) => setLinkScope(e.target.value as 'building' | 'unit')}
+                      className="mr-2"
+                    />
+                    <span className="text-sm text-gray-700">Specific unit</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Building Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Select Building
+                </label>
+                <select
+                  value={selectedBuilding}
+                  onChange={(e) => handleBuildingChange(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Choose a building...</option>
+                  {buildings.map((building) => (
+                    <option key={building.id} value={building.id}>
+                      {building.name} {building.address && `- ${building.address}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Unit Selection (only if scope is unit) */}
+              {linkScope === 'unit' && selectedBuilding && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Select Unit
+                  </label>
+                  <select
+                    value={selectedUnit}
+                    onChange={(e) => setSelectedUnit(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Choose a unit...</option>
+                    {units.map((unit) => (
+                      <option key={unit.id} value={unit.id}>
+                        {unit.unit_number} {unit.floor && `(Floor ${unit.floor})`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Information */}
+              <div className="bg-blue-50 p-3 rounded-md">
+                <p className="text-xs text-blue-800">
+                  {linkScope === 'building'
+                    ? 'Building-wide leases store clauses that apply to all units (e.g., no pets, landlord powers).'
+                    : 'Unit-specific leases store individual lease terms (e.g., apportionment %, leaseholder name).'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end space-x-3 p-6 border-t bg-gray-50">
+              <button
+                onClick={() => setShowLinkModal(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleLinkLease}
+                disabled={isLinking || !selectedBuilding || (linkScope === 'unit' && !selectedUnit)}
+                className="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-md transition-colors"
+              >
+                {isLinking && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>}
+                <span>{isLinking ? 'Linking...' : 'Link Lease'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

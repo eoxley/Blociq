@@ -54,15 +54,14 @@ export default function ComplianceDocumentsPage() {
         .from('building_documents')
         .select(`
           id,
-          title,
+          file_name,
           type,
-          uploaded_at,
-          ocr_status,
+          created_at,
           building:buildings(name)
         `)
         .ilike('type', '%compliance%')
         .or('type.ilike.%eicr%,type.ilike.%fire%,type.ilike.%insurance%,type.ilike.%certificate%')
-        .order('uploaded_at', { ascending: false })
+        .order('created_at', { ascending: false })
 
       if (error) {
         console.error('Error fetching compliance documents:', error)
@@ -71,13 +70,13 @@ export default function ComplianceDocumentsPage() {
       } else {
         const formattedDocuments = (data || []).map(doc => ({
           id: doc.id,
-          title: doc.title || 'Untitled Document',
+          title: doc.file_name || 'Untitled Document',
           type: doc.type || 'Unknown',
           building_name: doc.building?.name || 'Unknown Building',
           building_id: doc.building?.id || '',
-          uploaded_at: doc.uploaded_at,
+          uploaded_at: doc.created_at,
           status: 'active',
-          ocr_status: doc.ocr_status || 'pending'
+          ocr_status: 'pending' // Default since ocr_status column doesn't exist
         }))
         setDocuments(formattedDocuments)
       }
