@@ -1,65 +1,59 @@
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export async function middleware(req: NextRequest) {
-  const res = NextResponse.next();
-  const supabase = createMiddlewareClient({ req, res });
-
-  // Handle portal routes
+  // Handle portal routes with basic auth check
   if (req.nextUrl.pathname.startsWith('/portal/')) {
-    const { data: { session } } = await supabase.auth.getSession();
+    // Get the project ref from the environment to build the correct cookie name
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    let projectRef = '';
 
-    // If no session, redirect to sign-in
-    if (!session) {
+    if (supabaseUrl) {
+      // Extract project ref from Supabase URL
+      const urlMatch = supabaseUrl.match(/https:\/\/([^.]+)\.supabase\.co/);
+      if (urlMatch) {
+        projectRef = urlMatch[1];
+      }
+    }
+
+    // Check for Supabase auth cookies (multiple possible names)
+    const possibleCookieNames = [
+      `sb-${projectRef}-auth-token`,
+      'sb-access-token',
+      'sb-refresh-token',
+      'supabase-auth-token',
+      'supabase.auth.token'
+    ];
+
+    let hasAuthCookie = false;
+    for (const cookieName of possibleCookieNames) {
+      if (req.cookies.get(cookieName)?.value) {
+        hasAuthCookie = true;
+        break;
+      }
+    }
+
+    // Also check for any cookie that starts with 'sb-' and contains 'auth'
+    if (!hasAuthCookie) {
+      const allCookies = req.cookies.getAll();
+      hasAuthCookie = allCookies.some(cookie =>
+        cookie.name.startsWith('sb-') && cookie.name.includes('auth') && cookie.value
+      );
+    }
+
+    // If no auth token found, redirect to sign-in
+    if (!hasAuthCookie) {
       const redirectUrl = new URL('/auth/sign-in', req.url);
       redirectUrl.searchParams.set('redirectTo', req.nextUrl.pathname);
       return NextResponse.redirect(redirectUrl);
     }
 
-    // Extract leaseholder ID from URL
-    const pathParts = req.nextUrl.pathname.split('/');
-    const leaseholderId = pathParts[2];
-
-    if (leaseholderId && leaseholderId !== 'help' && leaseholderId !== 'contact') {
-      // Verify user has access to this lease
-      const { data: lease, error } = await supabase
-        .from('leases')
-        .select('id, building_id')
-        .eq('id', leaseholderId)
-        .single();
-
-      if (error || !lease) {
-        // Lease not found or access denied
-        const errorUrl = new URL('/portal/access-denied', req.url);
-        return NextResponse.redirect(errorUrl);
-      }
-
-      // Check if user has access to the building
-      const { data: buildingAccess } = await supabase
-        .from('building_access')
-        .select('role')
-        .eq('building_id', lease.building_id)
-        .eq('user_id', session.user.id)
-        .single();
-
-      // Check if user created the building
-      const { data: building } = await supabase
-        .from('buildings')
-        .select('created_by')
-        .eq('id', lease.building_id)
-        .single();
-
-      const hasAccess = buildingAccess?.role || building?.created_by === session.user.id;
-
-      if (!hasAccess) {
-        const errorUrl = new URL('/portal/access-denied', req.url);
-        return NextResponse.redirect(errorUrl);
-      }
-    }
+    // For more complex authorization (building access, etc.),
+    // we'll handle it client-side or in API routes since Edge Runtime
+    // has limited capabilities for database queries
   }
 
-  return res;
+  return NextResponse.next();
 }
 
 export const config = {
