@@ -59,6 +59,17 @@ BEGIN
     END IF;
 END $$;
 
+-- Add building_id column to document_jobs table if it doesn't exist (needed by portal APIs)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name = 'document_jobs' AND column_name = 'building_id') THEN
+        ALTER TABLE document_jobs ADD COLUMN building_id UUID REFERENCES buildings(id) ON DELETE SET NULL;
+        CREATE INDEX IF NOT EXISTS idx_document_jobs_building_id ON document_jobs(building_id);
+        COMMENT ON COLUMN document_jobs.building_id IS 'Reference to the building this document relates to';
+    END IF;
+END $$;
+
 -- Create user_buildings junction table if it doesn't exist (used by RLS policies)
 CREATE TABLE IF NOT EXISTS user_buildings (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
