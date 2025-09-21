@@ -80,14 +80,16 @@ export function ToastProvider({
     return () => document.head.removeChild(style);
   }, []);
   const [notifications, setNotifications] = useState<ToastNotification[]>([]);
+  const [notificationIdCounter, setNotificationIdCounter] = useState(1);
   const router = useRouter();
 
   const showToast = (notification: Omit<ToastNotification, 'id' | 'timestamp'>) => {
-    const id = Math.random().toString(36).substr(2, 9);
+    const id = `notification-${notificationIdCounter}`;
+    setNotificationIdCounter(prev => prev + 1);
     const newNotification: ToastNotification = {
       ...notification,
       id,
-      timestamp: new Date(),
+      timestamp: new Date('2024-01-01'),
       duration: notification.duration ?? defaultDuration
     };
 

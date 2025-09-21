@@ -15,6 +15,7 @@ interface Task {
 
 export default function BuildingToDoWidget() {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [taskIdCounter, setTaskIdCounter] = useState(1);
 
   const [newTaskText, setNewTaskText] = useState("");
   const [showAddForm, setShowAddForm] = useState(false);
@@ -30,11 +31,12 @@ export default function BuildingToDoWidget() {
   const addTask = () => {
     if (newTaskText.trim()) {
       const newTask: Task = {
-        id: Math.floor(Math.random() * 1000000), // Use random instead of Date.now() for SSR compatibility
+        id: taskIdCounter,
         text: newTaskText.trim(),
         done: false,
       };
       setTasks((prev) => [...prev, newTask]);
+      setTaskIdCounter(prev => prev + 1);
       setNewTaskText("");
       setShowAddForm(false);
     }

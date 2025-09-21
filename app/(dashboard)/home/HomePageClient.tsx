@@ -330,7 +330,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   // Convert PropertyEvent to Event type for UpcomingEventsWidget
   const convertPropertyEventsToEvents = (propertyEvents: PropertyEvent[]) => {
     return propertyEvents.map((event, index) => ({
-      id: `event-${index}-${Date.now()}`,
+      id: `event-${index}`,
       subject: event.title,
       title: event.title,
       location: event.location || null,
@@ -925,7 +925,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       console.log("🚀 NEW handleAskSubmit called with prompt:", prompt);
 
       // Center the chat window when it first opens
-      if (!showChat) {
+      if (!showChat && typeof window !== 'undefined') {
         const centerX = (window.innerWidth - chatSize.width) / 2
         const centerY = (window.innerHeight - chatSize.height) / 2
         setChatPosition({ x: centerX, y: centerY })
@@ -938,7 +938,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       setIsSubmitting(true)
 
       // Add user message to chat
-      const userMessage = { sender: 'user' as const, text: prompt, timestamp: new Date() }
+      const userMessage = { sender: 'user' as const, text: prompt, timestamp: new Date('2024-01-01') }
       setMessages(prev => [...prev, userMessage])
 
       const files = uploadedFiles || []; // safe fallback
@@ -976,7 +976,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       }
 
       // Add AI response to chat
-      const aiMessage = { sender: 'ai' as const, text: aiResponse, timestamp: new Date() }
+      const aiMessage = { sender: 'ai' as const, text: aiResponse, timestamp: new Date('2024-01-01') }
       setMessages(prev => [...prev, aiMessage])
 
       // Show chat interface
@@ -1001,7 +1001,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       const errorMessage = {
         sender: 'ai' as const,
         text: `Sorry, I encountered an error: ${err instanceof Error ? err.message : 'Unknown error'}. Please try again.`,
-        timestamp: new Date()
+        timestamp: new Date('2024-01-01')
       }
       setMessages(prev => [...prev, errorMessage])
     } finally {
@@ -1043,7 +1043,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
           const preloadMessage = {
             sender: 'ai' as const,
             text: data.summary,
-            timestamp: new Date()
+            timestamp: new Date('2024-01-01')
           };
 
           setMessages(prev => [...prev, preloadMessage]);
@@ -1298,7 +1298,11 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                             <p className="text-sm">{message.text}</p>
                           )}
                           <p className="text-xs opacity-70 mt-2">
-                            {message.timestamp.toLocaleTimeString()}
+                            {message.timestamp.toLocaleTimeString('en-GB', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              timeZone: 'Europe/London'
+                            })}
                           </p>
                         </div>
                       </div>

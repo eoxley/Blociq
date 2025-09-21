@@ -57,6 +57,7 @@ export default function AskBlocIQHomepage() {
   const [isDragOver, setIsDragOver] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null)
+  const [fileIdCounter, setFileIdCounter] = useState(1)
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [isSearching, setIsSearching] = useState(false)
   
@@ -120,7 +121,8 @@ export default function AskBlocIQHomepage() {
     
     Array.from(files).forEach(file => {
       if (validateFile(file)) {
-        const fileId = Math.random().toString(36).substr(2, 9)
+        const fileId = `file-${fileIdCounter}`
+        setFileIdCounter(prev => prev + 1)
         const uploadedFile: UploadedFile = {
           file,
           id: fileId,
@@ -174,7 +176,7 @@ export default function AskBlocIQHomepage() {
       id: Date.now().toString(),
       role: 'user',
       content: prompt.trim(),
-      timestamp: new Date(),
+      timestamp: new Date('2024-01-01'),
       files: uploadedFiles.length > 0 ? [...uploadedFiles] : undefined
     }
 
