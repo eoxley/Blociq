@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FileText, Clock, CheckCircle, AlertCircle, Eye, Link, Download, RefreshCw, Trash2 } from 'lucide-react';
+import { FileText, Clock, CheckCircle, AlertCircle, Eye, Link, Download, RefreshCw, Trash2, Wrench } from 'lucide-react';
 import { DocumentJob } from '../LeaseLabClient';
 import { toast } from 'sonner';
 
@@ -15,6 +15,7 @@ interface JobsListProps {
 export default function JobsList({ jobs, onViewAnalysis, onRefresh }: JobsListProps) {
   const [refreshing, setRefreshing] = useState(false);
   const [deletingJobs, setDeletingJobs] = useState<Set<string>>(new Set());
+  const [reprocessingJobs, setReprocessingJobs] = useState<Set<string>>(new Set());
 
   // Debug: Log props on mount
   console.log('🔍 JobsList props:', { 
@@ -50,15 +51,15 @@ export default function JobsList({ jobs, onViewAnalysis, onRefresh }: JobsListPr
     }
 
     setDeletingJobs(prev => new Set([...prev, jobId]));
-    
+
     try {
       console.log('🗑️ Attempting to delete job:', jobId);
       const response = await fetch(`/api/lease-lab/jobs/${jobId}`, {
         method: 'DELETE'
       });
-      
+
       console.log('📡 Delete response status:', response.status);
-      
+
       if (response.ok) {
         const responseData = await response.json();
         console.log('✅ Delete successful:', responseData);
@@ -83,6 +84,51 @@ export default function JobsList({ jobs, onViewAnalysis, onRefresh }: JobsListPr
       // Don't call onDelete or refresh on error - job should remain in UI
     } finally {
       setDeletingJobs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(jobId);
+        return newSet;
+      });
+    }
+  };
+
+  const handleReprocess = async (jobId: string, filename: string) => {
+    if (!confirm(`Reprocess analysis for "${filename}"? This will regenerate the analysis data.`)) {
+      return;
+    }
+
+    setReprocessingJobs(prev => new Set([...prev, jobId]));
+
+    try {
+      console.log('🔄 Attempting to reprocess job:', jobId);
+      const response = await fetch('/api/lease-lab/reprocess', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ jobId })
+      });
+
+      console.log('📡 Reprocess response status:', response.status);
+
+      if (response.ok) {
+        const responseData = await response.json();
+        console.log('✅ Reprocess successful:', responseData);
+        toast.success('Analysis regenerated successfully');
+        // Refresh to show updated analysis
+        if (onRefresh) {
+          await onRefresh();
+          console.log('✅ Jobs list refreshed after reprocess');
+        }
+      } else {
+        const errorData = await response.json();
+        console.error('❌ Reprocess failed:', errorData);
+        throw new Error(errorData.message || 'Failed to reprocess analysis');
+      }
+    } catch (error) {
+      console.error('Error reprocessing job:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to reprocess analysis');
+    } finally {
+      setReprocessingJobs(prev => {
         const newSet = new Set(prev);
         newSet.delete(jobId);
         return newSet;
@@ -296,7 +342,7 @@ export default function JobsList({ jobs, onViewAnalysis, onRefresh }: JobsListPr
 
             {/* Actions */}
             <div className="flex items-center space-x-2 ml-4">
-              {job.status === 'READY' && (
+              {job.status === 'READY' && job.summary_json && (
                 <button
                   onClick={() => onViewAnalysis(job)}
                   className="flex items-center space-x-1 px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
@@ -305,7 +351,24 @@ export default function JobsList({ jobs, onViewAnalysis, onRefresh }: JobsListPr
                   <span>View Analysis</span>
                 </button>
               )}
-              
+
+              {/* Reprocess Button - for jobs that are READY but missing analysis */}
+              {job.status === 'READY' && !job.summary_json && (
+                <button
+                  onClick={() => handleReprocess(job.id, job.filename)}
+                  disabled={reprocessingJobs.has(job.id)}
+                  className="flex items-center space-x-1 px-3 py-2 text-sm font-medium text-orange-600 hover:text-orange-500 hover:bg-orange-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Regenerate analysis"
+                >
+                  {reprocessingJobs.has(job.id) ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Wrench className="h-4 w-4" />
+                  )}
+                  <span>Regenerate</span>
+                </button>
+              )}
+
               {job.linked_building_id && (
                 <div className="flex items-center space-x-1 px-3 py-2 text-sm text-green-600 bg-green-50 rounded-lg">
                   <Link className="h-4 w-4" />
