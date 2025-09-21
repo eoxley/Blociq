@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
-import { isLeaseDocument, generateBasicDocumentSummary } from '@/lib/lease/LeaseDocumentParser';
 
 export const maxDuration = 120; // 2 minutes for AI analysis
 
@@ -16,42 +15,14 @@ export async function POST(req: NextRequest) {
     const { jobId, extractedText, filename, mime, userId } = await req.json();
 
     if (!jobId || !extractedText) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'Missing required data',
         message: 'Job ID and extracted text are required'
       }, { status: 400 });
     }
 
-    // Check if this is actually a lease document
-    const isLease = isLeaseDocument(filename, extractedText);
-    console.log(`📄 Document type detection for "${filename}": ${isLease ? 'LEASE' : 'NON-LEASE'}`);
-
-    if (!isLease) {
-      // Generate basic summary for non-lease documents
-      console.log('📋 Generating basic summary for non-lease document');
-      const basicSummary = generateBasicDocumentSummary(filename, extractedText);
-      
-      // Update job with basic summary
-      await serviceSupabase
-        .from('document_jobs')
-        .update({
-          status: 'READY',
-          summary_json: basicSummary,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', jobId);
-
-      return NextResponse.json({ 
-        success: true,
-        message: 'Non-lease document processed with basic summary',
-        isLease: false,
-        documentType: basicSummary.documentType,
-        analysis: basicSummary
-      });
-    }
-
-    // Continue with lease processing for actual lease documents
-    console.log('🏠 Processing as lease document');
+    // Since only leases should be uploaded in this section, always process as lease
+    console.log('🏠 Processing as lease document:', filename);
     if (userId) {
       console.log('🤖 Starting AI lease analysis for job:', jobId, 'user:', userId);
     } else {
@@ -317,19 +288,40 @@ ${extractedText.substring(0, 60000)}
       console.error('Raw response length:', analysisText.length);
       console.error('Cleaned response preview:', analysisText.replace(/^```json\s*/, '').replace(/\s*```$/, '').substring(0, 300));
       
-      // Create a fallback summary
+      // Create a fallback summary that matches UI expectations
+      const textPreview = extractedText.substring(0, 2000);
+      const hasLeaseTerms = /lease|lessor|lessee|tenant|landlord/i.test(textPreview);
+      const hasPropertyRef = /property|address|premises|flat|apartment|house/i.test(textPreview);
+
       summary = {
-        doc_type: 'lease',
-        overview: 'Analysis parsing failed - manual review required',
-        parties: ['Parsing Error - Check Logs'],
-        key_dates: [],
-        financials: [],
-        obligations: [],
-        restrictions: [],
-        variations: [],
-        actions: [{ title: 'Manual Review Required', description: 'AI analysis parsing failed' }],
-        source_spans: [],
-        unknowns: ['JSON parsing failed - check server logs for details']
+        doc_type: hasLeaseTerms ? 'lease' : 'document',
+        executive_summary: `Analysis of ${filename} completed with ${extractedText.length.toLocaleString()} characters extracted. ${hasLeaseTerms ? 'Lease-related content was detected.' : 'Document processed successfully.'} AI parsing encountered issues, but the full document text is available for review.`,
+        basic_property_details: {
+          property_description: hasPropertyRef ? 'Property details are present in the document - manual review recommended' : `Document: ${filename}`,
+          lease_term: hasLeaseTerms ? 'Lease terms detected - detailed extraction needed' : 'No clear lease terms identified',
+          parties: hasLeaseTerms ? ['Parties identified in document', 'Manual review recommended for details'] : ['Document processed - party details need extraction']
+        },
+        detailed_sections: [
+          {
+            section_title: 'Processing Status',
+            content: [
+              `✅ Document uploaded: ${filename}`,
+              `✅ OCR completed: ${extractedText.length.toLocaleString()} characters extracted`,
+              `⚠️ AI analysis parsing failed - manual review needed`,
+              `📄 Full document text is available for detailed review`
+            ],
+            referenced_clauses: ['System processing log']
+          }
+        ],
+        other_provisions: [
+          {
+            provision_title: 'Technical Information',
+            content: `Document processing completed successfully. ${extractedText.length.toLocaleString()} characters of text were extracted from the PDF. AI analysis encountered parsing issues but all content is preserved.`,
+            referenced_clauses: ['Technical log']
+          }
+        ],
+        disclaimer: 'This analysis encountered technical parsing issues. The document has been successfully processed and text extracted. Please review the content manually or try reprocessing.',
+        unknowns: ['AI parsing failed - reprocessing recommended', 'Manual review required for detailed analysis']
       };
     }
 
