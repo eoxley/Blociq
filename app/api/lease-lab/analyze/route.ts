@@ -34,11 +34,10 @@ export async function POST(req: NextRequest) {
       // Update job with basic summary
       await serviceSupabase
         .from('document_jobs')
-        .update({ 
-          status: 'COMPLETED',
-          analysis_result: basicSummary,
-          updated_at: new Date().toISOString(),
-          completed_at: new Date().toISOString()
+        .update({
+          status: 'READY',
+          summary_json: basicSummary,
+          updated_at: new Date().toISOString()
         })
         .eq('id', jobId);
 
@@ -222,6 +221,10 @@ Document text to analyze:
 ${extractedText.substring(0, 60000)}
 `;
 
+    console.log('🤖 Calling OpenAI API for lease analysis...');
+    console.log('📊 Text length:', extractedText.length, 'characters');
+    console.log('📊 Prompt length:', analysisPrompt.length, 'characters');
+
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -246,15 +249,29 @@ ${extractedText.substring(0, 60000)}
     });
 
     if (!openaiResponse.ok) {
-      throw new Error(`OpenAI API failed: ${openaiResponse.status}`);
+      const errorText = await openaiResponse.text();
+      console.error('❌ OpenAI API error response:', {
+        status: openaiResponse.status,
+        statusText: openaiResponse.statusText,
+        body: errorText
+      });
+      throw new Error(`OpenAI API failed: ${openaiResponse.status} - ${errorText}`);
     }
 
     const openaiResult = await openaiResponse.json();
+    console.log('📋 OpenAI response received:', {
+      usage: openaiResult.usage,
+      choicesLength: openaiResult.choices?.length || 0
+    });
+
     const analysisText = openaiResult.choices[0]?.message?.content;
 
     if (!analysisText) {
+      console.error('❌ No analysis content in OpenAI response:', openaiResult);
       throw new Error('No analysis returned from OpenAI');
     }
+
+    console.log('📝 Analysis text length:', analysisText.length, 'characters');
 
     // Parse the JSON response - handle markdown code blocks
     let summary;
@@ -297,6 +314,22 @@ ${extractedText.substring(0, 60000)}
     }
 
     console.log('✅ AI analysis completed for job:', jobId);
+
+    // Update the document_jobs table with the analysis results
+    const { error: updateError } = await serviceSupabase
+      .from('document_jobs')
+      .update({
+        summary_json: summary,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', jobId);
+
+    if (updateError) {
+      console.error('❌ Failed to update document_jobs with analysis:', updateError);
+      // Don't fail the whole request, just log the error
+    } else {
+      console.log('✅ Successfully updated document_jobs with analysis for job:', jobId);
+    }
 
     return NextResponse.json({
       success: true,
