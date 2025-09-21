@@ -357,7 +357,18 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
   // Set random welcome message on page load
   useEffect(() => {
-    setCurrentWelcomeMessage(getRandomWelcomeMessage())
+    const loadWelcomeMessage = async () => {
+      try {
+        const message = await getRandomWelcomeMessage()
+        setCurrentWelcomeMessage(message)
+      } catch (error) {
+        console.warn('Error loading welcome message, using sync fallback:', error)
+        // Fallback to sync version if async fails
+        const { getRandomWelcomeMessageSync } = await import('@/utils/messages')
+        setCurrentWelcomeMessage(getRandomWelcomeMessageSync())
+      }
+    }
+    loadWelcomeMessage()
   }, [])
 
   useEffect(() => {
@@ -896,12 +907,12 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     await loadOutlookEvents()
   }
 
-  // Scroll to bottom of messages only when chat is open
-  useEffect(() => {
-    if (showChat && messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
-    }
-  }, [messages, showChat])
+  // Auto-scroll removed - let users control their own scrolling within chat
+  // useEffect(() => {
+  //   if (showChat && messagesEndRef.current) {
+  //     messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
+  //   }
+  // }, [messages, showChat])
 
   // Handle Ask BlocIQ submission
   const handleAskSubmit = async (prompt: string) => {
@@ -1054,8 +1065,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         const response = await fetch('/api/users')
         if (response.ok) {
           const data = await response.json()
-          if (data.first_name) {
-            setUserFirstName(data.first_name)
+          if (data.user?.profile?.first_name) {
+            setUserFirstName(data.user.profile.first_name)
           } else {
             // Fallback: use first part of email before @
             const emailPrefix = user.email.split('@')[0]
