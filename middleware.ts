@@ -1,45 +1,22 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export async function middleware(req: NextRequest) {
+export function middleware(req: NextRequest) {
   // Handle portal routes with basic auth check
   if (req.nextUrl.pathname.startsWith('/portal/')) {
-    // Get the project ref from the environment to build the correct cookie name
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    let projectRef = '';
+    // Check for any Supabase auth cookie patterns
+    const allCookies = req.cookies.getAll();
 
-    if (supabaseUrl) {
-      // Extract project ref from Supabase URL
-      const urlMatch = supabaseUrl.match(/https:\/\/([^.]+)\.supabase\.co/);
-      if (urlMatch) {
-        projectRef = urlMatch[1];
-      }
-    }
-
-    // Check for Supabase auth cookies (multiple possible names)
-    const possibleCookieNames = [
-      `sb-${projectRef}-auth-token`,
-      'sb-access-token',
-      'sb-refresh-token',
-      'supabase-auth-token',
-      'supabase.auth.token'
-    ];
-
-    let hasAuthCookie = false;
-    for (const cookieName of possibleCookieNames) {
-      if (req.cookies.get(cookieName)?.value) {
-        hasAuthCookie = true;
-        break;
-      }
-    }
-
-    // Also check for any cookie that starts with 'sb-' and contains 'auth'
-    if (!hasAuthCookie) {
-      const allCookies = req.cookies.getAll();
-      hasAuthCookie = allCookies.some(cookie =>
-        cookie.name.startsWith('sb-') && cookie.name.includes('auth') && cookie.value
-      );
-    }
+    // Look for common Supabase auth cookie patterns
+    const hasAuthCookie = allCookies.some(cookie => {
+      const name = cookie.name.toLowerCase();
+      return (
+        (name.startsWith('sb-') && name.includes('auth')) ||
+        name.includes('supabase') ||
+        name === 'access_token' ||
+        name === 'refresh_token'
+      ) && cookie.value && cookie.value.length > 10;
+    });
 
     // If no auth token found, redirect to sign-in
     if (!hasAuthCookie) {
