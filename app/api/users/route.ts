@@ -27,11 +27,11 @@ export async function GET(req: NextRequest) {
 
     const user = session.user;
 
-    // Get user profile from the users table
+    // Get user profile from the profiles table (handle missing columns gracefully)
     const { data: profile, error: profileError } = await supabase
-      .from('users')
-      .select('id, email, first_name, last_name, full_name, job_title, company_name, phone_number, created_at, updated_at')
-      .eq('email', user.email)
+      .from('profiles')
+      .select('*') // Select all available columns
+      .eq('id', user.id)
       .single();
 
     if (profileError) {

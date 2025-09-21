@@ -18,14 +18,15 @@ import { generateEmailSignature, saveUserSignature } from '@/lib/signature';
 interface UserProfile {
   id: string;
   email: string;
-  first_name: string | null;
-  last_name: string | null;
-  job_title: string | null;
-  company_name: string | null;
-  phone_number: string | null;
-  signature_text: string | null;
-  signature_url: string | null;
-  email_signature: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  job_title?: string | null;
+  company_name?: string | null;
+  phone_number?: string | null;
+  signature_text?: string | null;
+  signature_url?: string | null;
+  email_signature?: string | null;
+  full_name?: string | null;
 }
 
 export default function AccountPage() {
@@ -51,31 +52,24 @@ export default function AccountPage() {
       if (authError) throw authError;
       if (!user) throw new Error('No user found');
 
-      // Get user profile from database
+      // Get user profile from database (use profiles table which has the correct schema)
       const { data: profileData, error: profileError } = await supabase
-        .from('users')
+        .from('profiles')
         .select('*')
-        .eq('email', user.email)
+        .eq('id', user.id)
         .single();
 
       if (profileError && profileError.code !== 'PGRST116') {
         throw profileError;
       }
 
-      // If profile doesn't exist, create one
+      // If profile doesn't exist, create one with only essential fields
       if (!profileData) {
         const { data: newProfile, error: createError } = await supabase
-          .from('users')
+          .from('profiles')
           .insert({
-            email: user.email,
-            first_name: null,
-            last_name: null,
-            job_title: null,
-            company_name: null,
-            phone_number: null,
-            signature_text: null,
-            signature_url: null,
-            email_signature: null
+            id: user.id,
+            email: user.email
           })
           .select()
           .single();
@@ -111,18 +105,20 @@ export default function AccountPage() {
     try {
       setSaving(true);
       
+      // Only update fields that exist in the profile
+      const updateData: any = {};
+      if (profile.first_name !== undefined) updateData.first_name = profile.first_name;
+      if (profile.last_name !== undefined) updateData.last_name = profile.last_name;
+      if (profile.job_title !== undefined) updateData.job_title = profile.job_title;
+      if (profile.company_name !== undefined) updateData.company_name = profile.company_name;
+      if (profile.phone_number !== undefined) updateData.phone_number = profile.phone_number;
+      if (profile.signature_text !== undefined) updateData.signature_text = profile.signature_text;
+      if (profile.signature_url !== undefined) updateData.signature_url = profile.signature_url;
+      if (profile.email_signature !== undefined) updateData.email_signature = profile.email_signature;
+
       const { error } = await supabase
-        .from('users')
-        .update({
-          first_name: profile.first_name,
-          last_name: profile.last_name,
-          job_title: profile.job_title,
-          company_name: profile.company_name,
-          phone_number: profile.phone_number,
-          signature_text: profile.signature_text,
-          signature_url: profile.signature_url,
-          email_signature: profile.email_signature
-        })
+        .from('profiles')
+        .update(updateData)
         .eq('id', profile.id);
 
       if (error) throw error;
