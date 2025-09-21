@@ -58,3 +58,60 @@ BEGIN
         WHERE created_by IS NULL;
     END IF;
 END $$;
+
+-- Create user_buildings junction table if it doesn't exist (used by RLS policies)
+CREATE TABLE IF NOT EXISTS user_buildings (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    building_id UUID NOT NULL REFERENCES buildings(id) ON DELETE CASCADE,
+    role TEXT NOT NULL DEFAULT 'viewer' CHECK (role IN ('owner', 'manager', 'viewer')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id, building_id)
+);
+
+-- Create indexes for user_buildings
+CREATE INDEX IF NOT EXISTS idx_user_buildings_user_id ON user_buildings(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_buildings_building_id ON user_buildings(building_id);
+
+-- Create building_access table if it doesn't exist (used by API access control)
+CREATE TABLE IF NOT EXISTS building_access (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    building_id UUID NOT NULL REFERENCES buildings(id) ON DELETE CASCADE,
+    role TEXT NOT NULL DEFAULT 'viewer' CHECK (role IN ('owner', 'manager', 'viewer')),
+    granted_by UUID REFERENCES auth.users(id),
+    granted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id, building_id)
+);
+
+-- Create indexes for building_access
+CREATE INDEX IF NOT EXISTS idx_building_access_user_id ON building_access(user_id);
+CREATE INDEX IF NOT EXISTS idx_building_access_building_id ON building_access(building_id);
+
+-- Populate user_buildings and building_access with current user for existing buildings
+DO $$
+DECLARE
+    first_user_id UUID;
+    building_record RECORD;
+BEGIN
+    -- Get the first available user
+    SELECT id INTO first_user_id FROM auth.users LIMIT 1;
+
+    IF first_user_id IS NOT NULL THEN
+        -- Add access entries for all existing buildings
+        FOR building_record IN SELECT id FROM buildings LOOP
+            -- Insert into user_buildings (for RLS)
+            INSERT INTO user_buildings (user_id, building_id, role)
+            VALUES (first_user_id, building_record.id, 'owner')
+            ON CONFLICT (user_id, building_id) DO NOTHING;
+
+            -- Insert into building_access (for API)
+            INSERT INTO building_access (user_id, building_id, role, granted_by)
+            VALUES (first_user_id, building_record.id, 'owner', first_user_id)
+            ON CONFLICT (user_id, building_id) DO NOTHING;
+        END LOOP;
+    END IF;
+END $$;
