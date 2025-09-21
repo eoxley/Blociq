@@ -542,7 +542,7 @@ export default function AnalysisDrawer({ job, onClose }: AnalysisDrawerProps) {
               <div className="text-sm text-gray-500">
                 Analysis completed on {new Date(job.updated_at).toLocaleDateString('en-GB')}
               </div>
-              <button className="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
+              <button onClick={exportToPDF} className="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
                 <Download className="h-4 w-4" />
                 <span>Export Summary</span>
               </button>
