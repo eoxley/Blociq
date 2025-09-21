@@ -99,21 +99,52 @@ export async function POST(req: NextRequest) {
     });
 
     if (!analysisResponse.ok) {
-      throw new Error(`AI analysis failed: ${analysisResponse.status}`);
+      const errorText = await analysisResponse.text();
+      console.error('❌ AI analysis failed:', {
+        status: analysisResponse.status,
+        error: errorText
+      });
+      throw new Error(`AI analysis failed: ${analysisResponse.status} - ${errorText}`);
     }
 
     const analysisResult = await analysisResponse.json();
-    console.log('✅ AI analysis completed:', analysisResult);
+    console.log('✅ AI analysis completed:', {
+      success: analysisResult.success,
+      hasAnalysis: !!analysisResult.summary,
+      analysisLength: analysisResult.analysisLength || 0
+    });
 
-    // Update job as ready with real analysis
-    await serviceSupabase
+    // Update job status to READY (analysis endpoint already saved summary_json)
+    const { error: statusUpdateError } = await serviceSupabase
       .from('document_jobs')
-      .update({ 
+      .update({
         status: 'READY',
-        summary_json: analysisResult.summary,
         updated_at: new Date().toISOString()
       })
       .eq('id', jobId);
+
+    if (statusUpdateError) {
+      console.error('❌ Failed to update job status to READY:', statusUpdateError);
+      throw new Error('Failed to update job status');
+    }
+
+    // Verify the analysis was saved correctly
+    const { data: finalJob, error: verifyError } = await serviceSupabase
+      .from('document_jobs')
+      .select('id, status, summary_json')
+      .eq('id', jobId)
+      .single();
+
+    if (verifyError) {
+      console.error('❌ Failed to verify job after processing:', verifyError);
+    } else {
+      console.log('🔍 Final job verification:', {
+        id: finalJob.id,
+        status: finalJob.status,
+        hasAnalysis: !!finalJob.summary_json,
+        analysisKeys: finalJob.summary_json ? Object.keys(finalJob.summary_json).slice(0, 5) : []
+      });
+    }
 
     console.log('🎉 Document processing completed successfully');
 
