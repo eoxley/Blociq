@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, FileText, Calendar, DollarSign, Shield, AlertTriangle, Edit3, CheckCircle, Link, Download, Minimize2, Maximize2 } from 'lucide-react';
 import { DocumentJob } from '../LeaseLabClient';
 
@@ -16,6 +16,20 @@ export default function AnalysisDrawer({ job, onClose, onAttachToBuilding }: Ana
   const [isMinimized, setIsMinimized] = useState(false);
 
   const summary = job.summary_json || {};
+
+  // Prevent background scrolling when drawer is open
+  useEffect(() => {
+    // Store original overflow style
+    const originalOverflow = document.body.style.overflow;
+
+    // Disable scrolling on body
+    document.body.style.overflow = 'hidden';
+
+    // Cleanup function to restore scrolling when component unmounts
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, []);
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: FileText },
