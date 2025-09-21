@@ -25,7 +25,6 @@ export async function GET(request: NextRequest) {
         file_size,
         uploaded_by,
         uploaded_at,
-        upload_date,
         building_id,
         ocr_status,
         ocr_text,
@@ -82,7 +81,6 @@ export async function POST(request: NextRequest) {
         file_size: file_size || 0,
         uploaded_by: user.email || user.id,
         uploaded_at: new Date().toISOString(),
-        upload_date: new Date().toISOString(),
         ocr_status: 'pending',
         metadata: metadata || {}
       })

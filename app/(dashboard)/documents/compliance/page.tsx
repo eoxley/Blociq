@@ -27,7 +27,7 @@ interface ComplianceDocument {
   type: string
   building_name: string
   building_id: string
-  upload_date: string
+  uploaded_at: string
   status: string
   expiry_date?: string
   ocr_status: string
@@ -56,13 +56,13 @@ export default function ComplianceDocumentsPage() {
           id,
           title,
           type,
-          upload_date,
+          uploaded_at,
           ocr_status,
           building:buildings(name)
         `)
         .ilike('type', '%compliance%')
         .or('type.ilike.%eicr%,type.ilike.%fire%,type.ilike.%insurance%,type.ilike.%certificate%')
-        .order('upload_date', { ascending: false })
+        .order('uploaded_at', { ascending: false })
 
       if (error) {
         console.error('Error fetching compliance documents:', error)
@@ -75,7 +75,7 @@ export default function ComplianceDocumentsPage() {
           type: doc.type || 'Unknown',
           building_name: doc.building?.name || 'Unknown Building',
           building_id: doc.building?.id || '',
-          upload_date: doc.upload_date,
+          uploaded_at: doc.uploaded_at,
           status: 'active',
           ocr_status: doc.ocr_status || 'pending'
         }))
@@ -246,7 +246,7 @@ export default function ComplianceDocumentsPage() {
                       </div>
                       <div className="flex items-center gap-1">
                         <Calendar className="h-4 w-4" />
-                        <span>Uploaded {new Date(document.upload_date).toLocaleDateString()}</span>
+                        <span>Uploaded {new Date(document.uploaded_at).toLocaleDateString()}</span>
                       </div>
                     </div>
 

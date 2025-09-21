@@ -109,7 +109,7 @@ export default function DocumentLibraryOverview() {
       try {
         const { data: documentsData, error: documentsError } = await supabase
           .from('building_documents')
-          .select('id, upload_date, ocr_status')
+          .select('id, uploaded_at, ocr_status')
 
         if (documentsError) {
           console.error('Error fetching document stats:', documentsError)
@@ -126,7 +126,7 @@ export default function DocumentLibraryOverview() {
 
           const totalDocuments = documentsData?.length || 0
           const recentUploads = documentsData?.filter(doc =>
-            doc.upload_date && new Date(doc.upload_date) > sevenDaysAgo
+            doc.uploaded_at && new Date(doc.uploaded_at) > sevenDaysAgo
           ).length || 0
           const pendingOcr = documentsData?.filter(doc =>
             doc.ocr_status === 'pending' || doc.ocr_status === 'processing'

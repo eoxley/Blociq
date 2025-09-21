@@ -28,7 +28,7 @@ interface MajorWorksDocument {
   type: string
   building_name: string
   building_id: string
-  upload_date: string
+  uploaded_at: string
   status: string
   project_value?: string
   ocr_status: string
@@ -57,12 +57,12 @@ export default function MajorWorksDocumentsPage() {
           id,
           title,
           type,
-          upload_date,
+          uploaded_at,
           ocr_status,
           building:buildings(name)
         `)
         .or('type.ilike.%major%,type.ilike.%works%,type.ilike.%contract%,type.ilike.%tender%,type.ilike.%project%')
-        .order('upload_date', { ascending: false })
+        .order('uploaded_at', { ascending: false })
 
       if (error) {
         console.error('Error fetching major works documents:', error)
@@ -74,7 +74,7 @@ export default function MajorWorksDocumentsPage() {
           type: doc.type || 'Unknown',
           building_name: doc.building?.name || 'Unknown Building',
           building_id: doc.building?.id || '',
-          upload_date: doc.upload_date,
+          uploaded_at: doc.uploaded_at,
           status: 'active',
           ocr_status: doc.ocr_status || 'pending'
         }))
@@ -246,7 +246,7 @@ export default function MajorWorksDocumentsPage() {
                       </div>
                       <div className="flex items-center gap-1">
                         <Calendar className="h-4 w-4" />
-                        <span>Uploaded {new Date(document.upload_date).toLocaleDateString()}</span>
+                        <span>Uploaded {new Date(document.uploaded_at).toLocaleDateString()}</span>
                       </div>
                       {document.project_value && (
                         <div className="flex items-center gap-1">

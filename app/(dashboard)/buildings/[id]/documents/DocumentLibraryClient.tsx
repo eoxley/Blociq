@@ -31,7 +31,7 @@ interface Document {
   mime_type: string
   category: string
   document_type: string
-  upload_date: string
+  uploaded_at: string
   ocr_status: 'pending' | 'processing' | 'completed' | 'failed'
   metadata: any
   uploaded_by: string
@@ -390,7 +390,7 @@ export default function DocumentLibraryClient({
                               </span>
                               <span className="text-xs text-gray-400">•</span>
                               <span className="text-xs text-gray-500">
-                                {new Date(doc.upload_date).toLocaleDateString()}
+                                {new Date(doc.uploaded_at).toLocaleDateString()}
                               </span>
                               {getOCRStatusIcon(doc.ocr_status)}
                               {doc.category === 'leases' && (
@@ -475,7 +475,7 @@ export default function DocumentLibraryClient({
                 </div>
                 <div>
                   <label className="font-medium text-gray-700">Upload Date:</label>
-                  <p className="text-gray-600">{new Date(selectedDocument.upload_date).toLocaleDateString()}</p>
+                  <p className="text-gray-600">{new Date(selectedDocument.uploaded_at).toLocaleDateString()}</p>
                 </div>
                 <div>
                   <label className="font-medium text-gray-700">OCR Status:</label>

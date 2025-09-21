@@ -29,7 +29,7 @@ interface GeneralDocument {
   type: string
   building_name: string
   building_id: string
-  upload_date: string
+  uploaded_at: string
   status: string
   file_type: string
   ocr_status: string
@@ -58,7 +58,7 @@ export default function GeneralDocumentsPage() {
           id,
           title,
           type,
-          upload_date,
+          uploaded_at,
           ocr_status,
           file_type,
           building:buildings(name)
@@ -71,7 +71,7 @@ export default function GeneralDocumentsPage() {
         .not('type', 'ilike', '%works%')
         .not('type', 'ilike', '%contract%')
         .not('type', 'ilike', '%tender%')
-        .order('upload_date', { ascending: false })
+        .order('uploaded_at', { ascending: false })
 
       if (error) {
         console.error('Error fetching general documents:', error)
@@ -83,7 +83,7 @@ export default function GeneralDocumentsPage() {
           type: doc.type || 'General',
           building_name: doc.building?.name || 'Unknown Building',
           building_id: doc.building?.id || '',
-          upload_date: doc.upload_date,
+          uploaded_at: doc.uploaded_at,
           status: 'active',
           file_type: doc.file_type || 'document',
           ocr_status: doc.ocr_status || 'pending'
@@ -273,7 +273,7 @@ export default function GeneralDocumentsPage() {
                         </div>
                         <div className="flex items-center gap-1">
                           <Calendar className="h-4 w-4" />
-                          <span>Uploaded {new Date(document.upload_date).toLocaleDateString()}</span>
+                          <span>Uploaded {new Date(document.uploaded_at).toLocaleDateString()}</span>
                         </div>
                       </div>
 
