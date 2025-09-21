@@ -36,7 +36,8 @@ export async function POST(req: NextRequest) {
       buildingId,
       unitId,
       scope,
-      leaseholderName: leaseholderName ? `${leaseholderName.substring(0, 20)}...` : null
+      leaseholderName: leaseholderName ? `${leaseholderName.substring(0, 20)}...` : null,
+      userId: user.id
     });
 
     // Validate required fields
@@ -79,34 +80,88 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify user has access to the building
+    console.log(`🏢 Checking building access for buildingId: ${buildingId}, userId: ${user.id}`);
+
     const { data: building, error: buildingError } = await supabase
       .from('buildings')
       .select('id, name, created_by')
       .eq('id', buildingId)
       .single();
 
+    console.log('🏢 Building query result:', { building, buildingError });
+
     if (buildingError || !building) {
+      console.error('❌ Building not found or access denied:', {
+        buildingId,
+        userId: user.id,
+        error: buildingError?.message,
+        code: buildingError?.code
+      });
+
+      // Check if this might be a production building ID being used in development
+      const isPossibleProdId = buildingId && buildingId.includes('-') && buildingId.length > 30;
+      const suggestionMessage = isPossibleProdId
+        ? ' This appears to be a production building ID. Please use a building ID from your local development database.'
+        : '';
+
       return NextResponse.json({
         error: 'Building not found',
-        message: 'The specified building could not be found.'
+        message: `The specified building could not be found. Building ID: ${buildingId}${suggestionMessage}`,
+        debug: {
+          buildingId,
+          userId: user.id,
+          errorCode: buildingError?.code,
+          errorMessage: buildingError?.message,
+          isPossibleProdId,
+          suggestion: isPossibleProdId ? 'Use a building ID from your local development database' : 'Verify the building ID is correct'
+        }
       }, { status: 404 });
     }
 
     // Check if user has access to this building
-    const { data: buildingAccess } = await supabase
+    console.log(`🔐 Checking building access for userId: ${user.id}, buildingId: ${buildingId}`);
+
+    const { data: buildingAccess, error: accessError } = await supabase
       .from('building_access')
       .select('role')
       .eq('building_id', buildingId)
       .eq('user_id', user.id)
       .single();
 
-    const hasAccess = building.created_by === user.id ||
-                     (buildingAccess && ['owner', 'manager'].includes(buildingAccess.role));
+    console.log('🔐 Building access query result:', { buildingAccess, accessError });
+
+    const isCreatedBy = building.created_by === user.id;
+    const hasAccessRole = buildingAccess && ['owner', 'manager'].includes(buildingAccess.role);
+    const hasAccess = isCreatedBy || hasAccessRole;
+
+    console.log('🔐 Access check results:', {
+      isCreatedBy,
+      hasAccessRole,
+      hasAccess,
+      buildingCreatedBy: building.created_by,
+      userId: user.id,
+      userRole: buildingAccess?.role
+    });
 
     if (!hasAccess) {
+      console.error('❌ Access denied for building link:', {
+        userId: user.id,
+        buildingId,
+        buildingCreatedBy: building.created_by,
+        userRole: buildingAccess?.role
+      });
+
       return NextResponse.json({
         error: 'Access denied',
-        message: 'You do not have permission to link leases to this building.'
+        message: 'You do not have permission to link leases to this building.',
+        debug: {
+          userId: user.id,
+          buildingId,
+          buildingCreatedBy: building.created_by,
+          userRole: buildingAccess?.role,
+          isCreatedBy,
+          hasAccessRole
+        }
       }, { status: 403 });
     }
 

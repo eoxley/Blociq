@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { X, FileText, Calendar, DollarSign, Shield, AlertTriangle, Edit3, CheckCircle, Link, Download, Minimize2, Maximize2, Building2, Home } from 'lucide-react';
 import { DocumentJob } from '../LeaseLabClient';
 import jsPDF from 'jspdf';
@@ -11,6 +12,7 @@ interface AnalysisDrawerProps {
 }
 
 export default function AnalysisDrawer({ job, onClose }: AnalysisDrawerProps) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState('overview');
   const [isMinimized, setIsMinimized] = useState(false);
   const [showLinkModal, setShowLinkModal] = useState(false);
@@ -116,11 +118,27 @@ export default function AnalysisDrawer({ job, onClose }: AnalysisDrawerProps) {
         alert(`Lease successfully linked to ${linkScope === 'building' ? 'building' : 'unit'}!`);
 
         setShowLinkModal(false);
-        // Optionally refresh or update UI
+
+        // Navigate to the appropriate lease-mode page
+        if (selectedBuilding) {
+          if (linkScope === 'unit' && selectedUnit) {
+            // Navigate to building lease-mode with unit filter
+            console.log(`🔗 Navigating to building lease-mode page with unit filter: /buildings/${selectedBuilding}/lease-mode?unit=${selectedUnit}`);
+            router.push(`/buildings/${selectedBuilding}/lease-mode?unit=${selectedUnit}`);
+          } else {
+            // Navigate to building-wide lease mode
+            console.log(`🔗 Navigating to building lease-mode page: /buildings/${selectedBuilding}/lease-mode`);
+            router.push(`/buildings/${selectedBuilding}/lease-mode`);
+          }
+        }
       } else {
         const error = await response.json();
         console.error('❌ Failed to link lease:', error);
-        alert(error.message || 'Failed to link lease');
+
+        // Show more detailed error information
+        const errorMessage = error.message || 'Failed to link lease';
+        const debugInfo = error.debug ? `\n\nDebug info:\n${JSON.stringify(error.debug, null, 2)}` : '';
+        alert(errorMessage + debugInfo);
       }
     } catch (error) {
       console.error('❌ Error linking lease:', error);
