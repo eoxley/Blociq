@@ -3,16 +3,15 @@
 import { useState, useEffect } from 'react';
 import { X, FileText, Calendar, DollarSign, Shield, AlertTriangle, Edit3, CheckCircle, Link, Download, Minimize2, Maximize2, Building2, Home } from 'lucide-react';
 import { DocumentJob } from '../LeaseLabClient';
+import jsPDF from 'jspdf';
 
 interface AnalysisDrawerProps {
   job: DocumentJob;
   onClose: () => void;
-  onAttachToBuilding: (jobId: string, buildingId: string, unitId?: string) => void;
 }
 
-export default function AnalysisDrawer({ job, onClose, onAttachToBuilding }: AnalysisDrawerProps) {
+export default function AnalysisDrawer({ job, onClose }: AnalysisDrawerProps) {
   const [activeTab, setActiveTab] = useState('overview');
-  const [isAttaching, setIsAttaching] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [isLinking, setIsLinking] = useState(false);
@@ -45,15 +44,6 @@ export default function AnalysisDrawer({ job, onClose, onAttachToBuilding }: Ana
     { id: 'provisions', label: 'Other Provisions', icon: Shield },
   ];
 
-  const handleAttachToBuilding = async () => {
-    // This would open a building/unit selector in a real implementation
-    // For now, we'll just show a placeholder
-    setIsAttaching(true);
-    setTimeout(() => {
-      setIsAttaching(false);
-      onClose();
-    }, 1000);
-  };
 
   const handleMinimize = () => {
     setIsMinimized(true);
@@ -146,6 +136,99 @@ export default function AnalysisDrawer({ job, onClose, onAttachToBuilding }: Ana
       fetchUnits(buildingId);
     }
     setSelectedUnit('');
+  };
+
+  const exportToPDF = async () => {
+    const pdf = new jsPDF();
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const margin = 20;
+    let yPosition = margin;
+
+    // Title
+    pdf.setFontSize(20);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Lease Analysis Summary', margin, yPosition);
+    yPosition += 15;
+
+    // Document info
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`Document: ${job.filename}`, margin, yPosition);
+    yPosition += 8;
+    pdf.text(`Analyzed: ${new Date(job.updated_at).toLocaleDateString('en-GB')}`, margin, yPosition);
+    yPosition += 15;
+
+    // Executive Summary
+    if (summary.executive_summary || summary.overview) {
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Executive Summary', margin, yPosition);
+      yPosition += 10;
+
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      const summaryText = summary.executive_summary || summary.overview;
+      const splitSummary = pdf.splitTextToSize(summaryText, pageWidth - 2 * margin);
+      pdf.text(splitSummary, margin, yPosition);
+      yPosition += splitSummary.length * 5 + 10;
+    }
+
+    // Key Details
+    if (summary.basic_property_details) {
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Key Details', margin, yPosition);
+      yPosition += 10;
+
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+
+      const details = summary.basic_property_details;
+      if (details.property_address) {
+        pdf.text(`Property: ${details.property_address}`, margin, yPosition);
+        yPosition += 6;
+      }
+      if (details.lease_term) {
+        pdf.text(`Lease Term: ${details.lease_term}`, margin, yPosition);
+        yPosition += 6;
+      }
+      if (details.parties) {
+        pdf.text('Parties:', margin, yPosition);
+        yPosition += 6;
+        details.parties.forEach((party: string) => {
+          pdf.text(`  • ${party}`, margin + 10, yPosition);
+          yPosition += 5;
+        });
+      }
+      yPosition += 10;
+    }
+
+    // Financial Information
+    if (summary.financial_obligations) {
+      if (yPosition > 250) { // Check if we need a new page
+        pdf.addPage();
+        yPosition = margin;
+      }
+
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Financial Obligations', margin, yPosition);
+      yPosition += 10;
+
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+
+      summary.financial_obligations.forEach((obligation: any) => {
+        if (obligation.type && obligation.amount) {
+          pdf.text(`${obligation.type}: ${obligation.amount}`, margin, yPosition);
+          yPosition += 6;
+        }
+      });
+      yPosition += 10;
+    }
+
+    // Save the PDF
+    pdf.save(`lease-analysis-${job.filename.replace(/\.[^/.]+$/, '')}.pdf`);
   };
 
   const renderOverview = () => (
@@ -407,14 +490,6 @@ export default function AnalysisDrawer({ job, onClose, onAttachToBuilding }: Ana
               >
                 <Building2 className="h-4 w-4" />
                 <span>Link to Building/Unit</span>
-              </button>
-              <button
-                onClick={handleAttachToBuilding}
-                disabled={isAttaching || job.linked_building_id}
-                className="flex items-center space-x-1 px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
-              >
-                <Link className="h-4 w-4" />
-                <span>{job.linked_building_id ? 'Attached' : 'Attach to Building'}</span>
               </button>
               <button
                 onClick={handleMinimize}

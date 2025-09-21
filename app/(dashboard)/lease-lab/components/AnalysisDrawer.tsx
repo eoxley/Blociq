@@ -301,14 +301,6 @@ export default function AnalysisDrawer({ job, onClose, onAttachToBuilding }: Ana
             </div>
             <div className="flex items-center space-x-2">
               <button
-                onClick={handleAttachToBuilding}
-                disabled={isAttaching || job.linked_building_id}
-                className="flex items-center space-x-1 px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
-              >
-                <Link className="h-4 w-4" />
-                <span>{job.linked_building_id ? 'Attached' : 'Attach to Building'}</span>
-              </button>
-              <button
                 onClick={handleMinimize}
                 className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                 title="Minimize"

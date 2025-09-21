@@ -67,25 +67,6 @@ export default function LeaseLabClient() {
     setShowAnalysis(true);
   };
 
-  const handleAttachToBuilding = async (jobId: string, buildingId: string, unitId?: string) => {
-    try {
-      const response = await fetch(`/api/lease-lab/jobs/${jobId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          linked_building_id: buildingId,
-          linked_unit_id: unitId 
-        })
-      });
-
-      if (response.ok) {
-        await fetchJobs(); // Refresh jobs list
-        setShowAnalysis(false);
-      }
-    } catch (error) {
-      console.error('Error attaching to building:', error);
-    }
-  };
 
 
   return (
@@ -128,7 +109,6 @@ export default function LeaseLabClient() {
         <AnalysisDrawer
           job={selectedJob}
           onClose={() => setShowAnalysis(false)}
-          onAttachToBuilding={handleAttachToBuilding}
         />
       )}
     </div>
