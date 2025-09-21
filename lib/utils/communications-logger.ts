@@ -3,10 +3,10 @@ import { createClient } from '@/lib/supabase/server'
 export interface CommunicationLogEntry {
   building_id?: string
   leaseholder_id?: string
-  user_id?: string
-  direction: 'inbound' | 'outbound'
+  sent_by?: string
+  direction: 'incoming' | 'outgoing'
   subject?: string
-  body: string
+  content: string
   metadata?: Record<string, any>
   sent_at?: string
 }
@@ -17,16 +17,16 @@ export interface CommunicationLogEntry {
  */
 export async function logCommunication(entry: CommunicationLogEntry) {
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
 
     // Prepare the data for insertion
     const logData = {
       building_id: entry.building_id || null,
       leaseholder_id: entry.leaseholder_id || null,
-      user_id: entry.user_id || null,
+      sent_by: entry.sent_by || null,
       direction: entry.direction,
       subject: entry.subject || null,
-      body: entry.body,
+      content: entry.content,
       metadata: entry.metadata || {},
       sent_at: entry.sent_at ? new Date(entry.sent_at).toISOString() : new Date().toISOString()
     }
@@ -57,7 +57,7 @@ export async function logCommunication(entry: CommunicationLogEntry) {
  */
 export async function getBuildingCommunications(buildingId: string, limit = 50) {
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
 
     const { data, error } = await supabase
       .from('communications_log')
@@ -87,7 +87,7 @@ export async function getBuildingCommunications(buildingId: string, limit = 50) 
  */
 export async function getLeaseholderCommunications(leaseholderId: string, limit = 50) {
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
 
     const { data, error } = await supabase
       .from('communications_log')
@@ -117,17 +117,17 @@ export async function getLeaseholderCommunications(leaseholderId: string, limit 
  */
 export async function getRecentCommunicationsForContext(buildingId?: string, limit = 20) {
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
 
     let query = supabase
       .from('communications_log')
       .select(`
         direction,
         subject,
-        body,
+        content,
         sent_at,
-        building:buildings(name),
-        leaseholder:leaseholders(name, email)
+        building_id,
+        leaseholder_id
       `)
       .order('sent_at', { ascending: false })
       .limit(limit)
@@ -139,6 +139,11 @@ export async function getRecentCommunicationsForContext(buildingId?: string, lim
     const { data, error } = await query
 
     if (error) {
+      // If table doesn't exist or columns don't exist, return empty array gracefully
+      if (error.code === '42703' || error.code === 'PGRST200' || error.message?.includes('does not exist')) {
+        console.log('Communications log table not available, returning empty communications context')
+        return []
+      }
       console.error('Error fetching communications for context:', error)
       return []
     }

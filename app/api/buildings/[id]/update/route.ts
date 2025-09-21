@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
 
 export async function PUT(
@@ -28,10 +28,13 @@ export async function PUT(
     }
 
     // Create Supabase client
-    const supabase = createClient(cookies())
+    const supabase = await createClient()
     
-    // Check authentication
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    // Check authentication - Safe destructuring to prevent "Right side of assignment cannot be destructured" error
+    const sessionResult = await supabase.auth.getSession()
+    const sessionData = sessionResult?.data || {}
+    const session = sessionData.session || null
+    const sessionError = sessionResult?.error || null
     if (sessionError || !session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -68,8 +71,10 @@ export async function PUT(
     
     // Map frontend field names to database column names
     if (body.notes !== undefined) updateData.notes = body.notes
+    if (body.access_notes !== undefined) updateData.access_notes = body.access_notes
     if (body.key_access_notes !== undefined) updateData.key_access_notes = body.key_access_notes
     if (body.parking_notes !== undefined) updateData.parking_info = body.parking_notes
+    if (body.parking_info !== undefined) updateData.parking_info = body.parking_info
     if (body.entry_code !== undefined) updateData.entry_code = body.entry_code
     if (body.fire_panel_location !== undefined) updateData.fire_panel_location = body.fire_panel_location
 

@@ -52,12 +52,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     console.log('✅ All compliance assets validated:', assets.map(a => `${a.name} (${a.category})`));
     
     // Create rows with correct column names based on the actual database schema
-    const rows = asset_ids.map((assetId: string) => ({ 
-      building_id: params.id, 
-      compliance_asset_id: assetId,
-      status: 'pending',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+    const rows = asset_ids.map((assetId: string) => ({
+      building_id: params.id,
+      asset_id: assetId,
+      status: 'pending'
     }));
     
     console.log('📝 Inserting compliance asset rows:', rows.length);

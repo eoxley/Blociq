@@ -62,7 +62,7 @@ export default function CommunicationsLog({
           id,
           direction,
           subject,
-          body,
+          content,
           sent_at,
           metadata,
           building:buildings(id, name),

@@ -7,10 +7,10 @@ export async function POST(
 ) {
   try {
     const buildingId = params.id;
-    const { compliance_asset_id } = await request.json();
+    const { asset_id } = await request.json();
 
-    if (!buildingId || !compliance_asset_id) {
-      return NextResponse.json({ error: "Building ID and compliance asset ID are required" }, { status: 400 });
+    if (!buildingId || !asset_id) {
+      return NextResponse.json({ error: "Building ID and asset ID are required" }, { status: 400 });
     }
 
     // Check if this asset is already added to this building
@@ -18,7 +18,7 @@ export async function POST(
       .from("building_compliance_assets")
       .select("id")
       .eq("building_id", buildingId)
-      .eq("compliance_asset_id", compliance_asset_id)
+      .eq("asset_id", asset_id)
       .single();
 
     if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows returned
@@ -34,7 +34,7 @@ export async function POST(
       .from("building_compliance_assets")
       .insert({
         building_id: buildingId,
-        compliance_asset_id: compliance_asset_id,
+        asset_id: asset_id,
         status: "pending"
       })
       .select()

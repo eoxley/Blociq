@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient(cookies())
+    const supabase = await createClient()
 
     // Check authentication
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
+    const sessionResult = await supabase.auth.getSession()
+    const sessionData = sessionResult?.data || {}
+    const session = sessionData.session || null
+    const sessionError = sessionResult?.error || null
+    if (sessionError || !session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -32,7 +35,7 @@ export async function GET(request: NextRequest) {
       query = query.eq('building_id', buildingId)
     }
     if (assetId) {
-      query = query.eq('compliance_asset_id', assetId)
+      query = query.eq('asset_id', assetId)
     }
     if (status) {
       query = query.eq('status', status)
@@ -70,22 +73,22 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { building_id, compliance_asset_id, status, next_due_date, notes, contractor } = body
+    const { building_id, asset_id, status, next_due_date, notes, contractor } = body
 
-    if (!building_id || !compliance_asset_id) {
+    if (!building_id || !asset_id) {
       return NextResponse.json(
-        { error: 'Missing required fields: building_id and compliance_asset_id' },
+        { error: 'Missing required fields: building_id and asset_id' },
         { status: 400 }
       )
     }
 
-    const supabase = createClient(cookies())
+    const supabase = await createClient()
 
     const { data, error } = await supabase
       .from('building_compliance_assets')
       .insert({
         building_id,
-        compliance_asset_id,
+        asset_id,
         status: status || 'not_applied',
         next_due_date: next_due_date || null,
         notes: notes || null,
@@ -125,11 +128,14 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    const supabase = createClient(cookies())
+    const supabase = await createClient()
 
     // Check authentication
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
+    const sessionResult = await supabase.auth.getSession()
+    const sessionData = sessionResult?.data || {}
+    const session = sessionData.session || null
+    const sessionError = sessionResult?.error || null
+    if (sessionError || !session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

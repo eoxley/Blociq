@@ -5,8 +5,11 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
     
-    // Check authentication
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    // Check authentication - Safe destructuring to prevent \"Right side of assignment cannot be destructured\" error
+    const sessionResult = await supabase.auth.getSession();
+    const sessionData = sessionResult?.data || {}
+    const session = sessionData.session || null
+    const sessionError = sessionResult?.error || null
     if (sessionError || !session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -15,7 +18,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const building_id = searchParams.get('building_id')
     const leaseholder_id = searchParams.get('leaseholder_id')
-    const direction = searchParams.get('direction') // 'inbound', 'outbound', or null for both
+    const direction = searchParams.get('direction') // 'incoming', 'outgoing', or null for both
     const limit = parseInt(searchParams.get('limit') || '100')
 
     // Fetch communications log with relationships
@@ -37,7 +40,7 @@ export async function GET(request: NextRequest) {
     if (leaseholder_id) {
       query = query.eq('leaseholder_id', leaseholder_id)
     }
-    if (direction && (direction === 'inbound' || direction === 'outbound')) {
+    if (direction && (direction === 'incoming' || direction === 'outgoing')) {
       query = query.eq('direction', direction)
     }
 
@@ -66,8 +69,11 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
 
-    // Check authentication
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    // Check authentication - Safe destructuring to prevent \"Right side of assignment cannot be destructured\" error
+    const sessionResult = await supabase.auth.getSession();
+    const sessionData = sessionResult?.data || {}
+    const session = sessionData.session || null
+    const sessionError = sessionResult?.error || null
     if (sessionError || !session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -82,9 +88,9 @@ export async function POST(request: NextRequest) {
       metadata = {}
     } = body;
 
-    if (!direction || (direction !== 'inbound' && direction !== 'outbound')) {
+    if (!direction || (direction !== 'incoming' && direction !== 'outgoing')) {
       return NextResponse.json({
-        error: 'Direction is required and must be either "inbound" or "outbound"'
+        error: 'Direction is required and must be either "incoming" or "outgoing"'
       }, { status: 400 });
     }
 
@@ -98,10 +104,10 @@ export async function POST(request: NextRequest) {
       .insert({
         building_id: building_id || null,
         leaseholder_id: leaseholder_id || null,
-        user_id: session.user.id,
+        sent_by: session.user.id,
         direction,
         subject: subject || null,
-        body: body_content,
+        content: body_content,
         metadata: metadata || {}
       })
       .select()

@@ -68,7 +68,7 @@ export async function searchEntireDatabase(
         id, unit_number, floor, type, notes, 
         building_id, leaseholder_id,
         buildings!inner(name, address),
-        leaseholders(name, email, phone)
+        leaseholders!units_leaseholder_id_fkey(name, email, phone)
       `)
       .or(`unit_number.ilike.%${searchTerm}%,type.ilike.%${searchTerm}%,notes.ilike.%${searchTerm}%`)
       .limit(maxResults);

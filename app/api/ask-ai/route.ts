@@ -11,6 +11,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { createClient } from '@/lib/supabase/server';
 import { AIContextHandler } from '../../../lib/ai-context-handler';
 import { logBuildingQuery, detectQueryContextType } from '../../../lib/ai/buildingQueryLogger';
 import { buildPrompt } from '../../../lib/buildPrompt';
@@ -221,7 +222,6 @@ export async function POST(req: NextRequest) {
     }
 
     // Dynamic imports to prevent build-time execution
-    const { createClient } = await import('@/lib/supabase/server');
     const { default: OpenAI } = await import('openai');
     const { MAX_CHARS_PER_DOC, MAX_TOTAL_DOC_CHARS, truncate, isSummariseLike } = await import("../../../lib/ask/text");
     const { searchBuildingAndUnits, searchLeaseholderDirect } = await import('../../../lib/supabase/buildingSearch');

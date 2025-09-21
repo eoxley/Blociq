@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 import { cookies } from 'next/headers';
 
 export async function POST(
@@ -7,7 +7,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createClient(cookies());
+    const supabase = await createClient();
     
     // Check authentication - Safe destructuring to prevent "Right side of assignment cannot be destructured" error
     const sessionResult = await supabase.auth.getSession();
@@ -34,7 +34,7 @@ export async function POST(
       .from('building_compliance_assets')
       .delete()
       .eq('building_id', buildingId)
-      .in('compliance_asset_id', asset_ids);
+      .in('asset_id', asset_ids);
 
     if (deleteError) {
       console.error('Error deleting compliance assets:', deleteError);

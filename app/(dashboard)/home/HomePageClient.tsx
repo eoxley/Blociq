@@ -757,21 +757,58 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   const fetchEmails = async () => {
     try {
       setLoadingEmails(true)
-      const { data, error } = await supabase
-        .from('incoming_emails')
-        .select('*')
-        .eq('is_read', false)
-        .order('received_at', { ascending: false })
-        .limit(5)
 
-      if (error) {
-        console.error('Error fetching emails:', error)
-        return
+      // Try to fetch email summary from API
+      const response = await fetch('/api/ask-ai/email-summary')
+
+      if (response.ok) {
+        const result = await response.json()
+
+        // Extract unread count from the analysis if available
+        if (result.analysis && typeof result.analysis.unreadCount === 'number') {
+          // Create mock email objects to represent the count
+          const mockEmails = Array.from({ length: result.analysis.unreadCount }, (_, i) => ({
+            id: `mock-${i}`,
+            subject: `Email ${i + 1}`,
+            is_read: false,
+            received_at: new Date().toISOString()
+          }))
+          setRecentEmails(mockEmails)
+        } else {
+          // Fallback: try direct database query
+          const { data, error } = await supabase
+            .from('incoming_emails')
+            .select('*')
+            .eq('is_read', false)
+            .order('received_at', { ascending: false })
+            .limit(5)
+
+          if (!error) {
+            setRecentEmails(data || [])
+          } else {
+            console.log('Email summary not available, showing 0 unread emails')
+            setRecentEmails([])
+          }
+        }
+      } else {
+        // Fallback to direct database query if API fails
+        const { data, error } = await supabase
+          .from('incoming_emails')
+          .select('*')
+          .eq('is_read', false)
+          .order('received_at', { ascending: false })
+          .limit(5)
+
+        if (!error) {
+          setRecentEmails(data || [])
+        } else {
+          console.log('Email data not available, showing 0 unread emails')
+          setRecentEmails([])
+        }
       }
-
-      setRecentEmails(data || [])
     } catch (error) {
       console.error('Error in fetchEmails:', error)
+      setRecentEmails([])
     } finally {
       setLoadingEmails(false)
     }

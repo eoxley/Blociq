@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from '@/utils/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 import { cookies } from 'next/headers';
 
 export async function GET(
@@ -7,10 +7,13 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createClient(cookies());
+    const supabase = await createClient();
     
-    // Check authentication
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    // Check authentication - Safe destructuring to prevent "Right side of assignment cannot be destructured" error
+    const sessionResult = await supabase.auth.getSession();
+    const sessionData = sessionResult?.data || {}
+    const session = sessionData.session || null
+    const sessionError = sessionResult?.error || null
     if (sessionError || !session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -26,7 +29,7 @@ export async function GET(
       .from("building_compliance_assets")
       .select(`
         id as bca_id,
-        compliance_asset_id,
+        asset_id,
         next_due_date,
         status,
         notes,
@@ -51,7 +54,7 @@ export async function GET(
     }
 
     // Get the compliance assets details
-    const assetIds = bcaData.map(row => row.compliance_asset_id);
+    const assetIds = bcaData.map(row => row.asset_id);
     const { data: assetData, error: assetError } = await supabase
       .from("compliance_assets")
       .select(`
@@ -75,10 +78,10 @@ export async function GET(
 
     // Transform the data to combine both datasets
     const transformedData = bcaData.map(row => {
-      const asset = assetMap.get(row.compliance_asset_id);
+      const asset = assetMap.get(row.asset_id);
       return {
         bca_id: row.bca_id,
-        asset_id: row.compliance_asset_id,
+        asset_id: row.asset_id,
         asset_name: asset?.name || "Unknown",
         category: asset?.category || "Unknown",
         frequency_months: asset?.frequency_months || row.frequency_months,
