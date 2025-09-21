@@ -93,8 +93,20 @@ export async function POST(request: NextRequest) {
 
     // 2. Analyze file characteristics for optimal OCR selection
     const fileBuffer = Buffer.from(await file.arrayBuffer());
-    const { analyzeFileCharacteristics, selectOptimalOCRMethods, generateFileHash } = await import('@/lib/ocr/intelligent-selection');
-    const { getOrExtractText } = await import('@/lib/ocr/extraction-cache');
+
+    let analyzeFileCharacteristics, selectOptimalOCRMethods, generateFileHash, getOrExtractText;
+    try {
+      const intelligentSelection = await import('@/lib/ocr/intelligent-selection');
+      analyzeFileCharacteristics = intelligentSelection.analyzeFileCharacteristics;
+      selectOptimalOCRMethods = intelligentSelection.selectOptimalOCRMethods;
+      generateFileHash = intelligentSelection.generateFileHash;
+
+      const extractionCache = await import('@/lib/ocr/extraction-cache');
+      getOrExtractText = extractionCache.getOrExtractText;
+    } catch (importError) {
+      console.error('❌ Failed to import OCR modules:', importError);
+      throw new Error(`OCR modules unavailable: ${importError instanceof Error ? importError.message : 'Unknown import error'}`);
+    }
     
     const fileCharacteristics = await analyzeFileCharacteristics(file);
     const generatedFileHash = generateFileHash(fileBuffer);
@@ -156,10 +168,31 @@ export async function POST(request: NextRequest) {
 
     // 4. Parse lease document into structured format
     console.log("📋 Parsing lease document with LeaseDocumentParser...");
-    const { LeaseDocumentParser } = await import('@/lib/lease-document-parser');
-    const parser = new LeaseDocumentParser(extractedText, file.name, extractionQuality.score);
-    const leaseAnalysis = parser.parse();
-    const parsingStats = parser.getParsingStats();
+    let leaseAnalysis, parsingStats;
+    try {
+      const { LeaseDocumentParser } = await import('@/lib/lease-document-parser');
+      const parser = new LeaseDocumentParser(extractedText, file.name, extractionQuality.score);
+      leaseAnalysis = parser.parse();
+      parsingStats = parser.getParsingStats();
+    } catch (parserError) {
+      console.error('❌ Failed to import or run lease parser:', parserError);
+      // Provide fallback analysis
+      leaseAnalysis = {
+        sections: [],
+        parties: {},
+        financial_terms: {},
+        key_dates: {},
+        property_details: {},
+        clauses: [],
+        summary: 'Parser unavailable - using AI analysis only'
+      };
+      parsingStats = {
+        sections_found: 0,
+        confidence: 0,
+        processing_time: 0,
+        warnings: ['Lease parser module unavailable']
+      };
+    }
     
     console.log("📊 Lease parsing statistics:", parsingStats);
 
@@ -343,15 +376,17 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('❌ Error processing document:', error)
-    const formData = await request.formData().catch(() => new FormData());
-    return NextResponse.json(
-      { 
-        error: 'Failed to process document. Please try again.',
-        processingId: formData.get('processingId') as string,
-        timestamp: new Date().toISOString()
-      },
-      { status: 500, headers }
-    )
+    console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace available')
+
+    // Get processingId from the already parsed formData variables
+    const errorResponse = {
+      error: 'Failed to process document. Please try again.',
+      details: error instanceof Error ? error.message : 'Unknown error',
+      processingId: processingId || null,
+      timestamp: new Date().toISOString()
+    };
+
+    return NextResponse.json(errorResponse, { status: 500, headers })
   }
 }
 
@@ -412,19 +447,32 @@ async function extractTextFromPDF_TextLayer(file: File): Promise<string> {
 async function extractTextFromPDF_OpenAI(file: File): Promise<string> {
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
-  
-  const response = await openai.files.create({
-    file: new Blob([buffer], { type: 'application/pdf' }),
-    purpose: 'assistants',
-  });
 
-  const content = await openai.files.content(response.id);
-  const text = await content.text();
-  
-  // Clean up
-  await openai.files.delete(response.id);
-  
-  return text;
+  let fileId: string | null = null;
+  try {
+    const response = await openai.files.create({
+      file: new Blob([buffer], { type: 'application/pdf' }),
+      purpose: 'assistants',
+    });
+    fileId = response.id;
+
+    const content = await openai.files.content(response.id);
+    const text = await content.text();
+
+    return text;
+  } catch (error) {
+    console.error('❌ OpenAI file extraction failed:', error);
+    throw new Error(`OpenAI extraction failed: ${error instanceof Error ? error.message : 'Unknown OpenAI error'}`);
+  } finally {
+    // Clean up file even if extraction failed
+    if (fileId) {
+      try {
+        await openai.files.delete(fileId);
+      } catch (deleteError) {
+        console.warn('⚠️ Failed to delete OpenAI file:', deleteError);
+      }
+    }
+  }
 }
 
 async function extractTextFromPDF_GoogleVision(file: File): Promise<string> {
@@ -635,6 +683,7 @@ Return only valid JSON.
 `
 
   try {
+    console.log('🤖 Starting OpenAI analysis...')
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
@@ -648,15 +697,25 @@ Return only valid JSON.
         }
       ],
       temperature: 0.1,
+      timeout: 60000, // 60 second timeout
     })
 
     const response = completion.choices[0]?.message?.content
     if (!response) {
-      throw new Error('No response from AI')
+      throw new Error('No response from OpenAI API')
     }
 
-    // Parse JSON response
-    const analysis = JSON.parse(response)
+    console.log('✅ OpenAI analysis completed')
+
+    // Parse JSON response with error handling
+    let analysis;
+    try {
+      analysis = JSON.parse(response)
+    } catch (parseError) {
+      console.error('❌ Failed to parse OpenAI JSON response:', parseError)
+      console.error('Raw response:', response.substring(0, 500))
+      throw new Error('Invalid JSON response from AI analysis')
+    }
 
     // Validate and clean up the analysis
     return {
