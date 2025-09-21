@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { FileText, Clock, CheckCircle, AlertCircle, Eye, Link, Download, RefreshCw, Trash2, Wrench } from 'lucide-react';
+import { FileText, Clock, CheckCircle, AlertCircle, Eye, Link, Download, RefreshCw, Trash2, Wrench, Play } from 'lucide-react';
 import { DocumentJob } from '../LeaseLabClient';
 import { toast } from 'sonner';
 
@@ -16,6 +16,7 @@ export default function JobsList({ jobs, onViewAnalysis, onRefresh }: JobsListPr
   const [refreshing, setRefreshing] = useState(false);
   const [deletingJobs, setDeletingJobs] = useState<Set<string>>(new Set());
   const [reprocessingJobs, setReprocessingJobs] = useState<Set<string>>(new Set());
+  const [triggeringJobs, setTriggeringJobs] = useState<Set<string>>(new Set());
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Debug: Log props changes (reduced logging)
@@ -26,7 +27,8 @@ export default function JobsList({ jobs, onViewAnalysis, onRefresh }: JobsListPr
     });
   }, [jobs.length]);
 
-  // Auto-refresh every 5 seconds for jobs that are still processing
+  // TEMPORARILY DISABLED auto-refresh to fix infinite loop
+  // Auto-refresh every 10 seconds for jobs that are still processing
   useEffect(() => {
     // Clear any existing interval
     if (intervalRef.current) {
@@ -38,25 +40,27 @@ export default function JobsList({ jobs, onViewAnalysis, onRefresh }: JobsListPr
       ['QUEUED', 'OCR', 'EXTRACT', 'SUMMARISE'].includes(job.status)
     );
 
-    if (processingJobs.length > 0 && !refreshing) {
+    // TEMPORARILY DISABLED - uncomment after fixing pipeline
+    /*
+    if (processingJobs.length > 0) {
       console.log(`🔄 Setting up auto-refresh for ${processingJobs.length} processing jobs`);
       intervalRef.current = setInterval(() => {
-        // Only refresh if document is visible and not already refreshing
-        if (!document.hidden && !refreshing) {
+        if (!document.hidden) {
           console.log('🔄 Auto-refresh triggered');
           onRefresh();
         }
-      }, 5000);
+      }, 10000);
     }
+    */
 
-    // Cleanup interval on unmount or when no processing jobs
+    // Cleanup interval on unmount
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
     };
-  }, [jobs.map(job => `${job.id}-${job.status}`).join(','), refreshing]); // Use job IDs and statuses as dependency
+  }, []); // Empty dependency array to prevent loop
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -148,6 +152,51 @@ export default function JobsList({ jobs, onViewAnalysis, onRefresh }: JobsListPr
       toast.error(error instanceof Error ? error.message : 'Failed to reprocess analysis');
     } finally {
       setReprocessingJobs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(jobId);
+        return newSet;
+      });
+    }
+  };
+
+  const handleTriggerProcessing = async (jobId: string, filename: string) => {
+    if (!confirm(`Start processing for "${filename}"? This will begin OCR and analysis.`)) {
+      return;
+    }
+
+    setTriggeringJobs(prev => new Set([...prev, jobId]));
+
+    try {
+      console.log('🚀 Attempting to trigger processing for job:', jobId);
+      const response = await fetch('/api/lease-lab/trigger-processing', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ jobId })
+      });
+
+      console.log('📡 Trigger response status:', response.status);
+
+      if (response.ok) {
+        const responseData = await response.json();
+        console.log('✅ Processing triggered successfully:', responseData);
+        toast.success('Processing started successfully');
+        // Refresh to show updated status
+        if (onRefresh) {
+          await onRefresh();
+          console.log('✅ Jobs list refreshed after trigger');
+        }
+      } else {
+        const errorData = await response.json();
+        console.error('❌ Trigger failed:', errorData);
+        throw new Error(errorData.message || 'Failed to start processing');
+      }
+    } catch (error) {
+      console.error('Error triggering processing:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to start processing');
+    } finally {
+      setTriggeringJobs(prev => {
         const newSet = new Set(prev);
         newSet.delete(jobId);
         return newSet;
@@ -361,6 +410,7 @@ export default function JobsList({ jobs, onViewAnalysis, onRefresh }: JobsListPr
 
             {/* Actions */}
             <div className="flex items-center space-x-2 ml-4">
+              {/* View Analysis Button - for jobs with completed analysis */}
               {job.status === 'READY' && job.summary_json && (
                 <button
                   onClick={() => onViewAnalysis(job)}
@@ -368,6 +418,23 @@ export default function JobsList({ jobs, onViewAnalysis, onRefresh }: JobsListPr
                 >
                   <Eye className="h-4 w-4" />
                   <span>View Analysis</span>
+                </button>
+              )}
+
+              {/* Process Button - for stuck QUEUED jobs */}
+              {job.status === 'QUEUED' && (
+                <button
+                  onClick={() => handleTriggerProcessing(job.id, job.filename)}
+                  disabled={triggeringJobs.has(job.id)}
+                  className="flex items-center space-x-1 px-3 py-2 text-sm font-medium text-purple-600 hover:text-purple-500 hover:bg-purple-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Start processing"
+                >
+                  {triggeringJobs.has(job.id) ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Play className="h-4 w-4" />
+                  )}
+                  <span>Process</span>
                 </button>
               )}
 
