@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { FileText, Clock, CheckCircle, AlertCircle, Eye, Link, Download, RefreshCw, Trash2, Wrench } from 'lucide-react';
 import { DocumentJob } from '../LeaseLabClient';
 import { toast } from 'sonner';
@@ -16,28 +16,47 @@ export default function JobsList({ jobs, onViewAnalysis, onRefresh }: JobsListPr
   const [refreshing, setRefreshing] = useState(false);
   const [deletingJobs, setDeletingJobs] = useState<Set<string>>(new Set());
   const [reprocessingJobs, setReprocessingJobs] = useState<Set<string>>(new Set());
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Debug: Log props on mount
-  console.log('🔍 JobsList props:', { 
-    jobsCount: jobs.length, 
-    onRefreshType: typeof onRefresh,
-    onViewAnalysisType: typeof onViewAnalysis 
-  });
+  // Debug: Log props changes (reduced logging)
+  useEffect(() => {
+    console.log('🔍 JobsList updated:', {
+      jobsCount: jobs.length,
+      statuses: jobs.map(job => job.status)
+    });
+  }, [jobs.length]);
 
   // Auto-refresh every 5 seconds for jobs that are still processing
   useEffect(() => {
-    const processingJobs = jobs.filter(job => 
+    // Clear any existing interval
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+
+    const processingJobs = jobs.filter(job =>
       ['QUEUED', 'OCR', 'EXTRACT', 'SUMMARISE'].includes(job.status)
     );
 
-    if (processingJobs.length > 0) {
-      const interval = setInterval(() => {
-        onRefresh();
+    if (processingJobs.length > 0 && !refreshing) {
+      console.log(`🔄 Setting up auto-refresh for ${processingJobs.length} processing jobs`);
+      intervalRef.current = setInterval(() => {
+        // Only refresh if document is visible and not already refreshing
+        if (!document.hidden && !refreshing) {
+          console.log('🔄 Auto-refresh triggered');
+          onRefresh();
+        }
       }, 5000);
-
-      return () => clearInterval(interval);
     }
-  }, [jobs, onRefresh]);
+
+    // Cleanup interval on unmount or when no processing jobs
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [jobs.map(job => `${job.id}-${job.status}`).join(','), refreshing]); // Use job IDs and statuses as dependency
 
   const handleRefresh = async () => {
     setRefreshing(true);
