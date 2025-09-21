@@ -914,6 +914,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   //   }
   // }, [messages, showChat])
 
+  console.log('HomePage: Auto-scroll disabled for Ask BlocIQ responses')
+
   // Handle Ask BlocIQ submission
   const handleAskSubmit = async (prompt: string) => {
     try {
@@ -1065,9 +1067,23 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         const response = await fetch('/api/users')
         if (response.ok) {
           const data = await response.json()
+          console.log('👤 Users API response:', data)
+
+          // Try multiple paths to get the first name
+          let firstName = null
           if (data.user?.profile?.first_name) {
-            setUserFirstName(data.user.profile.first_name)
+            firstName = data.user.profile.first_name
+          } else if (data.profile?.first_name) {
+            firstName = data.profile.first_name
+          } else if (data.first_name) {
+            firstName = data.first_name
+          }
+
+          if (firstName) {
+            console.log('✅ Found first name:', firstName)
+            setUserFirstName(firstName)
           } else {
+            console.log('⚠️ No first name found, using email fallback')
             // Fallback: use first part of email before @
             const emailPrefix = user.email.split('@')[0]
             setUserFirstName(emailPrefix)
