@@ -1,15 +1,23 @@
-// ✅ COMPLIANCE UPLOAD USING LEASE ANALYSIS PIPELINE
-// Uses the exact same upload function as lease analysis with compliance-specific response
+// 🏢 BUILDING SAFETY ACT COMPLIANCE UPLOAD SYSTEM
+// Full BSA logic with richer statuses, expiry tracking, and golden thread logging
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import OpenAI from 'openai'
+import { BSAComplianceAnalyzer, BSAComplianceStatus, type BSAAnalysisResult } from '@/lib/compliance/bsa-analyzers'
+import { createGoldenThreadEntry, isHigherRiskBuilding, generateOutlookReminder, type GoldenThreadEntry } from '@/lib/compliance/golden-thread'
+import {
+  createComplianceCalendarEvent,
+  createComplianceTask,
+  createComplianceEmailAlert,
+  createComplianceOverviewEmail
+} from '@/lib/outlook/compliance-integrations'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
 
-export const maxDuration = 180; // 3 minutes for upload and analysis
+export const maxDuration = 300; // 5 minutes for upload and BSA analysis
 
 export async function POST(request: NextRequest) {
   // Add cache-busting headers
@@ -197,8 +205,27 @@ export async function POST(request: NextRequest) {
       console.warn("⚠️ Poor extraction quality detected - proceeding with caution");
     }
 
-    // 5. Generate COMPLIANCE-SPECIFIC AI analysis
-    const complianceAnalysis = await analyseComplianceDocument(extractedText, file.name, assetInfo, extractionQuality)
+    // 5. Generate BSA COMPLIANCE ANALYSIS with AI + Rules hybrid approach
+    console.log("🏢 Starting Building Safety Act compliance analysis...");
+
+    // First get AI analysis for context and data extraction
+    const aiAnalysis = await analyseComplianceDocument(extractedText, file.name, assetInfo, extractionQuality);
+
+    // Then apply BSA-specific rules-based analysis
+    const bsaAnalysis = BSAComplianceAnalyzer.analyze(
+      aiAnalysis.classification || 'Other',
+      extractedText,
+      aiAnalysis,
+      aiAnalysis.inspection_date,
+      aiAnalysis.next_due_date
+    );
+
+    console.log("✅ BSA Analysis completed:", {
+      status: bsaAnalysis.status,
+      priority: bsaAnalysis.priority,
+      riskLevel: bsaAnalysis.riskLevel,
+      findings: bsaAnalysis.findings.length
+    });
 
     // 6. Create compliance document record
     let complianceDocumentId: string | null = null;
@@ -214,9 +241,9 @@ export async function POST(request: NextRequest) {
           original_filename: originalFilename || file.name,
           file_type: file.type,
           file_size: file.size,
-          document_type: complianceAnalysis.classification || 'Other',
+          document_type: aiAnalysis.classification || 'Other',
           document_category: 'Current Certificate',
-          ai_confidence_score: complianceAnalysis.confidence || 50,
+          ai_confidence_score: aiAnalysis.confidence || 50,
           uploaded_by_user_id: user.id,
           processing_status: 'completed'
         })
@@ -234,143 +261,288 @@ export async function POST(request: NextRequest) {
       console.error('❌ Error creating compliance document record:', docCreateError);
     }
 
-    // 7. Store compliance-specific AI extraction data
-    let complianceStatus = null;
-    let hasActionRequired = false;
-
+    // 7. Store BSA compliance analysis data
     if (complianceDocumentId) {
       try {
-        // Determine compliance status from various indicators
-        complianceStatus = determineComplianceStatus(complianceAnalysis, extractedText);
-        hasActionRequired = determineIfActionRequired(complianceAnalysis);
-
-        console.log(`📊 Compliance assessment: Status=${complianceStatus}, Actions Required=${hasActionRequired}`);
+        console.log(`📊 BSA Compliance Status: ${bsaAnalysis.status}, Priority: ${bsaAnalysis.priority}, Risk: ${bsaAnalysis.riskLevel}`);
 
         const { error: extractionError } = await supabaseAdmin
           .from("ai_document_extractions")
           .insert({
             document_id: complianceDocumentId,
             extracted_data: {
-              summary: complianceAnalysis.summary,
-              classification: complianceAnalysis.classification,
-              document_type: complianceAnalysis.document_type,
-              key_dates: complianceAnalysis.key_dates,
-              key_entities: complianceAnalysis.key_entities,
-              action_required: complianceAnalysis.action_required,
-              responsible_party: complianceAnalysis.responsible_party,
-              suggested_compliance_asset: complianceAnalysis.suggested_compliance_asset,
-              compliance_status: complianceStatus,
-              has_action_required: hasActionRequired
+              // AI Analysis
+              summary: aiAnalysis.summary,
+              classification: aiAnalysis.classification,
+              document_type: aiAnalysis.document_type,
+              key_dates: aiAnalysis.key_dates,
+              key_entities: aiAnalysis.key_entities,
+              action_required: aiAnalysis.action_required,
+              responsible_party: aiAnalysis.responsible_party,
+              suggested_compliance_asset: aiAnalysis.suggested_compliance_asset,
+
+              // BSA Analysis
+              bsa_status: bsaAnalysis.status,
+              bsa_priority: bsaAnalysis.priority,
+              bsa_risk_level: bsaAnalysis.riskLevel,
+              bsa_findings: bsaAnalysis.findings,
+              bsa_compliance_details: bsaAnalysis.complianceDetails,
+              contractor_recommendations: bsaAnalysis.contractorRecommendations,
+              regulatory_notes: bsaAnalysis.regulatoryNotes,
+
+              has_action_required: bsaAnalysis.actionRequired !== null
             },
             confidence_scores: {
-              overall: complianceAnalysis.confidence,
-              extraction_quality: extractionQuality.score
+              overall: aiAnalysis.confidence,
+              extraction_quality: extractionQuality.score,
+              bsa_confidence: bsaAnalysis.riskLevel !== 'unknown' ? 85 : 60
             },
-            inspection_date: complianceAnalysis.inspection_date || null,
-            next_due_date: complianceAnalysis.next_due_date || null,
-            inspector_name: complianceAnalysis.contractor_name || null,
-            inspector_company: complianceAnalysis.contractor_name || null,
+            inspection_date: aiAnalysis.inspection_date || null,
+            next_due_date: aiAnalysis.next_due_date || null,
+            inspector_name: aiAnalysis.contractor_name || null,
+            inspector_company: aiAnalysis.contractor_name || null,
             certificate_number: extractedText.match(/(?:cert|certificate|ref|no)[\s:]*([A-Z0-9\-\/]{6,})/gi)?.[0] || null,
-            property_address: complianceAnalysis.building_name || null,
-            compliance_status: complianceStatus,
-            ai_model_version: 'compliance-v1.0',
+            property_address: aiAnalysis.building_name || null,
+            compliance_status: bsaAnalysis.status,
+            ai_model_version: 'bsa-v1.0',
             processing_time_ms: extractionResult.stats?.processing_time || 0
           });
 
         if (extractionError) {
-          console.error("❌ Failed to save compliance extraction data:", extractionError);
+          console.error("❌ Failed to save BSA compliance extraction data:", extractionError);
         } else {
-          console.log("✅ Compliance AI extraction data saved successfully");
+          console.log("✅ BSA compliance AI extraction data saved successfully");
         }
       } catch (error) {
-        console.error('⚠️ Error storing compliance analysis:', error);
+        console.error('⚠️ Error storing BSA compliance analysis:', error);
       }
     }
 
-    // 8. Update building compliance asset status if critical issues found
-    if (complianceStatus === 'Fail' || complianceStatus === 'Unsatisfactory' || hasActionRequired) {
-      try {
-        console.log(`🚨 Critical compliance issue detected - updating asset status`);
+    // 8. Get building context for HRB checking and Golden Thread
+    let buildingContext: any = null;
+    try {
+      const { data: building, error: buildingError } = await supabaseAdmin
+        .from('buildings')
+        .select('*')
+        .eq('id', buildingId)
+        .single();
 
-        // Update the building compliance asset with the latest status
-        const { error: assetUpdateError } = await supabaseAdmin
-          .from('building_compliance_assets')
-          .update({
-            status: complianceStatus === 'Fail' || complianceStatus === 'Unsatisfactory' ? 'non_compliant' : 'action_required',
-            last_carried_out: complianceAnalysis.inspection_date || null,
-            next_due_date: complianceAnalysis.next_due_date || null,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', bcaData.id);
+      if (!buildingError && building) {
+        buildingContext = building;
+        console.log(`🏢 Building context: ${building.name}, HRB: ${isHigherRiskBuilding(building)}`);
+      }
+    } catch (error) {
+      console.warn('⚠️ Could not fetch building context:', error);
+    }
 
-        if (assetUpdateError) {
-          console.error("❌ Failed to update building compliance asset:", assetUpdateError);
-        } else {
-          console.log("✅ Building compliance asset updated with critical status");
-        }
+    // 9. Update building compliance asset with BSA status and dates
+    try {
+      console.log(`🔄 Updating asset status to: ${bsaAnalysis.status}`);
 
-        // Create compliance action record for tracking
-        if (hasActionRequired) {
-          const actionPriority = complianceStatus === 'Fail' || complianceStatus === 'Unsatisfactory' ? 'high' : 'medium';
+      // Update the building compliance asset with BSA status
+      const { error: assetUpdateError } = await supabaseAdmin
+        .from('building_compliance_assets')
+        .update({
+          status: bsaAnalysis.status,
+          last_carried_out: aiAnalysis.inspection_date || null,
+          next_due_date: aiAnalysis.next_due_date || null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', bcaData.id);
 
-          console.log(`📝 Action required: ${complianceAnalysis.action_required} (Priority: ${actionPriority})`);
+      if (assetUpdateError) {
+        console.error("❌ Failed to update building compliance asset:", assetUpdateError);
+      } else {
+        console.log(`✅ Building compliance asset updated: ${bsaAnalysis.status}`);
+      }
 
-          try {
-            const { error: actionError } = await supabaseAdmin
-              .from('compliance_actions')
-              .insert({
-                building_compliance_asset_id: bcaData.id,
-                building_id: parseInt(buildingId),
-                document_id: complianceDocumentId,
-                action_description: complianceAnalysis.action_required,
-                priority: actionPriority,
-                responsible_party: complianceAnalysis.responsible_party || 'Management Company',
-                due_date: complianceAnalysis.next_due_date || null,
-                status: 'pending',
-                source: 'document_analysis',
-                created_by: user.id,
-                compliance_status: complianceStatus
-              });
+      // 10. Create Golden Thread compliance log entry (BSA requirement)
+      if (buildingContext && complianceDocumentId) {
+        try {
+          const goldenThreadEntry = createGoldenThreadEntry({
+            building_id: buildingId,
+            document_id: complianceDocumentId,
+            building_compliance_asset_id: bcaData.id,
+            document_type: aiAnalysis.classification || 'Other',
+            original_filename: originalFilename || file.name,
+            file_path: fileName,
+            bsa_analysis: bsaAnalysis,
+            ai_summary: aiAnalysis,
+            extracted_text: extractedText,
+            ocr_source: extractionResult.method || 'unknown',
+            user_id: user.id,
+            user_confirmed: false, // Will be confirmed via UI
+            is_hrb: isHigherRiskBuilding(buildingContext),
+            building_name: buildingContext.name
+          });
 
-            if (actionError) {
-              console.warn("⚠️ Failed to create compliance action record:", actionError);
-              console.warn("⚠️ Make sure to run the compliance_actions table migration first");
-            } else {
-              console.log("✅ Compliance action record created for tracking");
+          // Add Outlook IDs to the Golden Thread entry
+          const goldenThreadEntryWithOutlook = {
+            ...goldenThreadEntry,
+            ai_extraction_raw: {
+              ...goldenThreadEntry.ai_extraction_raw,
+              outlook_integration: {
+                calendar_event_id: outlookEventId,
+                task_id: outlookTaskId,
+                email_alert_id: outlookEmailId,
+                created_at: new Date().toISOString()
+              }
             }
-          } catch (actionCreateError) {
-            console.warn("⚠️ Compliance actions table may not exist yet:", actionCreateError);
+          };
+
+          const { error: logError } = await supabaseAdmin
+            .from('compliance_logs')
+            .insert(goldenThreadEntryWithOutlook);
+
+          if (logError) {
+            console.warn("⚠️ Failed to create Golden Thread log entry:", logError);
+          } else {
+            console.log(`🔗 Golden Thread log created - HRB: ${goldenThreadEntry.is_golden_thread}`);
+          }
+        } catch (error) {
+          console.error('⚠️ Error creating Golden Thread entry:', error);
+        }
+      }
+
+      // 11. Create building_todos for non-compliant or action-required items
+      if (bsaAnalysis.actionRequired && (
+        bsaAnalysis.status === 'non_compliant' ||
+        bsaAnalysis.status === 'remedial_action_pending' ||
+        bsaAnalysis.status === 'expired'
+      )) {
+        try {
+          const todoData = {
+            building_id: parseInt(buildingId),
+            item_text: bsaAnalysis.actionRequired,
+            priority: bsaAnalysis.priority,
+            due_date: aiAnalysis.next_due_date || null,
+            notes: `Generated from ${aiAnalysis.classification} analysis. Findings: ${bsaAnalysis.findings.join('; ')}`,
+            completed: false,
+            source: 'Compliance Analysis',
+            created_by: user.id
+          };
+
+          console.log(`📝 Creating high-priority todo: ${bsaAnalysis.actionRequired}`);
+
+          const { error: todoError } = await supabaseAdmin
+            .from('building_action_tracker')
+            .insert(todoData);
+
+          if (todoError) {
+            console.warn("⚠️ Failed to create building todo:", todoError);
+          } else {
+            console.log(`✅ Building todo created with ${bsaAnalysis.priority} priority`);
+          }
+        } catch (error) {
+          console.error('⚠️ Error creating building todo:', error);
+        }
+      }
+
+      // 12. OUTLOOK INTEGRATION - Calendar, Tasks, and Email Alerts
+      let outlookEventId: string | null = null;
+      let outlookTaskId: string | null = null;
+      let outlookEmailId: string | null = null;
+
+      try {
+        // A. Create calendar reminder for renewal date
+        if (aiAnalysis.next_due_date && buildingContext) {
+          try {
+            console.log(`📅 Creating Outlook calendar event for: ${aiAnalysis.next_due_date}`);
+            const calendarResult = await createComplianceCalendarEvent(
+              aiAnalysis.classification || 'Compliance Document',
+              buildingContext.name || 'Building',
+              assetInfo?.name || 'Asset',
+              aiAnalysis.next_due_date,
+              bsaAnalysis.status,
+              isHigherRiskBuilding(buildingContext),
+              aiAnalysis.summary || 'Compliance document processed',
+              publicUrl // Link to document in BlocIQ
+            );
+
+            outlookEventId = calendarResult.eventId;
+            console.log(`✅ Outlook calendar event created: ${outlookEventId}`);
+
+          } catch (calendarError) {
+            console.warn('⚠️ Failed to create calendar event:', calendarError);
           }
         }
 
-      } catch (error) {
-        console.error('⚠️ Error updating compliance asset status:', error);
-      }
-    } else if (complianceStatus === 'Pass' || complianceStatus === 'Satisfactory') {
-      // Update asset with positive status
-      try {
-        const { error: assetUpdateError } = await supabaseAdmin
-          .from('building_compliance_assets')
-          .update({
-            status: 'compliant',
-            last_carried_out: complianceAnalysis.inspection_date || null,
-            next_due_date: complianceAnalysis.next_due_date || null,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', bcaData.id);
+        // B. Create Outlook task for remedial actions
+        if (bsaAnalysis.actionRequired && (
+          bsaAnalysis.status === 'non_compliant' ||
+          bsaAnalysis.status === 'remedial_action_pending' ||
+          bsaAnalysis.status === 'expired'
+        )) {
+          try {
+            console.log(`📋 Creating Outlook task for remedial action`);
+            const taskResult = await createComplianceTask(
+              aiAnalysis.classification || 'Compliance Document',
+              buildingContext?.name || 'Building',
+              assetInfo?.name || 'Asset',
+              bsaAnalysis.status,
+              bsaAnalysis.findings,
+              bsaAnalysis.complianceDetails.urgentActions || [bsaAnalysis.actionRequired],
+              aiAnalysis.responsible_party || 'Property Manager',
+              aiAnalysis.next_due_date,
+              isHigherRiskBuilding(buildingContext),
+              publicUrl
+            );
 
-        if (!assetUpdateError) {
-          console.log("✅ Building compliance asset updated with compliant status");
+            outlookTaskId = taskResult.taskId;
+            console.log(`✅ Outlook task created: ${outlookTaskId}`);
+
+          } catch (taskError) {
+            console.warn('⚠️ Failed to create task:', taskError);
+          }
         }
-      } catch (error) {
-        console.error('⚠️ Error updating compliance asset with positive status:', error);
+
+        // C. Create email alert for high-risk findings
+        if (bsaAnalysis.riskLevel === 'intolerable' ||
+            bsaAnalysis.status === 'non_compliant' ||
+            (bsaAnalysis.complianceDetails.category1Issues && bsaAnalysis.complianceDetails.category1Issues > 0)) {
+          try {
+            console.log(`📧 Creating high-priority email alert for ${bsaAnalysis.riskLevel} risk`);
+
+            // Get property manager emails (simplified - would normally fetch from building data)
+            const alertRecipients = [
+              // Add logic to fetch property manager emails from building/agency data
+              'property.manager@example.com' // Placeholder
+            ];
+
+            const emailResult = await createComplianceEmailAlert(
+              aiAnalysis.classification || 'Compliance Document',
+              buildingContext?.name || 'Building',
+              assetInfo?.name || 'Asset',
+              bsaAnalysis.status,
+              bsaAnalysis.riskLevel,
+              bsaAnalysis.findings,
+              bsaAnalysis.complianceDetails.urgentActions || [bsaAnalysis.actionRequired || 'Review required'],
+              alertRecipients,
+              undefined, // CC recipients
+              isHigherRiskBuilding(buildingContext)
+            );
+
+            outlookEmailId = emailResult.messageId;
+            console.log(`✅ Outlook email alert created: ${outlookEmailId}`);
+
+          } catch (emailError) {
+            console.warn('⚠️ Failed to create email alert:', emailError);
+          }
+        }
+
+      } catch (outlookError) {
+        console.warn('⚠️ Outlook integration failed:', outlookError);
+        // Continue processing even if Outlook fails
       }
+
+    } catch (error) {
+      console.error('⚠️ Error in BSA compliance processing:', error);
     }
 
-    // 9. Return COMPLIANCE-SPECIFIC analysis results
+    // 13. Return BSA COMPLIANCE ANALYSIS results
     return NextResponse.json({
       success: true,
-      type: 'compliance_analysis',
+      type: 'bsa_compliance_analysis',
       processingId: processingId,
       fileHash: fileHash || generatedFileHash,
       processedAt: new Date().toISOString(),
@@ -388,37 +560,82 @@ export async function POST(request: NextRequest) {
         processing_status: 'completed'
       },
 
-      // Compliance-specific analysis (primary response)
-      complianceAnalysis: {
-        classification: complianceAnalysis.classification,
-        document_type: complianceAnalysis.document_type,
-        summary: complianceAnalysis.summary,
-        inspection_date: complianceAnalysis.inspection_date,
-        next_due_date: complianceAnalysis.next_due_date,
-        responsible_party: complianceAnalysis.responsible_party,
-        action_required: complianceAnalysis.action_required,
-        confidence: complianceAnalysis.confidence,
-        suggested_compliance_asset: complianceAnalysis.suggested_compliance_asset,
-        contractor_name: complianceAnalysis.contractor_name,
-        building_name: complianceAnalysis.building_name,
-        key_dates: complianceAnalysis.key_dates,
-        key_entities: complianceAnalysis.key_entities,
-        document_validation: complianceAnalysis.document_validation,
-        compliance_status: complianceStatus,
-        has_action_required: hasActionRequired
+      // Building Safety Act Analysis (primary response)
+      bsaAnalysis: {
+        // BSA Status & Risk
+        status: bsaAnalysis.status,
+        priority: bsaAnalysis.priority,
+        riskLevel: bsaAnalysis.riskLevel,
+
+        // Findings & Actions
+        findings: bsaAnalysis.findings,
+        actionRequired: bsaAnalysis.actionRequired,
+        complianceDetails: bsaAnalysis.complianceDetails,
+        contractorRecommendations: bsaAnalysis.contractorRecommendations,
+        regulatoryNotes: bsaAnalysis.regulatoryNotes,
+
+        // AI Context
+        classification: aiAnalysis.classification,
+        document_type: aiAnalysis.document_type,
+        summary: aiAnalysis.summary,
+        inspection_date: aiAnalysis.inspection_date,
+        next_due_date: aiAnalysis.next_due_date,
+        responsible_party: aiAnalysis.responsible_party,
+        confidence: aiAnalysis.confidence,
+        contractor_name: aiAnalysis.contractor_name,
+        building_name: aiAnalysis.building_name,
+        key_dates: aiAnalysis.key_dates,
+        key_entities: aiAnalysis.key_entities,
+        document_validation: aiAnalysis.document_validation
       },
 
-      // Asset linking information
-      assetLinking: {
+      // Building Safety Act Compliance Status
+      buildingSafetyAct: {
         building_compliance_asset_id: bcaData.id,
-        asset_updated: complianceStatus !== null,
-        current_status: complianceStatus === 'Fail' || complianceStatus === 'Unsatisfactory' ? 'non_compliant' :
-                       complianceStatus === 'Pass' || complianceStatus === 'Satisfactory' ? 'compliant' :
-                       hasActionRequired ? 'action_required' : 'pending_review',
-        action_created: hasActionRequired, // Actions are created if required (after running migration)
-        action_logged: hasActionRequired, // Actions are logged in console
-        priority: complianceStatus === 'Fail' || complianceStatus === 'Unsatisfactory' ? 'high' :
-                 hasActionRequired ? 'medium' : 'low'
+        asset_updated: true,
+        current_status: bsaAnalysis.status,
+        is_hrb: buildingContext ? isHigherRiskBuilding(buildingContext) : false,
+        golden_thread_logged: buildingContext !== null,
+        action_created: bsaAnalysis.actionRequired !== null,
+        todo_priority: bsaAnalysis.priority,
+        regulator_notification_required: bsaAnalysis.riskLevel === 'intolerable',
+        next_reminder_scheduled: aiAnalysis.next_due_date !== null
+      },
+
+      // Outlook Integration Results
+      outlookIntegration: {
+        calendar_event_created: outlookEventId !== null,
+        calendar_event_id: outlookEventId,
+        task_created: outlookTaskId !== null,
+        task_id: outlookTaskId,
+        email_alert_created: outlookEmailId !== null,
+        email_alert_id: outlookEmailId,
+        integration_successful: (outlookEventId || outlookTaskId || outlookEmailId) !== null,
+        features_used: [
+          ...(outlookEventId ? ['calendar_reminder'] : []),
+          ...(outlookTaskId ? ['remedial_task'] : []),
+          ...(outlookEmailId ? ['risk_alert_email'] : [])
+        ]
+      },
+
+      // User Confirmation Required
+      userConfirmation: {
+        required: true,
+        compliance_log_id: null, // Will be set after Golden Thread log creation
+        modal_data: {
+          document_info: {
+            filename: originalFilename || file.name,
+            documentType: aiAnalysis.classification || 'Other',
+            buildingName: buildingContext?.name || 'Building',
+            assetName: assetInfo?.name || 'Asset',
+            inspectionDate: aiAnalysis.inspection_date,
+            nextDueDate: aiAnalysis.next_due_date
+          },
+          bsa_analysis: bsaAnalysis,
+          is_golden_thread: buildingContext ? isHigherRiskBuilding(buildingContext) : false,
+          outlook_task_id: outlookTaskId,
+          building_compliance_asset_id: bcaData.id
+        }
       },
 
       // Quality metrics
@@ -429,16 +646,20 @@ export async function POST(request: NextRequest) {
         warnings: extractionQuality.warnings
       },
 
-      // Debug information
-      debug_info: {
+      // Audit trail information
+      auditTrail: {
         user_id: user.id,
         timestamp: new Date().toISOString(),
         file_name: fileName,
         asset_context: `${assetInfo?.name} (${assetInfo?.category})`,
+        building_context: buildingContext?.name || 'Unknown',
+        ocr_source: extractionResult.method || 'unknown',
+        ai_model_version: 'bsa-v1.0',
         extracted_text_preview: extractedText.substring(0, 500) + '...',
         full_text_length: extractedText.length,
-        compliance_status_determined: complianceStatus,
-        action_required_determined: hasActionRequired
+        bsa_status_determined: bsaAnalysis.status,
+        risk_level_determined: bsaAnalysis.riskLevel,
+        action_required_determined: bsaAnalysis.actionRequired !== null
       }
     }, { headers })
 
@@ -696,103 +917,5 @@ Return only valid JSON.
   }
 }
 
-// Helper function to determine compliance status from document analysis
-function determineComplianceStatus(analysis: any, extractedText: string): string | null {
-  const text = extractedText.toLowerCase();
-  const actionRequired = analysis.action_required?.toLowerCase() || '';
-  const summary = analysis.summary?.toLowerCase() || '';
-
-  // Direct status indicators (highest priority)
-  if (text.includes('fail') || actionRequired.includes('fail') || summary.includes('fail')) {
-    return 'Fail';
-  }
-
-  if (text.includes('unsatisfactory') || actionRequired.includes('unsatisfactory') || summary.includes('unsatisfactory')) {
-    return 'Unsatisfactory';
-  }
-
-  if (text.includes('pass') || actionRequired.includes('satisfactory') || summary.includes('satisfactory')) {
-    return 'Pass';
-  }
-
-  if (text.includes('satisfactory') || actionRequired.includes('pass') || summary.includes('pass')) {
-    return 'Satisfactory';
-  }
-
-  // EICR-specific indicators
-  if (text.includes('category 1') || text.includes('c1')) {
-    const c1Pattern = /(?:category\s*1|c1)[:\s]*(\d+)/gi;
-    const matches = [...text.matchAll(c1Pattern)];
-    if (matches.some(match => parseInt(match[1]) > 0)) {
-      return 'Unsatisfactory'; // Category 1 defects = unsatisfactory
-    } else if (text.includes('no category 1') || text.includes('no c1')) {
-      return 'Satisfactory';
-    }
-  }
-
-  // Gas safety indicators
-  if (text.includes('not to current standards') || text.includes('immediately dangerous')) {
-    return 'Fail';
-  }
-
-  // Fire safety indicators
-  if (text.includes('high risk') || text.includes('significant risk')) {
-    return 'Unsatisfactory';
-  }
-
-  // Check for specific action words that indicate problems
-  const problemIndicators = [
-    'repair', 'replace', 'urgent', 'immediate', 'defect', 'fault', 'issue',
-    'remedial', 'action required', 'must be', 'needs to be', 'should be'
-  ];
-
-  const hasProblems = problemIndicators.some(indicator =>
-    text.includes(indicator) || actionRequired.includes(indicator) || summary.includes(indicator)
-  );
-
-  if (hasProblems) {
-    return 'Action Required';
-  }
-
-  // If we can't determine status, return null
-  return null;
-}
-
-// Helper function to determine if action is required
-function determineIfActionRequired(analysis: any): boolean {
-  const actionRequired = analysis.action_required?.toLowerCase() || '';
-  const summary = analysis.summary?.toLowerCase() || '';
-
-  // Direct action indicators
-  const actionIndicators = [
-    'repair', 'replace', 'urgent', 'immediate', 'remedial', 'fix', 'address',
-    'action required', 'must be', 'needs to be', 'should be', 'investigate',
-    'schedule', 'arrange', 'contact', 'review', 'update', 'renew', 'test'
-  ];
-
-  const hasDirectAction = actionIndicators.some(indicator =>
-    actionRequired.includes(indicator) || summary.includes(indicator)
-  );
-
-  // Exclude routine/normal actions
-  const routineActions = [
-    'file for records', 'no action required', 'satisfactory', 'continue as normal',
-    'review annually', 'next inspection due'
-  ];
-
-  const isRoutineOnly = routineActions.some(routine =>
-    actionRequired.includes(routine) && !hasDirectAction
-  );
-
-  // Check for specific compliance failures
-  const complianceFailures = [
-    'fail', 'unsatisfactory', 'category 1', 'c1', 'defect', 'fault',
-    'non-compliant', 'breach', 'violation', 'immediately dangerous'
-  ];
-
-  const hasFailures = complianceFailures.some(failure =>
-    actionRequired.includes(failure) || summary.includes(failure)
-  );
-
-  return (hasDirectAction && !isRoutineOnly) || hasFailures;
-}
+// BSA compliance upload function now uses modular analyzers above
+// Old helper functions removed - replaced with BSA-specific analyzer classes

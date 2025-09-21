@@ -16,6 +16,36 @@ const openai = new OpenAI({
 
 export const maxDuration = 180; // 3 minutes for upload and analysis
 
+// Helper function to categorize documents for the building_documents table
+function categorizeDocument(classification: string): string {
+  const classificationLower = classification.toLowerCase();
+
+  if (['fire risk assessment', 'eicr', 'gas safety', 'lift maintenance', 'electrical', 'asbestos'].some(term =>
+    classificationLower.includes(term))) {
+    return 'compliance';
+  }
+
+  if (classificationLower.includes('lease') || classificationLower.includes('tenancy')) {
+    return 'leases';
+  }
+
+  if (classificationLower.includes('insurance')) {
+    return 'insurance';
+  }
+
+  if (['major works', 'construction', 'renovation', 'project'].some(term =>
+    classificationLower.includes(term))) {
+    return 'major_works';
+  }
+
+  if (['minutes', 'meeting', 'agm', 'egm'].some(term =>
+    classificationLower.includes(term))) {
+    return 'minutes';
+  }
+
+  return 'other';
+}
+
 export async function POST(request: NextRequest) {
   // Add cache-busting headers
   const headers = {
@@ -49,44 +79,77 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate file type
-    if (!file.name.toLowerCase().endsWith('.pdf')) {
+    // Validate file type against building_documents bucket allowed types
+    const allowedMimeTypes = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/msword',
+      'text/plain',
+      'image/jpeg',
+      'image/png'
+    ];
+
+    const allowedExtensions = ['.pdf', '.docx', '.doc', '.txt', '.jpg', '.jpeg', '.png'];
+
+    if (!allowedMimeTypes.includes(file.type) &&
+        !allowedExtensions.some(ext => file.name.toLowerCase().endsWith(ext))) {
       return NextResponse.json(
-        { error: 'Only PDF files are supported' },
-        { status: 400 }
+        {
+          error: 'File type not supported',
+          details: `Supported types: PDF, Word documents, text files, and images (JPG, PNG)`,
+          receivedType: file.type || 'unknown'
+        },
+        { status: 400, headers }
+      )
+    }
+
+    // Validate file size (50MB limit as per bucket configuration)
+    const maxFileSize = 52428800; // 50MB in bytes
+    if (file.size > maxFileSize) {
+      return NextResponse.json(
+        {
+          error: 'File too large',
+          details: `Maximum file size is 50MB. Your file is ${(file.size / 1024 / 1024).toFixed(2)}MB`,
+          maxSize: '50MB'
+        },
+        { status: 400, headers }
       )
     }
 
     console.log("📄 Processing PDF:", file.name)
 
     // 1. Upload file to Supabase storage
-    const supabase = await createClient()
+    const supabase = createClient()
 
     // Get current user for storage path
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    if (userError || !user) {
+      console.error('❌ Authentication error:', userError)
       return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
+        {
+          error: 'Authentication required',
+          details: userError?.message || 'User not found'
+        },
+        { status: 401, headers }
       )
     }
 
     const fileName = `${user.id}/${Date.now()}_${file.name}`
     const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('building-documents')
+      .from('building_documents')
       .upload(fileName, file)
 
     if (uploadError) {
       console.error('❌ File upload error:', uploadError)
       return NextResponse.json(
-        { error: 'Failed to upload file' },
-        { status: 500 }
+        { error: `Failed to upload file: ${uploadError.message}` },
+        { status: 500, headers }
       )
     }
 
     // Get public URL
     const { data: { publicUrl } } = supabase.storage
-      .from('building-documents')
+      .from('building_documents')
       .getPublicUrl(fileName)
 
     console.log("✅ File uploaded:", publicUrl)
@@ -105,7 +168,14 @@ export async function POST(request: NextRequest) {
       getOrExtractText = extractionCache.getOrExtractText;
     } catch (importError) {
       console.error('❌ Failed to import OCR modules:', importError);
-      throw new Error(`OCR modules unavailable: ${importError instanceof Error ? importError.message : 'Unknown import error'}`);
+      return NextResponse.json(
+        {
+          error: 'OCR system unavailable',
+          details: `OCR modules could not be loaded: ${importError instanceof Error ? importError.message : 'Unknown import error'}`,
+          suggestion: 'Please try again later or contact support'
+        },
+        { status: 503, headers }
+      );
     }
     
     const fileCharacteristics = await analyzeFileCharacteristics(file);
@@ -141,8 +211,17 @@ export async function POST(request: NextRequest) {
     
     if (!extractedText || extractedText.trim().length === 0) {
       return NextResponse.json(
-        { error: 'Could not extract text from PDF. The document may be scanned or corrupted.' },
-        { status: 400 }
+        {
+          error: 'Text extraction failed',
+          details: 'Could not extract readable text from the document. The document may be scanned, corrupted, or heavily encrypted.',
+          suggestions: [
+            'Ensure the document is not password-protected',
+            'Try uploading a different version of the document',
+            'For scanned documents, ensure text is clearly visible'
+          ],
+          extractionMethod: extractionResult?.method || 'unknown'
+        },
+        { status: 400, headers }
       )
     }
 
@@ -196,10 +275,25 @@ export async function POST(request: NextRequest) {
     
     console.log("📊 Lease parsing statistics:", parsingStats);
 
-    // 5. Generate AI analysis with enhanced prompt and validation context (fallback)
-    const aiAnalysis = await analyseDocument(extractedText, file.name, buildingId, extractionQuality)
+    // 5. Generate AI analysis with enhanced prompt and validation context
+    console.log("🤖 Starting AI document analysis...");
+    let aiAnalysis;
+    try {
+      aiAnalysis = await analyseDocument(extractedText, file.name, buildingId, extractionQuality);
+    } catch (aiError) {
+      console.error('❌ AI analysis failed:', aiError);
+      return NextResponse.json(
+        {
+          error: 'Document analysis failed',
+          details: `AI analysis could not be completed: ${aiError instanceof Error ? aiError.message : 'Unknown AI error'}`,
+          extractedText: extractedText.substring(0, 500) + '...', // Provide preview for manual review
+          suggestions: ['Document can be uploaded for manual review', 'Try again later if this is a temporary issue']
+        },
+        { status: 500, headers }
+      );
+    }
 
-    // 4. Create document record first to get proper ID
+    // 6. Create document record after AI analysis
     let documentId: string | null = null;
     try {
       console.log("💾 Creating document record for:", file.name);
@@ -207,23 +301,51 @@ export async function POST(request: NextRequest) {
       const { data: documentData, error: docError } = await supabase
         .from('building_documents')
         .insert({
-          file_name: file.name,
-          file_url: publicUrl,
+          name: file.name,
+          file_path: fileName, // Store the storage path, not public URL
           building_id: buildingId ? parseInt(buildingId) : null,
-          type: 'Lease Document' // Default classification
+          type: aiAnalysis?.classification || 'Document', // Use AI classification
+          category: categorizeDocument(aiAnalysis?.classification || 'Other'),
+          file_size: file.size,
+          uploaded_by: user.id,
+          ocr_status: 'completed', // Since we've already extracted text
+          ocr_text: extractedText.substring(0, 65535), // Postgres TEXT limit
+          metadata: {
+            original_filename: file.name,
+            public_url: publicUrl,
+            file_type: file.type,
+            processing_method: extractionResult.method,
+            quality_score: extractionQuality?.score,
+            ai_confidence: aiAnalysis?.confidence
+          }
         })
         .select('id')
         .single();
 
       if (docError) {
         console.error('❌ Failed to create document record:', docError);
-        // Continue without document linking
+        return NextResponse.json(
+          {
+            error: 'Database error',
+            details: `Failed to create document record: ${docError.message}`,
+            context: 'Document was uploaded successfully but could not be saved to database'
+          },
+          { status: 500, headers }
+        );
       } else {
         documentId = documentData.id;
         console.log("✅ Document record created with ID:", documentId);
       }
     } catch (docCreateError) {
       console.error('❌ Error creating document record:', docCreateError);
+      return NextResponse.json(
+        {
+          error: 'Database error',
+          details: `Unexpected error creating document record: ${docCreateError instanceof Error ? docCreateError.message : 'Unknown database error'}`,
+          context: 'Document was uploaded successfully but could not be saved to database'
+        },
+        { status: 500, headers }
+      );
     }
 
     // 6. Store enhanced analysis with versioning and statistics
@@ -378,11 +500,19 @@ export async function POST(request: NextRequest) {
     console.error('❌ Error processing document:', error)
     console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace available')
 
-    // Get processingId from the already parsed formData variables
+    // Try to get processingId from formData if available
+    let processingIdFromError = null;
+    try {
+      const errorFormData = await request.clone().formData();
+      processingIdFromError = errorFormData.get('processingId') as string;
+    } catch {
+      // Ignore errors when trying to re-parse formData
+    }
+
     const errorResponse = {
       error: 'Failed to process document. Please try again.',
       details: error instanceof Error ? error.message : 'Unknown error',
-      processingId: processingId || null,
+      processingId: processingIdFromError,
       timestamp: new Date().toISOString()
     };
 
@@ -696,8 +826,7 @@ Return only valid JSON.
           content: prompt
         }
       ],
-      temperature: 0.1,
-      timeout: 60000, // 60 second timeout
+      temperature: 0.1
     })
 
     const response = completion.choices[0]?.message?.content
