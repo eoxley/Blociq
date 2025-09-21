@@ -356,7 +356,12 @@ export async function POST(request: NextRequest) {
         console.log(`✅ Building compliance asset updated: ${bsaAnalysis.status}`);
       }
 
-      // 10. Create Golden Thread compliance log entry (BSA requirement)
+      // 10. Initialize Outlook integration variables
+      let outlookEventId: string | null = null;
+      let outlookTaskId: string | null = null;
+      let outlookEmailId: string | null = null;
+
+      // 11. Create Golden Thread compliance log entry (BSA requirement)
       if (buildingContext && complianceDocumentId) {
         try {
           const goldenThreadEntry = createGoldenThreadEntry({
@@ -376,23 +381,9 @@ export async function POST(request: NextRequest) {
             building_name: buildingContext.name
           });
 
-          // Add Outlook IDs to the Golden Thread entry
-          const goldenThreadEntryWithOutlook = {
-            ...goldenThreadEntry,
-            ai_extraction_raw: {
-              ...goldenThreadEntry.ai_extraction_raw,
-              outlook_integration: {
-                calendar_event_id: outlookEventId,
-                task_id: outlookTaskId,
-                email_alert_id: outlookEmailId,
-                created_at: new Date().toISOString()
-              }
-            }
-          };
-
           const { error: logError } = await supabaseAdmin
             .from('compliance_logs')
-            .insert(goldenThreadEntryWithOutlook);
+            .insert(goldenThreadEntry);
 
           if (logError) {
             console.warn("⚠️ Failed to create Golden Thread log entry:", logError);
@@ -404,7 +395,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // 11. Create building_todos for non-compliant or action-required items
+      // 12. Create building_todos for non-compliant or action-required items
       if (bsaAnalysis.actionRequired && (
         bsaAnalysis.status === 'non_compliant' ||
         bsaAnalysis.status === 'remedial_action_pending' ||
@@ -438,10 +429,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // 12. OUTLOOK INTEGRATION - Calendar, Tasks, and Email Alerts
-      let outlookEventId: string | null = null;
-      let outlookTaskId: string | null = null;
-      let outlookEmailId: string | null = null;
+      // 13. OUTLOOK INTEGRATION - Calendar, Tasks, and Email Alerts
 
       try {
         // A. Create calendar reminder for renewal date
@@ -539,7 +527,7 @@ export async function POST(request: NextRequest) {
       console.error('⚠️ Error in BSA compliance processing:', error);
     }
 
-    // 13. Return BSA COMPLIANCE ANALYSIS results
+    // 14. Return BSA COMPLIANCE ANALYSIS results
     return NextResponse.json({
       success: true,
       type: 'bsa_compliance_analysis',
