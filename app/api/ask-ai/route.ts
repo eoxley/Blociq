@@ -19,6 +19,51 @@ import { insertAiLog } from '../../../lib/supabase/ai_logs';
 
 export const runtime = "nodejs";
 
+// Helper function to ensure user has agency_id
+async function ensureUserHasAgency(supabase: any, userId: string): Promise<{ agency_id: string } | null> {
+  // Get user's current profile
+  const { data: userProfile } = await supabase
+    .from('profiles')
+    .select('agency_id')
+    .eq('id', userId)
+    .single();
+
+  // If user already has an agency, return it
+  if (userProfile?.agency_id) {
+    return { agency_id: userProfile.agency_id };
+  }
+
+  console.log('🔄 User missing agency_id, attempting auto-assignment...');
+
+  // Try to find and assign a default agency
+  const { data: defaultAgency } = await supabase
+    .from('agencies')
+    .select('id')
+    .limit(1)
+    .single();
+
+  if (defaultAgency) {
+    console.log('✅ Found default agency, updating user profile...');
+
+    // Update the user's profile with the default agency
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ agency_id: defaultAgency.id })
+      .eq('id', userId);
+
+    if (!updateError) {
+      console.log('✅ Successfully assigned default agency to user');
+      return { agency_id: defaultAgency.id };
+    } else {
+      console.error('❌ Failed to update user profile with agency:', updateError);
+    }
+  } else {
+    console.warn('⚠️ No agencies found in database');
+  }
+
+  return null;
+}
+
 // CORS headers for Outlook Add-in compatibility
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -363,19 +408,15 @@ export async function POST(req: NextRequest) {
         if (documentIntent) {
           console.log('📄 Document intent detected:', documentIntent);
           
-          // Get user's agency
-          const { data: userProfile } = await supabase
-            .from('profiles')
-            .select('agency_id')
-            .eq('id', user.id)
-            .single();
-          
+          // Ensure user has agency_id (with auto-assignment fallback)
+          const userProfile = await ensureUserHasAgency(supabase, user.id);
+
           if (!userProfile?.agency_id) {
             return NextResponse.json({
               success: false,
               error: 'User not linked to agency',
-              message: 'Please complete your profile setup'
-            }, { status: 400 });
+              message: 'No agencies available. Please contact support to set up your account.'
+            }, { status: 403 });
           }
           
           // Resolve building context
@@ -558,19 +599,15 @@ export async function POST(req: NextRequest) {
         if (reportIntent) {
           console.log('📊 Report intent detected:', reportIntent);
 
-          // Get user's agency
-          const { data: userProfile } = await supabase
-            .from('profiles')
-            .select('agency_id')
-            .eq('id', user.id)
-            .single();
+          // Ensure user has agency_id (with auto-assignment fallback)
+          const userProfile = await ensureUserHasAgency(supabase, user.id);
 
           if (!userProfile?.agency_id) {
             return NextResponse.json({
               success: false,
               error: 'User not linked to agency',
-              message: 'Please complete your profile setup'
-            }, { status: 400 });
+              message: 'No agencies available. Please contact support to set up your account.'
+            }, { status: 403 });
           }
 
           // Execute the report

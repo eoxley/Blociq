@@ -34,6 +34,13 @@ import EmailSummaryCard from '@/components/home/EmailSummaryCard'
 import CalendarSyncWidget from '@/components/CalendarSyncWidget'
 import UpcomingEventsWidget from '@/components/UpcomingEventsWidget'
 
+// Helper function to format AI responses into paragraphs
+function formatResponse(text: string): string {
+  return text
+    .split(/\n\s*\n/) // split on blank lines
+    .map(p => `<p class="mb-3 last:mb-0">${p.trim()}</p>`)
+    .join("");
+}
 
 type PropertyEvent = {
   building: string
@@ -907,14 +914,12 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     await loadOutlookEvents()
   }
 
-  // Auto-scroll removed - let users control their own scrolling within chat
-  // useEffect(() => {
-  //   if (showChat && messagesEndRef.current) {
-  //     messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
-  //   }
-  // }, [messages, showChat])
-
-  console.log('HomePage: Auto-scroll disabled for Ask BlocIQ responses')
+  // Auto-scroll to latest messages when chat is open
+  useEffect(() => {
+    if (showChat && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [messages, showChat])
 
   // Handle Ask BlocIQ submission
   const handleAskSubmit = async (prompt: string) => {
@@ -1280,14 +1285,21 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                         className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
                       >
                         <div
-                          className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                          className={`max-w-xs lg:max-w-md px-4 py-3 rounded-lg ${
                             message.sender === 'user'
-                              ? 'bg-blue-500 text-white'
-                              : 'bg-gray-100 text-gray-900'
+                              ? 'bg-blue-50 text-blue-900 border border-blue-200'
+                              : 'bg-gray-50 text-gray-900 border border-gray-200'
                           }`}
                         >
-                          <p className="text-sm">{message.text}</p>
-                          <p className="text-xs opacity-70 mt-1">
+                          {message.sender === 'ai' ? (
+                            <div
+                              className="prose prose-sm max-w-none text-gray-900"
+                              dangerouslySetInnerHTML={{ __html: formatResponse(message.text) }}
+                            />
+                          ) : (
+                            <p className="text-sm">{message.text}</p>
+                          )}
+                          <p className="text-xs opacity-70 mt-2">
                             {message.timestamp.toLocaleTimeString()}
                           </p>
                         </div>
