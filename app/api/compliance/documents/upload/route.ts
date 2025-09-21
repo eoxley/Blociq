@@ -231,8 +231,17 @@ export async function POST(request: NextRequest) {
     }
 
     // 7. Store compliance-specific AI extraction data
+    let complianceStatus = null;
+    let hasActionRequired = false;
+
     if (complianceDocumentId) {
       try {
+        // Determine compliance status from various indicators
+        complianceStatus = determineComplianceStatus(complianceAnalysis, extractedText);
+        hasActionRequired = determineIfActionRequired(complianceAnalysis);
+
+        console.log(`📊 Compliance assessment: Status=${complianceStatus}, Actions Required=${hasActionRequired}`);
+
         const { error: extractionError } = await supabase
           .from("ai_document_extractions")
           .insert({
@@ -245,7 +254,9 @@ export async function POST(request: NextRequest) {
               key_entities: complianceAnalysis.key_entities,
               action_required: complianceAnalysis.action_required,
               responsible_party: complianceAnalysis.responsible_party,
-              suggested_compliance_asset: complianceAnalysis.suggested_compliance_asset
+              suggested_compliance_asset: complianceAnalysis.suggested_compliance_asset,
+              compliance_status: complianceStatus,
+              has_action_required: hasActionRequired
             },
             confidence_scores: {
               overall: complianceAnalysis.confidence,
@@ -257,8 +268,7 @@ export async function POST(request: NextRequest) {
             inspector_company: complianceAnalysis.contractor_name || null,
             certificate_number: extractedText.match(/(?:cert|certificate|ref|no)[\s:]*([A-Z0-9\-\/]{6,})/gi)?.[0] || null,
             property_address: complianceAnalysis.building_name || null,
-            compliance_status: complianceAnalysis.action_required?.toLowerCase().includes('satisfactory') ? 'Pass' :
-                              complianceAnalysis.action_required?.toLowerCase().includes('fail') ? 'Fail' : null,
+            compliance_status: complianceStatus,
             ai_model_version: 'compliance-v1.0',
             processing_time_ms: extractionResult.stats?.processing_time || 0
           });
@@ -273,7 +283,82 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 8. Return COMPLIANCE-SPECIFIC analysis results
+    // 8. Update building compliance asset status if critical issues found
+    if (complianceStatus === 'Fail' || complianceStatus === 'Unsatisfactory' || hasActionRequired) {
+      try {
+        console.log(`🚨 Critical compliance issue detected - updating asset status`);
+
+        // Update the building compliance asset with the latest status
+        const { error: assetUpdateError } = await supabase
+          .from('building_compliance_assets')
+          .update({
+            current_status: complianceStatus === 'Fail' || complianceStatus === 'Unsatisfactory' ? 'non_compliant' : 'action_required',
+            last_inspection_date: complianceAnalysis.inspection_date || null,
+            next_due_date: complianceAnalysis.next_due_date || null,
+            latest_document_id: complianceDocumentId,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', bcaData.id);
+
+        if (assetUpdateError) {
+          console.error("❌ Failed to update building compliance asset:", assetUpdateError);
+        } else {
+          console.log("✅ Building compliance asset updated with critical status");
+        }
+
+        // Create compliance action record for tracking
+        if (hasActionRequired) {
+          const actionPriority = complianceStatus === 'Fail' || complianceStatus === 'Unsatisfactory' ? 'high' : 'medium';
+
+          const { error: actionError } = await supabase
+            .from('compliance_actions')
+            .insert({
+              building_compliance_asset_id: bcaData.id,
+              building_id: parseInt(buildingId),
+              document_id: complianceDocumentId,
+              action_description: complianceAnalysis.action_required,
+              priority: actionPriority,
+              responsible_party: complianceAnalysis.responsible_party || 'Management Company',
+              due_date: complianceAnalysis.next_due_date || null,
+              status: 'pending',
+              source: 'document_analysis',
+              created_by: user.id,
+              compliance_status: complianceStatus
+            });
+
+          if (actionError) {
+            console.warn("⚠️ Failed to create compliance action record:", actionError);
+          } else {
+            console.log("✅ Compliance action record created for tracking");
+          }
+        }
+
+      } catch (error) {
+        console.error('⚠️ Error updating compliance asset status:', error);
+      }
+    } else if (complianceStatus === 'Pass' || complianceStatus === 'Satisfactory') {
+      // Update asset with positive status
+      try {
+        const { error: assetUpdateError } = await supabase
+          .from('building_compliance_assets')
+          .update({
+            current_status: 'compliant',
+            last_inspection_date: complianceAnalysis.inspection_date || null,
+            next_due_date: complianceAnalysis.next_due_date || null,
+            latest_document_id: complianceDocumentId,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', bcaData.id);
+
+        if (!assetUpdateError) {
+          console.log("✅ Building compliance asset updated with compliant status");
+        }
+      } catch (error) {
+        console.error('⚠️ Error updating compliance asset with positive status:', error);
+      }
+    }
+
+    // 9. Return COMPLIANCE-SPECIFIC analysis results
     return NextResponse.json({
       success: true,
       type: 'compliance_analysis',
@@ -309,7 +394,21 @@ export async function POST(request: NextRequest) {
         building_name: complianceAnalysis.building_name,
         key_dates: complianceAnalysis.key_dates,
         key_entities: complianceAnalysis.key_entities,
-        document_validation: complianceAnalysis.document_validation
+        document_validation: complianceAnalysis.document_validation,
+        compliance_status: complianceStatus,
+        has_action_required: hasActionRequired
+      },
+
+      // Asset linking information
+      assetLinking: {
+        building_compliance_asset_id: bcaData.id,
+        asset_updated: complianceStatus !== null,
+        current_status: complianceStatus === 'Fail' || complianceStatus === 'Unsatisfactory' ? 'non_compliant' :
+                       complianceStatus === 'Pass' || complianceStatus === 'Satisfactory' ? 'compliant' :
+                       hasActionRequired ? 'action_required' : 'pending_review',
+        action_created: hasActionRequired,
+        priority: complianceStatus === 'Fail' || complianceStatus === 'Unsatisfactory' ? 'high' :
+                 hasActionRequired ? 'medium' : 'low'
       },
 
       // Quality metrics
@@ -327,7 +426,9 @@ export async function POST(request: NextRequest) {
         file_name: fileName,
         asset_context: `${assetInfo?.name} (${assetInfo?.category})`,
         extracted_text_preview: extractedText.substring(0, 500) + '...',
-        full_text_length: extractedText.length
+        full_text_length: extractedText.length,
+        compliance_status_determined: complianceStatus,
+        action_required_determined: hasActionRequired
       }
     }, { headers })
 
@@ -583,4 +684,105 @@ Return only valid JSON.
       }
     }
   }
+}
+
+// Helper function to determine compliance status from document analysis
+function determineComplianceStatus(analysis: any, extractedText: string): string | null {
+  const text = extractedText.toLowerCase();
+  const actionRequired = analysis.action_required?.toLowerCase() || '';
+  const summary = analysis.summary?.toLowerCase() || '';
+
+  // Direct status indicators (highest priority)
+  if (text.includes('fail') || actionRequired.includes('fail') || summary.includes('fail')) {
+    return 'Fail';
+  }
+
+  if (text.includes('unsatisfactory') || actionRequired.includes('unsatisfactory') || summary.includes('unsatisfactory')) {
+    return 'Unsatisfactory';
+  }
+
+  if (text.includes('pass') || actionRequired.includes('satisfactory') || summary.includes('satisfactory')) {
+    return 'Pass';
+  }
+
+  if (text.includes('satisfactory') || actionRequired.includes('pass') || summary.includes('pass')) {
+    return 'Satisfactory';
+  }
+
+  // EICR-specific indicators
+  if (text.includes('category 1') || text.includes('c1')) {
+    const c1Pattern = /(?:category\s*1|c1)[:\s]*(\d+)/gi;
+    const matches = [...text.matchAll(c1Pattern)];
+    if (matches.some(match => parseInt(match[1]) > 0)) {
+      return 'Unsatisfactory'; // Category 1 defects = unsatisfactory
+    } else if (text.includes('no category 1') || text.includes('no c1')) {
+      return 'Satisfactory';
+    }
+  }
+
+  // Gas safety indicators
+  if (text.includes('not to current standards') || text.includes('immediately dangerous')) {
+    return 'Fail';
+  }
+
+  // Fire safety indicators
+  if (text.includes('high risk') || text.includes('significant risk')) {
+    return 'Unsatisfactory';
+  }
+
+  // Check for specific action words that indicate problems
+  const problemIndicators = [
+    'repair', 'replace', 'urgent', 'immediate', 'defect', 'fault', 'issue',
+    'remedial', 'action required', 'must be', 'needs to be', 'should be'
+  ];
+
+  const hasProblems = problemIndicators.some(indicator =>
+    text.includes(indicator) || actionRequired.includes(indicator) || summary.includes(indicator)
+  );
+
+  if (hasProblems) {
+    return 'Action Required';
+  }
+
+  // If we can't determine status, return null
+  return null;
+}
+
+// Helper function to determine if action is required
+function determineIfActionRequired(analysis: any): boolean {
+  const actionRequired = analysis.action_required?.toLowerCase() || '';
+  const summary = analysis.summary?.toLowerCase() || '';
+
+  // Direct action indicators
+  const actionIndicators = [
+    'repair', 'replace', 'urgent', 'immediate', 'remedial', 'fix', 'address',
+    'action required', 'must be', 'needs to be', 'should be', 'investigate',
+    'schedule', 'arrange', 'contact', 'review', 'update', 'renew', 'test'
+  ];
+
+  const hasDirectAction = actionIndicators.some(indicator =>
+    actionRequired.includes(indicator) || summary.includes(indicator)
+  );
+
+  // Exclude routine/normal actions
+  const routineActions = [
+    'file for records', 'no action required', 'satisfactory', 'continue as normal',
+    'review annually', 'next inspection due'
+  ];
+
+  const isRoutineOnly = routineActions.some(routine =>
+    actionRequired.includes(routine) && !hasDirectAction
+  );
+
+  // Check for specific compliance failures
+  const complianceFailures = [
+    'fail', 'unsatisfactory', 'category 1', 'c1', 'defect', 'fault',
+    'non-compliant', 'breach', 'violation', 'immediately dangerous'
+  ];
+
+  const hasFailures = complianceFailures.some(failure =>
+    actionRequired.includes(failure) || summary.includes(failure)
+  );
+
+  return (hasDirectAction && !isRoutineOnly) || hasFailures;
 }
