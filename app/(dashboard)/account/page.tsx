@@ -104,7 +104,7 @@ export default function AccountPage() {
 
     try {
       setSaving(true);
-      
+
       // Only update fields that exist in the profile
       const updateData: any = {};
       if (profile.first_name !== undefined) updateData.first_name = profile.first_name;
@@ -116,24 +116,33 @@ export default function AccountPage() {
       if (profile.signature_url !== undefined) updateData.signature_url = profile.signature_url;
       if (profile.email_signature !== undefined) updateData.email_signature = profile.email_signature;
 
-      const { error } = await supabase
-        .from('profiles')
-        .update(updateData)
-        .eq('id', profile.id);
+      // Use API endpoint instead of direct Supabase calls
+      const response = await fetch('/api/users', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData),
+      });
 
-      if (error) throw error;
-      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update profile');
+      }
+
+      const result = await response.json();
+
       // Save signature data to localStorage for use in emails
       saveUserSignature(profile);
-      
+
       // Update signature preview
       const completeSignature = generateEmailSignature(profile);
       setSignaturePreview(completeSignature);
-      
+
       toast.success('Profile updated successfully!');
     } catch (error) {
       console.error('Error updating profile:', error);
-      toast.error('Failed to update profile');
+      toast.error(error instanceof Error ? error.message : 'Failed to update profile');
     } finally {
       setSaving(false);
     }
