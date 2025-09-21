@@ -141,13 +141,22 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    console.log('🗑️ Starting DELETE request for job:', params.id);
+
     const supabase = createClient(cookies());
-    
+    console.log('✅ Supabase client created');
+
     // Get the current user
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
+    console.log('📋 Session check result:', {
+      hasSession: !!session,
+      hasUser: !!session?.user,
+      sessionError: sessionError?.message || 'none'
+    });
+
     if (sessionError || !session?.user) {
-      return NextResponse.json({ 
+      console.error('❌ Authentication failed:', sessionError);
+      return NextResponse.json({
         error: 'Authentication required',
         message: 'Please log in to delete job'
       }, { status: 401 });
@@ -200,13 +209,25 @@ export async function DELETE(
 
     // Delete the job using service role client for proper permissions
     console.log('🗑️ Deleting job from database:', params.id, 'for user:', user.id);
-    
+
     // Create service role client for deletion
+    console.log('🔧 Creating service role client...');
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('❌ Missing Supabase environment variables');
+      throw new Error('Missing Supabase configuration');
+    }
+
     const serviceSupabase = createServiceClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
     );
-    
+    console.log('✅ Service role client created');
+
+    console.log('🗑️ Executing delete query with params:', {
+      jobId: params.id,
+      userId: user.id
+    });
+
     const { error: deleteError, count } = await serviceSupabase
       .from('document_jobs')
       .delete()
@@ -215,24 +236,67 @@ export async function DELETE(
 
     if (deleteError) {
       console.error('❌ Error deleting job:', deleteError);
-      return NextResponse.json({ 
-        error: 'Failed to delete job',
-        message: 'Unable to delete job. Please try again.'
-      }, { status: 500 });
+      console.error('❌ Delete error details:', {
+        code: deleteError.code,
+        message: deleteError.message,
+        details: deleteError.details,
+        hint: deleteError.hint
+      });
+
+      // Try alternative deletion approach with regular client
+      console.log('🔄 Trying alternative deletion with regular client...');
+      try {
+        const { error: altDeleteError } = await supabase
+          .from('document_jobs')
+          .delete()
+          .eq('id', params.id)
+          .eq('user_id', user.id);
+
+        if (altDeleteError) {
+          console.error('❌ Alternative deletion also failed:', altDeleteError);
+          return NextResponse.json({
+            error: 'Failed to delete job',
+            message: 'Unable to delete job. Please try again.',
+            details: process.env.NODE_ENV === 'development' ? deleteError.message : undefined
+          }, { status: 500 });
+        }
+
+        console.log('✅ Alternative deletion succeeded');
+        return NextResponse.json({
+          success: true,
+          message: 'Job deleted successfully'
+        });
+
+      } catch (altError) {
+        console.error('❌ Alternative deletion threw error:', altError);
+        return NextResponse.json({
+          error: 'Failed to delete job',
+          message: 'Unable to delete job. Please try again.'
+        }, { status: 500 });
+      }
     }
 
     console.log('✅ Job successfully deleted from database. Rows affected:', count);
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       message: 'Job deleted successfully',
       rowsAffected: count
     });
 
   } catch (error) {
-    console.error('Job delete error:', error);
-    return NextResponse.json({ 
+    console.error('❌ Job delete error:', error);
+    console.error('❌ Error details:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : 'No stack trace'
+    });
+
+    return NextResponse.json({
       error: 'Failed to delete job',
-      message: 'An unexpected error occurred. Please try again.'
+      message: 'An unexpected error occurred. Please try again.',
+      details: process.env.NODE_ENV === 'development'
+        ? (error instanceof Error ? error.message : 'Unknown error')
+        : undefined
     }, { status: 500 });
   }
 }
