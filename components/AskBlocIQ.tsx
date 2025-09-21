@@ -129,7 +129,15 @@ export default function AskBlocIQ({
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const { supabase } = useSupabase();
-  
+
+  // Helper function to format AI responses into paragraphs
+  function formatResponse(text: string): string {
+    return text
+      .split(/\n\s*\n/) // split on blank lines
+      .map(p => `<p class="mb-3 last:mb-0">${p.trim()}</p>`)
+      .join("");
+  }
+
   useEffect(() => {
     const getSession = async () => {
       if (!supabase) return;
@@ -220,10 +228,12 @@ export default function AskBlocIQ({
     textarea.style.height = `${newHeight}px`;
   };
 
-  // Auto-scroll removed - let users control their own scrolling
-  // useEffect(() => {
-  //   messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  // }, [messages]);
+  // Auto-scroll to latest messages when messages update
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
 
 
   const handleSuggestedPrompt = (prompt: string) => {
@@ -461,44 +471,23 @@ export default function AskBlocIQ({
                         leaseData={message.leaseData} 
                       />
                     ) : (
-                      <div className={`relative inline-block px-5 py-3 rounded-2xl ${
-                        isUser 
-                          ? 'bg-gradient-to-br from-blue-500 to-purple-600 text-white rounded-tr-md' 
-                          : 'bg-gray-100 text-gray-900 rounded-tl-md'
+                      <div className={`relative inline-block px-5 py-3 rounded-2xl border ${
+                        isUser
+                          ? 'bg-blue-50 text-blue-900 border-blue-200 rounded-tr-md'
+                          : 'bg-gray-50 text-gray-900 border-gray-200 rounded-tl-md'
                       }`}>
                         
-                        {/* Content with formatting */}
-                        <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                          {message.content?.split('\n').map((line, index) => {
-                            if (!line || typeof line !== 'string') {
-                              return <div key={index}></div>;
-                            }
-                            
-                            if (line.startsWith('**') && line.endsWith('**')) {
-                              return (
-                                <h4 key={index} className={`font-semibold mt-3 mb-2 first:mt-0 ${
-                                  isUser ? 'text-white' : 'text-gray-800'
-                                }`}>
-                                  {line.replace(/\*\*/g, '')}
-                                </h4>
-                              );
-                            }
-                            
-                            if (line.startsWith('• ')) {
-                              return (
-                                <div key={index} className="ml-4 mb-1">
-                                  {line}
-                                </div>
-                              );
-                            }
-                            
-                            const processedLine = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                            
-                            return (
-                              <div key={index} className={index > 0 ? 'mt-2' : ''} dangerouslySetInnerHTML={{ __html: processedLine }} />
-                            );
-                          })}
-                        </div>
+                        {/* Content with improved formatting */}
+                        {isAI ? (
+                          <div
+                            className="prose prose-sm max-w-none text-gray-900"
+                            dangerouslySetInnerHTML={{ __html: formatResponse(message.content || '') }}
+                          />
+                        ) : (
+                          <div className="text-sm leading-relaxed">
+                            {message.content}
+                          </div>
+                        )}
                       </div>
                     )}
 

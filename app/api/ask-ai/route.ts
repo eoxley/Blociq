@@ -674,10 +674,17 @@ export async function POST(req: NextRequest) {
           if (buildingKeywords.some(keyword => potentialName.includes(keyword))) {
             console.log('🔍 Searching for building:', potentialName);
             
-            const { data: building } = await supabase
+            let buildingQuery = supabase
               .from('buildings')
               .select('id, name, address, unit_count')
-              .ilike('name', `%${potentialName}%`)
+              .ilike('name', `%${potentialName}%`);
+
+            // Filter by agency for authenticated users
+            if (userAgencyId) {
+              buildingQuery = buildingQuery.eq('agency_id', userAgencyId);
+            }
+
+            const { data: building } = await buildingQuery
               .limit(1)
               .single();
             
@@ -692,6 +699,21 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // 🔐 Ensure authenticated users have agency linkage
+    let userAgencyId = null;
+    if (!isPublicAccess && user) {
+      const agencyCheck = await ensureUserHasAgency(supabase, user.id);
+      if (!agencyCheck?.agency_id) {
+        return createResponse({
+          success: false,
+          error: 'This user is not linked to an agency. Please check setup or contact support.',
+          message: 'No agencies available. Please contact support to set up your account.'
+        }, 403);
+      }
+      userAgencyId = agencyCheck.agency_id;
+      console.log('✅ User agency verified:', userAgencyId);
+    }
+
     // 👤 Fetch User Profile for Personalization
     let userProfile = null;
     let userFirstName = "";
@@ -701,7 +723,7 @@ export async function POST(req: NextRequest) {
         .select('first_name, last_name, job_title, company_name')
         .eq('email', user?.email)
         .single();
-      
+
       if (profile) {
         userProfile = profile;
         userFirstName = profile.first_name || "";
@@ -727,7 +749,7 @@ export async function POST(req: NextRequest) {
         console.log('🔍 Fetching building context for:', building_id);
         
         // Fetch building data with units and leaseholders
-        const { data: buildingData, error: buildingError } = await supabase
+        let buildingDataQuery = supabase
           .from('buildings')
           .select(`
             id, name, address, unit_count, notes, is_hrb,
@@ -735,8 +757,14 @@ export async function POST(req: NextRequest) {
               structure_type, client_name, client_contact, client_email, operational_notes
             )
           `)
-          .eq('id', building_id)
-          .single();
+          .eq('id', building_id);
+
+        // Filter by agency for authenticated users
+        if (userAgencyId) {
+          buildingDataQuery = buildingDataQuery.eq('agency_id', userAgencyId);
+        }
+
+        const { data: buildingData, error: buildingError } = await buildingDataQuery.single();
 
         if (buildingData && !buildingError) {
           console.log('✅ Building data loaded:', buildingData.name);
