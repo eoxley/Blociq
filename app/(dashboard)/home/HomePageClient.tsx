@@ -30,8 +30,6 @@ import CommunicationModal from '@/components/CommunicationModal'
 import { getRandomWelcomeMessage } from '@/utils/messages'
 import { HybridLeaseProcessor } from '@/lib/hybrid-lease-processor'
 import ClientOnly from '@/components/ClientOnly'
-import EmailSummaryCard from '@/components/home/EmailSummaryCard'
-import CalendarSyncWidget from '@/components/CalendarSyncWidget'
 import UpcomingEventsWidget from '@/components/UpcomingEventsWidget'
 
 // Helper function to format AI responses into paragraphs
@@ -1355,11 +1353,6 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
           </div>
         </div>
 
-        {/* Email Summary Card */}
-        <EmailSummaryCard />
-
-        {/* Calendar Sync Widget */}
-        <CalendarSyncWidget />
 
         {/* Communication Modal */}
         {showCommunicationModal && communicationModalData && (
