@@ -1,0 +1,18 @@
+<svg width="300" height="200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="300" height="200" fill="#e8f5e8" stroke="#388e3c" stroke-width="3" rx="20"/>
+  
+  <!-- UK Flag Icon -->
+  <rect x="120" y="60" width="60" height="40" fill="#012169" stroke="#000" stroke-width="2"/>
+  <!-- White Cross -->
+  <rect x="120" y="75" width="60" height="10" fill="white"/>
+  <rect x="145" y="60" width="10" height="40" fill="white"/>
+  <!-- Red Cross -->
+  <rect x="120" y="77" width="60" height="6" fill="#c8102e"/>
+  <rect x="147" y="60" width="6" height="40" fill="#c8102e"/>
+  
+  <!-- Text -->
+  <text x="150" y="140" text-anchor="middle" fill="#388e3c" font-family="Inter, sans-serif" font-size="24" font-weight="bold">Built for UK</text>
+  <text x="150" y="165" text-anchor="middle" fill="#666" font-family="Inter, sans-serif" font-size="16">Section 20, BSA, RICS</text>
+  <text x="150" y="185" text-anchor="middle" fill="#666" font-family="Inter, sans-serif" font-size="16">compliance ready</text>
+</svg>

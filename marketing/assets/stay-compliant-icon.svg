@@ -1,0 +1,13 @@
+<svg width="300" height="200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="300" height="200" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="3" rx="20"/>
+  
+  <!-- Shield Icon -->
+  <path d="M150 50 L175 65 L175 95 Q175 110 150 115 Q125 110 125 95 L125 65 Z" fill="#7b1fa2" stroke="#4a148c" stroke-width="3"/>
+  <path d="M140 85 L150 95 L160 80" stroke="white" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Text -->
+  <text x="150" y="140" text-anchor="middle" fill="#7b1fa2" font-family="Inter, sans-serif" font-size="24" font-weight="bold">Stay Compliant</text>
+  <text x="150" y="165" text-anchor="middle" fill="#666" font-family="Inter, sans-serif" font-size="16">GDPR & UK regulations</text>
+  <text x="150" y="185" text-anchor="middle" fill="#666" font-family="Inter, sans-serif" font-size="16">built-in by design</text>
+</svg>

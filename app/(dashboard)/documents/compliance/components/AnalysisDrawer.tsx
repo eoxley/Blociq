@@ -93,7 +93,8 @@ export default function AnalysisDrawer({ job, onClose, onAttachToBuilding, categ
         ? JSON.parse(job.summary_json)
         : job.summary_json;
 
-      const response = await fetch('/api/compliance-lab/confirm', {
+      // Use unified confirmation endpoint
+      const response = await fetch('/api/documents/confirm', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -102,7 +103,8 @@ export default function AnalysisDrawer({ job, onClose, onAttachToBuilding, categ
           document_id: job.id,
           building_id: buildingId,
           analysis_results: summary,
-          confirmed: true
+          confirmed: true,
+          classification: { category }
         })
       });
 
@@ -111,18 +113,32 @@ export default function AnalysisDrawer({ job, onClose, onAttachToBuilding, categ
         setComplianceAssetCreated(true);
         setShowConfirmationModal(false);
 
-        toast.success(
-          `Compliance asset created successfully! ${result.urgent_findings_count > 0 ?
-            `${result.urgent_findings_count} urgent finding alert(s) created.` : ''} ${result.outlook_event_created ?
-            'Outlook reminder set.' : ''}`
-        );
+        // Category-specific success messages
+        let successMessage = '';
+        switch (result.category) {
+          case 'compliance':
+            successMessage = `Compliance asset created successfully! ${result.urgent_findings_count > 0 ?
+              `${result.urgent_findings_count} urgent finding alert(s) created.` : ''} ${result.outlook_event_created ?
+              'Outlook reminder set.' : ''}`;
+            break;
+          case 'major_works':
+            successMessage = `Major works project created successfully! Stage: ${result.stage || 'Unknown'}`;
+            break;
+          case 'general':
+            successMessage = 'Document filed successfully!';
+            break;
+          default:
+            successMessage = 'Document processed successfully!';
+        }
+
+        toast.success(successMessage);
       } else {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create compliance asset');
+        throw new Error(errorData.message || `Failed to process ${category} document`);
       }
     } catch (error) {
-      console.error('Error creating compliance asset:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to create compliance asset');
+      console.error(`Error processing ${category} document:`, error);
+      toast.error(error instanceof Error ? error.message : `Failed to process ${category} document`);
     }
   };
 
@@ -132,8 +148,8 @@ export default function AnalysisDrawer({ job, onClose, onAttachToBuilding, categ
         ? JSON.parse(job.summary_json)
         : job.summary_json;
 
-      // Log the declined action
-      await fetch('/api/compliance-lab/confirm', {
+      // Log the declined action using unified endpoint
+      await fetch('/api/documents/confirm', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -142,12 +158,19 @@ export default function AnalysisDrawer({ job, onClose, onAttachToBuilding, categ
           document_id: job.id,
           building_id: null,
           analysis_results: summary,
-          confirmed: false
+          confirmed: false,
+          classification: { category }
         })
       });
 
       setShowConfirmationModal(false);
-      toast.info('Compliance asset creation declined');
+
+      // Category-specific decline messages
+      const declineMessage = category === 'compliance' ? 'Compliance asset creation declined' :
+                           category === 'major_works' ? 'Major works project creation declined' :
+                           'Document processing declined';
+
+      toast.info(declineMessage);
     } catch (error) {
       console.error('Error logging declined action:', error);
       setShowConfirmationModal(false);
@@ -183,6 +206,279 @@ export default function AnalysisDrawer({ job, onClose, onAttachToBuilding, categ
       case 'LOW': return 'text-green-600 bg-green-50 border-green-200';
       default: return 'text-gray-600 bg-gray-50 border-gray-200';
     }
+  };
+
+  // Major Works specific renderer
+  const renderMajorWorksContent = () => {
+    if (!job.summary_json) {
+      return (
+        <div className="text-center py-8">
+          <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+          <p className="text-gray-500">No analysis available</p>
+        </div>
+      );
+    }
+
+    const summary = typeof job.summary_json === 'string'
+      ? JSON.parse(job.summary_json)
+      : job.summary_json;
+
+    return (
+      <div className="space-y-6">
+        {/* Document Type & Stage */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {summary.document_type && (
+            <div>
+              <h4 className="font-medium text-gray-900 mb-2">Document Type</h4>
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
+                {summary.document_type}
+              </span>
+            </div>
+          )}
+
+          {summary.stage && (
+            <div>
+              <h4 className="font-medium text-gray-900 mb-2">Stage</h4>
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800">
+                {summary.stage}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Project Description */}
+        {summary.project_description && (
+          <div>
+            <h4 className="font-medium text-gray-900 mb-3">Project Description</h4>
+            <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+              {summary.project_description.scope_of_works && (
+                <p className="text-sm"><strong>Scope of Works:</strong> {summary.project_description.scope_of_works}</p>
+              )}
+              {summary.project_description.reason_for_works && (
+                <p className="text-sm"><strong>Reason:</strong> {summary.project_description.reason_for_works}</p>
+              )}
+              {summary.project_description.urgency_level && (
+                <p className="text-sm"><strong>Urgency:</strong>
+                  <span className={`ml-2 px-2 py-1 rounded text-xs font-medium ${
+                    summary.project_description.urgency_level === 'urgent' ? 'bg-red-100 text-red-800' :
+                    summary.project_description.urgency_level === 'standard' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-green-100 text-green-800'
+                  }`}>
+                    {summary.project_description.urgency_level}
+                  </span>
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Consultation Details */}
+        {summary.consultation_details && (
+          <div>
+            <h4 className="font-medium text-gray-900 mb-3">Consultation Details</h4>
+            <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+              {summary.consultation_details.consultation_period_start && (
+                <p className="text-sm"><strong>Consultation Start:</strong> {new Date(summary.consultation_details.consultation_period_start).toLocaleDateString('en-GB')}</p>
+              )}
+              {summary.consultation_details.consultation_period_end && (
+                <p className="text-sm"><strong>Consultation End:</strong> {new Date(summary.consultation_details.consultation_period_end).toLocaleDateString('en-GB')}</p>
+              )}
+              {summary.consultation_details.consultation_type && (
+                <p className="text-sm"><strong>Type:</strong> {summary.consultation_details.consultation_type}</p>
+              )}
+              {summary.consultation_details.leaseholder_count && (
+                <p className="text-sm"><strong>Leaseholders:</strong> {summary.consultation_details.leaseholder_count}</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Financial Details */}
+        {summary.financial_details && (
+          <div>
+            <h4 className="font-medium text-gray-900 mb-3">Financial Details</h4>
+            <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+              {summary.financial_details.estimated_cost && (
+                <p className="text-sm"><strong>Estimated Cost:</strong> £{summary.financial_details.estimated_cost.toLocaleString()}</p>
+              )}
+              {summary.financial_details.cost_per_unit && (
+                <p className="text-sm"><strong>Cost per Unit:</strong> £{summary.financial_details.cost_per_unit.toLocaleString()}</p>
+              )}
+              {summary.financial_details.service_charge_implications && (
+                <p className="text-sm"><strong>Service Charge Impact:</strong> {summary.financial_details.service_charge_implications}</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Timeline */}
+        {summary.timeline && (
+          <div>
+            <h4 className="font-medium text-gray-900 mb-3">Timeline</h4>
+            <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+              {summary.timeline.works_start_date && (
+                <p className="text-sm"><strong>Works Start:</strong> {new Date(summary.timeline.works_start_date).toLocaleDateString('en-GB')}</p>
+              )}
+              {summary.timeline.estimated_completion && (
+                <p className="text-sm"><strong>Estimated Completion:</strong> {new Date(summary.timeline.estimated_completion).toLocaleDateString('en-GB')}</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Summary */}
+        {summary.summary && (
+          <div>
+            <h4 className="font-medium text-gray-900 mb-3">Summary</h4>
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+              <p className="text-sm text-purple-900 whitespace-pre-wrap">{summary.summary}</p>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // General Documents specific renderer
+  const renderGeneralContent = () => {
+    if (!job.summary_json) {
+      return (
+        <div className="text-center py-8">
+          <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+          <p className="text-gray-500">No analysis available</p>
+        </div>
+      );
+    }
+
+    const summary = typeof job.summary_json === 'string'
+      ? JSON.parse(job.summary_json)
+      : job.summary_json;
+
+    return (
+      <div className="space-y-6">
+        {/* Document Type & Category */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {summary.document_type && (
+            <div>
+              <h4 className="font-medium text-gray-900 mb-2">Document Type</h4>
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+                {summary.document_type}
+              </span>
+            </div>
+          )}
+
+          {summary.document_category && (
+            <div>
+              <h4 className="font-medium text-gray-900 mb-2">Category</h4>
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                {summary.document_category}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Correspondence Details */}
+        {summary.correspondence_details && (
+          <div>
+            <h4 className="font-medium text-gray-900 mb-3">Correspondence Details</h4>
+            <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+              {summary.correspondence_details.subject_matter && (
+                <p className="text-sm"><strong>Subject Matter:</strong> {summary.correspondence_details.subject_matter}</p>
+              )}
+              {summary.correspondence_details.urgency_level && (
+                <p className="text-sm"><strong>Urgency:</strong>
+                  <span className={`ml-2 px-2 py-1 rounded text-xs font-medium ${
+                    summary.correspondence_details.urgency_level === 'urgent' ? 'bg-red-100 text-red-800' :
+                    summary.correspondence_details.urgency_level === 'standard' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-green-100 text-green-800'
+                  }`}>
+                    {summary.correspondence_details.urgency_level}
+                  </span>
+                </p>
+              )}
+              {summary.correspondence_details.response_required && (
+                <p className="text-sm"><strong>Response Required:</strong> Yes</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Meeting Information */}
+        {summary.meeting_information && summary.meeting_information.meeting_type && (
+          <div>
+            <h4 className="font-medium text-gray-900 mb-3">Meeting Information</h4>
+            <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+              <p className="text-sm"><strong>Meeting Type:</strong> {summary.meeting_information.meeting_type}</p>
+              {summary.meeting_information.meeting_date && (
+                <p className="text-sm"><strong>Date:</strong> {new Date(summary.meeting_information.meeting_date).toLocaleDateString('en-GB')}</p>
+              )}
+              {summary.meeting_information.key_decisions && summary.meeting_information.key_decisions.length > 0 && (
+                <div>
+                  <p className="text-sm font-medium">Key Decisions:</p>
+                  <ul className="list-disc list-inside text-xs text-gray-600 ml-2">
+                    {summary.meeting_information.key_decisions.map((decision: string, index: number) => (
+                      <li key={index}>{decision}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Financial Information */}
+        {summary.financial_information && summary.financial_information.amounts_mentioned && summary.financial_information.amounts_mentioned.length > 0 && (
+          <div>
+            <h4 className="font-medium text-gray-900 mb-3">Financial Information</h4>
+            <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+              {summary.financial_information.amounts_mentioned.map((amount: any, index: number) => (
+                <p key={index} className="text-sm">
+                  <strong>{amount.description}:</strong> {amount.currency === 'GBP' ? '£' : ''}{amount.amount?.toLocaleString() || 'N/A'}
+                </p>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Key Issues */}
+        {summary.key_issues && summary.key_issues.length > 0 && (
+          <div>
+            <h4 className="font-medium text-gray-900 mb-3">Key Issues</h4>
+            <div className="space-y-2">
+              {summary.key_issues.map((issue: string, index: number) => (
+                <div key={index} className="border border-yellow-200 rounded-lg p-3 bg-yellow-50">
+                  <p className="text-sm text-yellow-900">{issue}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Recommended Actions */}
+        {summary.recommended_actions && summary.recommended_actions.length > 0 && (
+          <div>
+            <h4 className="font-medium text-gray-900 mb-3">Recommended Actions</h4>
+            <div className="space-y-2">
+              {summary.recommended_actions.map((action: string, index: number) => (
+                <div key={index} className="border border-blue-200 rounded-lg p-3 bg-blue-50">
+                  <p className="text-sm text-blue-900">{action}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Summary */}
+        {summary.summary && (
+          <div>
+            <h4 className="font-medium text-gray-900 mb-3">Summary</h4>
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <p className="text-sm text-green-900 whitespace-pre-wrap">{summary.summary}</p>
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
 
   const renderSummaryContent = () => {
@@ -447,7 +743,11 @@ export default function AnalysisDrawer({ job, onClose, onAttachToBuilding, categ
                   <Shield className="h-6 w-6 text-blue-600" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900">Compliance Analysis</h2>
+                  <h2 className="text-lg font-semibold text-gray-900">
+                  {category === 'compliance' ? 'Compliance Analysis' :
+                   category === 'major_works' ? 'Major Works Analysis' :
+                   'Document Analysis'}
+                </h2>
                   <p className="text-sm text-gray-500 truncate max-w-md">{job.filename}</p>
                 </div>
               </div>
@@ -499,22 +799,32 @@ export default function AnalysisDrawer({ job, onClose, onAttachToBuilding, categ
                     className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   >
                     <Sparkles className="h-4 w-4 mr-2" />
-                    Create Asset
+                    {category === 'compliance' ? 'Create Asset' :
+                     category === 'major_works' ? 'Create Project' :
+                     'File Document'}
                   </button>
                 )}
               </div>
               <div className="bg-gray-50 rounded-lg p-4">
-                {renderSummaryContent()}
+                {category === 'compliance' ? renderSummaryContent() :
+                 category === 'major_works' ? renderMajorWorksContent() :
+                 renderGeneralContent()}
               </div>
 
               {complianceAssetCreated && (
                 <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
                   <div className="flex items-center">
                     <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                    <span className="text-green-800 font-medium">Compliance asset created successfully</span>
+                    <span className="text-green-800 font-medium">
+                      {category === 'compliance' ? 'Compliance asset created successfully' :
+                       category === 'major_works' ? 'Major works project created successfully' :
+                       'Document filed successfully'}
+                    </span>
                   </div>
                   <p className="text-green-700 text-sm mt-1">
-                    Building compliance tracking and Outlook reminders have been set up.
+                    {category === 'compliance' ? 'Building compliance tracking and Outlook reminders have been set up.' :
+                     category === 'major_works' ? 'Project tracking and consultation management have been set up.' :
+                     'Document has been processed and filed for reference.'}
                   </p>
                 </div>
               )}
