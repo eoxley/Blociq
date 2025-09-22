@@ -16,6 +16,7 @@ import { AIContextHandler } from '../../../lib/ai-context-handler';
 import { logBuildingQuery, detectQueryContextType } from '../../../lib/ai/buildingQueryLogger';
 import { buildPrompt } from '../../../lib/buildPrompt';
 import { insertAiLog } from '../../../lib/supabase/ai_logs';
+import { fetchBuildingLeaseContext, isLeaseRelatedQuery } from '../../../lib/ai/leaseContextFormatter';
 
 export const runtime = "nodejs";
 
@@ -195,8 +196,30 @@ IMPORTANT EMAIL REPLY RULES:
   public: `You are BlocIQ, a helpful AI assistant for UK property management. Provide general advice about property management, compliance, and best practices. Keep responses informative but not building-specific.`,
   
   compliance: `You are BlocIQ, a UK property management AI assistant specializing in compliance and regulatory matters. Help with health and safety, fire safety, building regulations, and compliance tracking.`,
-  
-  leaseholder: `You are BlocIQ, a UK property management AI assistant specializing in leaseholder relations. Help with communication, service charge queries, maintenance requests, and leaseholder support.`
+
+  leaseholder: `You are BlocIQ, a UK property management AI assistant specializing in leaseholder relations. Help with communication, service charge queries, maintenance requests, and leaseholder support.`,
+
+  lease_analysis: `You are BlocIQ, a UK property management AI assistant specializing in lease analysis and clause interpretation. You help answer questions about lease terms, clauses, and building-wide policies.
+
+LEASE ANALYSIS GUIDELINES:
+- Answer based on actual lease data provided in the context
+- If information is missing or unclear, state this explicitly
+- When referencing specific clauses, mention which unit/lease they come from
+- If there are discrepancies between leases, highlight them clearly
+- Be precise about what is allowed, restricted, or requires consent
+- Always cite your sources (which lease/clause you're referencing)
+- If the question can't be answered from the lease data, suggest consulting the actual lease documents
+
+COMMON LEASE QUERIES:
+- Pet policies ("Are pets allowed?")
+- Subletting rules ("Can I sublet my flat?")
+- Alteration permissions ("Can I renovate?")
+- Insurance obligations ("Who insures the building?")
+- Business use ("Can I run a business from home?")
+- Ground rent and service charges
+- General lease terms and conditions
+
+Remember: Always reference specific lease clauses and units when providing answers.`
 };
 
 // Leak triage policy helpers
@@ -738,7 +761,16 @@ export async function POST(req: NextRequest) {
     
     // Determine context and build appropriate prompt
     const context = AIContextHandler.determineContext(prompt);
-    let systemPrompt = await AIContextHandler.buildPrompt(context, prompt, buildingContext);
+
+    // Check for lease-related queries and use specialized system prompt
+    let systemPrompt: string;
+    if (building_id && isLeaseRelatedQuery(prompt)) {
+      console.log('🏠 Using lease analysis system prompt for lease-related query');
+      systemPrompt = SYSTEM_PROMPTS.lease_analysis;
+    } else {
+      // Use the default context-based system prompt
+      systemPrompt = await AIContextHandler.buildPrompt(context, prompt, buildingContext);
+    }
 
     // Initialize OpenAI client
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -820,6 +852,22 @@ Notes & Instructions: ${buildingData.notes || 'No notes added yet'}
         }
       } catch (error) {
         console.warn('Could not fetch building context:', error);
+      }
+    }
+
+    // 📋 LEASE CONTEXT
+    // Add lease analysis context for lease-related queries
+    if (building_id && isLeaseRelatedQuery(prompt)) {
+      try {
+        console.log('🏠 Fetching lease context for lease-related query');
+        const leaseContext = await fetchBuildingLeaseContext(building_id, leaseholderId);
+
+        if (leaseContext && leaseContext.length > 0) {
+          buildingContext += `\n\n📋 LEASE ANALYSIS:\n${leaseContext}`;
+          console.log('✅ Lease context added to building context');
+        }
+      } catch (error) {
+        console.warn('Could not fetch lease context:', error);
       }
     }
 
