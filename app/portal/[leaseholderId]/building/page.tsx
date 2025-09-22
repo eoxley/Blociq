@@ -16,7 +16,15 @@ export default async function BuildingPage({ params }: BuildingPageProps) {
   const { data: lease } = await supabase
     .from('leases')
     .select(`
-      *,
+      id,
+      leaseholder_name,
+      building_id,
+      unit_number,
+      status,
+      start_date,
+      end_date,
+      ground_rent,
+      service_charge_percentage,
       buildings!inner(
         id,
         name,
@@ -28,8 +36,7 @@ export default async function BuildingPage({ params }: BuildingPageProps) {
         insurance_details,
         freeholder_name,
         freeholder_contact
-      ),
-      units(id, unit_number, floor, bedrooms, bathrooms, square_footage)
+      )
     `)
     .eq('id', params.leaseholderId)
     .single();
@@ -43,9 +50,7 @@ export default async function BuildingPage({ params }: BuildingPageProps) {
     );
   }
 
-  const pageTitle = lease.scope === 'unit'
-    ? `Unit ${lease.units?.unit_number || 'Overview'}`
-    : 'Building Overview';
+  const pageTitle = `Unit ${lease.unit_number || 'Overview'}`;
 
   return (
     <div className="space-y-6">
@@ -53,10 +58,7 @@ export default async function BuildingPage({ params }: BuildingPageProps) {
       <div className="bg-white rounded-lg shadow-sm p-6">
         <h1 className="text-2xl font-bold text-gray-900">{pageTitle}</h1>
         <p className="text-gray-600 mt-2">
-          {lease.scope === 'unit'
-            ? `Information about your unit and the building at ${lease.buildings.address || lease.buildings.name}`
-            : `Overview of ${lease.buildings.name} and its management`
-          }
+          Information about your unit and the building at {lease.buildings.address || lease.buildings.name}
         </p>
       </div>
 
@@ -66,8 +68,8 @@ export default async function BuildingPage({ params }: BuildingPageProps) {
         <div className="lg:col-span-2">
           <BuildingInfo
             building={lease.buildings}
-            unit={lease.units}
-            scope={lease.scope}
+            unit={{ unit_number: lease.unit_number }}
+            scope="unit"
           />
         </div>
 
@@ -84,7 +86,7 @@ export default async function BuildingPage({ params }: BuildingPageProps) {
 
         {/* Maintenance History */}
         <div className="lg:col-span-2">
-          <MaintenanceHistory buildingId={lease.building_id} scope={lease.scope} unitId={lease.unit_id} />
+          <MaintenanceHistory buildingId={lease.building_id} scope="unit" unitId={null} />
         </div>
       </div>
     </div>

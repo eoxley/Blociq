@@ -15,9 +15,16 @@ export default async function PortalDashboard({ params }: PortalDashboardProps) 
   const { data: lease } = await supabase
     .from('leases')
     .select(`
-      *,
-      buildings!inner(id, name, address),
-      units(id, unit_number, floor)
+      id,
+      leaseholder_name,
+      building_id,
+      unit_number,
+      status,
+      start_date,
+      end_date,
+      ground_rent,
+      service_charge_percentage,
+      buildings!inner(id, name, address)
     `)
     .eq('id', params.leaseholderId)
     .single();
@@ -39,7 +46,7 @@ export default async function PortalDashboard({ params }: PortalDashboardProps) 
           Welcome, {lease.leaseholder_name || 'Leaseholder'}
         </h1>
         <p className="text-gray-600 mt-2">
-          Here's an overview of your {lease.scope === 'unit' ? 'unit' : 'building'} information and recent activity.
+          Here's an overview of your unit information and recent activity.
         </p>
       </div>
 
@@ -58,7 +65,7 @@ export default async function PortalDashboard({ params }: PortalDashboardProps) 
 
         {/* Quick Actions */}
         <div className="lg:col-span-2">
-          <QuickActions leaseholderId={params.leaseholderId} scope={lease.scope} />
+          <QuickActions leaseholderId={params.leaseholderId} scope="unit" />
         </div>
       </div>
     </div>

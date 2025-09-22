@@ -15,9 +15,19 @@ export default async function AccountPage({ params }: AccountPageProps) {
   const { data: lease } = await supabase
     .from('leases')
     .select(`
-      *,
-      buildings!inner(id, name, address),
-      units(id, unit_number, floor)
+      id,
+      leaseholder_name,
+      building_id,
+      unit_number,
+      status,
+      start_date,
+      end_date,
+      ground_rent,
+      service_charge_percentage,
+      responsibilities,
+      restrictions,
+      rights,
+      buildings!inner(id, name, address)
     `)
     .eq('id', params.leaseholderId)
     .single();

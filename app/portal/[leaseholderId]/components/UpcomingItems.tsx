@@ -19,14 +19,18 @@ interface UpcomingItemsProps {
 export function UpcomingItems({ leaseholderId }: UpcomingItemsProps) {
   const [items, setItems] = useState<UpcomingItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const fetchUpcomingItems = async () => {
       try {
         const response = await fetch(`/api/portal/${leaseholderId}/upcoming`);
         if (response.ok) {
           const data = await response.json();
           setItems(data.items || []);
+        } else {
+          console.error('Failed to fetch upcoming items:', response.status, response.statusText);
         }
       } catch (error) {
         console.error('Failed to fetch upcoming items:', error);
@@ -40,13 +44,12 @@ export function UpcomingItems({ leaseholderId }: UpcomingItemsProps) {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    const now = new Date();
-    const diffInDays = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-
-    if (diffInDays === 0) return 'Today';
-    if (diffInDays === 1) return 'Tomorrow';
-    if (diffInDays < 7) return `In ${diffInDays} days`;
-    return date.toLocaleDateString();
+    // Use simpler formatting to avoid hydration mismatches
+    return date.toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
   };
 
   const getPriorityColor = (priority: string) => {
@@ -105,14 +108,26 @@ export function UpcomingItems({ leaseholderId }: UpcomingItemsProps) {
         </a>
       </div>
 
-      {items.length === 0 ? (
+      {!mounted ? (
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="animate-pulse">
+              <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+            </div>
+          ))}
+        </div>
+      ) : !Array.isArray(items) || items.length === 0 ? (
         <div className="text-center py-6">
           <CalendarDaysIcon className="w-8 h-8 text-gray-400 mx-auto mb-2" />
           <p className="text-gray-500 text-sm">No upcoming items</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {items.slice(0, 4).map((item) => (
+          {items
+            .filter(item => item && item.id && item.title)
+            .slice(0, 4)
+            .map((item) => (
             <div key={item.id} className="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50">
               <div className="flex-shrink-0 text-lg">
                 {getTypeIcon(item.type)}
@@ -120,14 +135,14 @@ export function UpcomingItems({ leaseholderId }: UpcomingItemsProps) {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center space-x-2">
                   <p className="text-sm font-medium text-gray-900 truncate">
-                    {item.title}
+                    {item.title || 'No title'}
                   </p>
                   <span className={`px-2 py-1 text-xs rounded-full border ${getPriorityColor(item.priority)}`}>
-                    {item.priority}
+                    {item.priority || 'medium'}
                   </span>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  {formatDate(item.date)}
+                  {item.date ? formatDate(item.date) : 'Date TBD'}
                 </p>
                 {item.description && (
                   <p className="text-xs text-gray-600 mt-1 line-clamp-1">

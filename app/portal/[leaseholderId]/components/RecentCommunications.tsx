@@ -19,14 +19,18 @@ interface RecentCommunicationsProps {
 export function RecentCommunications({ leaseholderId }: RecentCommunicationsProps) {
   const [communications, setCommunications] = useState<Communication[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const fetchCommunications = async () => {
       try {
         const response = await fetch(`/api/portal/${leaseholderId}/communications?limit=5`);
         if (response.ok) {
           const data = await response.json();
           setCommunications(data.communications || []);
+        } else {
+          console.error('Failed to fetch communications:', response.status, response.statusText);
         }
       } catch (error) {
         console.error('Failed to fetch communications:', error);
@@ -40,16 +44,12 @@ export function RecentCommunications({ leaseholderId }: RecentCommunicationsProp
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    const now = new Date();
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-
-    if (diffInHours < 24) {
-      return `${diffInHours}h ago`;
-    } else if (diffInHours < 168) { // 7 days
-      return `${Math.floor(diffInHours / 24)}d ago`;
-    } else {
-      return date.toLocaleDateString();
-    }
+    // Use simpler formatting to avoid hydration mismatches
+    return date.toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
   };
 
   if (loading) {
@@ -80,24 +80,35 @@ export function RecentCommunications({ leaseholderId }: RecentCommunicationsProp
         </a>
       </div>
 
-      {communications.length === 0 ? (
+      {!mounted ? (
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="animate-pulse">
+              <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+            </div>
+          ))}
+        </div>
+      ) : !Array.isArray(communications) || communications.length === 0 ? (
         <div className="text-center py-6">
           <ChatBubbleLeftRightIcon className="w-8 h-8 text-gray-400 mx-auto mb-2" />
           <p className="text-gray-500 text-sm">No recent communications</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {communications.map((comm) => (
+          {communications
+            .filter(comm => comm && comm.id && comm.subject)
+            .map((comm) => (
             <div key={comm.id} className="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50">
               <div className="flex-shrink-0">
                 <EnvelopeIcon className="w-5 h-5 text-gray-400" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 truncate">
-                  {comm.subject}
+                  {comm.subject || 'No subject'}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
-                  {comm.direction === 'incoming' ? 'Received' : 'Sent'} • {formatDate(comm.created_at)}
+                  {comm.direction === 'incoming' ? 'Received' : 'Sent'} • {comm.created_at ? formatDate(comm.created_at) : 'Date unknown'}
                 </p>
                 {comm.content && (
                   <p className="text-xs text-gray-600 mt-1 line-clamp-2">

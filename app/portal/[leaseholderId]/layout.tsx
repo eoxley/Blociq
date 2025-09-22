@@ -28,11 +28,12 @@ export default async function PortalLayout({
     .select(`
       id,
       leaseholder_name,
-      scope,
       building_id,
-      unit_id,
-      buildings!inner(id, name, address),
-      units(id, unit_number, floor)
+      unit_number,
+      status,
+      start_date,
+      end_date,
+      buildings!inner(id, name, address)
     `)
     .eq('id', params.leaseholderId)
     .single();
@@ -61,14 +62,14 @@ export default async function PortalLayout({
       <PortalHeader
         leaseholderName={lease.leaseholder_name}
         buildingName={lease.buildings.name}
-        unitNumber={lease.units?.unit_number}
-        scope={lease.scope}
+        unitNumber={lease.unit_number}
+        scope="unit"
       />
 
       <div className="flex">
         <PortalNavigation
           leaseholderId={params.leaseholderId}
-          scope={lease.scope}
+          scope="unit"
         />
 
         <main className="flex-1 p-6">

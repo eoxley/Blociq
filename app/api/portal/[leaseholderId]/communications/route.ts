@@ -40,13 +40,14 @@ export async function GET(
         type,
         subject,
         content,
-        direction,
-        created_at,
+        sent_at,
         sent_by,
-        building_id
+        building_id,
+        leaseholder_id,
+        status
       `)
       .eq('building_id', lease.building_id)
-      .order('created_at', { ascending: false })
+      .order('sent_at', { ascending: false })
       .limit(limit);
 
     if (commError) {
@@ -57,9 +58,20 @@ export async function GET(
       }, { status: 500 });
     }
 
+    // Transform communications to match expected interface
+    const transformedCommunications = (communications || []).map(comm => ({
+      id: comm.id,
+      type: comm.type,
+      subject: comm.subject,
+      content: comm.content,
+      created_at: comm.sent_at,
+      direction: 'outgoing', // All communications in log are outgoing by default
+      status: comm.status
+    }));
+
     return NextResponse.json({
       success: true,
-      communications: communications || []
+      communications: transformedCommunications
     });
 
   } catch (error) {
