@@ -2,6 +2,7 @@ import { ReactNode } from 'react'
 import { redirect } from 'next/navigation'
 import DashboardSidebar from '@/components/DashboardSidebar'
 import MobileNavigation from '@/components/MobileNavigation'
+import FloatingAskBlocIQ from '@/components/FloatingAskBlocIQ'
 import { NavigationProvider } from '@/components/NavigationContext'
 import { AgencyProvider } from '@/hooks/useAgency'
 import { LeaseNotificationProvider } from '@/contexts/LeaseNotificationContext'
@@ -58,6 +59,9 @@ export default async function DashboardLayout({
                   </div>
                 </div>
               </main>
+
+              {/* Floating Ask BlocIQ Widget */}
+              <FloatingAskBlocIQ />
             </div>
             </div>
           </LeaseNotificationProvider>
