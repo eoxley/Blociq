@@ -8,6 +8,8 @@
 import { createClient } from '@/utils/supabase/server';
 import { parseAddinIntent, extractBuildingContext } from '../intent/parseAddinIntent';
 import { buildReplyContext, generateReplyResponse } from '../prompt/addinPrompt';
+import { getFounderGuidance } from '@/lib/ai/founder';
+import { buildAIContext } from '@/lib/buildAIContext';
 
 export interface ReplyAdapterResult {
   subjectSuggestion: string;
@@ -68,12 +70,21 @@ export function createAddinReplyAdapter() {
         // Generate reply body
         const bodyHtml = await generateReplyBody(context, replyContext);
         
-        return generateReplyResponse(
+        const response = generateReplyResponse(
           subjectSuggestion,
           bodyHtml,
           replyContext.replyFacts,
           replyContext.sources
         );
+
+        // Add confidence level to metadata
+        return {
+          ...response,
+          metadata: {
+            ...response.metadata,
+            confidence: 'high' as const
+          }
+        };
         
       } catch (error) {
         console.error('Reply Adapter error:', error);
@@ -180,15 +191,72 @@ async function generateContextualReply(
   }
 
   try {
-    // Build BlocIQ-specific knowledge context
-    let blociqContext = 'BlocIQ BUILDING KNOWLEDGE:\n';
+    // Build comprehensive BlocIQ context
+    let blociqContext = 'BlocIQ KNOWLEDGE BASE:\n\n';
 
-    // Add building context
-    if (buildingContext?.buildingName) {
-      blociqContext += `Building: ${buildingContext.buildingName}\n`;
-      if (buildingContext.address) {
-        blociqContext += `Address: ${buildingContext.address}\n`;
+    // Get founder knowledge for email topic
+    const emailContent = `${outlookContext.subject || ''} ${outlookContext.bodyPreview || ''}`.toLowerCase();
+    let founderGuidance = '';
+
+    try {
+      const topicHints = [];
+      if (emailContent.includes('section 20') || emailContent.includes('s20')) {
+        topicHints.push('section20', 'consultation');
       }
+      if (emailContent.includes('repair') || emailContent.includes('maintenance')) {
+        topicHints.push('repairs', 'maintenance');
+      }
+      if (emailContent.includes('service charge')) {
+        topicHints.push('service_charge', 'financials');
+      }
+      if (emailContent.includes('compliance') || emailContent.includes('safety')) {
+        topicHints.push('compliance', 'safety');
+      }
+      if (emailContent.includes('insurance')) {
+        topicHints.push('insurance', 'claims');
+      }
+
+      const guidance = await getFounderGuidance({
+        topicHints,
+        contexts: ['core', 'complaints'],
+        limit: 3
+      });
+
+      if (guidance && typeof guidance === 'string') {
+        founderGuidance = guidance;
+      } else if (Array.isArray(guidance) && guidance.length > 0) {
+        founderGuidance = guidance.map((item: any) => item.content || item).join('\n\n');
+      }
+    } catch (error) {
+      console.warn('Could not fetch founder guidance:', error);
+    }
+
+    // Add founder knowledge to context
+    if (founderGuidance) {
+      blociqContext += `FOUNDER GUIDANCE:\n${founderGuidance}\n\n`;
+    }
+
+    // Get comprehensive building context if building ID is available
+    if (buildingContext?.buildingId) {
+      try {
+        const fullBuildingContext = await buildAIContext(buildingContext.buildingId);
+        if (fullBuildingContext) {
+          blociqContext += `BUILDING DATA:\n${fullBuildingContext}\n\n`;
+        }
+      } catch (error) {
+        console.warn('Could not fetch comprehensive building context:', error);
+        // Fall back to basic building context
+        if (buildingContext?.buildingName) {
+          blociqContext += `Building: ${buildingContext.buildingName}\n`;
+          if (buildingContext.unitNumber) {
+            blociqContext += `Unit: ${buildingContext.unitNumber}\n`;
+          }
+        }
+      }
+    } else if (buildingContext?.buildingName) {
+      // Basic building context if no ID available
+      blociqContext += `BUILDING CONTEXT:\n`;
+      blociqContext += `Building: ${buildingContext.buildingName}\n`;
       if (buildingContext.unitNumber) {
         blociqContext += `Unit: ${buildingContext.unitNumber}\n`;
       }
@@ -218,11 +286,11 @@ async function generateContextualReply(
     }
 
     // If no specific BlocIQ data, add generic property management context
-    if (!buildingContext && !leaseSummary) {
+    if (!buildingContext && !leaseSummary && !founderGuidance) {
       blociqContext += 'No specific building or lease data available in BlocIQ system.\n';
     }
 
-    // Use BlocIQ-aware prompt
+    // Use BlocIQ-aware prompt with founder guidance
     const prompt = `You are the BlocIQ Outlook Add-in Assistant for UK leasehold block management.
 
 ${blociqContext}
@@ -234,16 +302,18 @@ Content: ${outlookContext.bodyPreview || 'No preview available'}
 
 IMPORTANT INSTRUCTIONS:
 1. Generate a professional British English reply
-2. Use ONLY the BlocIQ building and lease data provided above
-3. If specific information isn't in the BlocIQ data, state "Not specified in the lease/building records"
-4. Reference specific lease clauses, repair obligations, or building details when relevant
-5. Stay within UK leasehold block management domain
-6. Be helpful but factual - never invent information
-7. If the email asks about repairs, service charges, Section 20, or compliance, use the lease data
-8. Acknowledge receipt and address main points professionally
-9. Return only the main body content (no greeting or signature)
+2. Use the BlocIQ knowledge base provided above - including founder guidance, building data, and lease information
+3. If founder guidance is provided, incorporate relevant best practices and expert insights
+4. If specific information isn't in the BlocIQ data, state "Not specified in the lease/building records"
+5. Reference specific lease clauses, repair obligations, building details, or compliance information when relevant
+6. Stay within UK leasehold block management domain
+7. Be helpful but factual - never invent information
+8. For repairs, service charges, Section 20, compliance, or safety matters, use the comprehensive data provided
+9. Follow any relevant founder guidance for tone, approach, and professional standards
+10. Acknowledge receipt and address main points professionally
+11. Return only the main body content (no greeting or signature)
 
-Generate an appropriate reply using BlocIQ knowledge:`;
+Generate an appropriate reply using the complete BlocIQ knowledge base:`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
