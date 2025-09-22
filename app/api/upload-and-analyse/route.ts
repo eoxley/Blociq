@@ -172,13 +172,26 @@ export async function POST(request: NextRequest) {
     console.log("✅ Supabase client created");
 
     // Get current user for storage path
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
-      console.error('❌ Authentication error:', userError)
+    let user;
+    try {
+      const { data: { user: authUser }, error: userError } = await supabase.auth.getUser()
+      if (userError || !authUser) {
+        console.error('❌ Authentication error:', userError)
+        return NextResponse.json(
+          {
+            error: 'Authentication required',
+            details: userError?.message || 'Auth session missing!'
+          },
+          { status: 401, headers }
+        )
+      }
+      user = authUser;
+    } catch (authError) {
+      console.error('❌ Authentication error:', authError)
       return NextResponse.json(
         {
           error: 'Authentication required',
-          details: userError?.message || 'User not found'
+          details: authError instanceof Error ? authError.message : 'Auth session missing!'
         },
         { status: 401, headers }
       )
