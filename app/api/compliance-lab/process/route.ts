@@ -127,6 +127,22 @@ export async function POST(req: NextRequest) {
       })
       .eq('id', jobId);
 
+    // Log the analysis completion for audit trail
+    try {
+      await serviceSupabase
+        .from('ai_analysis_logs')
+        .insert({
+          document_job_id: jobId,
+          analysis_type: 'compliance_document',
+          analysis_results: analysisResult.summary,
+          created_at: new Date().toISOString(),
+          user_confirmed: false, // Will be updated when user confirms
+          status: 'awaiting_confirmation'
+        });
+    } catch (logError) {
+      console.warn('⚠️ Could not create analysis log:', logError.message);
+    }
+
     console.log('🎉 Compliance document processing completed successfully for job:', jobId);
 
     return NextResponse.json({

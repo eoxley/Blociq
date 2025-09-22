@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { DocumentJob } from '../ComplianceLabClient';
-import { X, Building, Home, Link, Shield, AlertTriangle, CheckCircle, Clock, FileText } from 'lucide-react';
+import { X, Building, Home, Link, Shield, AlertTriangle, CheckCircle, Clock, FileText, Sparkles } from 'lucide-react';
+import ComplianceConfirmationModal from './ComplianceConfirmationModal';
+import { toast } from 'sonner';
 
 interface AnalysisDrawerProps {
   job: DocumentJob;
@@ -30,6 +32,8 @@ export default function AnalysisDrawer({ job, onClose, onAttachToBuilding, categ
   const [selectedUnit, setSelectedUnit] = useState<string>('');
   const [isAttaching, setIsAttaching] = useState(false);
   const [showAttachForm, setShowAttachForm] = useState(false);
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [complianceAssetCreated, setComplianceAssetCreated] = useState(false);
 
   useEffect(() => {
     fetchBuildings();
@@ -79,6 +83,77 @@ export default function AnalysisDrawer({ job, onClose, onAttachToBuilding, categ
     }
   };
 
+  const handleCreateComplianceAsset = () => {
+    setShowConfirmationModal(true);
+  };
+
+  const handleConfirmCompliance = async (buildingId: string) => {
+    try {
+      const summary = typeof job.summary_json === 'string'
+        ? JSON.parse(job.summary_json)
+        : job.summary_json;
+
+      const response = await fetch('/api/compliance-lab/confirm', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          document_id: job.id,
+          building_id: buildingId,
+          analysis_results: summary,
+          confirmed: true
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setComplianceAssetCreated(true);
+        setShowConfirmationModal(false);
+
+        toast.success(
+          `Compliance asset created successfully! ${result.urgent_findings_count > 0 ?
+            `${result.urgent_findings_count} urgent finding alert(s) created.` : ''} ${result.outlook_event_created ?
+            'Outlook reminder set.' : ''}`
+        );
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create compliance asset');
+      }
+    } catch (error) {
+      console.error('Error creating compliance asset:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to create compliance asset');
+    }
+  };
+
+  const handleCancelCompliance = async () => {
+    try {
+      const summary = typeof job.summary_json === 'string'
+        ? JSON.parse(job.summary_json)
+        : job.summary_json;
+
+      // Log the declined action
+      await fetch('/api/compliance-lab/confirm', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          document_id: job.id,
+          building_id: null,
+          analysis_results: summary,
+          confirmed: false
+        })
+      });
+
+      setShowConfirmationModal(false);
+      toast.info('Compliance asset creation declined');
+    } catch (error) {
+      console.error('Error logging declined action:', error);
+      setShowConfirmationModal(false);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-GB', {
       day: 'numeric',
@@ -97,6 +172,19 @@ export default function AnalysisDrawer({ job, onClose, onAttachToBuilding, categ
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  const getClassificationColor = (classification: string) => {
+    switch (classification?.toUpperCase()) {
+      case 'C1': return 'text-red-600 bg-red-50 border-red-200';
+      case 'C2': return 'text-orange-600 bg-orange-50 border-orange-200';
+      case 'C3': return 'text-yellow-600 bg-yellow-50 border-yellow-200';
+      case 'FI': return 'text-blue-600 bg-blue-50 border-blue-200';
+      case 'HIGH': return 'text-red-600 bg-red-50 border-red-200';
+      case 'MEDIUM': return 'text-orange-600 bg-orange-50 border-orange-200';
+      case 'LOW': return 'text-green-600 bg-green-50 border-green-200';
+      default: return 'text-gray-600 bg-gray-50 border-gray-200';
+    }
+  };
+
   const renderSummaryContent = () => {
     if (!job.summary_json) {
       return (
@@ -113,32 +201,220 @@ export default function AnalysisDrawer({ job, onClose, onAttachToBuilding, categ
 
     return (
       <div className="space-y-6">
-        {summary.document_type && (
-          <div>
-            <h4 className="font-medium text-gray-900 mb-2">Document Type</h4>
-            <p className="text-gray-700">{summary.document_type}</p>
-          </div>
-        )}
+        {/* Document Type & Status */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {summary.document_type && (
+            <div>
+              <h4 className="font-medium text-gray-900 mb-2">Document Type</h4>
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                {summary.document_type}
+              </span>
+            </div>
+          )}
 
-        {summary.compliance_status && (
+          {summary.compliance_status && (
+            <div>
+              <h4 className="font-medium text-gray-900 mb-2">Compliance Status</h4>
+              <div className="flex items-center space-x-2">
+                {summary.compliance_status === 'satisfactory' ? (
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                ) : summary.compliance_status === 'unsatisfactory' ? (
+                  <AlertTriangle className="h-5 w-5 text-red-500" />
+                ) : (
+                  <Clock className="h-5 w-5 text-yellow-500" />
+                )}
+                <span className="capitalize text-gray-700 font-medium">{summary.compliance_status}</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Property Details */}
+        {summary.property_details && (
           <div>
-            <h4 className="font-medium text-gray-900 mb-2">Compliance Status</h4>
-            <div className="flex items-center space-x-2">
-              {summary.compliance_status === 'compliant' ? (
-                <CheckCircle className="h-5 w-5 text-green-500" />
-              ) : summary.compliance_status === 'non-compliant' ? (
-                <AlertTriangle className="h-5 w-5 text-red-500" />
-              ) : (
-                <Clock className="h-5 w-5 text-yellow-500" />
+            <h4 className="font-medium text-gray-900 mb-3">Property Details</h4>
+            <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+              {summary.property_details.address && (
+                <p className="text-sm"><strong>Address:</strong> {summary.property_details.address}</p>
               )}
-              <span className="capitalize text-gray-700">{summary.compliance_status}</span>
+              {summary.property_details.description && (
+                <p className="text-sm"><strong>Description:</strong> {summary.property_details.description}</p>
+              )}
+              {summary.property_details.client_details && (
+                <p className="text-sm"><strong>Client:</strong> {summary.property_details.client_details}</p>
+              )}
             </div>
           </div>
         )}
 
+        {/* Inspection Details */}
+        {summary.inspection_details && (
+          <div>
+            <h4 className="font-medium text-gray-900 mb-3">Inspection Details</h4>
+            <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+              {summary.inspection_details.inspection_date && (
+                <p className="text-sm"><strong>Inspection Date:</strong> {new Date(summary.inspection_details.inspection_date).toLocaleDateString('en-GB')}</p>
+              )}
+              {summary.inspection_details.next_inspection_due && (
+                <p className="text-sm"><strong>Next Inspection Due:</strong> {new Date(summary.inspection_details.next_inspection_due).toLocaleDateString('en-GB')}</p>
+              )}
+              {summary.inspection_details.inspector_name && (
+                <p className="text-sm"><strong>Inspector:</strong> {summary.inspection_details.inspector_name}</p>
+              )}
+              {summary.inspection_details.inspector_company && (
+                <p className="text-sm"><strong>Company:</strong> {summary.inspection_details.inspector_company}</p>
+              )}
+              {summary.inspection_details.certificate_number && (
+                <p className="text-sm"><strong>Certificate Number:</strong> {summary.inspection_details.certificate_number}</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Key Findings */}
         {summary.key_findings && summary.key_findings.length > 0 && (
           <div>
-            <h4 className="font-medium text-gray-900 mb-2">Key Findings</h4>
+            <h4 className="font-medium text-gray-900 mb-3">Key Findings</h4>
+            <div className="space-y-3">
+              {summary.key_findings.map((finding: any, index: number) => (
+                <div key={index} className="border rounded-lg p-3">
+                  {typeof finding === 'object' ? (
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className={`px-2 py-1 rounded text-xs font-medium border ${getClassificationColor(finding.classification)}`}>
+                          {finding.classification}
+                        </span>
+                        {finding.priority && (
+                          <span className="text-xs text-gray-500 uppercase font-medium">{finding.priority}</span>
+                        )}
+                      </div>
+                      <p className="text-sm font-medium text-gray-900 mb-1">{finding.observation}</p>
+                      {finding.location && <p className="text-xs text-gray-600 mb-1">Location: {finding.location}</p>}
+                      {finding.action_required && <p className="text-xs text-gray-700">Action: {finding.action_required}</p>}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-700">{finding}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Test Results (for EICR) */}
+        {summary.test_results && (
+          <div>
+            <h4 className="font-medium text-gray-900 mb-3">Test Results</h4>
+            <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+              {summary.test_results.overall_condition && (
+                <p className="text-sm"><strong>Overall Condition:</strong>
+                  <span className={`ml-2 px-2 py-1 rounded text-xs font-medium ${
+                    summary.test_results.overall_condition === 'satisfactory'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {summary.test_results.overall_condition}
+                  </span>
+                </p>
+              )}
+              {summary.test_results.insulation_resistance && (
+                <p className="text-sm"><strong>Insulation Resistance:</strong> {summary.test_results.insulation_resistance}</p>
+              )}
+              {summary.test_results.earth_fault_readings && (
+                <p className="text-sm"><strong>Earth Fault Readings:</strong> {summary.test_results.earth_fault_readings}</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Recommendations */}
+        {summary.recommendations && summary.recommendations.length > 0 && (
+          <div>
+            <h4 className="font-medium text-gray-900 mb-3">Recommendations</h4>
+            <div className="space-y-3">
+              {summary.recommendations.map((rec: any, index: number) => (
+                <div key={index} className="border border-blue-200 rounded-lg p-3 bg-blue-50">
+                  {typeof rec === 'object' ? (
+                    <div>
+                      <p className="text-sm font-medium text-blue-900 mb-1">{rec.action}</p>
+                      {rec.reason && <p className="text-xs text-blue-700 mb-1">Reason: {rec.reason}</p>}
+                      {rec.timeframe && <p className="text-xs text-blue-600">Timeframe: {rec.timeframe}</p>}
+                      {rec.regulation_reference && (
+                        <p className="text-xs text-blue-600 mt-1">Reference: {rec.regulation_reference}</p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-blue-900">{rec}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Risk Assessment */}
+        {summary.risk_assessment && (
+          <div>
+            <h4 className="font-medium text-gray-900 mb-3">Risk Assessment</h4>
+            <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+              {summary.risk_assessment.overall_risk && (
+                <p className="text-sm"><strong>Overall Risk:</strong>
+                  <span className={`ml-2 px-2 py-1 rounded text-xs font-medium ${getClassificationColor(summary.risk_assessment.overall_risk)}`}>
+                    {summary.risk_assessment.overall_risk.toUpperCase()}
+                  </span>
+                </p>
+              )}
+              {summary.risk_assessment.immediate_hazards && summary.risk_assessment.immediate_hazards.length > 0 && (
+                <div>
+                  <p className="text-sm font-medium text-red-700 mb-1">Immediate Hazards:</p>
+                  <ul className="list-disc list-inside text-xs text-red-600 ml-2">
+                    {summary.risk_assessment.immediate_hazards.map((hazard: string, index: number) => (
+                      <li key={index}>{hazard}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Regulatory Compliance */}
+        {summary.regulatory_compliance && (
+          <div>
+            <h4 className="font-medium text-gray-900 mb-3">Regulatory Compliance</h4>
+            <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+              {summary.regulatory_compliance.meets_current_standards !== undefined && (
+                <p className="text-sm"><strong>Meets Current Standards:</strong>
+                  <span className={`ml-2 px-2 py-1 rounded text-xs font-medium ${
+                    summary.regulatory_compliance.meets_current_standards
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {summary.regulatory_compliance.meets_current_standards ? 'Yes' : 'No'}
+                  </span>
+                </p>
+              )}
+              {summary.regulatory_compliance.relevant_regulations && (
+                <p className="text-sm"><strong>Relevant Regulations:</strong> {summary.regulatory_compliance.relevant_regulations.join(', ')}</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Summary */}
+        {summary.summary && (
+          <div>
+            <h4 className="font-medium text-gray-900 mb-3">Summary</h4>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-sm text-blue-900 whitespace-pre-wrap">{summary.summary}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Legacy format support */}
+        {summary.key_findings && typeof summary.key_findings[0] === 'string' && (
+          <div>
+            <h4 className="font-medium text-gray-900 mb-2">Key Findings (Legacy)</h4>
             <ul className="list-disc list-inside space-y-1 text-gray-700">
               {summary.key_findings.map((finding: string, index: number) => (
                 <li key={index}>{finding}</li>
@@ -151,24 +427,6 @@ export default function AnalysisDrawer({ job, onClose, onAttachToBuilding, categ
           <div>
             <h4 className="font-medium text-gray-900 mb-2">Expiry Date</h4>
             <p className="text-gray-700">{new Date(summary.expiry_date).toLocaleDateString('en-GB')}</p>
-          </div>
-        )}
-
-        {summary.recommendations && summary.recommendations.length > 0 && (
-          <div>
-            <h4 className="font-medium text-gray-900 mb-2">Recommendations</h4>
-            <ul className="list-disc list-inside space-y-1 text-gray-700">
-              {summary.recommendations.map((rec: string, index: number) => (
-                <li key={index}>{rec}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {summary.summary && (
-          <div>
-            <h4 className="font-medium text-gray-900 mb-2">Summary</h4>
-            <p className="text-gray-700 whitespace-pre-wrap">{summary.summary}</p>
           </div>
         )}
       </div>
@@ -233,10 +491,33 @@ export default function AnalysisDrawer({ job, onClose, onAttachToBuilding, categ
 
             {/* Analysis Results */}
             <div className="mb-8">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Analysis Results</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900">Analysis Results</h3>
+                {job.status === 'READY' && !complianceAssetCreated && (
+                  <button
+                    onClick={handleCreateComplianceAsset}
+                    className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Create Asset
+                  </button>
+                )}
+              </div>
               <div className="bg-gray-50 rounded-lg p-4">
                 {renderSummaryContent()}
               </div>
+
+              {complianceAssetCreated && (
+                <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-center">
+                    <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                    <span className="text-green-800 font-medium">Compliance asset created successfully</span>
+                  </div>
+                  <p className="text-green-700 text-sm mt-1">
+                    Building compliance tracking and Outlook reminders have been set up.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Attach to Building */}
@@ -326,6 +607,16 @@ export default function AnalysisDrawer({ job, onClose, onAttachToBuilding, categ
           </div>
         </div>
       </div>
+
+      {/* Compliance Confirmation Modal */}
+      <ComplianceConfirmationModal
+        analysisData={job.summary_json ? (typeof job.summary_json === 'string' ? JSON.parse(job.summary_json) : job.summary_json) : null}
+        buildingId={job.linked_building_id}
+        buildingName={job.linked_building_id ? buildings.find(b => b.id === job.linked_building_id)?.name : undefined}
+        onConfirm={handleConfirmCompliance}
+        onCancel={handleCancelCompliance}
+        isVisible={showConfirmationModal}
+      />
     </div>
   );
 }

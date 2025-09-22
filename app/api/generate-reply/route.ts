@@ -111,8 +111,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Use the existing addin reply adapter with resolved context
+    // Pass the actual email content as userInput instead of a generic string
+    const emailContent = bodyPreview || `Subject: ${subject}`;
     const replyResult = await addinReplyAdapter({
-      userInput: 'Generate a professional reply to this email',
+      userInput: emailContent,
       outlookContext,
       buildingContext,
       leaseSummary,
