@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
 
     // Parse the request body
     const body = await req.json();
-    const { building_id, compliance_asset_id } = body;
+    const { building_id, asset_id } = body;
 
     if (!building_id) {
       return NextResponse.json({ 
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
 
     // Fetch compliance asset details if specified
     let assetDetails = null;
-    if (compliance_asset_id) {
+    if (asset_id) {
       const { data: buildingAsset, error: assetError } = await supabase
         .from("building_assets")
         .select(`
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
           )
         `)
         .eq("building_id", parseInt(building_id))
-        .eq("compliance_item_id", parseInt(compliance_asset_id))
+        .eq("compliance_item_id", parseInt(asset_id))
         .single();
 
       if (!assetError && buildingAsset) {
@@ -174,7 +174,7 @@ BlocIQ Compliance System`;
         .from("compliance_reminders")
         .insert({
           building_id: parseInt(building_id),
-          compliance_item_id: compliance_asset_id ? parseInt(compliance_asset_id) : null,
+          compliance_item_id: asset_id ? parseInt(asset_id) : null,
           reminder_type: 'overdue_reminder',
           message: emailBody,
           sent_to: managerEmail,
@@ -191,7 +191,7 @@ BlocIQ Compliance System`;
     }
 
     // Update building asset notes to record reminder sent
-    if (compliance_asset_id) {
+    if (asset_id) {
       const { error: updateError } = await supabase
         .from("building_assets")
         .update({ 
@@ -199,7 +199,7 @@ BlocIQ Compliance System`;
           updated_at: new Date().toISOString()
         })
         .eq("building_id", parseInt(building_id))
-        .eq("compliance_item_id", parseInt(compliance_asset_id));
+        .eq("compliance_item_id", parseInt(asset_id));
 
       if (updateError) {
         console.warn("⚠️ Could not update building asset notes:", updateError);

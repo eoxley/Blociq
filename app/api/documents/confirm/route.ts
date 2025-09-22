@@ -173,11 +173,11 @@ async function handleComplianceConfirmation(serviceSupabase: any, user: any, doc
 
   const buildingAssetData = {
     building_id: building_id,
-    compliance_asset_id: complianceAsset.id,
-    last_completed_date: analysis_results.inspection_details?.inspection_date || new Date().toISOString().split('T')[0],
+    asset_id: complianceAsset.id,
+    last_renewed_date: analysis_results.inspection_details?.inspection_date || new Date().toISOString().split('T')[0],
     next_due_date: analysis_results.inspection_details?.next_inspection_due,
     status: complianceStatus,
-    document_id: document_id,
+    latest_document_id: document_id,
     contractor: analysis_results.inspection_details?.inspector_company || analysis_results.inspection_details?.inspector_name,
     notes: `${analysis_results.document_type} - ${analysis_results.compliance_status}. Certificate: ${analysis_results.inspection_details?.certificate_number || 'N/A'}`,
     updated_at: new Date().toISOString()
@@ -187,7 +187,7 @@ async function handleComplianceConfirmation(serviceSupabase: any, user: any, doc
   const { data: buildingAsset, error: buildingAssetError } = await serviceSupabase
     .from('building_compliance_assets')
     .upsert(buildingAssetData, {
-      onConflict: 'building_id,compliance_asset_id',
+      onConflict: 'building_id,asset_id',
       ignoreDuplicates: false
     })
     .select('id')
@@ -212,7 +212,7 @@ async function handleComplianceConfirmation(serviceSupabase: any, user: any, doc
 
     const alertsData = urgentFindings.map((finding: any) => ({
       building_id: building_id,
-      compliance_asset_id: complianceAsset.id,
+      asset_id: complianceAsset.id,
       alert_type: finding.classification === 'C1' ? 'immediate_danger' : 'potentially_dangerous',
       alert_message: `${finding.classification}: ${finding.observation}`,
       finding_details: finding,
@@ -256,7 +256,7 @@ async function handleComplianceConfirmation(serviceSupabase: any, user: any, doc
     message: 'Compliance asset created successfully',
     category: 'compliance',
     building_asset_id: buildingAsset.id,
-    compliance_asset_id: complianceAsset.id,
+    asset_id: complianceAsset.id,
     urgent_findings_count: urgentFindings.length,
     outlook_event_created: outlookEventCreated,
     next_inspection_due: analysis_results.inspection_details?.next_inspection_due
@@ -277,7 +277,7 @@ async function handleMajorWorksConfirmation(serviceSupabase: any, user: any, doc
   // Create major works project record
   const projectData = {
     building_id: building_id,
-    document_id: document_id,
+    latest_document_id: document_id,
     project_type: analysis_results.document_type,
     stage: analysis_results.stage || 'NOI',
     description: analysis_results.project_description || `${analysis_results.document_type} - ${analysis_results.stage || 'Stage unknown'}`,
@@ -322,7 +322,7 @@ async function handleGeneralConfirmation(serviceSupabase: any, user: any, docume
 
   // For general documents, we might just want to update metadata or create a filing record
   const filingData = {
-    document_id: document_id,
+    latest_document_id: document_id,
     building_id: building_id || null,
     document_type: analysis_results.document_type,
     category: 'general',

@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
     // Now create building compliance assets for this building
     const buildingAssets = basicAssets.map(asset => ({
       building_id: buildingId,
-      compliance_asset_id: asset.id,
+      asset_id: asset.id,
       status: 'not_applied',
       next_due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
       notes: 'Auto-created during setup',
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
     const { data: createdBuildingAssets, error: buildingAssetError } = await supabase
       .from('building_compliance_assets')
       .upsert(buildingAssets, { 
-        onConflict: 'building_id,compliance_asset_id',
+        onConflict: 'building_id,asset_id',
         ignoreDuplicates: true 
       })
       .select();

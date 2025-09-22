@@ -32,7 +32,7 @@ export async function GET() {
 
     const { data: buildingComplianceAssets, error: buildingAssetsError } = await supabase
       .from('building_compliance_assets')
-      .select('id, building_id, compliance_asset_id')
+      .select('id, building_id, asset_id')
       .limit(1)
 
     return NextResponse.json({

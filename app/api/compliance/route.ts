@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
       .select(`
         id,
         building_id,
-        compliance_asset_id,
+        asset_id,
         status,
         next_due_date,
         notes
@@ -101,8 +101,8 @@ export async function GET(request: NextRequest) {
         id: asset.id,
         building_id: asset.building_id,
         building_name: building?.name || 'Unknown Building',
-        asset_id: asset.compliance_asset_id,
-        asset_name: `Compliance Asset ${asset.compliance_asset_id}`, // Use compliance_asset_id since we can't join
+        asset_id: asset.asset_id,
+        asset_name: `Compliance Asset ${asset.asset_id}`, // Use asset_id since we can't join
         category: 'Compliance',
         status: asset.status,
         next_due_date: asset.next_due_date,

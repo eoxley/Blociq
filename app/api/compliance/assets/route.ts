@@ -148,14 +148,14 @@ export async function POST(request: NextRequest) {
       // Get existing assets to avoid duplicates
       const { data: existingAssets, error: existingError } = await supabase
         .from('building_compliance_assets')
-        .select('compliance_asset_id')
+        .select('asset_id')
         .eq('building_id', building_id)
 
       if (existingError) {
         console.error('Error fetching existing assets:', existingError)
       }
 
-      const existingAssetIds = new Set(existingAssets?.map(ea => ea.compliance_asset_id) || [])
+      const existingAssetIds = new Set(existingAssets?.map(ea => ea.asset_id) || [])
       const newAssetIds = asset_ids.filter(id => !existingAssetIds.has(id))
 
       if (newAssetIds.length === 0) {
@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
       // Create building compliance asset records
       const assetsToInsert = newAssetIds.map(asset_id => ({
         building_id,
-        compliance_asset_id: asset_id,
+        asset_id: asset_id,
         status: 'not_applied',
         next_due_date: null,
         created_at: new Date().toISOString(),

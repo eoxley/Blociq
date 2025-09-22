@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
       .from('building_compliance_assets')
       .select(`
         id,
-        compliance_asset_id,
+        asset_id,
         compliance_assets (
           name,
           category
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
       // Create the building compliance asset records
       const newBuildingAssets = complianceAssets.map(asset => ({
         building_id: building_id,
-        compliance_asset_id: asset.id,
+        asset_id: asset.id,
         status: 'pending',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()

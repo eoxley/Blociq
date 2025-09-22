@@ -111,7 +111,46 @@ async function ensureUserHasAgency(supabase: any, userId: string): Promise<{ age
         console.error('❌ Failed to update user profile with agency:', updateError);
       }
     } else {
-      console.warn('⚠️ No agencies found in database');
+      console.log('🔄 No agencies found, creating default agency...');
+
+      // Create a default agency if none exists
+      const { data: newAgency, error: createAgencyError } = await supabase
+        .from('agencies')
+        .insert({
+          name: 'Default Agency',
+          slug: 'default-agency',
+          created_at: new Date().toISOString()
+        })
+        .select('id, name')
+        .single();
+
+      if (newAgency && !createAgencyError) {
+        console.log('✅ Created default agency, assigning to user...');
+
+        // Create agency membership
+        await supabase
+          .from('agency_members')
+          .insert({
+            user_id: userId,
+            agency_id: newAgency.id,
+            role: 'admin',
+            invitation_status: 'accepted',
+            joined_at: new Date().toISOString()
+          });
+
+        // Update the user's profile with the new agency
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ agency_id: newAgency.id })
+          .eq('id', userId);
+
+        if (!updateError) {
+          console.log('✅ Successfully assigned new default agency to user:', newAgency.name);
+          return { agency_id: newAgency.id };
+        }
+      } else {
+        console.error('❌ Failed to create default agency:', createAgencyError);
+      }
     }
   }
 
