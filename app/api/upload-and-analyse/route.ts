@@ -113,6 +113,7 @@ export async function POST(request: NextRequest) {
 
     console.log("🔄 Processing document with cache-busting:", {
       fileName: file?.name,
+      buildingId,
       processingId,
       fileHash: fileHash?.substring(0, 8) + '...',
       forceReprocess,
@@ -126,7 +127,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate file type against building_documents bucket allowed types
+    // Validate file type against documents bucket allowed types
     const allowedMimeTypes = [
       'application/pdf',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -166,7 +167,9 @@ export async function POST(request: NextRequest) {
     console.log("📄 Processing PDF:", file.name)
 
     // 1. Upload file to Supabase storage
+    console.log("🔗 Creating Supabase client...");
     const supabase = await createClient()
+    console.log("✅ Supabase client created");
 
     // Get current user for storage path
     const { data: { user }, error: userError } = await supabase.auth.getUser()
@@ -182,21 +185,29 @@ export async function POST(request: NextRequest) {
     }
 
     const fileName = `${user.id}/${Date.now()}_${file.name}`
+    console.log("📤 Uploading file to storage:", fileName);
+    
     const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('building_documents')
+      .from('documents')
       .upload(fileName, file)
 
     if (uploadError) {
       console.error('❌ File upload error:', uploadError)
       return NextResponse.json(
-        { error: `Failed to upload file: ${uploadError.message}` },
+        { 
+          error: `Failed to upload file: ${uploadError.message}`,
+          details: `Storage bucket: documents, File: ${fileName}`,
+          uploadError: uploadError
+        },
         { status: 500, headers }
       )
     }
+    
+    console.log("✅ File uploaded successfully:", uploadData);
 
     // Get public URL
     const { data: { publicUrl } } = supabase.storage
-      .from('building_documents')
+      .from('documents')
       .getPublicUrl(fileName)
 
     console.log("✅ File uploaded:", publicUrl)
@@ -345,17 +356,27 @@ export async function POST(request: NextRequest) {
     let documentId: string | null = null;
     try {
       console.log("💾 Creating document record for:", file.name);
+      console.log("📋 Document data:", {
+        name: file.name,
+        file_path: fileName,
+        building_id: buildingId,
+        type: aiAnalysis?.classification || 'Document',
+        category: categorizeDocument(aiAnalysis?.classification || 'Other'),
+        file_size: file.size,
+        uploaded_by: user.id.toString(),
+        ocr_status: 'completed'
+      });
       
       const { data: documentData, error: docError } = await supabase
         .from('building_documents')
         .insert({
           name: file.name,
           file_path: fileName, // Store the storage path, not public URL
-          building_id: buildingId ? parseInt(buildingId) : null,
+          building_id: buildingId,
           type: aiAnalysis?.classification || 'Document', // Use AI classification
           category: categorizeDocument(aiAnalysis?.classification || 'Other'),
           file_size: file.size,
-          uploaded_by: user.id,
+          uploaded_by: user.id.toString(), // Convert UUID to string
           ocr_status: 'completed', // Since we've already extracted text
           ocr_text: extractedText.substring(0, 65535), // Postgres TEXT limit
           metadata: {
@@ -372,11 +393,22 @@ export async function POST(request: NextRequest) {
 
       if (docError) {
         console.error('❌ Failed to create document record:', docError);
+        console.error('❌ Document insert data:', {
+          name: file.name,
+          file_path: fileName,
+          building_id: buildingId,
+          type: aiAnalysis?.classification || 'Document',
+          category: categorizeDocument(aiAnalysis?.classification || 'Other'),
+          file_size: file.size,
+          uploaded_by: user.id.toString(),
+          ocr_status: 'completed'
+        });
         return NextResponse.json(
           {
             error: 'Database error',
             details: `Failed to create document record: ${docError.message}`,
-            context: 'Document was uploaded successfully but could not be saved to database'
+            context: 'Document was uploaded successfully but could not be saved to database',
+            docError: docError
           },
           { status: 500, headers }
         );

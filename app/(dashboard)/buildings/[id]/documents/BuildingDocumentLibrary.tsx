@@ -149,44 +149,30 @@ export default function BuildingDocumentLibrary({ building }: { building: Buildi
         console.warn('Building documents table not accessible:', error)
       }
 
-      // 2. Fetch compliance documents
+      // 2. Fetch compliance documents (simplified query)
       try {
         const { data: complianceDocs, error: complianceError } = await supabase
-          .from('compliance_documents')
-          .select(`
-            id,
-            original_filename,
-            file_type,
-            file_size,
-            file_path,
-            uploaded_at: created_at,
-            uploaded_by_user_id,
-            document_type,
-            document_category,
-            processing_status,
-            building_compliance_assets!inner(
-              building_id,
-              compliance_assets(name, category)
-            )
-          `)
-          .eq('building_compliance_assets.building_id', building.id)
-          .order('created_at', { ascending: false })
+          .from('building_documents')
+          .select('*')
+          .eq('building_id', building.id)
+          .eq('category', 'compliance')
+          .order('uploaded_at', { ascending: false })
 
         if (!complianceError && complianceDocs) {
           const formattedComplianceDocs = complianceDocs.map((doc: any) => ({
             id: doc.id,
-            name: doc.original_filename || 'Compliance Document',
-            type: doc.file_type || 'application/pdf',
-            category: `Compliance - ${doc.building_compliance_assets?.compliance_assets?.category || doc.document_category || 'Other'}`,
+            name: doc.name || 'Compliance Document',
+            type: doc.type || 'application/pdf',
+            category: `Compliance - ${doc.type || 'Other'}`,
             file_path: doc.file_path,
             file_size: doc.file_size || 0,
             uploaded_at: doc.uploaded_at,
-            uploaded_by: doc.uploaded_by_user_id || 'Unknown',
-            ocr_status: doc.processing_status === 'completed' ? 'completed' : 'pending',
+            uploaded_by: doc.uploaded_by || 'Unknown',
+            ocr_status: doc.ocr_status || 'pending',
             metadata: {
-              source: 'compliance_documents',
-              document_type: doc.document_type,
-              asset_name: doc.building_compliance_assets?.compliance_assets?.name
+              source: 'building_documents',
+              document_type: doc.type,
+              category: doc.category
             }
           }))
           allDocuments.push(...formattedComplianceDocs)
