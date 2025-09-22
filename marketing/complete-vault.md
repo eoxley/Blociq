@@ -91,41 +91,109 @@ gantt
 ### Save Time Icon
 ```svg
 <svg width="300" height="200" xmlns="http://www.w3.org/2000/svg">
-  <rect width="300" height="200" fill="#e3f2fd" stroke="#1976d2" stroke-width="3" rx="20"/>
-  <circle cx="150" cy="80" r="35" fill="#1976d2" stroke="#0d47a1" stroke-width="3"/>
-  <line x1="150" y1="55" x2="150" y2="80" stroke="white" stroke-width="4" stroke-linecap="round"/>
+  <!-- Background with BlocIQ brand gradient -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f0fdfa;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#e0f2fe;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="iconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0d9488;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2563eb;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="300" height="200" fill="url(#bgGradient)" stroke="#0d9488" stroke-width="3" rx="20"/>
+  
+  <!-- Clock Icon (Lucide React Clock style) -->
+  <circle cx="150" cy="80" r="35" fill="url(#iconGradient)" stroke="#0d9488" stroke-width="3"/>
+  <!-- Clock hands -->
+  <line x1="150" y1="50" x2="150" y2="80" stroke="white" stroke-width="4" stroke-linecap="round"/>
   <line x1="150" y1="80" x2="170" y2="80" stroke="white" stroke-width="4" stroke-linecap="round"/>
+  <!-- Center dot -->
   <circle cx="150" cy="80" r="4" fill="white"/>
-  <text x="150" y="140" text-anchor="middle" fill="#1976d2" font-family="Inter, sans-serif" font-size="24" font-weight="bold">Save Time</text>
-  <text x="150" y="165" text-anchor="middle" fill="#666" font-family="Inter, sans-serif" font-size="16">Automate 70% of admin tasks</text>
-  <text x="150" y="185" text-anchor="middle" fill="#666" font-family="Inter, sans-serif" font-size="16">with intelligent workflows</text>
+  <!-- Clock marks -->
+  <circle cx="150" cy="50" r="2" fill="white"/>
+  <circle cx="170" cy="80" r="2" fill="white"/>
+  <circle cx="150" cy="110" r="2" fill="white"/>
+  <circle cx="130" cy="80" r="2" fill="white"/>
+  
+  <!-- Text with BlocIQ brand colors -->
+  <text x="150" y="140" text-anchor="middle" fill="#0d9488" font-family="Inter, sans-serif" font-size="24" font-weight="bold">Save Time</text>
+  <text x="150" y="165" text-anchor="middle" fill="#64748b" font-family="Inter, sans-serif" font-size="16">Automate 70% of admin tasks</text>
+  <text x="150" y="185" text-anchor="middle" fill="#64748b" font-family="Inter, sans-serif" font-size="16">with intelligent workflows</text>
 </svg>
 ```
 
 ### Stay Compliant Icon
 ```svg
 <svg width="300" height="200" xmlns="http://www.w3.org/2000/svg">
-  <rect width="300" height="200" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="3" rx="20"/>
-  <path d="M150 50 L175 65 L175 95 Q175 110 150 115 Q125 110 125 95 L125 65 Z" fill="#7b1fa2" stroke="#4a148c" stroke-width="3"/>
-  <path d="M140 85 L150 95 L160 80" stroke="white" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-  <text x="150" y="140" text-anchor="middle" fill="#7b1fa2" font-family="Inter, sans-serif" font-size="24" font-weight="bold">Stay Compliant</text>
-  <text x="150" y="165" text-anchor="middle" fill="#666" font-family="Inter, sans-serif" font-size="16">GDPR & UK regulations</text>
-  <text x="150" y="185" text-anchor="middle" fill="#666" font-family="Inter, sans-serif" font-size="16">built-in by design</text>
+  <!-- Background with BlocIQ brand gradient -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#faf5ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f3e8ff;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="iconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7c3aed;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="300" height="200" fill="url(#bgGradient)" stroke="#7c3aed" stroke-width="3" rx="20"/>
+  
+  <!-- Shield Icon (Lucide React Shield style) -->
+  <path d="M150 45 L170 55 L170 85 Q170 100 150 105 Q130 100 130 85 L130 55 Z" fill="url(#iconGradient)" stroke="#7c3aed" stroke-width="3"/>
+  <!-- Checkmark inside shield -->
+  <path d="M140 80 L150 90 L160 75" stroke="white" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Shield details -->
+  <path d="M150 50 L160 55 L160 75 Q160 85 150 90 Q140 85 140 75 L140 55 Z" fill="rgba(255,255,255,0.2)" stroke="none"/>
+  
+  <!-- Text with BlocIQ brand colors -->
+  <text x="150" y="140" text-anchor="middle" fill="#7c3aed" font-family="Inter, sans-serif" font-size="24" font-weight="bold">Stay Compliant</text>
+  <text x="150" y="165" text-anchor="middle" fill="#64748b" font-family="Inter, sans-serif" font-size="16">GDPR & UK regulations</text>
+  <text x="150" y="185" text-anchor="middle" fill="#64748b" font-family="Inter, sans-serif" font-size="16">built-in by design</text>
 </svg>
 ```
 
 ### Built for UK Icon
 ```svg
 <svg width="300" height="200" xmlns="http://www.w3.org/2000/svg">
-  <rect width="300" height="200" fill="#e8f5e8" stroke="#388e3c" stroke-width="3" rx="20"/>
-  <rect x="120" y="60" width="60" height="40" fill="#012169" stroke="#000" stroke-width="2"/>
-  <rect x="120" y="75" width="60" height="10" fill="white"/>
-  <rect x="145" y="60" width="10" height="40" fill="white"/>
-  <rect x="120" y="77" width="60" height="6" fill="#c8102e"/>
-  <rect x="147" y="60" width="6" height="40" fill="#c8102e"/>
-  <text x="150" y="140" text-anchor="middle" fill="#388e3c" font-family="Inter, sans-serif" font-size="24" font-weight="bold">Built for UK</text>
-  <text x="150" y="165" text-anchor="middle" fill="#666" font-family="Inter, sans-serif" font-size="16">Section 20, BSA, RICS</text>
-  <text x="150" y="185" text-anchor="middle" fill="#666" font-family="Inter, sans-serif" font-size="16">compliance ready</text>
+  <!-- Background with BlocIQ brand gradient -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f0fdfa;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#e0f2fe;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="flagGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0d9488;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2563eb;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="300" height="200" fill="url(#bgGradient)" stroke="#0d9488" stroke-width="3" rx="20"/>
+  
+  <!-- UK Flag Icon with BlocIQ styling -->
+  <rect x="120" y="60" width="60" height="40" fill="#012169" stroke="#0d9488" stroke-width="2" rx="4"/>
+  <!-- White Cross -->
+  <rect x="120" y="75" width="60" height="10" fill="white" rx="1"/>
+  <rect x="145" y="60" width="10" height="40" fill="white" rx="1"/>
+  <!-- Red Cross -->
+  <rect x="120" y="77" width="60" height="6" fill="#c8102e" rx="1"/>
+  <rect x="147" y="60" width="6" height="40" fill="#c8102e" rx="1"/>
+  <!-- Flag pole -->
+  <rect x="115" y="55" width="3" height="50" fill="#8b5cf6" rx="1"/>
+  
+  <!-- UK text overlay -->
+  <text x="150" y="85" text-anchor="middle" fill="white" font-family="Inter, sans-serif" font-size="8" font-weight="bold">UK</text>
+  
+  <!-- Text with BlocIQ brand colors -->
+  <text x="150" y="140" text-anchor="middle" fill="#0d9488" font-family="Inter, sans-serif" font-size="24" font-weight="bold">Built for UK</text>
+  <text x="150" y="165" text-anchor="middle" fill="#64748b" font-family="Inter, sans-serif" font-size="16">Section 20, BSA, RICS</text>
+  <text x="150" y="185" text-anchor="middle" fill="#64748b" font-family="Inter, sans-serif" font-size="16">compliance ready</text>
 </svg>
 ```
 
@@ -253,12 +321,13 @@ Built with GDPR by design and hosted entirely within UK/EU data centres, BlocIQ 
 
 ## 🎨 Brand Guidelines
 
-- **Primary Blue**: #1976d2
-- **Secondary Purple**: #7b1fa2  
-- **Success Green**: #388e3c
-- **Warning Orange**: #f57c00
-- **Error Red**: #d32f2f
-- **Font**: Inter, Arial fallback
+- **Brand Teal**: #0d9488 (Primary brand color)
+- **Brand Blue**: #2563eb (Secondary brand color)  
+- **Brand Purple**: #7c3aed (Accent brand color)
+- **Success Green**: #10b981
+- **Warning Orange**: #f59e0b
+- **Error Red**: #ef4444
+- **Font**: Inter, system-ui, sans-serif
 - **Tone**: Professional, UK-focused, GDPR-compliant
 - **Language**: British English spelling
 - **Focus**: Leasehold block management, compliance, AI automation

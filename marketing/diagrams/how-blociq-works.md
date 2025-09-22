@@ -22,10 +22,10 @@ flowchart TD
     AI3 --> O5[📅 Calendar Sync<br/>Meeting management]
     
     %% Styling
-    classDef input fill:#e1f5fe,stroke:#1976d2,stroke-width:2px,color:#000
-    classDef database fill:#f3e5f5,stroke:#7b1fa2,stroke-width:3px,color:#000
-    classDef ai fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000
-    classDef output fill:#e8f5e8,stroke:#388e3c,stroke-width:2px,color:#000
+    classDef input fill:#f0fdfa,stroke:#0d9488,stroke-width:2px,color:#000
+    classDef database fill:#faf5ff,stroke:#7c3aed,stroke-width:3px,color:#000
+    classDef ai fill:#eff6ff,stroke:#2563eb,stroke-width:2px,color:#000
+    classDef output fill:#f0fdfa,stroke:#10b981,stroke-width:2px,color:#000
     
     class A,B,C,D,E input
     class DB database

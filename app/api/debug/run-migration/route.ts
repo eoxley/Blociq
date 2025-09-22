@@ -41,6 +41,36 @@ export async function POST(req: NextRequest) {
             END IF;
         END $$;
 
+        -- Add leaseholder_id column to communications_log if it doesn't exist
+        DO $$
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                           WHERE table_name = 'communications_log' AND column_name = 'leaseholder_id') THEN
+                ALTER TABLE communications_log ADD COLUMN leaseholder_id UUID;
+                CREATE INDEX IF NOT EXISTS idx_communications_log_leaseholder_id ON communications_log(leaseholder_id);
+                COMMENT ON COLUMN communications_log.leaseholder_id IS 'Reference to the leaseholder this communication relates to';
+            END IF;
+        END $$;
+
+        -- Add other missing columns to communications_log if they don't exist
+        DO $$
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                           WHERE table_name = 'communications_log' AND column_name = 'direction') THEN
+                ALTER TABLE communications_log ADD COLUMN direction TEXT CHECK (direction IN ('incoming', 'outgoing'));
+                COMMENT ON COLUMN communications_log.direction IS 'Direction of communication: incoming or outgoing';
+            END IF;
+        END $$;
+
+        DO $$
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                           WHERE table_name = 'communications_log' AND column_name = 'metadata') THEN
+                ALTER TABLE communications_log ADD COLUMN metadata JSONB DEFAULT '{}';
+                COMMENT ON COLUMN communications_log.metadata IS 'Additional metadata for the communication';
+            END IF;
+        END $$;
+
         -- Create building_access table if it doesn't exist
         CREATE TABLE IF NOT EXISTS building_access (
             id UUID DEFAULT gen_random_uuid() PRIMARY KEY,

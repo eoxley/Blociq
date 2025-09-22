@@ -21,10 +21,10 @@ graph TB
     API --> AUTH[🔐 Authentication<br/>Supabase Auth | MFA Ready]
     
     %% Styling
-    classDef frontend fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
-    classDef backend fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
-    classDef external fill:#fff3e0,stroke:#f57c00,stroke-width:2px
-    classDef security fill:#ffebee,stroke:#d32f2f,stroke-width:2px
+    classDef frontend fill:#eff6ff,stroke:#2563eb,stroke-width:2px
+    classDef backend fill:#faf5ff,stroke:#7c3aed,stroke-width:2px
+    classDef external fill:#f0fdfa,stroke:#0d9488,stroke-width:2px
+    classDef security fill:#fef2f2,stroke:#ef4444,stroke-width:2px
     
     class UI frontend
     class API,DB,STORAGE backend
