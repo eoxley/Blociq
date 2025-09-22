@@ -110,7 +110,6 @@ export default function BuildingLeaseMode({ building }: { building: Building }) 
     setFilteredLeases(filtered)
   }
 
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active':
@@ -219,7 +218,6 @@ export default function BuildingLeaseMode({ building }: { building: Building }) 
           buildingName={building.name}
         />
       ) : (
-        {/* Lease Index Table */}
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
@@ -320,7 +318,6 @@ export default function BuildingLeaseMode({ building }: { building: Building }) 
           )}
         </div>
       )}
-
     </div>
   )
 }
