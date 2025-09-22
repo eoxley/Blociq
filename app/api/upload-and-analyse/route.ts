@@ -662,6 +662,7 @@ export async function POST(request: NextRequest) {
               complianceAssetResult = { updated: true, assetId: existing.id };
             }
           }
+        }
         } // Close the else block for table existence check
       } catch (complianceError) {
         console.warn('⚠️ Error handling compliance asset:', complianceError);
@@ -1111,5 +1112,4 @@ Return only valid JSON.
       apportionment: null
     }
   }
-}
 }
