@@ -377,6 +377,7 @@ export async function POST(request: NextRequest) {
         category: categorizeDocument(aiAnalysis?.classification || 'Other'),
         file_size: file.size,
         uploaded_by: user.id.toString(),
+        created_by: user.id, // Required for RLS policy
         ocr_status: 'completed'
       });
       
@@ -385,12 +386,14 @@ export async function POST(request: NextRequest) {
         .from('building_documents')
         .insert({
           name: file.name,
+          title: file.name, // Required field for compliance page
           file_path: fileName, // Store the storage path, not public URL
           building_id: buildingId,
           type: aiAnalysis?.classification || 'Document', // Use AI classification
           category: categorizeDocument(aiAnalysis?.classification || 'Other'),
           file_size: file.size,
           uploaded_by: user.id.toString(), // Convert UUID to string
+          created_by: user.id, // Required for RLS policy
           ocr_status: 'completed', // Since we've already extracted text
           ocr_text: extractedText.substring(0, 65535), // Postgres TEXT limit
           metadata: {
@@ -439,6 +442,7 @@ export async function POST(request: NextRequest) {
           category: categorizeDocument(aiAnalysis?.classification || 'Other'),
           file_size: file.size,
           uploaded_by: user.id.toString(),
+          created_by: user.id, // Required for RLS policy
           ocr_status: 'completed'
         });
         return NextResponse.json(
