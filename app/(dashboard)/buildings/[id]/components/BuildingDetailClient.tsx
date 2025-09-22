@@ -35,7 +35,6 @@ import Revealable from '@/components/ui/Revealable'
 import UnitsTable from '@/components/buildings/UnitsTable'
 import ActionTracker from '@/components/buildings/ActionTracker'
 import CommunicationsLog from '@/components/communications/CommunicationsLog'
-import BuildingLeasesSection from '@/components/leases/BuildingLeasesSection'
 
 interface Building {
   id: string
@@ -604,33 +603,6 @@ export default function BuildingDetailClient({
         </div>
       </SectionCard>
 
-      {/* Leases Section */}
-      <SectionCard className="group">
-        <div className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] px-4 py-3 rounded-t-2xl">
-          <div className="flex items-center justify-between text-white">
-            <div className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              <h3 className="font-semibold">Leases</h3>
-            </div>
-            <Link
-              href={`/lease-lab`}
-              className="text-white/90 hover:text-white text-sm font-medium transition-colors"
-            >
-              Upload & Analyze
-            </Link>
-          </div>
-          {/* Decorative elements */}
-          <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-full blur-xl"></div>
-          <div className="absolute bottom-0 left-4 w-8 h-8 bg-white/5 rounded-full blur-lg"></div>
-        </div>
-
-        <div className="p-6">
-          <BuildingLeasesSection
-            buildingId={parseInt(buildingId)}
-            buildingName={building.name}
-          />
-        </div>
-      </SectionCard>
 
       {/* Quick Actions */}
       <SectionCard className="group">
