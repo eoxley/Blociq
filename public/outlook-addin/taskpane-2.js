@@ -27,11 +27,23 @@ const toneReasons = document.getElementById('toneReasons');
 const boundaryToggle = document.getElementById('boundaryToggle');
 const includeBoundary = document.getElementById('includeBoundary');
 
+// Promise detection elements
+const promiseStrip = document.getElementById('promiseStrip');
+const promiseText = document.getElementById('promiseText');
+const confirmPromise = document.getElementById('confirmPromise');
+const ignorePromise = document.getElementById('ignorePromise');
+
+// Toast elements
+const toastElement = document.getElementById('toast');
+const toastMessage = document.getElementById('toastMessage');
+const toastClose = document.getElementById('toastClose');
+
 // Initialize add-in
 Office.onReady(() => {
   console.log('📋 BlocIQ Taskpane loaded successfully');
   setupEventListeners();
   setupAIReplyListeners();
+  setupItemSendHandler();
   addWelcomeMessage();
 
   // Focus on input field
@@ -272,6 +284,72 @@ function setupAIReplyListeners() {
   if (includeBoundary) {
     includeBoundary.addEventListener('change', handleBoundaryToggle);
   }
+
+  // Promise detection functionality
+  if (confirmPromise) {
+    confirmPromise.addEventListener('click', handleConfirmPromise);
+  }
+
+  if (ignorePromise) {
+    ignorePromise.addEventListener('click', handleIgnorePromise);
+  }
+
+  // Toast functionality
+  if (toastClose) {
+    toastClose.addEventListener('click', hideToast);
+  }
+}
+
+// Setup ItemSend event handler for toast notifications
+function setupItemSendHandler() {
+  try {
+    // Register for ItemSend event
+    Office.context.mailbox.addHandlerAsync(
+      Office.EventType.ItemSend,
+      handleItemSend,
+      (result) => {
+        if (result.status === Office.AsyncResultStatus.Succeeded) {
+          console.log('✅ ItemSend handler registered successfully');
+        } else {
+          console.error('❌ Failed to register ItemSend handler:', result.error);
+        }
+      }
+    );
+  } catch (error) {
+    console.error('❌ Error setting up ItemSend handler:', error);
+  }
+}
+
+// Handle email send event
+function handleItemSend(eventArgs) {
+  console.log('📤 Email send detected');
+
+  try {
+    // Check if there's a pending follow-up
+    if (window.pendingFollowup) {
+      const { dueAtHuman, status, warnings } = window.pendingFollowup;
+
+      if (status === 'success') {
+        showToast(`📩 Follow-up scheduled for ${dueAtHuman}`, 'success');
+      } else if (status === 'partial_success') {
+        showToast(`⚠️ Follow-up created with warnings for ${dueAtHuman}`, 'warning');
+      } else {
+        showToast('⚠️ Could not schedule follow-up', 'error');
+      }
+
+      // Clear the pending follow-up
+      window.pendingFollowup = null;
+    }
+
+    // Always call completed to allow the send to proceed
+    eventArgs.completed();
+
+  } catch (error) {
+    console.error('❌ Error in ItemSend handler:', error);
+
+    // Still allow the email to send
+    eventArgs.completed();
+  }
 }
 
 // Handle AI Reply button click
@@ -460,6 +538,9 @@ function showConfirmationPanel(enrichment, tone, draft, metadata, emailContext) 
   // Show draft
   draftTextarea.value = draft;
 
+  // Check for promises in the draft and show promise strip if found
+  await checkForPromises(draft, enrichment);
+
   // Show panel
   confirmationPanel.style.display = 'block';
 }
@@ -645,6 +726,165 @@ function handleBoundaryToggle() {
   // This could trigger a re-generation if needed
   // For now, it's just a visual indicator
   console.log('🔘 Boundary toggle changed:', includeBoundary?.checked);
+}
+
+// Check for promises in draft text
+async function checkForPromises(draft, enrichment) {
+  try {
+    console.log('🔍 Checking for promises in draft...');
+
+    const response = await fetch('https://www.blociq.co.uk/api/outlook/followups/parse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ draft })
+    });
+
+    if (!response.ok) {
+      console.warn('Promise detection failed:', response.status);
+      return;
+    }
+
+    const { promises } = await response.json();
+
+    if (promises && promises.length > 0) {
+      const promise = promises[0]; // Use the first detected promise
+      showPromiseStrip(promise, enrichment);
+      console.log('📅 Promise detected:', promise);
+    } else {
+      hidePromiseStrip();
+    }
+
+  } catch (error) {
+    console.error('❌ Promise detection error:', error);
+    hidePromiseStrip();
+  }
+}
+
+// Show promise detection strip
+function showPromiseStrip(promise, enrichment) {
+  if (!promiseStrip || !promiseText) return;
+
+  const buildingName = enrichment.buildingName || 'Property';
+  const text = `Schedule follow-up for ${buildingName} – ${promise.humanLabel}?`;
+
+  promiseText.textContent = text;
+  promiseStrip.style.display = 'block';
+
+  // Store promise data for later use
+  window.currentPromise = {
+    promise,
+    enrichment,
+    buildingName
+  };
+}
+
+// Hide promise detection strip
+function hidePromiseStrip() {
+  if (promiseStrip) {
+    promiseStrip.style.display = 'none';
+  }
+  window.currentPromise = null;
+}
+
+// Handle promise confirmation
+async function handleConfirmPromise() {
+  if (!window.currentPromise) return;
+
+  try {
+    console.log('✅ Creating follow-up...');
+
+    // Disable buttons during creation
+    if (confirmPromise) confirmPromise.disabled = true;
+    if (ignorePromise) ignorePromise.disabled = true;
+
+    const { promise, enrichment, buildingName } = window.currentPromise;
+    const emailContext = window.currentContext?.emailContext;
+
+    const response = await fetch('https://www.blociq.co.uk/api/outlook/followups/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        subject: emailContext?.subject || 'Follow-up Required',
+        matchedText: promise.matchedText,
+        dueAtISO: promise.dueAtISO,
+        buildingId: enrichment.buildingId,
+        unitId: enrichment.unitId,
+        leaseholderId: enrichment.leaseholderId,
+        buildingName: buildingName,
+        senderEmail: emailContext?.senderEmail,
+        threadId: emailContext?.threadId,
+        messageId: emailContext?.messageId
+      })
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      console.log('✅ Follow-up created:', result);
+
+      // Store for toast notification when email is sent
+      window.pendingFollowup = {
+        dueAtHuman: result.dueAtHuman,
+        status: result.status,
+        warnings: result.warnings
+      };
+
+      // Hide the strip
+      hidePromiseStrip();
+
+      // Show success message in chat
+      addMessage(`✅ Follow-up scheduled for ${result.dueAtHuman}`, 'assistant');
+
+    } else {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to create follow-up');
+    }
+
+  } catch (error) {
+    console.error('❌ Follow-up creation failed:', error);
+    addMessage(`❌ Could not create follow-up: ${error.message}`, 'assistant');
+  } finally {
+    // Re-enable buttons
+    if (confirmPromise) confirmPromise.disabled = false;
+    if (ignorePromise) ignorePromise.disabled = false;
+  }
+}
+
+// Handle promise ignore
+function handleIgnorePromise() {
+  console.log('🚫 Promise ignored');
+  hidePromiseStrip();
+}
+
+// Toast notification functions
+function showToast(message, type = 'success') {
+  if (!toastElement || !toastMessage) return;
+
+  // Set message and type
+  toastMessage.textContent = message;
+  toastElement.className = `toast ${type}`;
+
+  // Show toast
+  toastElement.style.display = 'flex';
+
+  // Auto-hide after 4 seconds
+  setTimeout(() => {
+    hideToast();
+  }, 4000);
+
+  console.log(`📢 Toast shown: ${type} - ${message}`);
+}
+
+function hideToast() {
+  if (!toastElement) return;
+
+  // Add hiding animation
+  toastElement.classList.add('hiding');
+
+  // Hide after animation completes
+  setTimeout(() => {
+    toastElement.style.display = 'none';
+    toastElement.classList.remove('hiding');
+  }, 300);
 }
 
 console.log('📁 BlocIQ taskpane.js loaded successfully');
