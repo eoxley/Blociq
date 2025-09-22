@@ -159,94 +159,217 @@ export default function AnalysisDrawer({ job, onClose }: AnalysisDrawerProps) {
   const exportToPDF = async () => {
     const pdf = new jsPDF();
     const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
     const margin = 20;
     let yPosition = margin;
 
-    // Title
-    pdf.setFontSize(20);
+    // Helper function to check if we need a new page
+    const checkNewPage = (requiredSpace: number) => {
+      if (yPosition + requiredSpace > pageHeight - margin) {
+        pdf.addPage();
+        yPosition = margin;
+        return true;
+      }
+      return false;
+    };
+
+    // Helper function to add section header
+    const addSectionHeader = (title: string) => {
+      checkNewPage(15);
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(title, margin, yPosition);
+      yPosition += 12;
+    };
+
+    // Helper function to add subsection
+    const addSubsection = (title: string) => {
+      checkNewPage(10);
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(title, margin, yPosition);
+      yPosition += 8;
+    };
+
+    // Helper function to add text with wrapping
+    const addText = (text: string, fontSize = 10, isBold = false) => {
+      pdf.setFontSize(fontSize);
+      pdf.setFont('helvetica', isBold ? 'bold' : 'normal');
+      const splitText = pdf.splitTextToSize(text, pageWidth - 2 * margin);
+      checkNewPage(splitText.length * (fontSize * 0.4) + 5);
+      pdf.text(splitText, margin, yPosition);
+      yPosition += splitText.length * (fontSize * 0.4) + 5;
+    };
+
+    // Helper function to add list
+    const addList = (items: string[], indent = 0) => {
+      items.forEach((item: string) => {
+        checkNewPage(6);
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(`  ${'  '.repeat(indent)}• ${item}`, margin + (indent * 10), yPosition);
+        yPosition += 6;
+      });
+    };
+
+    // Helper function to add tags/chips
+    const addTags = (tags: string[]) => {
+      let currentX = margin;
+      tags.forEach((tag: string) => {
+        const tagWidth = pdf.getTextWidth(tag) + 8;
+        if (currentX + tagWidth > pageWidth - margin) {
+          yPosition += 8;
+          currentX = margin;
+        }
+        pdf.setFontSize(8);
+        pdf.setFont('helvetica', 'normal');
+        pdf.rect(currentX, yPosition - 6, tagWidth, 8);
+        pdf.text(tag, currentX + 4, yPosition - 1);
+        currentX += tagWidth + 4;
+      });
+      yPosition += 10;
+    };
+
+    // Title Page
+    pdf.setFontSize(24);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('Lease Analysis Summary', margin, yPosition);
-    yPosition += 15;
+    pdf.text('Lease Analysis Report', pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 20;
 
     // Document info
     pdf.setFontSize(12);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(`Document: ${job.filename}`, margin, yPosition);
+    pdf.text(`Document: ${job.filename}`, pageWidth / 2, yPosition, { align: 'center' });
     yPosition += 8;
-    pdf.text(`Analyzed: ${new Date(job.updated_at).toLocaleDateString('en-GB')}`, margin, yPosition);
-    yPosition += 15;
+    pdf.text(`Analyzed: ${new Date(job.updated_at).toLocaleDateString('en-GB')}`, pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 8;
+    pdf.text(`Generated: ${new Date().toLocaleDateString('en-GB')}`, pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 30;
 
-    // Executive Summary
+    // Table of Contents
+    addSectionHeader('Table of Contents');
+    const tocItems = [
+      '1. Executive Summary',
+      '2. Property Details',
+      '3. Detailed Sections',
+      '4. Other Provisions'
+    ];
+    tocItems.forEach((item, index) => {
+      checkNewPage(6);
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(item, margin, yPosition);
+      yPosition += 6;
+    });
+    yPosition += 20;
+
+    // 1. EXECUTIVE SUMMARY
+    addSectionHeader('1. Executive Summary');
+    
     if (summary.executive_summary || summary.overview) {
-      pdf.setFontSize(14);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Executive Summary', margin, yPosition);
-      yPosition += 10;
-
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'normal');
-      const summaryText = summary.executive_summary || summary.overview;
-      const splitSummary = pdf.splitTextToSize(summaryText, pageWidth - 2 * margin);
-      pdf.text(splitSummary, margin, yPosition);
-      yPosition += splitSummary.length * 5 + 10;
+      addText(summary.executive_summary || summary.overview);
     }
 
-    // Key Details
-    if (summary.basic_property_details) {
-      pdf.setFontSize(14);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Key Details', margin, yPosition);
-      yPosition += 10;
-
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'normal');
-
-      const details = summary.basic_property_details;
-      if (details.property_address) {
-        pdf.text(`Property: ${details.property_address}`, margin, yPosition);
-        yPosition += 6;
-      }
-      if (details.lease_term) {
-        pdf.text(`Lease Term: ${details.lease_term}`, margin, yPosition);
-        yPosition += 6;
-      }
-      if (details.parties) {
-        pdf.text('Parties:', margin, yPosition);
-        yPosition += 6;
-        details.parties.forEach((party: string) => {
-          pdf.text(`  • ${party}`, margin + 10, yPosition);
-          yPosition += 5;
-        });
-      }
-      yPosition += 10;
+    // Disclaimer
+    if (summary.disclaimer) {
+      addSubsection('Important Disclaimer');
+      pdf.setFillColor(255, 255, 0);
+      pdf.rect(margin, yPosition - 2, pageWidth - 2 * margin, 20, 'F');
+      addText(summary.disclaimer, 9);
     }
 
-    // Financial Information
-    if (summary.financial_obligations) {
-      if (yPosition > 250) { // Check if we need a new page
-        pdf.addPage();
-        yPosition = margin;
-      }
+    // Areas Requiring Review
+    if (summary.unknowns && summary.unknowns.length > 0) {
+      addSubsection('Areas Requiring Review');
+      addList(summary.unknowns);
+    }
 
-      pdf.setFontSize(14);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Financial Obligations', margin, yPosition);
-      yPosition += 10;
+    // 2. PROPERTY DETAILS
+    addSectionHeader('2. Property Details');
+    
+    const property = summary.basic_property_details || {};
+    
+    if (property.property_description) {
+      addSubsection('Property Description');
+      addText(property.property_description);
+    }
 
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'normal');
+    if (property.lease_term) {
+      addSubsection('Lease Term');
+      addText(property.lease_term);
+    }
 
-      summary.financial_obligations.forEach((obligation: any) => {
-        if (obligation.type && obligation.amount) {
-          pdf.text(`${obligation.type}: ${obligation.amount}`, margin, yPosition);
-          yPosition += 6;
+    if (property.parties && property.parties.length > 0) {
+      addSubsection('Parties');
+      addList(property.parties);
+    }
+
+    if (property.title_number) {
+      addSubsection('Title Number');
+      addText(property.title_number);
+    }
+
+    if (property.referenced_clauses && property.referenced_clauses.length > 0) {
+      addSubsection('Referenced Clauses');
+      addTags(property.referenced_clauses);
+    }
+
+    // 3. DETAILED SECTIONS
+    addSectionHeader('3. Detailed Sections');
+    
+    const sections = summary.detailed_sections || [];
+    if (sections.length > 0) {
+      sections.forEach((section: any, index: number) => {
+        addSubsection(`${index + 1}. ${section.section_title}`);
+        
+        if (section.content && section.content.length > 0) {
+          addList(section.content);
         }
+
+        if (section.referenced_clauses && section.referenced_clauses.length > 0) {
+          addText('Referenced Clauses:', 10, true);
+          addTags(section.referenced_clauses);
+        }
+        
+        yPosition += 10; // Space between sections
       });
-      yPosition += 10;
+    } else {
+      addText('No detailed sections available.');
+    }
+
+    // 4. OTHER PROVISIONS
+    addSectionHeader('4. Other Provisions');
+    
+    const provisions = summary.other_provisions || [];
+    if (provisions.length > 0) {
+      provisions.forEach((provision: any, index: number) => {
+        addSubsection(`${index + 1}. ${provision.title}`);
+        addText(provision.description);
+        
+        if (provision.referenced_clauses && provision.referenced_clauses.length > 0) {
+          addText('Referenced Clauses:', 10, true);
+          addTags(provision.referenced_clauses);
+        }
+        
+        yPosition += 10; // Space between provisions
+      });
+    } else {
+      addText('No other provisions identified.');
+    }
+
+    // Footer on last page
+    const pageCount = pdf.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      pdf.setPage(i);
+      pdf.setFontSize(8);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Page ${i} of ${pageCount}`, pageWidth - 30, pageHeight - 10);
+      pdf.text('Generated by BlocIQ Lease Lab', margin, pageHeight - 10);
     }
 
     // Save the PDF
-    pdf.save(`lease-analysis-${job.filename.replace(/\.[^/.]+$/, '')}.pdf`);
+    const filename = `lease-analysis-${job.filename.replace(/\.[^/.]+$/, '')}-${new Date().toISOString().split('T')[0]}.pdf`;
+    pdf.save(filename);
   };
 
   const renderOverview = () => (
