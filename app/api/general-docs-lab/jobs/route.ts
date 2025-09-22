@@ -17,19 +17,54 @@ export async function GET(req: NextRequest) {
 
     const user = session.user;
 
-    // Fetch jobs for the user's agency
-    const { data: jobs, error: jobsError } = await supabase
-      .from('document_jobs')
-      .select('*')
-      .eq('agency_id', user.user_metadata?.agency_id)
-      .eq('doc_category', 'general')
-      .order('created_at', { ascending: false });
+    // Fetch jobs for the user (try agency_id first, fallback to user_id)
+    let jobs = [];
+    let jobsError = null;
+
+    // Try to get user's agency_id first
+    const agencyId = user.user_metadata?.agency_id;
+
+    if (agencyId) {
+      console.log('🔍 Fetching jobs by agency_id:', agencyId);
+      const { data, error } = await supabase
+        .from('document_jobs')
+        .select('*')
+        .eq('agency_id', agencyId)
+        .eq('doc_category', 'general')
+        .order('created_at', { ascending: false });
+
+      jobs = data;
+      jobsError = error;
+    } else {
+      console.log('🔍 No agency_id found, fetching jobs by user_id:', user.id);
+      const { data, error } = await supabase
+        .from('document_jobs')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('doc_category', 'general')
+        .order('created_at', { ascending: false });
+
+      jobs = data;
+      jobsError = error;
+    }
 
     if (jobsError) {
       console.error('Error fetching general docs jobs:', jobsError);
+
+      // Check if it's a table not found error
+      if (jobsError.message?.includes('relation') && jobsError.message?.includes('does not exist')) {
+        console.log('📋 Document jobs table does not exist yet, returning empty array');
+        return NextResponse.json({
+          success: true,
+          jobs: [],
+          message: 'Document jobs table not set up yet. Upload a document to initialize.'
+        });
+      }
+
       return NextResponse.json({
         error: 'Failed to fetch jobs',
-        message: 'Unable to retrieve general docs jobs. Please try again.'
+        message: 'Unable to retrieve general docs jobs. Please try again.',
+        details: process.env.NODE_ENV === 'development' ? jobsError.message : undefined
       }, { status: 500 });
     }
 

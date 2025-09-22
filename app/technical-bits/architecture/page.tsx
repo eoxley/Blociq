@@ -53,84 +53,136 @@ export default function ArchitecturePage() {
             </p>
           </div>
           
-          {/* Mermaid Diagram */}
+          {/* Architecture Diagram */}
           <div className="bg-gray-50 rounded-lg p-6 overflow-x-auto">
-            <div className="mermaid">
-              flowchart TD
-                %% User Interface Layer
-                subgraph "👥 BlocIQ User Interface Layer"
-                    A[Property Manager<br/>🏢 Building Management<br/>Portfolio Oversight]
-                    B[Leaseholder<br/>🏠 Tenant Portal<br/>Digital Access]
-                    C[Investor<br/>📊 Portfolio View<br/>Analytics Dashboard]
-                end
-                
-                %% Application Layer
-                subgraph "📱 BlocIQ Application Layer"
-                    D[Next.js Frontend<br/>React Components<br/>TypeScript<br/>Responsive UI]
-                    E[API Routes<br/>Server Actions<br/>Authentication<br/>Middleware]
-                end
-                
-                %% Core Services
-                subgraph "🔧 BlocIQ Core Services"
-                    F[🗄️ Supabase Backend<br/>PostgreSQL Database<br/>Real-time Subscriptions<br/>File Storage<br/>Authentication]
-                    G[📧 Microsoft Graph API<br/>Outlook Integration<br/>Calendar Management<br/>Email Processing<br/>OAuth 2.0]
-                    H[🤖 OpenAI GPT-4<br/>Document Analysis<br/>AI Drafting<br/>Content Generation<br/>GDPR-Safe Processing]
-                    I[📄 Google Document AI<br/>OCR Processing<br/>Text Extraction<br/>EU Endpoints<br/>Lease Analysis]
-                    J[📬 SendGrid<br/>Email Delivery<br/>SMTP Services<br/>Template Management<br/>GDPR Compliant]
-                end
-                
-                %% Data Layer
-                subgraph "📊 BlocIQ Data Model"
-                    K[🏢 Buildings<br/>Property Information<br/>Management Data<br/>Location Details]
-                    L[🏠 Units<br/>Individual Properties<br/>Lease Details<br/>Tenant Information]
-                    M[👥 Leaseholders<br/>Tenant Data<br/>Contact Information<br/>Communication History]
-                    N[💬 Communications<br/>Email History<br/>Message Threads<br/>Document Attachments]
-                    O[📋 Compliance<br/>Safety Documents<br/>Certificates<br/>Regulatory Records]
-                    P[📄 Leases<br/>Legal Documents<br/>Terms & Conditions<br/>Renewal Tracking]
-                end
-                
-                %% Security & Compliance
-                subgraph "🛡️ BlocIQ Security & Compliance"
-                    Q[🔒 GDPR Compliance<br/>• EU/UK Data Residency<br/>• Right to be Forgotten<br/>• Data Minimization<br/>• Consent Management<br/>• Privacy by Design]
-                    R[🔐 Row Level Security<br/>• Agency Data Isolation<br/>• User Permission Matrix<br/>• Audit Logging<br/>• Access Controls]
-                    S[🔑 OAuth 2.0 Security<br/>• Microsoft Integration<br/>• Secure Token Exchange<br/>• Multi-Factor Auth<br/>• Session Management]
-                end
-                
-                %% Connections
-                A --> D
-                B --> D
-                C --> D
-                
-                D --> E
-                E --> F
-                E --> G
-                E --> H
-                E --> I
-                E --> J
-                
-                F --> K
-                F --> L
-                F --> M
-                F --> N
-                F --> O
-                F --> P
-                
-                F -.-> Q
-                F -.-> R
-                G -.-> S
-                
-                %% BlocIQ Brand Styling
-                classDef userClass fill:#e3f2fd,stroke:#1976d2,stroke-width:3px,color:#000,font-weight:bold,font-family:'Segoe UI',Arial
-                classDef appClass fill:#f3e5f5,stroke:#7b1fa2,stroke-width:3px,color:#000,font-weight:bold,font-family:'Segoe UI',Arial
-                classDef serviceClass fill:#e8f5e8,stroke:#388e3c,stroke-width:2px,color:#000,font-family:'Segoe UI',Arial
-                classDef dataClass fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000,font-family:'Segoe UI',Arial
-                classDef securityClass fill:#ffebee,stroke:#d32f2f,stroke-width:3px,color:#000,font-weight:bold,font-family:'Segoe UI',Arial
-                
-                class A,B,C userClass
-                class D,E appClass
-                class F,G,H,I,J serviceClass
-                class K,L,M,N,O,P dataClass
-                class Q,R,S securityClass
+            <div className="text-center mb-4">
+              <p className="text-sm text-gray-600">
+                Interactive system architecture diagram showing complete BlocIQ platform stack
+              </p>
+            </div>
+            
+            {/* Visual Architecture Representation */}
+            <div className="space-y-6">
+              {/* User Layer */}
+              <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+                <h4 className="text-lg font-bold text-blue-800 mb-3 flex items-center">
+                  👥 BlocIQ User Interface Layer
+                </h4>
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div className="bg-white p-3 rounded border">
+                    <div className="font-semibold text-gray-800">Property Manager</div>
+                    <div className="text-sm text-gray-600">🏢 Building Management, Portfolio Oversight</div>
+                  </div>
+                  <div className="bg-white p-3 rounded border">
+                    <div className="font-semibold text-gray-800">Leaseholder</div>
+                    <div className="text-sm text-gray-600">🏠 Tenant Portal, Digital Access</div>
+                  </div>
+                  <div className="bg-white p-3 rounded border">
+                    <div className="font-semibold text-gray-800">Investor</div>
+                    <div className="text-sm text-gray-600">📊 Portfolio View, Analytics Dashboard</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Application Layer */}
+              <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-4">
+                <h4 className="text-lg font-bold text-purple-800 mb-3 flex items-center">
+                  📱 BlocIQ Application Layer
+                </h4>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="bg-white p-3 rounded border">
+                    <div className="font-semibold text-gray-800">Next.js Frontend</div>
+                    <div className="text-sm text-gray-600">React Components, TypeScript, Responsive UI</div>
+                  </div>
+                  <div className="bg-white p-3 rounded border">
+                    <div className="font-semibold text-gray-800">API Routes</div>
+                    <div className="text-sm text-gray-600">Server Actions, Authentication, Middleware</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Core Services */}
+              <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4">
+                <h4 className="text-lg font-bold text-green-800 mb-3 flex items-center">
+                  🔧 BlocIQ Core Services
+                </h4>
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="bg-white p-3 rounded border">
+                    <div className="font-semibold text-gray-800">🗄️ Supabase Backend</div>
+                    <div className="text-sm text-gray-600">PostgreSQL, Real-time, File Storage</div>
+                  </div>
+                  <div className="bg-white p-3 rounded border">
+                    <div className="font-semibold text-gray-800">📧 Microsoft Graph</div>
+                    <div className="text-sm text-gray-600">Outlook Integration, OAuth 2.0</div>
+                  </div>
+                  <div className="bg-white p-3 rounded border">
+                    <div className="font-semibold text-gray-800">🤖 OpenAI GPT-4</div>
+                    <div className="text-sm text-gray-600">Document Analysis, AI Drafting</div>
+                  </div>
+                  <div className="bg-white p-3 rounded border">
+                    <div className="font-semibold text-gray-800">📄 Google Document AI</div>
+                    <div className="text-sm text-gray-600">OCR Processing, EU Endpoints</div>
+                  </div>
+                  <div className="bg-white p-3 rounded border">
+                    <div className="font-semibold text-gray-800">📬 SendGrid</div>
+                    <div className="text-sm text-gray-600">Email Delivery, GDPR Compliant</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Data Model */}
+              <div className="bg-orange-50 border-2 border-orange-200 rounded-lg p-4">
+                <h4 className="text-lg font-bold text-orange-800 mb-3 flex items-center">
+                  📊 BlocIQ Data Model
+                </h4>
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="bg-white p-3 rounded border">
+                    <div className="font-semibold text-gray-800">🏢 Buildings</div>
+                    <div className="text-sm text-gray-600">Property Information, Management Data</div>
+                  </div>
+                  <div className="bg-white p-3 rounded border">
+                    <div className="font-semibold text-gray-800">🏠 Units</div>
+                    <div className="text-sm text-gray-600">Individual Properties, Lease Details</div>
+                  </div>
+                  <div className="bg-white p-3 rounded border">
+                    <div className="font-semibold text-gray-800">👥 Leaseholders</div>
+                    <div className="text-sm text-gray-600">Tenant Data, Contact Information</div>
+                  </div>
+                  <div className="bg-white p-3 rounded border">
+                    <div className="font-semibold text-gray-800">💬 Communications</div>
+                    <div className="text-sm text-gray-600">Email History, Message Threads</div>
+                  </div>
+                  <div className="bg-white p-3 rounded border">
+                    <div className="font-semibold text-gray-800">📋 Compliance</div>
+                    <div className="text-sm text-gray-600">Safety Documents, Certificates</div>
+                  </div>
+                  <div className="bg-white p-3 rounded border">
+                    <div className="font-semibold text-gray-800">📄 Leases</div>
+                    <div className="text-sm text-gray-600">Legal Documents, Terms & Conditions</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Security & Compliance */}
+              <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4">
+                <h4 className="text-lg font-bold text-red-800 mb-3 flex items-center">
+                  🛡️ BlocIQ Security & Compliance
+                </h4>
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div className="bg-white p-3 rounded border">
+                    <div className="font-semibold text-gray-800">🔒 GDPR Compliance</div>
+                    <div className="text-sm text-gray-600">EU/UK Data Residency, Privacy by Design</div>
+                  </div>
+                  <div className="bg-white p-3 rounded border">
+                    <div className="font-semibold text-gray-800">🔐 Row Level Security</div>
+                    <div className="text-sm text-gray-600">Agency Data Isolation, Access Controls</div>
+                  </div>
+                  <div className="bg-white p-3 rounded border">
+                    <div className="font-semibold text-gray-800">🔑 OAuth 2.0 Security</div>
+                    <div className="text-sm text-gray-600">Microsoft Integration, Multi-Factor Auth</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -190,53 +242,6 @@ export default function ArchitecturePage() {
           </div>
         </div>
 
-        {/* Brand Kit Section */}
-        <div className="bg-white rounded-xl shadow-lg p-8">
-          <h3 className="text-2xl font-bold text-gray-900 mb-6">BlocIQ Brand Kit Integration</h3>
-          
-          <div className="grid md:grid-cols-2 gap-8">
-            <div>
-              <h4 className="text-lg font-semibold text-gray-900 mb-4">Brand Colors</h4>
-              <div className="space-y-3">
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-blue-600 rounded"></div>
-                  <span className="text-sm text-gray-600">Primary Blue: #1976d2 (User Interface)</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-purple-600 rounded"></div>
-                  <span className="text-sm text-gray-600">Secondary Purple: #7b1fa2 (Platform Core)</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-green-600 rounded"></div>
-                  <span className="text-sm text-gray-600">Success Green: #388e3c (Services)</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-orange-600 rounded"></div>
-                  <span className="text-sm text-gray-600">Warning Orange: #f57c00 (Data Layer)</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-red-600 rounded"></div>
-                  <span className="text-sm text-gray-600">Error Red: #d32f2f (Security)</span>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="text-lg font-semibold text-gray-900 mb-4">Typography</h4>
-              <div className="space-y-3">
-                <div className="text-sm text-gray-600">
-                  <strong>Font Family:</strong> Segoe UI, Arial
-                </div>
-                <div className="text-sm text-gray-600">
-                  <strong>Font Weights:</strong> Bold for headers, Regular for content
-                </div>
-                <div className="text-sm text-gray-600">
-                  <strong>Visual Hierarchy:</strong> Clear distinction between system layers
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* Download Section */}
         <div className="mt-8 text-center">

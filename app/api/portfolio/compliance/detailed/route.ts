@@ -83,9 +83,21 @@ export async function GET(request: NextRequest) {
     
     if (buildingsError) {
       console.error('Error fetching buildings:', buildingsError);
-      return NextResponse.json({ 
+
+      // Check if it's a table not found error
+      if (buildingsError.message?.includes('relation') && buildingsError.message?.includes('does not exist')) {
+        console.log('🏢 Buildings table does not exist yet, returning empty array');
+        return NextResponse.json({
+          success: true,
+          data: [],
+          message: 'Buildings table not set up yet.'
+        });
+      }
+
+      return NextResponse.json({
         success: false,
-        error: 'Failed to fetch buildings'
+        error: 'Failed to fetch buildings',
+        details: process.env.NODE_ENV === 'development' ? buildingsError.message : undefined
       }, { status: 500 });
     }
 
@@ -126,9 +138,21 @@ export async function GET(request: NextRequest) {
 
     if (complianceError) {
       console.error('Error fetching compliance data:', complianceError);
-      return NextResponse.json({ 
+
+      // Check if it's a table not found error
+      if (complianceError.message?.includes('relation') && complianceError.message?.includes('does not exist')) {
+        console.log('📋 Building compliance assets table does not exist yet, returning empty array');
+        return NextResponse.json({
+          success: true,
+          data: [],
+          message: 'Compliance assets table not set up yet.'
+        });
+      }
+
+      return NextResponse.json({
         success: false,
-        error: 'Failed to fetch compliance data'
+        error: 'Failed to fetch compliance data',
+        details: process.env.NODE_ENV === 'development' ? complianceError.message : undefined
       }, { status: 500 });
     }
 

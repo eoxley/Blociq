@@ -89,7 +89,7 @@ export function ToastProvider({
     const newNotification: ToastNotification = {
       ...notification,
       id,
-      timestamp: new Date('2024-01-01'),
+      timestamp: new Date(),
       duration: notification.duration ?? defaultDuration
     };
 

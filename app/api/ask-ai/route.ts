@@ -682,46 +682,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 🔍 Smart Building Detection from Prompt
-    if (!building_id) {
-      console.log('🔍 Auto-detecting building from prompt...');
-      
-      // Extract potential building names from the question with improved logic
-      const buildingKeywords = ['house', 'court', 'building', 'apartment', 'residence', 'manor', 'gardens', 'heights', 'view', 'plaza'];
-      const words = prompt.toLowerCase().split(/\s+/);
-      
-      // Try different combinations of words (1-3 words)
-      for (let wordCount = 1; wordCount <= 3; wordCount++) {
-        for (let i = 0; i <= words.length - wordCount; i++) {
-          const potentialName = words.slice(i, i + wordCount).join(' ');
-          if (buildingKeywords.some(keyword => potentialName.includes(keyword))) {
-            console.log('🔍 Searching for building:', potentialName);
-            
-            let buildingQuery = supabase
-              .from('buildings')
-              .select('id, name, address, unit_count')
-              .ilike('name', `%${potentialName}%`);
-
-            // Filter by agency for authenticated users
-            if (userAgencyId) {
-              buildingQuery = buildingQuery.eq('agency_id', userAgencyId);
-            }
-
-            const { data: building } = await buildingQuery
-              .limit(1)
-              .single();
-            
-            if (building) {
-              building_id = building.id;
-              console.log('✅ Auto-detected building:', building.name);
-              break;
-            }
-          }
-        }
-        if (building_id) break;
-      }
-    }
-
     // 🔐 Ensure authenticated users have agency linkage
     let userAgencyId = null;
     if (!isPublicAccess && user) {
@@ -735,6 +695,46 @@ export async function POST(req: NextRequest) {
       }
       userAgencyId = agencyCheck.agency_id;
       console.log('✅ User agency verified:', userAgencyId);
+    }
+
+    // 🔍 Smart Building Detection from Prompt
+    if (!building_id) {
+      console.log('🔍 Auto-detecting building from prompt...');
+
+      // Extract potential building names from the question with improved logic
+      const buildingKeywords = ['house', 'court', 'building', 'apartment', 'residence', 'manor', 'gardens', 'heights', 'view', 'plaza'];
+      const words = prompt.toLowerCase().split(/\s+/);
+
+      // Try different combinations of words (1-3 words)
+      for (let wordCount = 1; wordCount <= 3; wordCount++) {
+        for (let i = 0; i <= words.length - wordCount; i++) {
+          const potentialName = words.slice(i, i + wordCount).join(' ');
+          if (buildingKeywords.some(keyword => potentialName.includes(keyword))) {
+            console.log('🔍 Searching for building:', potentialName);
+
+            let buildingQuery = supabase
+              .from('buildings')
+              .select('id, name, address, unit_count')
+              .ilike('name', `%${potentialName}%`);
+
+            // Filter by agency for authenticated users
+            if (userAgencyId) {
+              buildingQuery = buildingQuery.eq('agency_id', userAgencyId);
+            }
+
+            const { data: building } = await buildingQuery
+              .limit(1)
+              .single();
+
+            if (building) {
+              building_id = building.id;
+              console.log('✅ Auto-detected building:', building.name);
+              break;
+            }
+          }
+        }
+        if (building_id) break;
+      }
     }
 
     // 👤 Fetch User Profile for Personalization
