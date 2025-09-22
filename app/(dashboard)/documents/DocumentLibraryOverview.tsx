@@ -105,46 +105,23 @@ export default function DocumentLibraryOverview() {
 
       setBuildings(buildingsWithCounts)
 
-      // Fetch overall document stats with better error handling
+      // Fetch overall document stats from dedicated API endpoint
       try {
-        const { data: documentsData, error: documentsError } = await supabase
-          .from('building_documents')
-          .select('id, uploaded_at, ocr_status')
-
-        if (documentsError) {
-          console.error('Error fetching document stats:', documentsError)
-          // Set default stats instead of throwing
+        const statsResponse = await fetch('/api/documents/stats')
+        if (statsResponse.ok) {
+          const statsData = await statsResponse.json()
+          setStats(statsData)
+        } else {
+          console.error('Error fetching document stats:', statsResponse.statusText)
           setStats({
             total_documents: 0,
             recent_uploads: 0,
             pending_ocr: 0,
             completed_ocr: 0
           })
-        } else {
-          const now = new Date()
-          const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-
-          const totalDocuments = documentsData?.length || 0
-          const recentUploads = documentsData?.filter(doc =>
-            doc.uploaded_at && new Date(doc.uploaded_at) > sevenDaysAgo
-          ).length || 0
-          const pendingOcr = documentsData?.filter(doc =>
-            doc.ocr_status === 'pending' || doc.ocr_status === 'processing'
-          ).length || 0
-          const completedOcr = documentsData?.filter(doc =>
-            doc.ocr_status === 'completed'
-          ).length || 0
-
-          setStats({
-            total_documents: totalDocuments,
-            recent_uploads: recentUploads,
-            pending_ocr: pendingOcr,
-            completed_ocr: completedOcr
-          })
         }
       } catch (statsError) {
         console.error('Exception fetching document stats:', statsError)
-        // Set default stats on exception
         setStats({
           total_documents: 0,
           recent_uploads: 0,
