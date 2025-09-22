@@ -68,6 +68,7 @@ export async function POST(req: NextRequest) {
       size_bytes: file.size,
       mime: file.type,
       user_id: user.id,
+      doc_category: 'lease',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };

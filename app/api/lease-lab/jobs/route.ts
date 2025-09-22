@@ -40,6 +40,7 @@ export async function GET(req: NextRequest) {
         .from('document_jobs')
         .select('*')
         .eq('user_id', user.id)
+        .eq('doc_category', 'lease')
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
 
