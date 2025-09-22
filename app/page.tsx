@@ -28,6 +28,9 @@ export default function LandingPage() {
               </span>
             </div>
             <div className="hidden md:flex items-center gap-6 text-sm">
+              <Link href="/technical-bits" className="text-gray-700 hover:text-[#6A00F5] transition-colors font-medium">
+                Technical Bits
+              </Link>
               {/* Temporarily disabled - Pricing and Onboarding pages */}
               {/* <Link href="/pricing" className="text-gray-700 hover:text-[#6A00F5] transition-colors font-medium">
                 Pricing
