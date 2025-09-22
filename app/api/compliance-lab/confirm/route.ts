@@ -143,11 +143,11 @@ export async function POST(req: NextRequest) {
 
     const buildingAssetData = {
       building_id: building_id,
-      compliance_asset_id: complianceAsset.id,
-      last_completed_date: analysis_results.inspection_details?.inspection_date || new Date().toISOString().split('T')[0],
+      asset_id: complianceAsset.id,
+      last_renewed_date: analysis_results.inspection_details?.inspection_date || new Date().toISOString().split('T')[0],
       next_due_date: analysis_results.inspection_details?.next_inspection_due,
       status: complianceStatus,
-      document_id: document_id,
+      latest_document_id: document_id,
       contractor: analysis_results.inspection_details?.inspector_company || analysis_results.inspection_details?.inspector_name,
       notes: `${analysis_results.document_type} - ${analysis_results.compliance_status}. Certificate: ${analysis_results.inspection_details?.certificate_number || 'N/A'}`,
       updated_at: new Date().toISOString()
@@ -157,7 +157,7 @@ export async function POST(req: NextRequest) {
     const { data: buildingAsset, error: buildingAssetError } = await serviceSupabase
       .from('building_compliance_assets')
       .upsert(buildingAssetData, {
-        onConflict: 'building_id,compliance_asset_id',
+        onConflict: 'building_id,asset_id',
         ignoreDuplicates: false
       })
       .select('id')
@@ -182,7 +182,7 @@ export async function POST(req: NextRequest) {
 
       const alertsData = urgentFindings.map((finding: any) => ({
         building_id: building_id,
-        compliance_asset_id: complianceAsset.id,
+        asset_id: complianceAsset.id,
         alert_type: finding.classification === 'C1' ? 'immediate_danger' : 'potentially_dangerous',
         alert_message: `${finding.classification}: ${finding.observation}`,
         finding_details: finding,
