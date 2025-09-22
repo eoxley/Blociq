@@ -17,6 +17,33 @@ const openai = new OpenAI({
 export const maxDuration = 180; // 3 minutes for upload and analysis
 
 // Helper function to categorize documents for the building_documents table
+function getFrequencyForAssetType(assetName: string): number {
+  const assetFrequencies: { [key: string]: number } = {
+    'Fire Safety': 12, // Annual
+    'Electrical Safety': 60, // 5 years
+    'Gas Safety': 12, // Annual
+    'Lift Safety': 6, // 6 months
+    'Asbestos Management': 12, // Annual
+    'Legionella Control': 12, // Annual
+    'Water Safety': 12, // Annual
+    'Emergency Lighting': 12, // Annual
+    'Fire Alarm': 12, // Annual
+    'EICR': 60, // 5 years
+    'PAT Testing': 12, // Annual
+    'Boiler Service': 12, // Annual
+  };
+
+  // Try to match the asset name to known frequencies
+  for (const [key, frequency] of Object.entries(assetFrequencies)) {
+    if (assetName.toLowerCase().includes(key.toLowerCase())) {
+      return frequency;
+    }
+  }
+
+  // Default to annual if unknown
+  return 12;
+}
+
 function categorizeDocument(classification: string): string {
   const classificationLower = classification.toLowerCase();
 
@@ -56,6 +83,26 @@ export async function POST(request: NextRequest) {
   };
 
   try {
+    // Debug request headers and content type
+    const contentType = request.headers.get('content-type');
+    console.log("📥 Upload request received:", {
+      method: request.method,
+      contentType: contentType,
+      hasBody: request.body !== null
+    });
+
+    if (!contentType || !contentType.includes('multipart/form-data')) {
+      console.error("❌ Invalid content type:", contentType);
+      return NextResponse.json(
+        {
+          error: 'Invalid request format',
+          details: `Expected multipart/form-data, received: ${contentType || 'none'}`,
+          help: 'Please ensure you are sending a file upload with proper form data'
+        },
+        { status: 400, headers }
+      );
+    }
+
     const formData = await request.formData()
     const file = formData.get('file') as File
     const buildingId = formData.get('buildingId') as string
@@ -119,7 +166,7 @@ export async function POST(request: NextRequest) {
     console.log("📄 Processing PDF:", file.name)
 
     // 1. Upload file to Supabase storage
-    const supabase = createClient()
+    const supabase = await createClient()
 
     // Get current user for storage path
     const { data: { user }, error: userError } = await supabase.auth.getUser()
@@ -458,7 +505,102 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 8. Return analysis results for user confirmation
+    // 8. Auto-create compliance asset for compliance documents
+    let complianceAssetResult = null;
+    if (buildingId && aiAnalysis.suggested_compliance_asset &&
+        ['Fire Risk Assessment', 'EICR', 'Gas Safety', 'Lift Maintenance', 'Insurance Certificate'].includes(aiAnalysis.classification)) {
+
+      try {
+        console.log('🏗️ Creating compliance asset for:', aiAnalysis.classification);
+
+        // First, try to find or create the compliance asset type
+        let { data: assetType, error: assetError } = await supabase
+          .from('compliance_assets')
+          .select('id')
+          .eq('name', aiAnalysis.suggested_compliance_asset)
+          .single();
+
+        if (assetError && assetError.code === 'PGRST116') {
+          // Asset type doesn't exist, create it
+          const { data: newAssetType, error: createAssetError } = await supabase
+            .from('compliance_assets')
+            .insert({
+              name: aiAnalysis.suggested_compliance_asset,
+              category: aiAnalysis.classification,
+              description: `${aiAnalysis.classification} compliance requirement`,
+              frequency_months: getFrequencyForAssetType(aiAnalysis.suggested_compliance_asset)
+            })
+            .select('id')
+            .single();
+
+          if (createAssetError) {
+            console.warn('⚠️ Could not create compliance asset type:', createAssetError);
+          } else {
+            assetType = newAssetType;
+          }
+        }
+
+        // If we have an asset type, create or update the building compliance asset
+        if (assetType) {
+          const complianceData = {
+            building_id: parseInt(buildingId),
+            status: 'compliant',
+            last_renewed_date: aiAnalysis.inspection_date || new Date().toISOString().split('T')[0],
+            next_due_date: aiAnalysis.next_due_date,
+            notes: aiAnalysis.summary?.substring(0, 500),
+            inspector_provider: aiAnalysis.contractor_name,
+            certificate_reference: documentId // Link to our document
+          };
+
+          // Check if this building already has this compliance asset
+          const { data: existing, error: existingError } = await supabase
+            .from('building_compliance_assets')
+            .select('id')
+            .eq('building_id', parseInt(buildingId))
+            .eq('asset_id', assetType.id)
+            .single();
+
+          if (existingError && existingError.code === 'PGRST116') {
+            // Doesn't exist, create new
+            const { data: newAsset, error: createError } = await supabase
+              .from('building_compliance_assets')
+              .insert({
+                ...complianceData,
+                asset_id: assetType.id
+              })
+              .select('id')
+              .single();
+
+            if (createError) {
+              console.warn('⚠️ Could not create building compliance asset:', createError);
+              complianceAssetResult = { created: false, error: createError.message };
+            } else {
+              console.log('✅ Compliance asset created:', newAsset.id);
+              complianceAssetResult = { created: true, assetId: newAsset.id };
+            }
+          } else if (!existingError) {
+            // Update existing
+            const { error: updateError } = await supabase
+              .from('building_compliance_assets')
+              .update(complianceData)
+              .eq('id', existing.id);
+
+            if (updateError) {
+              console.warn('⚠️ Could not update building compliance asset:', updateError);
+              complianceAssetResult = { updated: false, error: updateError.message };
+            } else {
+              console.log('✅ Compliance asset updated:', existing.id);
+              complianceAssetResult = { updated: true, assetId: existing.id };
+            }
+          }
+        }
+      } catch (complianceError) {
+        console.warn('⚠️ Error handling compliance asset:', complianceError);
+        complianceAssetResult = { created: false, error: 'Compliance asset creation failed' };
+      }
+    }
+
+    // 9. Return analysis results for user confirmation
     return NextResponse.json({
       success: true,
       type: 'lease_analysis',
@@ -493,7 +635,10 @@ export async function POST(request: NextRequest) {
       },
 
       // Lease storage information
-      leaseStorage: leaseStorageResult
+      leaseStorage: leaseStorageResult,
+
+      // Compliance asset creation information
+      complianceAsset: complianceAssetResult
     }, { headers })
 
   } catch (error) {

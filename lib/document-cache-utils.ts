@@ -119,10 +119,11 @@ export async function uploadDocumentWithCacheBusting(
 
   onProgress?.('Uploading document...');
 
-  // Upload with cache-busting headers
+  // Upload with FormData (no custom headers to preserve multipart/form-data)
+  // Note: When using FormData, the browser automatically sets the correct Content-Type
+  // with boundary, so we must not override it with custom headers
   const response = await fetch(endpoint, {
     method: 'POST',
-    headers: createCacheBustingHeaders(processingId, fileHash),
     body: formData
   });
 

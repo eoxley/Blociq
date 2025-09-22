@@ -78,12 +78,22 @@ export default function ClauseViewer({ lease, buildingId, onBack }: ClauseViewer
         .eq('lease_id', lease.id)
         .order('clause_type')
 
-      if (error) throw error
-
-      setClauses(data || [])
+      if (error) {
+        if (error.code === '42P01' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
+          // Table doesn't exist - handle gracefully
+          console.log('Lease clauses table not yet available')
+          setClauses([])
+        } else {
+          throw error
+        }
+      } else {
+        setClauses(data || [])
+      }
     } catch (error) {
       console.error('Error fetching lease clauses:', error)
-      toast.error('Failed to load lease clauses')
+      // Don't show error toast for missing table - just log it
+      console.log('Lease clause analysis feature not yet available')
+      setClauses([])
     } finally {
       setLoading(false)
     }

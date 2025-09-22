@@ -105,7 +105,6 @@ export async function GET(request: NextRequest) {
       .select(`
         id,
         building_id,
-        asset_id,
         status,
         last_renewed_date,
         last_carried_out,
@@ -116,22 +115,10 @@ export async function GET(request: NextRequest) {
         contractor,
         created_at,
         updated_at,
-        compliance_assets!asset_id (
-          id,
-          name,
-          category,
-          description,
-          frequency_months
-        ),
         buildings!building_id (
           id,
           name,
           is_hrb
-        ),
-        compliance_documents (
-          id,
-          document_url,
-          created_at
         )
       `)
       .in('building_id', buildingIds)

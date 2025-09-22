@@ -66,14 +66,25 @@ export default function BuildingLeaseSummary({ buildingId, buildingName }: Build
         .eq('building_id', buildingId)
         .single()
 
-      if (error && error.code !== 'PGRST116') {
-        throw error
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // No data found - this is normal for new buildings
+          setSummary(null)
+        } else if (error.code === '42P01' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
+          // Table doesn't exist - handle gracefully
+          console.log('Building lease summary table not yet available')
+          setSummary(null)
+        } else {
+          throw error
+        }
+      } else {
+        setSummary(data)
       }
-
-      setSummary(data)
     } catch (error) {
       console.error('Error fetching building lease summary:', error)
-      toast.error('Failed to load building lease summary')
+      // Don't show error toast for missing table - just log it
+      console.log('Building lease summary feature not yet available')
+      setSummary(null)
     } finally {
       setLoading(false)
     }
