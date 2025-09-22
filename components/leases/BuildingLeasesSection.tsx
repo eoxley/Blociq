@@ -56,7 +56,6 @@ export default function BuildingLeasesSection({ buildingId, buildingName }: Buil
           leaseholder_name,
           start_date,
           end_date,
-          apportionment,
           ground_rent,
           status,
           created_at,

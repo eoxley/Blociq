@@ -56,7 +56,7 @@ interface Building {
 
 interface CommunicationLog {
   id: string
-  type: 'call' | 'email' | 'letter'
+  type?: 'call' | 'email' | 'letter'
   leaseholder_id: string
   leaseholder_name: string
   building_name: string
@@ -89,7 +89,17 @@ export default function CommunicationsHub() {
     try {
       const { data, error } = await supabase
         .from('communications_log')
-        .select('*')
+        .select(`
+          id,
+          leaseholder_id,
+          leaseholder_name,
+          building_name,
+          unit_number,
+          subject,
+          content,
+          created_at,
+          status
+        `)
         .order('created_at', { ascending: false })
         .limit(5)
 
@@ -351,12 +361,12 @@ export default function CommunicationsHub() {
                   <div key={comm.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
                     <div className="flex items-center gap-4">
                       <div className={`p-3 rounded-xl ${
-                        comm.type === 'call' ? 'bg-green-100 text-green-700' :
-                        comm.type === 'email' ? 'bg-blue-100 text-blue-700' :
+                        (comm.type || 'email') === 'call' ? 'bg-green-100 text-green-700' :
+                        (comm.type || 'email') === 'email' ? 'bg-blue-100 text-blue-700' :
                         'bg-purple-100 text-purple-700'
                       }`}>
-                        {comm.type === 'call' ? <Phone className="h-5 w-5" /> :
-                         comm.type === 'email' ? <Mail className="h-5 w-5" /> :
+                        {(comm.type || 'email') === 'call' ? <Phone className="h-5 w-5" /> :
+                         (comm.type || 'email') === 'email' ? <Mail className="h-5 w-5" /> :
                          <FileText className="h-5 w-5" />}
                       </div>
                       <div>
