@@ -1,7 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import { DocumentJob } from '../ComplianceLabClient';
-import { Clock, CheckCircle, AlertCircle, Eye, FileText, Shield, RefreshCw } from 'lucide-react';
+import { Clock, CheckCircle, AlertCircle, Eye, FileText, Shield, RefreshCw, Play, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface JobsListProps {
   jobs: DocumentJob[];
@@ -59,6 +61,88 @@ const formatDate = (dateString: string) => {
 };
 
 export default function JobsList({ jobs, onViewAnalysis, onRefresh, category }: JobsListProps) {
+  const [triggeringJobs, setTriggeringJobs] = useState<Set<string>>(new Set());
+  const [deletingJobs, setDeletingJobs] = useState<Set<string>>(new Set());
+
+  const handleTriggerProcessing = async (jobId: string, filename: string) => {
+    if (!confirm(`Start processing for "${filename}"? This will begin OCR and analysis.`)) {
+      return;
+    }
+
+    setTriggeringJobs(prev => new Set([...prev, jobId]));
+
+    try {
+      console.log('🚀 Attempting to trigger processing for job:', jobId);
+      const response = await fetch('/api/lease-lab/trigger-processing', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ jobId })
+      });
+
+      console.log('📡 Trigger response status:', response.status);
+
+      if (response.ok) {
+        const responseData = await response.json();
+        console.log('✅ Processing triggered successfully:', responseData);
+        toast.success('Processing started successfully');
+        // Refresh to show updated status
+        onRefresh();
+      } else {
+        const errorData = await response.json();
+        console.error('❌ Trigger failed:', errorData);
+        throw new Error(errorData.message || 'Failed to trigger processing');
+      }
+    } catch (error) {
+      console.error('Error triggering processing:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to trigger processing');
+    } finally {
+      setTriggeringJobs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(jobId);
+        return newSet;
+      });
+    }
+  };
+
+  const handleDelete = async (jobId: string, filename: string) => {
+    if (!confirm(`Are you sure you want to delete "${filename}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    setDeletingJobs(prev => new Set([...prev, jobId]));
+
+    try {
+      console.log('🗑️ Attempting to delete job:', jobId);
+      const response = await fetch(`/api/lease-lab/jobs/${jobId}`, {
+        method: 'DELETE'
+      });
+
+      console.log('📡 Delete response status:', response.status);
+
+      if (response.ok) {
+        const responseData = await response.json();
+        console.log('✅ Delete successful:', responseData);
+        toast.success('Document deleted successfully');
+        onRefresh();
+      } else {
+        const errorData = await response.json();
+        console.error('❌ Delete failed:', errorData);
+        throw new Error(errorData.message || 'Failed to delete document');
+      }
+    } catch (error) {
+      console.error('Error deleting job:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to delete document');
+    } finally {
+      setDeletingJobs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(jobId);
+        return newSet;
+      });
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -129,6 +213,28 @@ export default function JobsList({ jobs, onViewAnalysis, onRefresh, category }: 
                 >
                   <Eye className="h-4 w-4 mr-1" />
                   View Analysis
+                </button>
+              )}
+
+              {job.status === 'UPLOADED' && (
+                <button
+                  onClick={() => handleTriggerProcessing(job.id, job.filename)}
+                  disabled={triggeringJobs.has(job.id)}
+                  className="flex items-center px-3 py-2 text-sm font-medium text-green-600 hover:text-green-700 border border-green-200 rounded-lg hover:bg-green-50 transition-colors disabled:opacity-50"
+                >
+                  <Play className="h-4 w-4 mr-1" />
+                  {triggeringJobs.has(job.id) ? 'Starting...' : 'Process'}
+                </button>
+              )}
+
+              {(job.status === 'UPLOADED' || job.status === 'FAILED') && (
+                <button
+                  onClick={() => handleDelete(job.id, job.filename)}
+                  disabled={deletingJobs.has(job.id)}
+                  className="flex items-center px-3 py-2 text-sm font-medium text-red-600 hover:text-red-700 border border-red-200 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  {deletingJobs.has(job.id) ? 'Deleting...' : 'Delete'}
                 </button>
               )}
             </div>
