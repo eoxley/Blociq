@@ -708,7 +708,7 @@ export async function POST(request: NextRequest) {
 
       // Compliance asset creation information
       complianceAsset: complianceAssetResult
-    }, { headers })
+    }, { headers });
 
   } catch (error) {
     console.error('❌ Error processing document:', error)
@@ -730,7 +730,7 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString()
     };
 
-    return NextResponse.json(errorResponse, { status: 500, headers })
+    return NextResponse.json(errorResponse, { status: 500, headers });
   }
 }
 
@@ -1111,4 +1111,5 @@ Return only valid JSON.
       apportionment: null
     }
   }
-} 
+}
+}
