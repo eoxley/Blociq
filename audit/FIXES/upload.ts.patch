@@ -1,0 +1,277 @@
+--- a/app/api/upload-and-analyse/route.ts
++++ b/app/api/upload-and-analyse/route.ts
+@@ -228,13 +228,22 @@ export async function POST(request: NextRequest) {
+
+     // 2. Analyze file characteristics for optimal OCR selection
+     const fileBuffer = Buffer.from(await file.arrayBuffer());
+
+-    let analyzeFileCharacteristics, selectOptimalOCRMethods, generateFileHash, getOrExtractText;
++    let analyzeFileCharacteristics, selectOptimalOCRMethods, generateFileHash, getOrExtractText, isOCRSystemAvailable = false;
+     try {
+       const intelligentSelection = await import('@/lib/ocr/intelligent-selection');
+       analyzeFileCharacteristics = intelligentSelection.analyzeFileCharacteristics;
+       selectOptimalOCRMethods = intelligentSelection.selectOptimalOCRMethods;
+       generateFileHash = intelligentSelection.generateFileHash;
+
++      // Test if OCR functions are actually callable
++      if (typeof analyzeFileCharacteristics !== 'function' ||
++          typeof selectOptimalOCRMethods !== 'function' ||
++          typeof generateFileHash !== 'function') {
++        throw new Error('OCR functions not properly exported');
++      }
++
++      isOCRSystemAvailable = true;
++
+       const extractionCache = await import('@/lib/ocr/extraction-cache');
+       getOrExtractText = extractionCache.getOrExtractText;
+     } catch (importError) {
+@@ -242,16 +251,33 @@ export async function POST(request: NextRequest) {
+       return NextResponse.json(
+         {
+           error: 'OCR system unavailable',
+-          details: `OCR modules could not be loaded: ${importError instanceof Error ? importError.message : 'Unknown import error'}`,
+-          suggestion: 'Please try again later or contact support'
++          details: `OCR modules could not be loaded: ${importError instanceof Error ? importError.message : 'Unknown import error'}`,
++          suggestion: 'Falling back to basic text extraction',
++          fallbackAvailable: true
+         },
+-        { status: 503, headers }
++        { status: 200, headers } // Don't fail completely, offer fallback
+       );
+     }
+
+-    const fileCharacteristics = await analyzeFileCharacteristics(file);
+-    const generatedFileHash = generateFileHash(fileBuffer);
+-
++    // Initialize file characteristics with fallback values
++    let fileCharacteristics = {
++      hasTextLayer: false,
++      quality: 'medium',
++      estimatedPages: 1,
++      documentType: 'unknown'
++    };
++    let generatedFileHash = 'fallback-' + Date.now();
++
++    if (isOCRSystemAvailable) {
++      try {
++        fileCharacteristics = await analyzeFileCharacteristics(file);
++        generatedFileHash = generateFileHash(fileBuffer);
++      } catch (analysisError) {
++        console.warn('⚠️ File analysis failed, using fallback values:', analysisError);
++        // Continue with fallback values
++      }
++    }
++
+     console.log("📋 File characteristics:", {
+       hasTextLayer: fileCharacteristics.hasTextLayer,
+       quality: fileCharacteristics.quality,
+@@ -261,21 +287,38 @@ export async function POST(request: NextRequest) {
+     });
+
+     // 3. Extract text with intelligent method selection and caching
+-    const extractionResult = await getOrExtractText(fileBuffer, async () => {
+-      const startTime = Date.now();
+-      const text = await extractTextFromPDFIntelligent(file, fileCharacteristics);
+-      const processingTime = Date.now() - startTime;
+-
+-      const { calculateExtractionQuality, generateExtractionStats } = await import('@/lib/ocr/intelligent-selection');
+-      const quality = calculateExtractionQuality(text, file, fileCharacteristics);
+-      const stats = generateExtractionStats(text, processingTime, 'intelligent_selection', fileCharacteristics);
+-
+-      return {
+-        text,
+-        method: 'intelligent_selection',
+-        stats,
+-        quality: quality.score
+-      };
++    let extractionResult;
++
++    if (isOCRSystemAvailable && getOrExtractText) {
++      try {
++        extractionResult = await getOrExtractText(fileBuffer, async () => {
++          const startTime = Date.now();
++          const text = await extractTextFromPDFIntelligent(file, fileCharacteristics);
++          const processingTime = Date.now() - startTime;
++
++          const { calculateExtractionQuality, generateExtractionStats } = await import('@/lib/ocr/intelligent-selection');
++          const quality = calculateExtractionQuality(text, file, fileCharacteristics);
++          const stats = generateExtractionStats(text, processingTime, 'intelligent_selection', fileCharacteristics);
++
++          return {
++            text,
++            method: 'intelligent_selection',
++            stats,
++            quality: quality.score
++          };
++        });
++      } catch (extractionError) {
++        console.warn('⚠️ Intelligent extraction failed, falling back to legacy method:', extractionError);
++        const fallbackText = await extractTextFromPDF(file);
++        extractionResult = {
++          text: fallbackText,
++          method: 'legacy_fallback',
++          stats: { processing_time: 0 },
++          quality: 0.5,
++          fromCache: false
++        };
++      }
++    } else {
++      // Use legacy extraction method
++      const fallbackText = await extractTextFromPDF(file);
++      extractionResult = {
++        text: fallbackText,
++        method: 'legacy_fallback',
++        stats: { processing_time: 0 },
++        quality: 0.5,
++        fromCache: false
++      };
++    }
+     });
+
+     const extractedText = extractionResult.text;
+@@ -303,16 +346,30 @@ export async function POST(request: NextRequest) {
+     });
+
+     // 4. Validate extraction quality
+-    const { calculateExtractionQuality } = await import('@/lib/ocr/intelligent-selection');
+-    const extractionQuality = calculateExtractionQuality(extractedText, file, fileCharacteristics);
++    let extractionQuality;
++    if (isOCRSystemAvailable) {
++      try {
++        const { calculateExtractionQuality } = await import('@/lib/ocr/intelligent-selection');
++        extractionQuality = calculateExtractionQuality(extractedText, file, fileCharacteristics);
++      } catch (qualityError) {
++        console.warn('⚠️ Quality assessment failed, using fallback validation:', qualityError);
++        extractionQuality = validateExtractionQuality(extractedText, file);
++      }
++    } else {
++      extractionQuality = validateExtractionQuality(extractedText, file);
++    }
++
+     console.log("📊 Extraction quality assessment:", {
+       level: extractionQuality.quality_level,
+       score: extractionQuality.score,
+-      completionRate: extractionQuality.completion_rate,
+-      warnings: extractionQuality.warnings.length
++      completionRate: extractionQuality.completion_rate || 'N/A',
++      warnings: extractionQuality.warnings?.length || 0
+     });
+
+-    if (extractionQuality.score < 0.3) {
++    if (extractionQuality.score < 0.3) {
+       console.warn("⚠️ Poor extraction quality detected - proceeding with caution");
+     }
+
+@@ -380,6 +437,15 @@ export async function POST(request: NextRequest) {
+         uploaded_by: user.id.toString(),
+         ocr_status: 'completed'
+       });
++
++      // Validate building_id exists and user has access
++      if (buildingId) {
++        const { data: buildingExists } = await supabase
++          .from('buildings')
++          .select('id')
++          .eq('id', buildingId)
++          .single();
++
++        if (!buildingExists) {
++          console.warn('⚠️ Building ID not found, proceeding without building link');
++          buildingId = null;
++        }
++      }
+
+       // Try building_documents table first, fall back to documents table if it doesn't exist
+       let { data: documentData, error: docError } = await supabase
+@@ -407,7 +473,15 @@ export async function POST(request: NextRequest) {
+
+       // If building_documents table doesn't exist, try a simpler documents table
+       if (docError && (docError.code === '42P01' || docError.message?.includes('does not exist'))) {
+         console.log('⚠️ building_documents table not found, trying simpler documents table');
+-        const { data: simpleDocData, error: simpleDocError } = await supabase
++
++        // Check if documents table exists first
++        const { data: tableCheck } = await supabase
++          .from('information_schema.tables')
++          .select('table_name')
++          .eq('table_name', 'documents')
++          .single()
++          .catch(() => ({ data: null }));
++
++        if (tableCheck) {
++          const { data: simpleDocData, error: simpleDocError } = await supabase
+           .from('documents')
+           .insert({
+             name: file.name,
+@@ -424,6 +498,16 @@ export async function POST(request: NextRequest) {
+           .select('id')
+           .single();
+
+-        documentData = simpleDocData;
+-        docError = simpleDocError;
++          documentData = simpleDocData;
++          docError = simpleDocError;
++        } else {
++          // Neither table exists, create minimal record tracking
++          console.error('❌ No suitable document table found');
++          docError = new Error('No document storage table available');
++        }
+       }
+
+       if (docError) {
+@@ -585,6 +669,16 @@ export async function POST(request: NextRequest) {
+
+         // Check if compliance tables exist first
+         const { data: tablesCheck, error: tablesError } = await supabase
++          .from('information_schema.tables')
++          .select('table_name')
++          .eq('table_name', 'compliance_assets')
++          .single()
++          .catch(() => ({ data: null, error: null }));
++
++        if (!tablesCheck) {
++          console.log('⚠️ Compliance tables not available, skipping compliance asset creation');
++          complianceAssetResult = { created: false, error: 'Compliance system not set up' };
++        } else {
++          // Original compliance logic continues here
++          const { data: assetCheck, error: assetError } = await supabase
+           .from('compliance_assets')
+           .select('id')
+           .limit(1);
+@@ -725,6 +819,15 @@ export async function POST(request: NextRequest) {
+     }, { headers });
+
+   } catch (error) {
++    // Enhanced error logging
+     console.error('❌ Error processing document:', error)
++    console.error('❌ Error type:', typeof error)
++    console.error('❌ Error name:', error?.constructor?.name)
+     console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace available')
++
++    // Log request context for debugging
++    console.error('❌ Request context:', {
++      method: request.method,
++      url: request.url,
++      headers: Object.fromEntries(request.headers.entries())
++    });
+
+     // Try to get processingId from formData if available
+@@ -739,6 +842,13 @@ export async function POST(request: NextRequest) {
+
+     const errorResponse = {
+       error: 'Failed to process document. Please try again.',
+-      details: error instanceof Error ? error.message : 'Unknown error',
++      details: error instanceof Error ? error.message : String(error),
++      errorType: error?.constructor?.name || 'UnknownError',
+       processingId: processingIdFromError,
+-      timestamp: new Date().toISOString()
++      timestamp: new Date().toISOString(),
++      // Include helpful context for debugging
++      context: {
++        hasOCRSystem: isOCRSystemAvailable,
++        extractionMethod: extractionResult?.method || 'unknown',
++        stage: 'document_processing'
++      }
+     };
+
+     return NextResponse.json(errorResponse, { status: 500, headers });

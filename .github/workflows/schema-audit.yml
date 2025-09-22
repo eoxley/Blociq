@@ -1,0 +1,291 @@
+name: Schema Audit
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  # Run weekly to catch schema drift
+  schedule:
+    - cron: '0 9 * * 1'  # Every Monday at 9 AM UTC
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  schema-audit:
+    runs-on: ubuntu-latest
+    name: Database Schema Audit
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Extract database queries
+      id: extract-queries
+      run: |
+        echo "🔍 Extracting database queries from codebase..."
+
+        # Create output directory
+        mkdir -p audit-results
+
+        # Extract .from() calls to identify table references
+        echo "=== TABLE REFERENCES ===" > audit-results/table-references.txt
+        grep -r "\.from(['\"]" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" . | \
+          sed "s/.*\.from(['\"]//g" | sed "s/['\"].*//g" | sort | uniq >> audit-results/table-references.txt
+
+        # Extract .select() calls to identify column references
+        echo "=== COLUMN REFERENCES ===" > audit-results/column-references.txt
+        grep -r "\.select(['\"]" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" . | \
+          sed "s/.*\.select(['\"]//g" | sed "s/['\"].*//g" | sort | uniq >> audit-results/column-references.txt
+
+        # Extract .eq() calls to identify filter columns
+        echo "=== FILTER COLUMNS ===" > audit-results/filter-columns.txt
+        grep -r "\.eq(['\"]" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" . | \
+          sed "s/.*\.eq(['\"]//g" | sed "s/['\"].*//g" | sort | uniq >> audit-results/filter-columns.txt
+
+        # Extract specific problematic patterns we've seen
+        echo "=== COMMUNICATIONS_LOG TYPE REFERENCES ===" > audit-results/communications-type-refs.txt
+        grep -r "communications_log.*type\|type.*communications_log" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" . >> audit-results/communications-type-refs.txt || true
+
+        echo "✅ Query extraction completed"
+
+    - name: Check migration files
+      id: check-migrations
+      run: |
+        echo "🔍 Analyzing migration files..."
+
+        # Find all migration files
+        find . -name "*.sql" -path "*/migrations/*" -o -path "*/supabase/migrations/*" > audit-results/migration-files.txt
+
+        # Extract table definitions from migrations
+        echo "=== MIGRATION TABLE DEFINITIONS ===" > audit-results/migration-tables.txt
+        for file in $(cat audit-results/migration-files.txt); do
+          echo "--- $file ---" >> audit-results/migration-tables.txt
+          grep -i "create table\|alter table.*add column\|add column" "$file" >> audit-results/migration-tables.txt || true
+        done
+
+        # Check for communications_log table definition
+        echo "=== COMMUNICATIONS_LOG TABLE SCHEMA ===" > audit-results/communications-log-schema.txt
+        grep -A 20 -i "create table.*communications_log\|table communications_log" $(cat audit-results/migration-files.txt) >> audit-results/communications-log-schema.txt || true
+
+        echo "✅ Migration analysis completed"
+
+    - name: Schema validation
+      id: validate-schema
+      run: |
+        echo "🔍 Running schema validation..."
+
+        # Check if communications_log.type column is defined in migrations
+        if grep -q "type.*text\|type.*varchar" audit-results/communications-log-schema.txt; then
+          echo "✅ communications_log.type column found in migrations"
+          echo "COMMUNICATIONS_LOG_TYPE_STATUS=found" >> $GITHUB_ENV
+        else
+          echo "❌ communications_log.type column NOT found in migrations"
+          echo "COMMUNICATIONS_LOG_TYPE_STATUS=missing" >> $GITHUB_ENV
+        fi
+
+        # Check for code references to missing column
+        TYPE_REFS=$(wc -l < audit-results/communications-type-refs.txt)
+        echo "Found $TYPE_REFS references to communications_log.type in code"
+        echo "TYPE_REFS_COUNT=$TYPE_REFS" >> $GITHUB_ENV
+
+        # List common tables referenced in code
+        echo "=== MOST REFERENCED TABLES ===" > audit-results/table-usage-summary.txt
+        grep -v "===" audit-results/table-references.txt | sort | uniq -c | sort -nr | head -20 >> audit-results/table-usage-summary.txt
+
+        echo "✅ Schema validation completed"
+
+    - name: Hydration pattern check
+      id: hydration-check
+      run: |
+        echo "🔍 Checking for hydration anti-patterns..."
+
+        # Check for hardcoded timestamps (ToastNotifications issue)
+        echo "=== HARDCODED TIMESTAMPS ===" > audit-results/hardcoded-timestamps.txt
+        grep -r "new Date(['\"]202[0-9]" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" . >> audit-results/hardcoded-timestamps.txt || true
+
+        # Check for window/document usage without guards
+        echo "=== UNGUARDED BROWSER API ACCESS ===" > audit-results/unguarded-browser-apis.txt
+        grep -r "window\." --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" . | \
+          grep -v "typeof window" | grep -v "use client" >> audit-results/unguarded-browser-apis.txt || true
+
+        # Check for missing "use client" directives
+        echo "=== COMPONENTS MISSING USE CLIENT ===" > audit-results/missing-use-client.txt
+        grep -l "useState\|useEffect\|window\.\|document\." --include="*.tsx" --include="*.jsx" . | \
+          xargs grep -L "use client" >> audit-results/missing-use-client.txt || true
+
+        # Count issues
+        HARDCODED_COUNT=$(wc -l < audit-results/hardcoded-timestamps.txt)
+        UNGUARDED_COUNT=$(wc -l < audit-results/unguarded-browser-apis.txt)
+        MISSING_CLIENT_COUNT=$(wc -l < audit-results/missing-use-client.txt)
+
+        echo "HARDCODED_TIMESTAMPS=$HARDCODED_COUNT" >> $GITHUB_ENV
+        echo "UNGUARDED_BROWSER_APIS=$UNGUARDED_COUNT" >> $GITHUB_ENV
+        echo "MISSING_USE_CLIENT=$MISSING_CLIENT_COUNT" >> $GITHUB_ENV
+
+        echo "✅ Hydration pattern check completed"
+
+    - name: Generate audit report
+      run: |
+        echo "📊 Generating comprehensive audit report..."
+
+        cat > audit-results/AUDIT_REPORT.md << 'EOF'
+        # Database Schema & Hydration Audit Report
+
+        **Generated:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+        **Branch:** ${{ github.ref_name }}
+        **Commit:** ${{ github.sha }}
+
+        ## Schema Validation Results
+
+        ### Communications Log Status
+        - **Type Column Status:** ${{ env.COMMUNICATIONS_LOG_TYPE_STATUS }}
+        - **Code References to .type:** ${{ env.TYPE_REFS_COUNT }}
+
+        ### Table Usage Summary
+        $(cat audit-results/table-usage-summary.txt)
+
+        ## Hydration Issues Found
+
+        - **Hardcoded Timestamps:** ${{ env.HARDCODED_TIMESTAMPS }}
+        - **Unguarded Browser APIs:** ${{ env.UNGUARDED_BROWSER_APIS }}
+        - **Missing "use client":** ${{ env.MISSING_USE_CLIENT }}
+
+        ## Detailed Findings
+
+        ### Communications Log Type References
+        $(cat audit-results/communications-type-refs.txt)
+
+        ### Schema Issues
+        $(if [ "${{ env.COMMUNICATIONS_LOG_TYPE_STATUS }}" = "missing" ]; then echo "❌ CRITICAL: communications_log.type column missing but referenced in code"; fi)
+
+        ## Recommendations
+
+        $(if [ "${{ env.COMMUNICATIONS_LOG_TYPE_STATUS }}" = "missing" ]; then echo "1. Run migration: audit/FIXES/communications_log.sql"; fi)
+        $(if [ "${{ env.HARDCODED_TIMESTAMPS }}" -gt "0" ]; then echo "2. Fix hardcoded timestamps in components"; fi)
+        $(if [ "${{ env.MISSING_USE_CLIENT }}" -gt "0" ]; then echo "3. Add 'use client' directive to client-side components"; fi)
+
+        EOF
+
+        # Replace variables in the markdown
+        envsubst < audit-results/AUDIT_REPORT.md > audit-results/FINAL_REPORT.md
+
+        echo "✅ Audit report generated"
+
+    - name: Upload audit artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: schema-audit-results
+        path: audit-results/
+        retention-days: 30
+
+    - name: Check for critical issues
+      run: |
+        echo "🚨 Checking for critical issues..."
+
+        CRITICAL_ISSUES=0
+
+        # Fail if communications_log.type is missing but referenced
+        if [ "${{ env.COMMUNICATIONS_LOG_TYPE_STATUS }}" = "missing" ] && [ "${{ env.TYPE_REFS_COUNT }}" -gt "0" ]; then
+          echo "❌ CRITICAL: communications_log.type column missing but referenced ${{ env.TYPE_REFS_COUNT }} times"
+          CRITICAL_ISSUES=$((CRITICAL_ISSUES + 1))
+        fi
+
+        # Warn about hydration issues but don't fail
+        if [ "${{ env.HARDCODED_TIMESTAMPS }}" -gt "0" ]; then
+          echo "⚠️ WARNING: Found ${{ env.HARDCODED_TIMESTAMPS }} hardcoded timestamps"
+        fi
+
+        if [ "${{ env.UNGUARDED_BROWSER_APIS }}" -gt "5" ]; then
+          echo "⚠️ WARNING: Found ${{ env.UNGUARDED_BROWSER_APIS }} unguarded browser API calls"
+        fi
+
+        # Set output for other jobs
+        echo "critical_issues=$CRITICAL_ISSUES" >> $GITHUB_OUTPUT
+
+        # Fail if critical issues found
+        if [ $CRITICAL_ISSUES -gt 0 ]; then
+          echo "💥 Build failed due to $CRITICAL_ISSUES critical schema issues"
+          echo "📋 See audit report for details: audit-results/FINAL_REPORT.md"
+          exit 1
+        else
+          echo "✅ No critical schema issues found"
+        fi
+
+    - name: Comment on PR (if applicable)
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const path = './audit-results/FINAL_REPORT.md';
+
+          if (fs.existsSync(path)) {
+            const report = fs.readFileSync(path, 'utf8');
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🔍 Schema Audit Results\n\n${report}`
+            });
+          }
+
+  suggest-fixes:
+    runs-on: ubuntu-latest
+    needs: schema-audit
+    if: failure() && needs.schema-audit.outputs.critical_issues > 0
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Create fix suggestion
+      run: |
+        echo "🔧 Generating fix suggestions..."
+
+        cat > SCHEMA_FIX_GUIDE.md << 'EOF'
+        # 🚨 Critical Schema Issues Detected
+
+        This CI check has detected critical database schema issues that need immediate attention.
+
+        ## Quick Fix Commands
+
+        ```bash
+        # 1. Fix communications_log.type column
+        psql -d your_database < audit/FIXES/communications_log.sql
+
+        # 2. Fix React hydration issues
+        # See detailed guide: audit/FIXES/react-hydration.md
+
+        # 3. Test fixes
+        npm run build
+        npm run lint
+        ```
+
+        ## Fix Files Available
+        - `audit/FIXES/communications_log.sql` - Database schema fix
+        - `audit/FIXES/react-hydration.md` - Hydration fix guide
+        - `audit/FIXES/upload.ts.patch` - Upload API improvements
+
+        ## Prevention
+        This CI check will now run on every PR to prevent similar issues.
+        EOF
+
+        echo "✅ Fix guide generated"
+
+    - name: Upload fix guide
+      uses: actions/upload-artifact@v3
+      with:
+        name: schema-fix-guide
+        path: SCHEMA_FIX_GUIDE.md
