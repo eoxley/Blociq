@@ -1227,26 +1227,6 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
             <div className="p-6">
               {!showChat ? (
                 <div>
-                  {/* Example Prompts */}
-                  <div className="mb-6">
-                    <h3 className="text-sm font-medium text-gray-700 mb-3">Try asking:</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {[
-                        "What are my upcoming compliance deadlines?",
-                        "Show me all properties with recent issues",
-                        "What emails need my attention today?",
-                        "Generate a summary of this week's events"
-                      ].map((prompt, index) => (
-                        <button
-                          key={index}
-                          onClick={() => handleExampleClick(prompt)}
-                          className="text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors text-sm text-gray-700 hover:text-gray-900"
-                        >
-                          {prompt}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
 
                   {/* Input Field */}
                   <div className="relative">
