@@ -255,16 +255,25 @@ export async function POST(req: NextRequest) {
       }, { status: 409 });
     }
 
-    // Create the lease record using actual schema fields
+    // Create the lease record using actual schema fields with required defaults
+    const currentYear = new Date().getFullYear();
+    const defaultStartDate = extractedLeaseStart ?
+      new Date(extractedLeaseStart + '-01-01').toISOString().split('T')[0] :
+      new Date(currentYear, 0, 1).toISOString().split('T')[0]; // Default to current year start
+
+    const defaultEndDate = extractedLeaseEnd ?
+      new Date(extractedLeaseEnd + '-12-31').toISOString().split('T')[0] :
+      new Date(currentYear + 99, 11, 31).toISOString().split('T')[0]; // Default to 99 years lease
+
     const leaseData = {
       building_id: buildingId,
       unit_number: unitId ? `Unit ${unitId}` : 'Building-wide',
       leaseholder_name: extractedLeaseholderName || 'Unknown Leaseholder',
-      start_date: extractedLeaseStart ? new Date(extractedLeaseStart + '-01-01').toISOString().split('T')[0] : null,
-      end_date: extractedLeaseEnd ? new Date(extractedLeaseEnd + '-12-31').toISOString().split('T')[0] : null,
+      start_date: defaultStartDate,
+      end_date: defaultEndDate,
       status: 'active',
       ground_rent: extractedGroundRent || 'Not specified',
-      service_charge_percentage: extractedApportionment ? parseFloat(extractedApportionment) : null,
+      service_charge_percentage: extractedApportionment ? parseFloat(extractedApportionment) : 0,
       responsibilities: finalAnalysisJson.detailed_sections?.filter((s: any) =>
         s.section_title?.toLowerCase().includes('responsibilities')
       ).map((s: any) => s.content).flat() || [],
@@ -277,7 +286,7 @@ export async function POST(req: NextRequest) {
         s.section_title?.toLowerCase().includes('access')
       ).map((s: any) => s.content).flat() || [],
       file_path: `lease-lab/${documentJobId}.pdf`,
-      ocr_text: documentJob.filename,
+      ocr_text: documentJob.filename || 'Document',
       metadata: {
         created_from_job: documentJobId,
         original_filename: documentJob.filename,
@@ -286,6 +295,16 @@ export async function POST(req: NextRequest) {
         document_job_id: documentJobId
       }
     };
+
+    console.log('📝 Inserting lease data:', {
+      building_id: leaseData.building_id,
+      unit_number: leaseData.unit_number,
+      leaseholder_name: leaseData.leaseholder_name,
+      start_date: leaseData.start_date,
+      end_date: leaseData.end_date,
+      ground_rent: leaseData.ground_rent,
+      service_charge_percentage: leaseData.service_charge_percentage
+    });
 
     const { data: newLease, error: createError } = await supabase
       .from('leases')
