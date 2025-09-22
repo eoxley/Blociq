@@ -78,7 +78,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      event_id: calendarEvent.id,
+      eventId: calendarEvent.id,
+      id: calendarEvent.id,
       message: 'Calendar event created successfully',
       event: {
         subject: calendarEvent.subject,

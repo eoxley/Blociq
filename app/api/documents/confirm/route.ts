@@ -234,8 +234,19 @@ async function handleComplianceConfirmation(serviceSupabase: any, user: any, doc
 
   // Create Outlook calendar event if next inspection date is available
   let outlookEventCreated = false;
+  let outlookEventId = null;
   if (analysis_results.inspection_details?.next_inspection_due) {
-    outlookEventCreated = await createOutlookEvent(building, analysis_results, urgentFindings);
+    const outlookResult = await createOutlookEvent(building, analysis_results, urgentFindings);
+    outlookEventCreated = outlookResult.success;
+    outlookEventId = outlookResult.eventId;
+
+    // Update building compliance asset with outlook event ID
+    if (outlookEventId && buildingAsset) {
+      await serviceSupabase
+        .from('building_compliance_assets')
+        .update({ outlook_event_id: outlookEventId })
+        .eq('id', buildingAsset.id);
+    }
   }
 
   console.log('🎉 Compliance asset creation completed successfully');
@@ -343,16 +354,15 @@ async function handleGeneralConfirmation(serviceSupabase: any, user: any, docume
 }
 
 // Helper function to create Outlook calendar events
-async function createOutlookEvent(building: any, analysis_results: any, urgentFindings: any[]): Promise<boolean> {
+async function createOutlookEvent(building: any, analysis_results: any, urgentFindings: any[]): Promise<{success: boolean, eventId?: string}> {
   try {
     console.log('📅 Creating Outlook calendar reminder');
 
     const eventTitle = `${analysis_results.document_type} Renewal – ${building.name}`;
     const eventDate = new Date(analysis_results.inspection_details.next_inspection_due);
 
-    // Set reminder for 30 days before
-    const reminderDate = new Date(eventDate);
-    reminderDate.setDate(reminderDate.getDate() - 30);
+    // Set event time to 4PM UK time
+    eventDate.setHours(16, 0, 0, 0);
 
     const eventDescription = `
 ${analysis_results.document_type} inspection is due for ${building.name}.
@@ -389,14 +399,18 @@ View document in BlocIQ: ${process.env.NEXT_PUBLIC_SITE_URL}/documents/complianc
     });
 
     if (calendarResponse.ok) {
+      const calendarResult = await calendarResponse.json();
       console.log('✅ Outlook calendar event created successfully');
-      return true;
+      return {
+        success: true,
+        eventId: calendarResult.eventId || calendarResult.id
+      };
     } else {
       console.warn('⚠️ Failed to create Outlook calendar event:', await calendarResponse.text());
-      return false;
+      return { success: false };
     }
   } catch (calendarError) {
     console.warn('⚠️ Error creating Outlook calendar event:', calendarError);
-    return false;
+    return { success: false };
   }
 }

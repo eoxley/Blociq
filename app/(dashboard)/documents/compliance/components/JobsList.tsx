@@ -73,7 +73,7 @@ export default function JobsList({ jobs, onViewAnalysis, onRefresh, category }: 
 
     try {
       console.log('🚀 Attempting to trigger processing for job:', jobId);
-      const response = await fetch('/api/lease-lab/trigger-processing', {
+      const response = await fetch('/api/compliance-lab/trigger-processing', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -216,18 +216,19 @@ export default function JobsList({ jobs, onViewAnalysis, onRefresh, category }: 
                 </button>
               )}
 
-              {job.status === 'UPLOADED' && (
+              {(job.status === 'UPLOADED' || job.status === 'QUEUED' || job.status === 'FAILED') && (
                 <button
                   onClick={() => handleTriggerProcessing(job.id, job.filename)}
                   disabled={triggeringJobs.has(job.id)}
                   className="flex items-center px-3 py-2 text-sm font-medium text-green-600 hover:text-green-700 border border-green-200 rounded-lg hover:bg-green-50 transition-colors disabled:opacity-50"
                 >
                   <Play className="h-4 w-4 mr-1" />
-                  {triggeringJobs.has(job.id) ? 'Starting...' : 'Process'}
+                  {triggeringJobs.has(job.id) ? 'Starting...' : job.status === 'FAILED' ? 'Retry' : 'Process'}
                 </button>
               )}
 
-              {(job.status === 'UPLOADED' || job.status === 'FAILED') && (
+              {/* Delete button - show for all statuses except currently processing */}
+              {job.status !== 'OCR' && job.status !== 'EXTRACT' && job.status !== 'SUMMARISE' && (
                 <button
                   onClick={() => handleDelete(job.id, job.filename)}
                   disabled={deletingJobs.has(job.id)}

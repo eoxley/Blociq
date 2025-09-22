@@ -731,7 +731,7 @@ export default function AnalysisDrawer({ job, onClose, onAttachToBuilding, categ
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
-      <div className="absolute inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm" onClick={onClose}></div>
+      <div className="absolute inset-0 bg-white/20 backdrop-blur-md" onClick={onClose}></div>
 
       <div className="absolute inset-0 flex items-center justify-center p-4">
         <div className="w-full max-w-4xl h-full bg-white shadow-xl rounded-lg overflow-hidden">
