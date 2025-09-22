@@ -115,7 +115,7 @@ export default function JobsList({ jobs, onViewAnalysis, onRefresh, category }: 
 
     try {
       console.log('🗑️ Attempting to delete job:', jobId);
-      const response = await fetch(`/api/lease-lab/jobs/${jobId}`, {
+      const response = await fetch(`/api/compliance-lab/jobs/${jobId}`, {
         method: 'DELETE'
       });
 

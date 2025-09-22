@@ -38,6 +38,13 @@ interface DocumentStats {
   completed_ocr: number
 }
 
+interface CategoryCounts {
+  lease_lab: number
+  compliance: number
+  major_works: number
+  general: number
+}
+
 export default function DocumentLibraryOverview() {
   const { supabase } = useSupabase()
   const [buildings, setBuildings] = useState<Building[]>([])
@@ -46,6 +53,12 @@ export default function DocumentLibraryOverview() {
     recent_uploads: 0,
     pending_ocr: 0,
     completed_ocr: 0
+  })
+  const [categoryCounts, setCategoryCounts] = useState<CategoryCounts>({
+    lease_lab: 0,
+    compliance: 0,
+    major_works: 0,
+    general: 0
   })
   const [loading, setLoading] = useState(true)
 
@@ -130,6 +143,64 @@ export default function DocumentLibraryOverview() {
         })
       }
 
+      // Fetch category counts
+      try {
+        const categoryCounts: CategoryCounts = {
+          lease_lab: 0,
+          compliance: 0,
+          major_works: 0,
+          general: 0
+        }
+
+        // Fetch lease lab documents
+        try {
+          const leaseLabResponse = await fetch('/api/lease-lab/jobs')
+          if (leaseLabResponse.ok) {
+            const leaseLabData = await leaseLabResponse.json()
+            categoryCounts.lease_lab = leaseLabData.jobs?.length || 0
+          }
+        } catch (error) {
+          console.error('Error fetching lease lab count:', error)
+        }
+
+        // Fetch compliance documents
+        try {
+          const complianceResponse = await fetch('/api/compliance-lab/jobs')
+          if (complianceResponse.ok) {
+            const complianceData = await complianceResponse.json()
+            categoryCounts.compliance = complianceData.jobs?.length || 0
+          }
+        } catch (error) {
+          console.error('Error fetching compliance count:', error)
+        }
+
+        // Fetch major works documents (TODO: Create this endpoint)
+        try {
+          const majorWorksResponse = await fetch('/api/major-works-lab/jobs')
+          if (majorWorksResponse.ok) {
+            const majorWorksData = await majorWorksResponse.json()
+            categoryCounts.major_works = majorWorksData.jobs?.length || 0
+          }
+        } catch (error) {
+          console.error('Error fetching major works count:', error)
+        }
+
+        // Fetch general documents
+        try {
+          const generalResponse = await fetch('/api/general-docs-lab/jobs')
+          if (generalResponse.ok) {
+            const generalData = await generalResponse.json()
+            categoryCounts.general = generalData.jobs?.length || 0
+          }
+        } catch (error) {
+          console.error('Error fetching general docs count:', error)
+        }
+
+        setCategoryCounts(categoryCounts)
+      } catch (error) {
+        console.error('Error fetching category counts:', error)
+      }
+
     } catch (error) {
       console.error('Error fetching document library data:', error)
 
@@ -158,7 +229,7 @@ export default function DocumentLibraryOverview() {
       icon: Microscope,
       href: '/documents/lease-lab',
       color: 'bg-purple-500',
-      count: 0 // We'll calculate this
+      count: categoryCounts.lease_lab
     },
     {
       name: 'Compliance',
@@ -166,7 +237,7 @@ export default function DocumentLibraryOverview() {
       icon: Shield,
       href: '/documents/compliance',
       color: 'bg-blue-500',
-      count: 0
+      count: categoryCounts.compliance
     },
     {
       name: 'Major Works',
@@ -174,7 +245,7 @@ export default function DocumentLibraryOverview() {
       icon: Wrench,
       href: '/documents/major-works',
       color: 'bg-orange-500',
-      count: 0
+      count: categoryCounts.major_works
     },
     {
       name: 'General',
@@ -182,7 +253,7 @@ export default function DocumentLibraryOverview() {
       icon: FileText,
       href: '/documents/general',
       color: 'bg-gray-500',
-      count: 0
+      count: categoryCounts.general
     }
   ]
 

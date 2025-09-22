@@ -98,8 +98,8 @@ export function SaveTimeCard({ className }: { className?: string }) {
   return (
     <ValuePropCard
       icon="clock"
-      title="Save Time"
-      description="Automate 70% of admin tasks with AI-powered document processing and smart inbox management. Focus on strategy, not spreadsheets."
+      title="AI-Powered Inbox Assistant"
+      description="Smart email categorization, auto-draft responses, and priority flagging. Automatically links emails to specific buildings and units."
       className={className}
     />
   );
@@ -109,8 +109,8 @@ export function StayCompliantCard({ className }: { className?: string }) {
   return (
     <ValuePropCard
       icon="shield"
-      title="Stay Compliant"
-      description="Built-in GDPR compliance, UK legal frameworks (Section 20, BSA, RICS), and automated compliance tracking. Never miss a deadline."
+      title="Compliance Management"
+      description="Automated deadline tracking, secure document storage, complete audit trails, and AI-powered document search for compliance requirements."
       className={className}
     />
   );

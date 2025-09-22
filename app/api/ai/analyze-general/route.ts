@@ -176,12 +176,28 @@ ${truncatedText}`;
 
     const aiResponse = completion.choices[0]?.message?.content || '{}';
 
-    // Try to parse JSON response
+    // Extract JSON from AI response (handle markdown code blocks)
     let analysisResult;
     try {
-      analysisResult = JSON.parse(aiResponse);
+      let jsonString = aiResponse;
+
+      // Remove markdown code block formatting if present
+      const jsonMatch = aiResponse.match(/```json\s*([\s\S]*?)\s*```/);
+      if (jsonMatch) {
+        jsonString = jsonMatch[1];
+      } else {
+        // Try to find JSON object in response
+        const objectMatch = aiResponse.match(/\{[\s\S]*\}/);
+        if (objectMatch) {
+          jsonString = objectMatch[0];
+        }
+      }
+
+      analysisResult = JSON.parse(jsonString);
+      console.log('✅ Successfully parsed JSON response');
     } catch (parseError) {
       console.warn('⚠️ AI response was not valid JSON, creating fallback analysis');
+      console.log('Raw AI response:', aiResponse.substring(0, 500));
 
       // Create fallback analysis for general documents
       analysisResult = {

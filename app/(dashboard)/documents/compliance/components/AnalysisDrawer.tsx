@@ -731,12 +731,13 @@ export default function AnalysisDrawer({ job, onClose, onAttachToBuilding, categ
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
-      <div className="absolute inset-0 bg-black bg-opacity-50" onClick={onClose}></div>
+      <div className="absolute inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm" onClick={onClose}></div>
 
-      <div className="absolute right-0 top-0 h-full w-full max-w-2xl bg-white shadow-xl">
-        <div className="flex h-full flex-col">
-          {/* Header */}
-          <div className="border-b border-gray-200 px-6 py-4">
+      <div className="absolute inset-0 flex items-center justify-center p-4">
+        <div className="w-full max-w-4xl h-full bg-white shadow-xl rounded-lg overflow-hidden">
+          <div className="flex h-full flex-col">
+            {/* Header */}
+            <div className="border-b border-gray-200 px-6 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="p-2 rounded-lg bg-blue-50">
@@ -761,11 +762,11 @@ export default function AnalysisDrawer({ job, onClose, onAttachToBuilding, categ
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
             {/* Document Info */}
             <div className="mb-8">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Document Information</h3>
-              <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+              <div className="bg-white rounded-lg p-4 space-y-3 shadow-sm border border-gray-200">
                 <div className="flex justify-between">
                   <span className="text-sm font-medium text-gray-500">File Size</span>
                   <span className="text-sm text-gray-900">{formatFileSize(job.size_bytes)}</span>
@@ -805,7 +806,7 @@ export default function AnalysisDrawer({ job, onClose, onAttachToBuilding, categ
                   </button>
                 )}
               </div>
-              <div className="bg-gray-50 rounded-lg p-4">
+              <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
                 {category === 'compliance' ? renderSummaryContent() :
                  category === 'major_works' ? renderMajorWorksContent() :
                  renderGeneralContent()}
@@ -915,6 +916,7 @@ export default function AnalysisDrawer({ job, onClose, onAttachToBuilding, categ
               </div>
             )}
           </div>
+        </div>
         </div>
       </div>
 
