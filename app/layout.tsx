@@ -8,6 +8,9 @@ import Footer from '@/components/Footer';
 import PublicAskBlocIQWidget from '@/components/PublicAskBlocIQWidget';
 import { Toaster } from 'sonner';
 
+// Force dynamic rendering for the entire app to prevent static generation issues
+export const dynamic = 'force-dynamic';
+
 
 const inter = Inter({ subsets: ['latin'] });
 
