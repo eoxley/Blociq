@@ -299,7 +299,7 @@ async function generateContextualReply(
     }
 
     // Route through the unified Ask BlocIQ knowledge stack
-    const emailContent = `Subject: ${outlookContext.subject || 'No Subject'}
+    const fullEmailContent = `Subject: ${outlookContext.subject || 'No Subject'}
 From: ${outlookContext.from || 'Sender'}
 Content: ${outlookContext.bodyPreview || 'No preview available'}
 
@@ -316,7 +316,7 @@ Please generate a professional reply to this email.`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        message: emailContent,
+        message: fullEmailContent,
         building_id: buildingContext?.buildingId,
         context_type: 'email_reply',
         intent: 'REPLY',

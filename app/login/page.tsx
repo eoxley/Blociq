@@ -2,6 +2,9 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import LoginForm from './LoginForm'
 
+// Force dynamic rendering to prevent static generation issues with Supabase
+export const dynamic = 'force-dynamic'
+
 export default async function LoginPage({
   searchParams,
 }: {
