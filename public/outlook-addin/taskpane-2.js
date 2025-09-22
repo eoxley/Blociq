@@ -9,17 +9,29 @@ const chatContainer = document.getElementById('chatContainer');
 const inputField = document.getElementById('inputField');
 const sendButton = document.getElementById('sendButton');
 
+// AI Reply elements
+const aiReplyButton = document.getElementById('aiReplyButton');
+const confirmationPanel = document.getElementById('confirmationPanel');
+const confirmationTitle = document.getElementById('confirmationTitle');
+const closeConfirmation = document.getElementById('closeConfirmation');
+const factsSection = document.getElementById('factsSection');
+const factsList = document.getElementById('factsList');
+const draftTextarea = document.getElementById('draftTextarea');
+const insertDraftButton = document.getElementById('insertDraftButton');
+const cancelButton = document.getElementById('cancelButton');
+
 // Initialize add-in
 Office.onReady(() => {
   console.log('📋 BlocIQ Taskpane loaded successfully');
   setupEventListeners();
+  setupAIReplyListeners();
   addWelcomeMessage();
-  
+
   // Focus on input field
   if (inputField) {
     inputField.focus();
   }
-  
+
   console.log('✅ Taskpane initialized');
 });
 
@@ -225,6 +237,305 @@ function adjustTextareaHeight() {
   
   inputField.style.height = 'auto';
   inputField.style.height = Math.min(inputField.scrollHeight, 120) + 'px';
+}
+
+// Setup AI Reply event listeners
+function setupAIReplyListeners() {
+  if (aiReplyButton) {
+    aiReplyButton.addEventListener('click', handleAIReply);
+  }
+
+  if (closeConfirmation) {
+    closeConfirmation.addEventListener('click', hideConfirmationPanel);
+  }
+
+  if (insertDraftButton) {
+    insertDraftButton.addEventListener('click', handleInsertDraft);
+  }
+
+  if (cancelButton) {
+    cancelButton.addEventListener('click', hideConfirmationPanel);
+  }
+}
+
+// Handle AI Reply button click
+async function handleAIReply() {
+  if (isProcessing) return;
+
+  try {
+    isProcessing = true;
+    setLoadingState(true);
+
+    console.log('🤖 Starting AI Reply generation...');
+
+    // Get current email context
+    const emailContext = await getDetailedEmailContext();
+    if (!emailContext) {
+      throw new Error('Could not read email context. Please select an email and try again.');
+    }
+
+    console.log('📧 Email context:', emailContext);
+
+    // Step 1: Enrich with building and compliance data
+    console.log('🔍 Enriching with building data...');
+    const enrichResponse = await fetch('https://www.blociq.co.uk/api/outlook/enrich', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        senderEmail: emailContext.senderEmail,
+        buildingHint: emailContext.buildingHint,
+        messageSummary: emailContext.messageSummary,
+        subject: emailContext.subject
+      })
+    });
+
+    if (!enrichResponse.ok) {
+      const errorText = await enrichResponse.text();
+      throw new Error(`Enrichment failed: ${errorText}`);
+    }
+
+    const { enrichment } = await enrichResponse.json();
+    console.log('✨ Enrichment result:', enrichment);
+
+    // Step 2: Generate draft
+    console.log('✍️ Generating draft...');
+    const draftResponse = await fetch('https://www.blociq.co.uk/api/outlook/draft', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        residentName: enrichment.residentName,
+        unitLabel: enrichment.unitLabel,
+        buildingName: enrichment.buildingName,
+        facts: enrichment.facts,
+        originalMessageSummary: emailContext.messageSummary
+      })
+    });
+
+    if (!draftResponse.ok) {
+      const errorText = await draftResponse.text();
+      throw new Error(`Draft generation failed: ${errorText}`);
+    }
+
+    const { draft, metadata } = await draftResponse.json();
+    console.log('📝 Draft generated:', { draft, metadata });
+
+    // Step 3: Show confirmation panel
+    showConfirmationPanel(enrichment, draft, metadata);
+
+  } catch (error) {
+    console.error('❌ AI Reply failed:', error);
+
+    // Show error in chat
+    addMessage(`AI Reply failed: ${error.message}`, 'assistant');
+  } finally {
+    isProcessing = false;
+    setLoadingState(false);
+  }
+}
+
+// Get detailed email context for AI Reply
+async function getDetailedEmailContext() {
+  try {
+    const item = Office.context.mailbox.item;
+    if (!item) {
+      throw new Error('No email item available');
+    }
+
+    const context = {
+      subject: item.subject || '',
+      itemId: item.itemId || null,
+      itemType: item.itemType || 'message'
+    };
+
+    // Get sender info
+    if (item.from) {
+      context.senderEmail = item.from.emailAddress || '';
+      context.senderName = item.from.displayName || '';
+    }
+
+    // Try to get body content
+    if (item.body && item.body.getAsync) {
+      const bodyResult = await new Promise((resolve, reject) => {
+        item.body.getAsync(Office.CoercionType.Text, (result) => {
+          if (result.status === Office.AsyncResultStatus.Succeeded) {
+            resolve(result.value);
+          } else {
+            resolve(''); // Don't fail on body read errors
+          }
+        });
+      });
+      context.body = bodyResult;
+    }
+
+    // Create message summary for AI processing
+    context.messageSummary = createMessageSummary(context);
+
+    // Extract building hint from subject/body
+    context.buildingHint = extractBuildingHint(context);
+
+    return context;
+
+  } catch (error) {
+    console.error('Error getting detailed email context:', error);
+    return null;
+  }
+}
+
+// Create message summary for topic detection
+function createMessageSummary(context) {
+  const parts = [];
+
+  if (context.subject) {
+    parts.push(`Subject: ${context.subject}`);
+  }
+
+  if (context.body) {
+    // Take first 500 chars of body for summary
+    const bodyPreview = context.body.slice(0, 500).replace(/\s+/g, ' ').trim();
+    parts.push(`Body: ${bodyPreview}`);
+  }
+
+  return parts.join(' | ');
+}
+
+// Extract building hint from email content
+function extractBuildingHint(context) {
+  const text = `${context.subject || ''} ${context.body || ''}`.toLowerCase();
+
+  // Look for common building name patterns
+  const buildingPatterns = [
+    /(\w+\s+court)/gi,
+    /(\w+\s+house)/gi,
+    /(\w+\s+tower)/gi,
+    /(\w+\s+mansion)/gi,
+    /(\w+\s+apartments?)/gi,
+    /(\w+\s+building)/gi,
+    /(\w+\s+block)/gi
+  ];
+
+  for (const pattern of buildingPatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      return match[0].trim();
+    }
+  }
+
+  return null;
+}
+
+// Show confirmation panel with enrichment and draft
+function showConfirmationPanel(enrichment, draft, metadata) {
+  if (!confirmationPanel) return;
+
+  // Update title
+  const residentName = enrichment.residentName || 'Resident';
+  confirmationTitle.textContent = `Proposed Reply to ${residentName}`;
+
+  // Show facts
+  populateFactsList(enrichment.facts);
+
+  // Show draft
+  draftTextarea.value = draft;
+
+  // Show panel
+  confirmationPanel.style.display = 'block';
+}
+
+// Populate facts list
+function populateFactsList(facts) {
+  if (!factsList) return;
+
+  factsList.innerHTML = '';
+
+  const factLabels = {
+    fraLast: 'Fire Risk Assessment (last)',
+    fraNext: 'Fire Risk Assessment (next due)',
+    fireDoorInspectLast: 'Fire door inspection (last)',
+    alarmServiceLast: 'Alarm system service (last)',
+    eicrLast: 'EICR (last)',
+    eicrNext: 'EICR (next due)',
+    gasLast: 'Gas safety (last)',
+    gasNext: 'Gas safety (next due)',
+    asbestosLast: 'Asbestos survey (last)',
+    asbestosNext: 'Asbestos survey (next due)',
+    openLeakTicketRef: 'Existing leak ticket',
+    openWorkOrderRef: 'Existing work order'
+  };
+
+  for (const [key, value] of Object.entries(facts)) {
+    if (value !== null && value !== undefined && value !== '') {
+      const li = document.createElement('li');
+      const label = factLabels[key] || key;
+      li.textContent = `${label}: ${value}`;
+      factsList.appendChild(li);
+    }
+  }
+
+  if (factsList.children.length === 0) {
+    const li = document.createElement('li');
+    li.textContent = 'No specific building data available for this sender';
+    li.style.fontStyle = 'italic';
+    factsList.appendChild(li);
+  }
+}
+
+// Hide confirmation panel
+function hideConfirmationPanel() {
+  if (confirmationPanel) {
+    confirmationPanel.style.display = 'none';
+  }
+}
+
+// Handle insert draft into email
+async function handleInsertDraft() {
+  try {
+    const draft = draftTextarea.value;
+    if (!draft.trim()) {
+      throw new Error('No draft content to insert');
+    }
+
+    console.log('📝 Inserting draft into email...');
+
+    // Insert draft into email compose window
+    await new Promise((resolve, reject) => {
+      Office.context.mailbox.item.body.setSelectedDataAsync(
+        draft,
+        { coercionType: Office.CoercionType.Text },
+        (result) => {
+          if (result.status === Office.AsyncResultStatus.Succeeded) {
+            resolve();
+          } else {
+            reject(new Error(result.error?.message || 'Failed to insert draft'));
+          }
+        }
+      );
+    });
+
+    console.log('✅ Draft inserted successfully');
+
+    // Hide panel and show success message
+    hideConfirmationPanel();
+    addMessage('✅ Draft inserted into your email. You can now review and send it.', 'assistant');
+
+  } catch (error) {
+    console.error('❌ Failed to insert draft:', error);
+    addMessage(`Failed to insert draft: ${error.message}`, 'assistant');
+  }
+}
+
+// Set loading state for AI Reply button
+function setLoadingState(loading) {
+  if (!aiReplyButton) return;
+
+  const container = aiReplyButton.closest('.ai-reply-section');
+
+  if (loading) {
+    container.classList.add('loading');
+    aiReplyButton.disabled = true;
+  } else {
+    container.classList.remove('loading');
+    aiReplyButton.disabled = false;
+  }
 }
 
 console.log('📁 BlocIQ taskpane.js loaded successfully');

@@ -224,6 +224,201 @@
         .chat-messages::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
         }
+
+        /* AI Reply Section */
+        .ai-reply-section {
+            padding: 12px;
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .ai-reply-button {
+            background: linear-gradient(135deg, #7645ED, #9D66F0);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0 auto 8px auto;
+            transition: all 0.2s ease;
+        }
+
+        .ai-reply-button:hover:not(:disabled) {
+            background: linear-gradient(135deg, #6334D4, #8555E8);
+            transform: translateY(-1px);
+        }
+
+        .ai-reply-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .ai-icon {
+            font-size: 16px;
+        }
+
+        .ai-reply-hint {
+            font-size: 11px;
+            color: #64748b;
+            margin: 0;
+        }
+
+        /* Confirmation Panel */
+        .confirmation-panel {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: white;
+            z-index: 1000;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        .confirmation-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .confirmation-header h3 {
+            margin: 0;
+            font-size: 16px;
+            color: #1e293b;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px;
+            color: #64748b;
+            border-radius: 4px;
+        }
+
+        .close-btn:hover {
+            background: #f1f5f9;
+            color: #1e293b;
+        }
+
+        .facts-section {
+            margin-bottom: 16px;
+        }
+
+        .facts-section h4 {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+            color: #1e293b;
+        }
+
+        .facts-section ul {
+            margin: 0;
+            padding-left: 16px;
+            font-size: 12px;
+            color: #475569;
+        }
+
+        .facts-section li {
+            margin-bottom: 4px;
+        }
+
+        .draft-section {
+            margin-bottom: 16px;
+        }
+
+        .draft-section h4 {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+            color: #1e293b;
+        }
+
+        .draft-textarea {
+            width: 100%;
+            min-height: 200px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            padding: 12px;
+            font-size: 12px;
+            font-family: inherit;
+            line-height: 1.5;
+            resize: vertical;
+        }
+
+        .draft-textarea:focus {
+            outline: none;
+            border-color: #7645ED;
+            box-shadow: 0 0 0 1px #7645ED;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        .primary-btn {
+            background: linear-gradient(135deg, #008C8F, #2BBEB4);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .primary-btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, #006d70, #1a9b94);
+        }
+
+        .primary-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .secondary-btn {
+            background: #f8fafc;
+            color: #475569;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .secondary-btn:hover {
+            background: #f1f5f9;
+            border-color: #94a3b8;
+        }
+
+        /* Loading state */
+        .loading .ai-reply-button {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        .loading .ai-icon {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -232,7 +427,39 @@
             <h1>BlocIQ AI Assistant</h1>
             <p>Property Management Expert</p>
         </div>
-        
+
+        <!-- AI Reply Button Section -->
+        <div class="ai-reply-section" id="aiReplySection">
+            <button id="aiReplyButton" class="ai-reply-button">
+                <span class="ai-icon">🤖</span>
+                AI Reply
+            </button>
+            <p class="ai-reply-hint">Generate a context-aware reply to this email</p>
+        </div>
+
+        <!-- Confirmation Panel (hidden by default) -->
+        <div class="confirmation-panel" id="confirmationPanel" style="display: none;">
+            <div class="confirmation-header">
+                <h3 id="confirmationTitle">Proposed Reply</h3>
+                <button id="closeConfirmation" class="close-btn">×</button>
+            </div>
+
+            <div class="facts-section" id="factsSection">
+                <h4>Key Facts:</h4>
+                <ul id="factsList"></ul>
+            </div>
+
+            <div class="draft-section">
+                <h4>Draft Message:</h4>
+                <textarea id="draftTextarea" class="draft-textarea"></textarea>
+            </div>
+
+            <div class="action-buttons">
+                <button id="insertDraftButton" class="primary-btn">Insert Draft</button>
+                <button id="cancelButton" class="secondary-btn">Cancel</button>
+            </div>
+        </div>
+
         <div class="chat-messages" id="chatContainer">
             <!-- Messages will be added here -->
         </div>
