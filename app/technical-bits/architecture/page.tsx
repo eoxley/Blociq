@@ -1,6 +1,6 @@
 import { Metadata } from 'next'
 import Link from 'next/link'
-import { ArrowLeft, Architecture, Download } from 'lucide-react'
+import { ArrowLeft, Building2, Download } from 'lucide-react'
 
 export const metadata: Metadata = {
   title: 'System Architecture - BlocIQ Technical Bits',
@@ -24,7 +24,7 @@ export default function ArchitecturePage() {
               </Link>
             </div>
             <div className="flex items-center space-x-2">
-              <Architecture className="h-8 w-8 text-blue-600" />
+              <Building2 className="h-8 w-8 text-blue-600" />
               <h1 className="text-2xl font-bold text-gray-900">System Architecture</h1>
             </div>
           </div>
