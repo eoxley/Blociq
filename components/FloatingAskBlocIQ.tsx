@@ -237,7 +237,7 @@ export default function FloatingAskBlocIQ({ className = '' }: FloatingAskBlocIQP
       {/* Backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-20 z-40"
+          className="fixed inset-0 bg-white/20 backdrop-blur-sm z-40"
           onClick={() => setIsOpen(false)}
           aria-hidden="true"
         />

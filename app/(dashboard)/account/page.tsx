@@ -56,7 +56,7 @@ export default function AccountPage() {
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user.id)
+        .eq('user_id', user.id)
         .single();
 
       if (profileError && profileError.code !== 'PGRST116') {
@@ -68,22 +68,25 @@ export default function AccountPage() {
         const { data: newProfile, error: createError } = await supabase
           .from('profiles')
           .insert({
-            id: user.id,
-            email: user.email
+            user_id: user.id
           })
           .select()
           .single();
 
         if (createError) throw createError;
-        setProfile(newProfile);
-        
+        // Add email from auth user to the profile object for UI
+        const profileWithEmail = { ...newProfile, email: user.email };
+        setProfile(profileWithEmail);
+
         // Save signature data to localStorage for use in emails
-        saveUserSignature(newProfile);
+        saveUserSignature(profileWithEmail);
       } else {
-        setProfile(profileData);
-        
+        // Add email from auth user to the profile object for UI
+        const profileWithEmail = { ...profileData, email: user.email, id: user.id };
+        setProfile(profileWithEmail);
+
         // Save signature data to localStorage for use in emails
-        saveUserSignature(profileData);
+        saveUserSignature(profileWithEmail);
       }
 
       // Set signature preview if exists

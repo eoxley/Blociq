@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('*') // Select all available columns
-      .eq('id', user.id)
+      .eq('user_id', user.id)
       .single();
 
     if (profileError) {
@@ -105,21 +105,59 @@ export async function PUT(req: NextRequest) {
       }
     }
 
-    // Update the profile
-    const { data: updatedProfile, error: updateError } = await supabase
+    // First check if profile exists, if not create it
+    const { data: existingProfile, error: checkError } = await supabase
       .from('profiles')
-      .update(updateData)
-      .eq('id', user.id)
-      .select()
+      .select('*')
+      .eq('user_id', user.id)
       .single();
 
-    if (updateError) {
-      console.error('Profile update error:', updateError);
+    let updatedProfile;
+    if (checkError && checkError.code === 'PGRST116') {
+      // Profile doesn't exist, create it
+      const { data: newProfile, error: createError } = await supabase
+        .from('profiles')
+        .insert({
+          user_id: user.id,
+          ...updateData
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('Profile creation error:', createError);
+        return NextResponse.json({
+          success: false,
+          error: 'Failed to create profile',
+          message: createError.message
+        }, { status: 400, headers });
+      }
+      updatedProfile = newProfile;
+    } else if (checkError) {
+      console.error('Profile check error:', checkError);
       return NextResponse.json({
         success: false,
-        error: 'Failed to update profile',
-        message: updateError.message
+        error: 'Failed to check profile',
+        message: checkError.message
       }, { status: 400, headers });
+    } else {
+      // Profile exists, update it
+      const { data: updated, error: updateError } = await supabase
+        .from('profiles')
+        .update(updateData)
+        .eq('user_id', user.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error('Profile update error:', updateError);
+        return NextResponse.json({
+          success: false,
+          error: 'Failed to update profile',
+          message: updateError.message
+        }, { status: 400, headers });
+      }
+      updatedProfile = updated;
     }
 
     return NextResponse.json({
