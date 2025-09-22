@@ -75,7 +75,24 @@ export default function BuildingLeaseMode({ building }: { building: Building }) 
     try {
       const { data, error } = await supabase
         .from('leases')
-        .select('*')
+        .select(`
+          id,
+          unit_number,
+          leaseholder_name,
+          start_date,
+          end_date,
+          status,
+          ground_rent,
+          service_charge_percentage,
+          responsibilities,
+          restrictions,
+          rights,
+          file_path,
+          ocr_text,
+          metadata,
+          created_at,
+          updated_at
+        `)
         .eq('building_id', building.id)
         .order('created_at', { ascending: false })
 

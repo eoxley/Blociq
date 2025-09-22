@@ -15,7 +15,7 @@ export default async function BuildingLayout({
   params
 }: BuildingLayoutProps) {
   const resolvedParams = await params
-  const supabase = createClient()
+  const supabase = await createClient()
 
   // Get building name
   let buildingName = 'Building'

@@ -1,5 +1,4 @@
 import { Suspense } from 'react';
-import { cookies } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import BuildingLeaseMode from './BuildingLeaseMode';
@@ -10,21 +9,34 @@ interface BuildingLeaseModePageProps {
 
 export default async function BuildingLeaseModePage({ params }: BuildingLeaseModePageProps) {
   const { id } = await params;
-  const supabase = createClient(cookies());
-  
+  const supabase = await createClient();
+
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) {
     redirect('/login');
   }
 
-  // Fetch building details
-  const { data: building, error } = await supabase
-    .from('buildings')
-    .select('*')
-    .eq('id', id)
-    .single();
+  // Fetch building details with error handling
+  let building = null;
+  try {
+    const { data, error } = await supabase
+      .from('buildings')
+      .select('id, name, address')
+      .eq('id', id)
+      .single();
 
-  if (error || !building) {
+    if (error) {
+      console.error('Error fetching building:', error);
+      redirect('/buildings');
+    }
+
+    building = data;
+  } catch (error) {
+    console.error('Exception fetching building:', error);
+    redirect('/buildings');
+  }
+
+  if (!building) {
     redirect('/buildings');
   }
 

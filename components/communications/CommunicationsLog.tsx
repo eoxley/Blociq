@@ -46,7 +46,7 @@ export default function CommunicationsLog({
   const { supabase } = useSupabase()
   const [communications, setCommunications] = useState<Communication[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'all' | 'inbound' | 'outbound'>('all')
+  const [filter, setFilter] = useState<'all' | 'email' | 'letter'>('all')
 
   useEffect(() => {
     fetchCommunications()
@@ -60,14 +60,17 @@ export default function CommunicationsLog({
         .from('communications_log')
         .select(`
           id,
-          direction,
+          type,
           subject,
           content,
           sent_at,
-          metadata,
           building_id,
           leaseholder_id,
-          user_id
+          sent_by,
+          building_name,
+          leaseholder_name,
+          unit_number,
+          status
         `)
         .order('sent_at', { ascending: false })
         .limit(limit)
@@ -80,7 +83,7 @@ export default function CommunicationsLog({
         query = query.eq('leaseholder_id', leaseholderId)
       }
       if (filter !== 'all') {
-        query = query.eq('direction', filter)
+        query = query.eq('type', filter)
       }
 
       const { data, error } = await query
@@ -114,30 +117,20 @@ export default function CommunicationsLog({
         }
       }
 
-      // Fetch related leaseholder data if needed
-      const leaseholderIds = [...new Set(data.map(comm => comm.leaseholder_id).filter(Boolean))]
-      let leaseholdersMap: Record<string, { id: string; name: string; email: string }> = {}
-
-      if (leaseholderIds.length > 0) {
-        const { data: leaseholders } = await supabase
-          .from('leaseholders')
-          .select('id, name, email')
-          .in('id', leaseholderIds)
-
-        if (leaseholders) {
-          leaseholdersMap = leaseholders.reduce((acc, leaseholder) => {
-            acc[leaseholder.id] = leaseholder
-            return acc
-          }, {} as Record<string, { id: string; name: string; email: string }>)
-        }
-      }
+      // Use leaseholder data directly from communications_log since it has leaseholder_name
+      // Skip separate leaseholder fetch to avoid schema issues
 
       // Map the data with related entities
       const enrichedCommunications = data.map(comm => ({
         ...comm,
+        direction: 'outbound', // Default since no direction field in schema
         body: comm.content || '', // Map content to body field
-        building: comm.building_id ? buildingsMap[comm.building_id] || null : null,
-        leaseholder: comm.leaseholder_id ? leaseholdersMap[comm.leaseholder_id] || null : null,
+        building: comm.building_id ? buildingsMap[comm.building_id] : (comm.building_name ? { id: comm.building_id || '', name: comm.building_name } : null),
+        leaseholder: comm.leaseholder_name ? {
+          id: comm.leaseholder_id || '',
+          name: comm.leaseholder_name,
+          email: ''
+        } : null,
         user: null // User data can be fetched if needed
       }))
 
@@ -169,19 +162,23 @@ export default function CommunicationsLog({
     }
   }
 
-  const getDirectionIcon = (direction: string) => {
-    if (direction === 'inbound') {
-      return <ArrowDown className="h-4 w-4 text-blue-600" />
+  const getTypeIcon = (type: string) => {
+    if (type === 'email') {
+      return <Mail className="h-4 w-4 text-blue-600" />
+    } else if (type === 'letter') {
+      return <Send className="h-4 w-4 text-green-600" />
     } else {
-      return <ArrowUp className="h-4 w-4 text-green-600" />
+      return <ArrowUp className="h-4 w-4 text-gray-600" />
     }
   }
 
-  const getDirectionColor = (direction: string) => {
-    if (direction === 'inbound') {
+  const getTypeColor = (type: string) => {
+    if (type === 'email') {
       return 'bg-blue-100 text-blue-800 border-blue-200'
-    } else {
+    } else if (type === 'letter') {
       return 'bg-green-100 text-green-800 border-green-200'
+    } else {
+      return 'bg-gray-100 text-gray-800 border-gray-200'
     }
   }
 
@@ -244,24 +241,24 @@ export default function CommunicationsLog({
                   All
                 </button>
                 <button
-                  onClick={() => setFilter('inbound')}
+                  onClick={() => setFilter('email')}
                   className={`px-3 py-1 text-xs font-medium transition-colors border-l border-gray-200 ${
-                    filter === 'inbound'
+                    filter === 'email'
                       ? 'bg-blue-600 text-white'
                       : 'bg-white text-gray-600 hover:bg-gray-50'
                   }`}
                 >
-                  Inbound
+                  Email
                 </button>
                 <button
-                  onClick={() => setFilter('outbound')}
+                  onClick={() => setFilter('letter')}
                   className={`px-3 py-1 text-xs font-medium transition-colors border-l border-gray-200 ${
-                    filter === 'outbound'
+                    filter === 'letter'
                       ? 'bg-green-600 text-white'
                       : 'bg-white text-gray-600 hover:bg-gray-50'
                   }`}
                 >
-                  Outbound
+                  Letter
                 </button>
               </div>
             )}
@@ -282,7 +279,7 @@ export default function CommunicationsLog({
             <h3 className="text-lg font-medium text-gray-900 mb-2">No communications found</h3>
             <p className="text-gray-500">
               {filter === 'all'
-                ? 'No email communications have been logged yet.'
+                ? 'No communications have been logged yet.'
                 : `No ${filter} communications found.`
               }
             </p>
@@ -292,18 +289,18 @@ export default function CommunicationsLog({
             {communications.map((comm) => (
               <div key={comm.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow">
                 <div className="flex items-start gap-4">
-                  <div className={`p-2 rounded-full ${getDirectionColor(comm.direction)}`}>
-                    {getDirectionIcon(comm.direction)}
+                  <div className={`p-2 rounded-full ${getTypeColor(comm.type)}`}>
+                    {getTypeIcon(comm.type)}
                   </div>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <BlocIQBadge
-                          variant={comm.direction === 'inbound' ? 'outline' : 'default'}
-                          className={`text-xs ${getDirectionColor(comm.direction)}`}
+                          variant={comm.type === 'email' ? 'default' : 'outline'}
+                          className={`text-xs ${getTypeColor(comm.type)}`}
                         >
-                          {comm.direction === 'inbound' ? 'Received' : 'Sent'}
+                          {comm.type === 'email' ? 'Email' : comm.type === 'letter' ? 'Letter' : 'Communication'}
                         </BlocIQBadge>
                         <span className="text-sm text-gray-500">
                           {formatDate(comm.sent_at)}
