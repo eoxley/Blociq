@@ -206,6 +206,7 @@ const ComplianceDocumentUploadModal: React.FC<ComplianceDocumentUploadModalProps
           if (xhr.status === 200) {
             try {
               const response = JSON.parse(xhr.responseText)
+              console.log('✅ Upload successful:', response)
 
               setUploadFiles(prev => prev.map(f =>
                 f.id === uploadFile.id
@@ -228,21 +229,39 @@ const ComplianceDocumentUploadModal: React.FC<ComplianceDocumentUploadModalProps
 
               resolve()
             } catch (error) {
+              console.error('❌ Error parsing response:', error)
               reject(error)
             }
           } else {
-            reject(new Error(`Upload failed with status ${xhr.status}`))
+            console.error('❌ Upload failed with status:', xhr.status)
+            try {
+              const errorResponse = JSON.parse(xhr.responseText)
+              console.error('❌ Error details:', errorResponse)
+              reject(new Error(errorResponse.error || `Upload failed with status ${xhr.status}`))
+            } catch (parseError) {
+              console.error('❌ Could not parse error response:', xhr.responseText)
+              reject(new Error(`Upload failed with status ${xhr.status}`))
+            }
           }
         }
 
         xhr.onerror = () => {
+          console.error('❌ Network error during upload')
           setUploadFiles(prev => prev.map(f =>
             f.id === uploadFile.id
-              ? { ...f, status: 'failed', error: 'Upload failed' }
+              ? { ...f, status: 'failed', error: 'Network error during upload' }
               : f
           ))
-          reject(new Error('Upload failed'))
+          reject(new Error('Network error during upload'))
         }
+
+        // Log what we're sending for debugging
+        console.log('🚀 Starting upload:', {
+          fileName: uploadFile.file.name,
+          fileSize: uploadFile.file.size,
+          fileType: uploadFile.file.type,
+          buildingId: uploadFile.buildingId
+        })
 
         // Use the upload-and-analyse endpoint for better OCR processing
         xhr.open('POST', '/api/upload-and-analyse')
@@ -415,9 +434,14 @@ const ComplianceDocumentUploadModal: React.FC<ComplianceDocumentUploadModalProps
                       )}
 
                       {uploadFile.error && (
-                        <p className="text-xs text-red-600 mt-1">
-                          ⚠️ {uploadFile.error}
-                        </p>
+                        <div className="bg-red-50 border border-red-200 rounded px-2 py-1 mt-1">
+                          <p className="text-xs text-red-700 font-medium">
+                            ⚠️ Upload Failed
+                          </p>
+                          <p className="text-xs text-red-600 mt-0.5">
+                            {uploadFile.error}
+                          </p>
+                        </div>
                       )}
                     </div>
 
