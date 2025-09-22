@@ -25,7 +25,6 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
-import ComplianceDocumentUpload from './ComplianceDocumentUpload'
 
 interface EnhancedEditAssetFormProps {
   buildingId: string
@@ -560,14 +559,18 @@ export default function EnhancedEditAssetForm({
           {/* Upload Tab */}
           {activeTab === 'upload' && (
             <div>
-              <ComplianceDocumentUpload
-                buildingId={buildingId}
-                assetId={assetId}
-                assetName={asset.compliance_assets.name}
-                onUploadComplete={handleDocumentUploadComplete}
-                maxFiles={5}
-                acceptedFileTypes={['.pdf', '.jpg', '.jpeg', '.png', '.webp']}
-              />
+              <div className="border border-gray-200 rounded-lg p-6 bg-blue-50 text-center">
+                <p className="text-sm text-blue-800 mb-4">
+                  Document uploads have been moved to the new Compliance Lab
+                </p>
+                <button
+                  onClick={() => window.open('/documents/compliance', '_blank')}
+                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Open Compliance Lab
+                </button>
+              </div>
             </div>
           )}
         </div>

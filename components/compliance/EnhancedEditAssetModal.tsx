@@ -19,7 +19,6 @@ import {
   Edit3
 } from 'lucide-react'
 import { toast } from 'sonner'
-import ComplianceDocumentUpload from './ComplianceDocumentUpload'
 
 interface EnhancedEditAssetModalProps {
   isOpen: boolean
@@ -577,13 +576,18 @@ const EnhancedEditAssetModal: React.FC<EnhancedEditAssetModalProps> = ({
                 {/* Document Upload */}
                 {showDocumentUpload && assetId && (
                   <div className="mb-6">
-                    <ComplianceDocumentUpload
-                      buildingId={buildingId}
-                      assetId={assetId}
-                      assetName={formData.asset_name}
-                      onUploadComplete={handleDocumentUploadComplete}
-                      maxFiles={5}
-                    />
+                    <div className="border border-gray-200 rounded-lg p-4 bg-blue-50">
+                      <p className="text-sm text-blue-800 mb-3">
+                        Upload compliance documents using the new Document Lab
+                      </p>
+                      <button
+                        onClick={() => window.open('/documents/compliance', '_blank')}
+                        className="inline-flex items-center px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        Open Compliance Lab
+                      </button>
+                    </div>
                   </div>
                 )}
 
