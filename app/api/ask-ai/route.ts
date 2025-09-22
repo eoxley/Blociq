@@ -34,32 +34,85 @@ async function ensureUserHasAgency(supabase: any, userId: string): Promise<{ age
     return { agency_id: userProfile.agency_id };
   }
 
-  console.log('🔄 User missing agency_id, attempting auto-assignment...');
+  console.log('🔄 User missing agency_id, checking agency memberships...');
 
-  // Try to find and assign a default agency
-  const { data: defaultAgency } = await supabase
-    .from('agencies')
-    .select('id')
-    .limit(1)
-    .single();
+  // Check if user is a member of any agencies
+  const { data: agencyMemberships } = await supabase
+    .from('agency_members')
+    .select(`
+      agency_id,
+      role,
+      agencies:agency_id (
+        id,
+        name,
+        slug
+      )
+    `)
+    .eq('user_id', userId)
+    .eq('invitation_status', 'accepted')
+    .order('joined_at', { ascending: true });
 
-  if (defaultAgency) {
-    console.log('✅ Found default agency, updating user profile...');
+  if (agencyMemberships && agencyMemberships.length > 0) {
+    console.log('✅ Found agency memberships, auto-linking to profile...');
 
-    // Update the user's profile with the default agency
+    // Use the first agency membership (oldest/primary)
+    const primaryMembership = agencyMemberships[0];
+
+    // Update the user's profile with the agency from their membership
     const { error: updateError } = await supabase
       .from('profiles')
-      .update({ agency_id: defaultAgency.id })
+      .update({ agency_id: primaryMembership.agency_id })
       .eq('id', userId);
 
     if (!updateError) {
-      console.log('✅ Successfully assigned default agency to user');
-      return { agency_id: defaultAgency.id };
+      console.log('✅ Successfully linked user to agency:', primaryMembership.agencies?.name);
+      return { agency_id: primaryMembership.agency_id };
     } else {
       console.error('❌ Failed to update user profile with agency:', updateError);
     }
   } else {
-    console.warn('⚠️ No agencies found in database');
+    console.log('🔄 No agency memberships found, attempting fallback assignment...');
+
+    // Fallback: Try to find and assign a default agency
+    const { data: defaultAgency } = await supabase
+      .from('agencies')
+      .select('id, name')
+      .limit(1)
+      .single();
+
+    if (defaultAgency) {
+      console.log('✅ Found default agency, creating membership and updating profile...');
+
+      // Create agency membership first
+      const { error: membershipError } = await supabase
+        .from('agency_members')
+        .insert({
+          user_id: userId,
+          agency_id: defaultAgency.id,
+          role: 'viewer',
+          invitation_status: 'accepted',
+          joined_at: new Date().toISOString()
+        });
+
+      if (membershipError) {
+        console.warn('⚠️ Failed to create agency membership:', membershipError);
+      }
+
+      // Update the user's profile with the default agency
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ agency_id: defaultAgency.id })
+        .eq('id', userId);
+
+      if (!updateError) {
+        console.log('✅ Successfully assigned default agency to user:', defaultAgency.name);
+        return { agency_id: defaultAgency.id };
+      } else {
+        console.error('❌ Failed to update user profile with agency:', updateError);
+      }
+    } else {
+      console.warn('⚠️ No agencies found in database');
+    }
   }
 
   return null;
