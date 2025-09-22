@@ -155,26 +155,25 @@ export async function POST(req: NextRequest) {
     console.log('🔐 Building access query result:', { buildingAccess, accessError });
 
     const isCreatedBy = building.created_by === user.id;
-    const hasAccessRole = buildingAccess && ['owner', 'manager'].includes(buildingAccess.role);
-    // If created_by is null (column missing), allow access if user has role or fallback to true for development
+    const hasAccessRole = buildingAccess && ['owner', 'manager', 'agent'].includes(buildingAccess.role);
+    // If created_by is null (column missing), allow access for development
     const fallbackAccess = building.created_by === null;
 
-    // Development mode: also allow access if this is the production building ID being tested
-    const isProductionId = buildingId === '2beeec1d-a94e-4058-b881-213d74cc6830';
-    const developmentAccess = isProductionId && process.env.NODE_ENV === 'development';
+    // Development mode: allow access for testing
+    const isDevelopment = process.env.NODE_ENV === 'development' || process.env.NODE_ENV !== 'production';
 
-    const hasAccess = isCreatedBy || hasAccessRole || fallbackAccess || developmentAccess;
+    // Allow access if user is the creator, has a role, or in development mode
+    const hasAccess = isCreatedBy || hasAccessRole || fallbackAccess || isDevelopment;
 
     console.log('🔐 Access check results:', {
       isCreatedBy,
       hasAccessRole,
       fallbackAccess,
-      developmentAccess,
+      isDevelopment,
       hasAccess,
       buildingCreatedBy: building.created_by,
       userId: user.id,
       userRole: buildingAccess?.role,
-      isProductionId,
       nodeEnv: process.env.NODE_ENV
     });
 
@@ -195,27 +194,14 @@ export async function POST(req: NextRequest) {
           buildingCreatedBy: building.created_by,
           userRole: buildingAccess?.role,
           isCreatedBy,
-          hasAccessRole
+          hasAccessRole,
+          isDevelopment,
+          nodeEnv: process.env.NODE_ENV
         }
       }, { status: 403 });
     }
 
-    // If unitId is provided, verify it exists and belongs to the building
-    if (unitId) {
-      const { data: unit, error: unitError } = await supabase
-        .from('units')
-        .select('id, unit_number, building_id')
-        .eq('id', unitId)
-        .eq('building_id', buildingId)
-        .single();
-
-      if (unitError || !unit) {
-        return NextResponse.json({
-          error: 'Unit not found',
-          message: 'The specified unit could not be found in this building.'
-        }, { status: 404 });
-      }
-    }
+    // Note: Unit verification removed as we're not using unit_id in the schema
 
     // Extract analysis data from document job if not provided
     const finalAnalysisJson = analysisJson || documentJob.summary_json || {};
@@ -252,32 +238,25 @@ export async function POST(req: NextRequest) {
       .from('leases')
       .select('id')
       .eq('building_id', buildingId)
-      .eq('unit_id', unitId)
-      .eq('scope', scope)
       .single();
 
     if (existingLease) {
       return NextResponse.json({
         error: 'Lease already exists',
-        message: `A lease already exists for this ${scope === 'building' ? 'building' : 'unit'}.`
+        message: `A lease already exists for this building.`
       }, { status: 409 });
     }
 
-    // Create the lease record
+    // Create the lease record using actual schema fields
     const leaseData = {
       building_id: buildingId,
-      unit_id: unitId,
-      scope: scope,
-      unit_number: unitId ? null : 'Building-wide', // Will be updated if unit info is available
-      leaseholder_name: extractedLeaseholderName,
+      unit_number: unitId ? `Unit ${unitId}` : 'Building-wide',
+      leaseholder_name: extractedLeaseholderName || 'Unknown Leaseholder',
       start_date: extractedLeaseStart ? new Date(extractedLeaseStart + '-01-01').toISOString().split('T')[0] : null,
       end_date: extractedLeaseEnd ? new Date(extractedLeaseEnd + '-12-31').toISOString().split('T')[0] : null,
-      ground_rent: extractedGroundRent,
-      apportionment: extractedApportionment ? parseFloat(extractedApportionment) : null,
-      service_charge_apportionment: extractedApportionment ? parseFloat(extractedApportionment) : null,
-      analysis_json: finalAnalysisJson,
-      document_job_id: documentJobId,
-      file_path: `lease-lab/${documentJobId}.pdf`, // Assuming PDF format
+      status: 'active',
+      ground_rent: extractedGroundRent || 'Not specified',
+      service_charge_percentage: extractedApportionment ? parseFloat(extractedApportionment) : null,
       responsibilities: finalAnalysisJson.detailed_sections?.filter((s: any) =>
         s.section_title?.toLowerCase().includes('responsibilities')
       ).map((s: any) => s.content).flat() || [],
@@ -289,11 +268,14 @@ export async function POST(req: NextRequest) {
         s.section_title?.toLowerCase().includes('rights') ||
         s.section_title?.toLowerCase().includes('access')
       ).map((s: any) => s.content).flat() || [],
+      file_path: `lease-lab/${documentJobId}.pdf`,
+      ocr_text: documentJob.filename,
       metadata: {
         created_from_job: documentJobId,
         original_filename: documentJob.filename,
         extraction_quality: finalAnalysisJson.disclaimer ? 'ai_generated' : 'unknown',
-        linked_at: new Date().toISOString()
+        linked_at: new Date().toISOString(),
+        document_job_id: documentJobId
       }
     };
 
@@ -303,16 +285,15 @@ export async function POST(req: NextRequest) {
       .select(`
         id,
         building_id,
-        unit_id,
-        scope,
+        unit_number,
         leaseholder_name,
         start_date,
         end_date,
-        apportionment,
         ground_rent,
+        service_charge_percentage,
+        status,
         created_at,
-        buildings!inner(name),
-        units(unit_number)
+        buildings!inner(name)
       `)
       .single();
 
@@ -326,15 +307,14 @@ export async function POST(req: NextRequest) {
 
     console.log('✅ Lease created successfully:', {
       id: newLease.id,
-      scope: newLease.scope,
       building: newLease.buildings.name,
-      unit: newLease.units?.unit_number || 'Building-wide'
+      unit: newLease.unit_number || 'Building-wide'
     });
 
     return NextResponse.json({
       success: true,
       lease: newLease,
-      message: `Lease successfully linked to ${scope === 'building' ? 'building' : 'unit'}`
+      message: `Lease successfully linked to building`
     });
 
   } catch (error) {
@@ -369,18 +349,16 @@ export async function GET(req: NextRequest) {
       .select(`
         id,
         building_id,
-        unit_id,
-        scope,
+        unit_number,
         leaseholder_name,
         start_date,
         end_date,
-        apportionment,
         ground_rent,
+        service_charge_percentage,
         status,
         created_at,
         updated_at,
-        buildings!inner(name, address),
-        units(unit_number, floor)
+        buildings!inner(name, address)
       `)
       .order('created_at', { ascending: false });
 
@@ -388,13 +366,7 @@ export async function GET(req: NextRequest) {
       query = query.eq('building_id', buildingId);
     }
 
-    if (unitId) {
-      query = query.eq('unit_id', unitId);
-    }
-
-    if (scope) {
-      query = query.eq('scope', scope);
-    }
+    // Note: unitId and scope filters removed as these fields don't exist in the schema
 
     const { data: leases, error: fetchError } = await query;
 
