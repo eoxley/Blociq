@@ -11,7 +11,7 @@ import {
   TopicHint
 } from '@/lib/outlook/reply-types';
 import {
-  generateReplyTemplate,
+  generateToneAwareReplyTemplate,
   detectTopic
 } from '@/lib/outlook/reply-utils';
 
@@ -22,6 +22,20 @@ export async function POST(req: NextRequest): Promise<NextResponse<DraftResponse
     // Detect topic if not provided
     const topic = body.topicHint || detectTopic(body.originalMessageSummary);
 
+    // Use user tone override or detected tone, default to neutral
+    const toneLabel = body.userToneOverride || body.tone?.label || 'neutral';
+    const escalationRequired = body.tone?.escalationRequired || false;
+
+    // Log tone override if applicable
+    if (body.userToneOverride && body.tone) {
+      console.log('📊 Tone override:', {
+        detected: body.tone.label,
+        override: body.userToneOverride,
+        confidence: body.tone.confidence,
+        topic
+      });
+    }
+
     // Build enrichment object for template
     const enrichment = {
       residentName: body.residentName,
@@ -30,20 +44,29 @@ export async function POST(req: NextRequest): Promise<NextResponse<DraftResponse
       facts: body.facts
     };
 
-    // Generate the draft using our template system
-    const draft = generateReplyTemplate(enrichment, body.originalMessageSummary);
+    // Generate the draft using tone-aware template system
+    const draft = generateToneAwareReplyTemplate(
+      enrichment,
+      body.originalMessageSummary,
+      toneLabel,
+      escalationRequired
+    );
 
     // Calculate metadata
     const factCount = Object.values(body.facts).filter(value =>
       value !== null && value !== undefined && value !== ''
     ).length;
 
-    const empathyLevel = determineEmpathyLevel(topic, body.originalMessageSummary);
+    const empathyLevel = determineEmpathyLevel(toneLabel, body.originalMessageSummary);
 
     const metadata = {
       topic,
       empathyLevel,
-      factCount
+      factCount,
+      detectedTone: body.tone?.label,
+      appliedTone: toneLabel,
+      toneOverridden: body.userToneOverride !== undefined,
+      escalationRequired
     };
 
     return NextResponse.json({ draft, metadata }, { status: 200 });
@@ -58,32 +81,39 @@ export async function POST(req: NextRequest): Promise<NextResponse<DraftResponse
 }
 
 /**
- * Determine empathy level based on topic and message content
+ * Determine empathy level based on tone and message content
  */
 function determineEmpathyLevel(
-  topic: TopicHint,
+  tone: string,
   messageSummary: string
 ): 'standard' | 'high' | 'urgent' {
   const text = messageSummary.toLowerCase();
 
-  // Urgent indicators
+  // Tone-based empathy mapping
+  if (tone === 'abusive') {
+    return 'urgent'; // Always urgent for abusive tone
+  }
+
+  if (tone === 'angry') {
+    return 'high'; // High empathy for angry tone
+  }
+
+  // Check content for urgency indicators
   if (
     text.includes('emergency') ||
     text.includes('urgent') ||
     text.includes('immediate') ||
     text.includes('safety') ||
     text.includes('danger') ||
-    (topic === 'fire' && (text.includes('alarm') || text.includes('smoke'))) ||
-    (topic === 'leak' && (text.includes('flooding') || text.includes('major')))
+    text.includes('flooding') ||
+    text.includes('major')
   ) {
     return 'urgent';
   }
 
   // High empathy indicators
   if (
-    topic === 'fire' ||
-    topic === 'leak' ||
-    text.includes('concern') ||
+    tone === 'concerned' ||
     text.includes('worried') ||
     text.includes('problem') ||
     text.includes('issue') ||

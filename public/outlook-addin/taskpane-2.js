@@ -20,6 +20,13 @@ const draftTextarea = document.getElementById('draftTextarea');
 const insertDraftButton = document.getElementById('insertDraftButton');
 const cancelButton = document.getElementById('cancelButton');
 
+// Tone elements
+const toneLabel = document.getElementById('toneLabel');
+const toneOverride = document.getElementById('toneOverride');
+const toneReasons = document.getElementById('toneReasons');
+const boundaryToggle = document.getElementById('boundaryToggle');
+const includeBoundary = document.getElementById('includeBoundary');
+
 // Initialize add-in
 Office.onReady(() => {
   console.log('📋 BlocIQ Taskpane loaded successfully');
@@ -256,6 +263,15 @@ function setupAIReplyListeners() {
   if (cancelButton) {
     cancelButton.addEventListener('click', hideConfirmationPanel);
   }
+
+  // Tone override functionality
+  if (toneOverride) {
+    toneOverride.addEventListener('change', handleToneOverride);
+  }
+
+  if (includeBoundary) {
+    includeBoundary.addEventListener('change', handleBoundaryToggle);
+  }
 }
 
 // Handle AI Reply button click
@@ -294,8 +310,8 @@ async function handleAIReply() {
       throw new Error(`Enrichment failed: ${errorText}`);
     }
 
-    const { enrichment } = await enrichResponse.json();
-    console.log('✨ Enrichment result:', enrichment);
+    const { enrichment, tone, topic } = await enrichResponse.json();
+    console.log('✨ Enrichment result:', { enrichment, tone, topic });
 
     // Step 2: Generate draft
     console.log('✍️ Generating draft...');
@@ -307,7 +323,8 @@ async function handleAIReply() {
         unitLabel: enrichment.unitLabel,
         buildingName: enrichment.buildingName,
         facts: enrichment.facts,
-        originalMessageSummary: emailContext.messageSummary
+        originalMessageSummary: emailContext.messageSummary,
+        tone: tone
       })
     });
 
@@ -320,7 +337,7 @@ async function handleAIReply() {
     console.log('📝 Draft generated:', { draft, metadata });
 
     // Step 3: Show confirmation panel
-    showConfirmationPanel(enrichment, draft, metadata);
+    showConfirmationPanel(enrichment, tone, draft, metadata, emailContext);
 
   } catch (error) {
     console.error('❌ AI Reply failed:', error);
@@ -423,13 +440,19 @@ function extractBuildingHint(context) {
   return null;
 }
 
-// Show confirmation panel with enrichment and draft
-function showConfirmationPanel(enrichment, draft, metadata) {
+// Show confirmation panel with enrichment, tone, and draft
+function showConfirmationPanel(enrichment, tone, draft, metadata, emailContext) {
   if (!confirmationPanel) return;
+
+  // Store context for regeneration
+  window.currentContext = { enrichment, tone, metadata, emailContext };
 
   // Update title
   const residentName = enrichment.residentName || 'Resident';
   confirmationTitle.textContent = `Proposed Reply to ${residentName}`;
+
+  // Show tone information
+  populateToneSection(tone);
 
   // Show facts
   populateFactsList(enrichment.facts);
@@ -536,6 +559,92 @@ function setLoadingState(loading) {
     container.classList.remove('loading');
     aiReplyButton.disabled = false;
   }
+}
+
+// Populate tone section
+function populateToneSection(tone) {
+  if (!toneLabel || !toneReasons) return;
+
+  // Update tone badge
+  toneLabel.textContent = tone.label.charAt(0).toUpperCase() + tone.label.slice(1);
+  toneLabel.className = `tone-badge ${tone.label}`;
+
+  // Show reasons
+  if (tone.reasons && tone.reasons.length > 0) {
+    toneReasons.textContent = `Reasons: ${tone.reasons.join(', ')}`;
+  } else {
+    toneReasons.textContent = '';
+  }
+
+  // Show boundary toggle for abusive tone
+  if (boundaryToggle) {
+    if (tone.label === 'abusive' || tone.escalationRequired) {
+      boundaryToggle.style.display = 'block';
+    } else {
+      boundaryToggle.style.display = 'none';
+    }
+  }
+
+  // Reset tone override
+  if (toneOverride) {
+    toneOverride.value = '';
+  }
+}
+
+// Handle tone override change
+async function handleToneOverride() {
+  if (!window.currentContext) return;
+
+  const selectedTone = toneOverride.value;
+  if (!selectedTone) return; // Use detected tone
+
+  try {
+    console.log('🔄 Regenerating draft with tone override:', selectedTone);
+
+    // Regenerate draft with new tone
+    const response = await fetch('https://www.blociq.co.uk/api/outlook/draft', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        residentName: window.currentContext.enrichment.residentName,
+        unitLabel: window.currentContext.enrichment.unitLabel,
+        buildingName: window.currentContext.enrichment.buildingName,
+        facts: window.currentContext.enrichment.facts,
+        originalMessageSummary: window.currentContext.emailContext.messageSummary,
+        tone: window.currentContext.tone,
+        userToneOverride: selectedTone
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to regenerate draft');
+    }
+
+    const { draft } = await response.json();
+    draftTextarea.value = draft;
+
+    // Update boundary toggle visibility
+    if (boundaryToggle) {
+      if (selectedTone === 'abusive') {
+        boundaryToggle.style.display = 'block';
+      } else {
+        boundaryToggle.style.display = 'none';
+      }
+    }
+
+    console.log('✅ Draft regenerated with new tone');
+
+  } catch (error) {
+    console.error('❌ Failed to regenerate draft:', error);
+    addMessage(`Failed to regenerate draft: ${error.message}`, 'assistant');
+  }
+}
+
+// Handle boundary toggle change
+function handleBoundaryToggle() {
+  // This could trigger a re-generation if needed
+  // For now, it's just a visual indicator
+  console.log('🔘 Boundary toggle changed:', includeBoundary?.checked);
 }
 
 console.log('📁 BlocIQ taskpane.js loaded successfully');

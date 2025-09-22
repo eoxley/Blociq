@@ -13,6 +13,7 @@ import {
   TopicHint
 } from '@/lib/outlook/reply-types';
 import { detectTopic } from '@/lib/outlook/reply-utils';
+import { detectTone, ToneResult } from '@/lib/outlook/tone-detection';
 
 export async function POST(req: NextRequest): Promise<NextResponse<EnrichResponse | { error: string }>> {
   try {
@@ -21,6 +22,18 @@ export async function POST(req: NextRequest): Promise<NextResponse<EnrichRespons
 
     // Detect topic if not provided
     const topic = body.topicHint || detectTopic(body.messageSummary);
+
+    // Detect tone from message content
+    const tone = detectTone(body.messageSummary, body.subject);
+
+    // Log tone detection (non-PII)
+    console.log('📊 Tone detected:', {
+      label: tone.label,
+      confidence: tone.confidence,
+      reasons: tone.reasons,
+      escalationRequired: tone.escalationRequired,
+      topic
+    });
 
     // 1. Look up leaseholder by email
     const { data: leaseholder, error: lhError } = await sb
@@ -98,7 +111,11 @@ export async function POST(req: NextRequest): Promise<NextResponse<EnrichRespons
       facts
     };
 
-    return NextResponse.json({ enrichment }, { status: 200 });
+    return NextResponse.json({
+      enrichment,
+      tone,
+      topic
+    }, { status: 200 });
 
   } catch (error: unknown) {
     console.error('Enrich API error:', error);

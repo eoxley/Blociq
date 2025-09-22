@@ -314,6 +314,95 @@
             color: #1e293b;
         }
 
+        .tone-section {
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .tone-section h4 {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+            color: #1e293b;
+        }
+
+        .tone-display {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .tone-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: capitalize;
+        }
+
+        .tone-badge.neutral {
+            background: #e2e8f0;
+            color: #475569;
+        }
+
+        .tone-badge.concerned {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .tone-badge.angry {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .tone-badge.abusive {
+            background: #fecaca;
+            color: #991b1b;
+            border: 1px solid #dc2626;
+        }
+
+        .tone-select {
+            padding: 4px 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-size: 11px;
+            background: white;
+        }
+
+        .tone-select:focus {
+            outline: none;
+            border-color: #7645ED;
+            box-shadow: 0 0 0 1px #7645ED;
+        }
+
+        .tone-reasons {
+            font-size: 10px;
+            color: #64748b;
+            font-style: italic;
+        }
+
+        .boundary-toggle {
+            margin-top: 8px;
+            padding: 8px;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 4px;
+        }
+
+        .boundary-toggle label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: #991b1b;
+            cursor: pointer;
+        }
+
+        .boundary-toggle input[type="checkbox"] {
+            margin: 0;
+        }
+
         .facts-section {
             margin-bottom: 16px;
         }
@@ -442,6 +531,27 @@
             <div class="confirmation-header">
                 <h3 id="confirmationTitle">Proposed Reply</h3>
                 <button id="closeConfirmation" class="close-btn">×</button>
+            </div>
+
+            <div class="tone-section" id="toneSection">
+                <h4>Detected Tone:</h4>
+                <div class="tone-display">
+                    <span id="toneLabel" class="tone-badge neutral">Neutral</span>
+                    <select id="toneOverride" class="tone-select">
+                        <option value="">Use detected tone</option>
+                        <option value="neutral">Neutral</option>
+                        <option value="concerned">Concerned</option>
+                        <option value="angry">Angry</option>
+                        <option value="abusive">Abusive</option>
+                    </select>
+                </div>
+                <div id="toneReasons" class="tone-reasons"></div>
+                <div id="boundaryToggle" class="boundary-toggle" style="display: none;">
+                    <label>
+                        <input type="checkbox" id="includeBoundary" checked>
+                        Include boundary and escalation text
+                    </label>
+                </div>
             </div>
 
             <div class="facts-section" id="factsSection">

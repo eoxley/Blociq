@@ -44,8 +44,19 @@ export const EnrichmentSchema = z.object({
 
 export type Enrichment = z.infer<typeof EnrichmentSchema>;
 
+export const ToneResultSchema = z.object({
+  label: z.enum(['neutral', 'concerned', 'angry', 'abusive']),
+  reasons: z.array(z.string()),
+  confidence: z.number(),
+  escalationRequired: z.boolean(),
+});
+
+export type ToneResult = z.infer<typeof ToneResultSchema>;
+
 export const EnrichResponseSchema = z.object({
   enrichment: EnrichmentSchema,
+  tone: ToneResultSchema,
+  topic: z.enum(['fire', 'leak', 'costs', 'eicr', 'compliance', 'general']),
 });
 
 export type EnrichResponse = z.infer<typeof EnrichResponseSchema>;
@@ -58,6 +69,8 @@ export const DraftRequestSchema = z.object({
   facts: EnrichmentFactsSchema,
   originalMessageSummary: z.string().min(1),
   topicHint: z.enum(['fire', 'leak', 'costs', 'eicr', 'compliance', 'general']).optional(),
+  tone: ToneResultSchema.optional(),
+  userToneOverride: z.enum(['neutral', 'concerned', 'angry', 'abusive']).optional(),
 });
 
 export type DraftRequest = z.infer<typeof DraftRequestSchema>;

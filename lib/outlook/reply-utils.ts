@@ -3,6 +3,8 @@
  * Handles topic detection, formatting, and template generation
  */
 
+import { ToneLabel, getToneOpening, getBoundaryText } from './tone-detection';
+
 export type TopicHint = 'fire' | 'leak' | 'costs' | 'eicr' | 'compliance' | 'general';
 
 export interface Enrichment {
@@ -228,35 +230,41 @@ This message was generated with AI assistance to ensure prompt and accurate resp
 }
 
 /**
- * Generate full empathetic reply template
+ * Generate tone-aware reply template
  */
-export function generateReplyTemplate(
+export function generateToneAwareReplyTemplate(
   enrichment: Enrichment,
-  originalMessageSummary: string
+  originalMessageSummary: string,
+  tone: ToneLabel,
+  escalationRequired = false
 ): string {
   const topic = detectTopic(originalMessageSummary);
-  const empathyOpening = getEmpathyOpening(topic);
   const topicPhrase = getTopicPhrase(topic);
-  const actionLine = getActionLineForTopic(topic);
-  const signatureBlock = generateSignatureBlock();
+  const actionLine = getToneAwareActionLine(topic, tone);
+  const signatureBlock = generateToneAwareSignature(tone);
+
+  // Get tone-appropriate opening
+  const opening = getToneOpening(tone, topicPhrase, enrichment.residentName);
+
+  // Build facts section (same for all tones but different formatting)
+  const factsSection = buildToneAwareFacts(enrichment.facts, tone);
+
+  // Get next steps with tone-appropriate timeline
+  const nextSteps = getToneAwareNextSteps(topic, tone);
+
+  // Add boundary text for abusive tone
+  const boundarySection = (tone === 'abusive')
+    ? `\n\n${getBoundaryText(escalationRequired)}`
+    : '';
 
   const template = `Dear {{residentName||"Resident"}},
 
-${empathyOpening}
+${opening}
 
-What we can see right now:
-• Fire Risk Assessment: last {{fraLast|fallback}}, next due {{fraNext|fallback}}
-• Fire door inspection: {{fireDoorInspectLast|fallback}}
-• Alarm system service: {{alarmServiceLast|fallback}}
-• EICR: last {{eicrLast|fallback}}, next due {{eicrNext|fallback}}
-• Gas safety: last {{gasLast|fallback}}, next due {{gasNext|fallback}}
-• Asbestos survey: last {{asbestosLast|fallback}}, next due {{asbestosNext|fallback}}
-• Existing work order: {{openWorkOrderRef|fallback}}
-• Existing leak ticket: {{openLeakTicketRef|fallback}}
+${factsSection}
 
 Next steps:
-• {{actionLine}}
-• We'll update you within 2 working days with the outcome and any actions required.
+${nextSteps}${boundarySection}
 
 ${signatureBlock}`;
 
@@ -267,4 +275,122 @@ ${signatureBlock}`;
     actionLine,
     facts: enrichment.facts
   });
+}
+
+/**
+ * Legacy function for backward compatibility
+ */
+export function generateReplyTemplate(
+  enrichment: Enrichment,
+  originalMessageSummary: string
+): string {
+  return generateToneAwareReplyTemplate(enrichment, originalMessageSummary, 'neutral');
+}
+
+/**
+ * Build tone-aware facts section
+ */
+function buildToneAwareFacts(facts: Enrichment['facts'], tone: ToneLabel): string {
+  const header = tone === 'abusive' ? 'Current status:' : 'What we can see right now:';
+
+  const factLines = [
+    `• Fire Risk Assessment: last {{fraLast|fallback}}, next due {{fraNext|fallback}}`,
+    `• Fire door inspection: {{fireDoorInspectLast|fallback}}`,
+    `• Alarm system service: {{alarmServiceLast|fallback}}`,
+    `• EICR: last {{eicrLast|fallback}}, next due {{eicrNext|fallback}}`,
+    `• Gas safety: last {{gasLast|fallback}}, next due {{gasNext|fallback}}`,
+    `• Asbestos survey: last {{asbestosLast|fallback}}, next due {{asbestosNext|fallback}}`,
+    `• Existing work order: {{openWorkOrderRef|fallback}}`,
+    `• Existing leak ticket: {{openLeakTicketRef|fallback}}`
+  ];
+
+  // For abusive tone, show fewer details and more focused
+  if (tone === 'abusive') {
+    return `${header}\n• Inspection history: reviewing records\n• Previous visits: {{openWorkOrderRef|fallback}}`;
+  }
+
+  return `${header}\n${factLines.join('\n')}`;
+}
+
+/**
+ * Get tone-aware action line
+ */
+function getToneAwareActionLine(topic: TopicHint, tone: ToneLabel): string {
+  const baseActions = {
+    fire: 'confirm the last alarm service and arrange a door inspection if due',
+    leak: 'book a contractor to inspect the source of ingress and protect the area',
+    eicr: 'review the latest EICR certificate and confirm compliance status',
+    compliance: 'review the latest certificate and confirm status',
+    costs: 'review the charges and provide a detailed breakdown with any applicable consultation requirements',
+    general: 'investigate this matter thoroughly'
+  };
+
+  const action = baseActions[topic];
+
+  switch (tone) {
+    case 'neutral':
+      return `We will ${action}.`;
+    case 'concerned':
+      return `We will ${action} as a priority.`;
+    case 'angry':
+      return `We will ${action} immediately.`;
+    case 'abusive':
+      return `We will ${action.split(' ').slice(0, 8).join(' ')}.`; // Shorter, more direct
+  }
+}
+
+/**
+ * Get tone-aware next steps section
+ */
+function getToneAwareNextSteps(topic: TopicHint, tone: ToneLabel): string {
+  const actionLine = getToneAwareActionLine(topic, tone);
+
+  const timeframes = {
+    neutral: '2 working days',
+    concerned: '2 working days',
+    angry: '24 hours',
+    abusive: '1 working day'
+  };
+
+  const timeframe = timeframes[tone];
+
+  switch (tone) {
+    case 'neutral':
+      return `• ${actionLine}\n• We'll update you within ${timeframe} with the outcome and any actions required.`;
+
+    case 'concerned':
+      return `• ${actionLine}\n• We'll update you within ${timeframe} with a detailed progress report.`;
+
+    case 'angry':
+      return `• ${actionLine}\n• We will update you within ${timeframe} with the findings.`;
+
+    case 'abusive':
+      return `• ${actionLine}\n• We will update you within ${timeframe}.`;
+  }
+}
+
+/**
+ * Generate tone-aware signature
+ */
+function generateToneAwareSignature(tone: ToneLabel): string {
+  const baseSignature = `[Your Name]
+Property Manager
+BlocIQ
+
+📞 [Phone Number]
+📧 [Email Address]
+🌐 www.blociq.co.uk`;
+
+  const closings = {
+    neutral: 'Kind regards,',
+    concerned: 'Best regards,',
+    angry: 'Regards,',
+    abusive: 'Regards,'
+  };
+
+  const aiNote = tone === 'abusive'
+    ? '' // No AI note for abusive tone to keep it formal
+    : '\n\nThis message was generated with AI assistance to ensure prompt and accurate responses.';
+
+  return `${closings[tone]}\n\n${baseSignature}${aiNote}`;
 }
