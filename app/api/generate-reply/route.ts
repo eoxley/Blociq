@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { parseAddinIntent } from '@/ai/intent/parseAddinIntent';
-import { buildAddinPrompt } from '@/ai/prompt/addinPrompt';
+import { buildReplyPrompt } from '@/ai/prompt/addinPrompt';
 import { addinQAAdapter } from '@/ai/adapters/addinQAAdapter';
 import { addinReplyAdapter } from '@/ai/adapters/addinReplyAdapter';
 
@@ -48,20 +48,74 @@ export async function POST(request: NextRequest) {
       cc: cc || []
     };
 
-    // Build building/unit context if provided
+    // Resolve building/unit context from Supabase if provided
     let buildingContext = null;
+    let leaseSummary = null;
+
     if (buildingId || unitId) {
-      buildingContext = {
-        buildingId: buildingId || null,
-        unitId: unitId || null
-      };
+      try {
+        // Get building details
+        if (buildingId) {
+          const { data: buildingData, error: buildingError } = await supabase
+            .from('buildings')
+            .select('id, name, address')
+            .eq('id', buildingId)
+            .single();
+
+          if (buildingData) {
+            buildingContext = {
+              buildingId: buildingData.id,
+              buildingName: buildingData.name,
+              address: buildingData.address
+            };
+          }
+        }
+
+        // Get unit details if provided
+        if (unitId) {
+          const { data: unitData, error: unitError } = await supabase
+            .from('units')
+            .select('id, unit_number, building_id')
+            .eq('id', unitId)
+            .single();
+
+          if (unitData) {
+            buildingContext = {
+              ...buildingContext,
+              unitId: unitData.id,
+              unitNumber: unitData.unit_number
+            };
+          }
+        }
+
+        // Try to get lease summary data from document_jobs for this building/unit
+        if (buildingId) {
+          const { data: leaseJobs, error: leaseError } = await supabase
+            .from('document_jobs')
+            .select('summary_json')
+            .eq('linked_building_id', buildingId)
+            .eq('status', 'READY')
+            .not('summary_json', 'is', null)
+            .order('updated_at', { ascending: false })
+            .limit(1);
+
+          if (leaseJobs && leaseJobs.length > 0) {
+            leaseSummary = leaseJobs[0].summary_json;
+          }
+        }
+
+      } catch (error) {
+        console.error('Error resolving building/unit context:', error);
+        // Continue without context
+      }
     }
 
-    // Use the existing addin reply adapter
+    // Use the existing addin reply adapter with resolved context
     const replyResult = await addinReplyAdapter({
       userInput: 'Generate a professional reply to this email',
       outlookContext,
       buildingContext,
+      leaseSummary,
       userId: user.id
     });
 

@@ -53,63 +53,136 @@ export default function OverviewPage() {
             </p>
           </div>
           
-          {/* Mermaid Diagram */}
+          {/* Platform Flow Diagram */}
           <div className="bg-gray-50 rounded-lg p-6 overflow-x-auto">
-            <div className="mermaid">
-              graph LR
-                %% User Layer
-                subgraph "👥 BlocIQ Users"
-                    A[Property Managers<br/>🏢 Portfolio Management<br/>Building Oversight]
-                    B[Leaseholders<br/>🏠 Tenant Portal<br/>Digital Access]
-                    C[Investors<br/>📊 Analytics Dashboard<br/>ROI Tracking]
-                end
-                
-                %% Main Platform
-                subgraph "📱 BlocIQ Platform"
-                    D[Web Application<br/>📋 Document Management<br/>💬 Communication Hub<br/>📊 Compliance Tracking<br/>🤖 AI-Powered Automation]
-                end
-                
-                %% External Services
-                subgraph "🔧 BlocIQ Integrated Services"
-                    E[🗄️ Supabase Database<br/>EU Hosted<br/>Secure Storage<br/>Real-time Sync]
-                    F[📧 Microsoft Outlook<br/>Email Integration<br/>Calendar Sync<br/>OAuth 2.0]
-                    G[🤖 OpenAI GPT-4<br/>Document Analysis<br/>Content Generation<br/>GDPR-Safe Processing]
-                    H[📄 Google Document AI<br/>OCR Text Extraction<br/>EU Processing<br/>Lease Analysis]
-                    I[📬 SendGrid Email<br/>Delivery Service<br/>SMTP Services<br/>GDPR Compliant]
-                end
-                
-                %% Data Security
-                subgraph "🛡️ BlocIQ Security & Compliance"
-                    J[🔒 GDPR Compliant<br/>• EU Data Residency<br/>• Agency Data Isolation<br/>• Secure Authentication<br/>• Audit Logging<br/>• AES-256 Encryption]
-                end
-                
-                %% Connections
-                A --> D
-                B --> D
-                C --> D
-                
-                D --> E
-                D --> F
-                D --> G
-                D --> H
-                D --> I
-                
-                E -.-> J
-                F -.-> J
-                G -.-> J
-                H -.-> J
-                I -.-> J
-                
-                %% BlocIQ Brand Styling
-                classDef userClass fill:#e3f2fd,stroke:#1976d2,stroke-width:3px,color:#000,font-weight:bold,font-family:'Segoe UI',Arial
-                classDef platformClass fill:#f3e5f5,stroke:#7b1fa2,stroke-width:3px,color:#000,font-weight:bold,font-family:'Segoe UI',Arial
-                classDef serviceClass fill:#e8f5e8,stroke:#388e3c,stroke-width:2px,color:#000,font-family:'Segoe UI',Arial
-                classDef securityClass fill:#ffebee,stroke:#d32f2f,stroke-width:3px,color:#000,font-weight:bold,font-family:'Segoe UI',Arial
-                
-                class A,B,C userClass
-                class D platformClass
-                class E,F,G,H,I serviceClass
-                class J securityClass
+            <div className="text-center mb-4">
+              <p className="text-sm text-gray-600">
+                High-level platform flow showing users, core services, and integrated systems
+              </p>
+            </div>
+            
+            {/* Visual Flow Representation */}
+            <div className="space-y-8">
+              {/* Users Layer */}
+              <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-6 text-center">
+                <h4 className="text-xl font-bold text-blue-800 mb-4 flex items-center justify-center">
+                  👥 BlocIQ Users
+                </h4>
+                <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+                  <div className="bg-white p-4 rounded-lg border shadow-sm">
+                    <div className="font-semibold text-gray-800 text-lg">Property Managers</div>
+                    <div className="text-sm text-gray-600 mt-1">🏢 Portfolio Management, Building Oversight</div>
+                  </div>
+                  <div className="bg-white p-4 rounded-lg border shadow-sm">
+                    <div className="font-semibold text-gray-800 text-lg">Leaseholders</div>
+                    <div className="text-sm text-gray-600 mt-1">🏠 Tenant Portal, Digital Access</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Arrow Down */}
+              <div className="flex justify-center">
+                <div className="text-4xl text-gray-400">⬇️</div>
+              </div>
+
+              {/* Main Platform */}
+              <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-6 text-center">
+                <h4 className="text-xl font-bold text-purple-800 mb-4 flex items-center justify-center">
+                  📱 BlocIQ Platform
+                </h4>
+                <div className="bg-white p-6 rounded-lg border shadow-sm max-w-4xl mx-auto">
+                  <div className="font-semibold text-gray-800 text-lg mb-4">Web Application</div>
+                  <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm text-gray-600">
+                    <div className="flex flex-col items-center space-y-1">
+                      <span className="text-2xl">📋</span>
+                      <span>Document Management</span>
+                    </div>
+                    <div className="flex flex-col items-center space-y-1">
+                      <span className="text-2xl">💬</span>
+                      <span>Communication Hub</span>
+                    </div>
+                    <div className="flex flex-col items-center space-y-1">
+                      <span className="text-2xl">📊</span>
+                      <span>Compliance Tracking</span>
+                    </div>
+                    <div className="flex flex-col items-center space-y-1">
+                      <span className="text-2xl">🤖</span>
+                      <span>AI-Powered Automation</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Arrow Down */}
+              <div className="flex justify-center">
+                <div className="text-4xl text-gray-400">⬇️</div>
+              </div>
+
+              {/* Integrated Services */}
+              <div className="bg-green-50 border-2 border-green-200 rounded-lg p-6 text-center">
+                <h4 className="text-xl font-bold text-green-800 mb-4 flex items-center justify-center">
+                  🔧 BlocIQ Integrated Services
+                </h4>
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-6xl mx-auto">
+                  <div className="bg-white p-4 rounded-lg border shadow-sm">
+                    <div className="font-semibold text-gray-800">🗄️ Supabase Database</div>
+                    <div className="text-sm text-gray-600 mt-1">EU Hosted, Secure Storage, Real-time Sync</div>
+                  </div>
+                  <div className="bg-white p-4 rounded-lg border shadow-sm">
+                    <div className="font-semibold text-gray-800">📧 Microsoft Outlook</div>
+                    <div className="text-sm text-gray-600 mt-1">Email Integration, Calendar Sync, OAuth 2.0</div>
+                  </div>
+                  <div className="bg-white p-4 rounded-lg border shadow-sm">
+                    <div className="font-semibold text-gray-800">🤖 OpenAI GPT-4</div>
+                    <div className="text-sm text-gray-600 mt-1">Document Analysis, Content Generation</div>
+                  </div>
+                  <div className="bg-white p-4 rounded-lg border shadow-sm">
+                    <div className="font-semibold text-gray-800">📄 Google Document AI</div>
+                    <div className="text-sm text-gray-600 mt-1">OCR Text Extraction, EU Processing</div>
+                  </div>
+                  <div className="bg-white p-4 rounded-lg border shadow-sm">
+                    <div className="font-semibold text-gray-800">📬 SendGrid Email</div>
+                    <div className="text-sm text-gray-600 mt-1">Delivery Service, SMTP Services</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Arrow Down */}
+              <div className="flex justify-center">
+                <div className="text-4xl text-gray-400">⬇️</div>
+              </div>
+
+              {/* Security & Compliance */}
+              <div className="bg-red-50 border-2 border-red-200 rounded-lg p-6 text-center">
+                <h4 className="text-xl font-bold text-red-800 mb-4 flex items-center justify-center">
+                  🛡️ BlocIQ Security & Compliance
+                </h4>
+                <div className="bg-white p-6 rounded-lg border shadow-sm max-w-4xl mx-auto">
+                  <div className="font-semibold text-gray-800 text-lg mb-4">🔒 GDPR Compliant</div>
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm text-gray-600">
+                    <div className="flex items-center justify-center space-x-2">
+                      <span>•</span>
+                      <span>EU Data Residency</span>
+                    </div>
+                    <div className="flex items-center justify-center space-x-2">
+                      <span>•</span>
+                      <span>Agency Data Isolation</span>
+                    </div>
+                    <div className="flex items-center justify-center space-x-2">
+                      <span>•</span>
+                      <span>Secure Authentication</span>
+                    </div>
+                    <div className="flex items-center justify-center space-x-2">
+                      <span>•</span>
+                      <span>Audit Logging</span>
+                    </div>
+                    <div className="flex items-center justify-center space-x-2">
+                      <span>•</span>
+                      <span>AES-256 Encryption</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -198,115 +271,7 @@ export default function OverviewPage() {
           </div>
         </div>
 
-        {/* Market Opportunity */}
-        <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
-          <h3 className="text-2xl font-bold text-gray-900 mb-6">Market Opportunity</h3>
-          
-          <div className="grid md:grid-cols-2 gap-8">
-            <div>
-              <h4 className="text-lg font-semibold text-gray-900 mb-4">UK Property Management Market</h4>
-              <ul className="space-y-3 text-gray-600">
-                <li className="flex items-center space-x-3">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <span><strong>Market Size:</strong> £2.5bn+ property management services market</span>
-                </li>
-                <li className="flex items-center space-x-3">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span><strong>Digital Transformation:</strong> Increasing demand for technology solutions</span>
-                </li>
-                <li className="flex items-center space-x-3">
-                  <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                  <span><strong>Regulatory Pressure:</strong> Growing compliance requirements driving automation</span>
-                </li>
-                <li className="flex items-center space-x-3">
-                  <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                  <span><strong>Cost Efficiency:</strong> Need for operational efficiency and cost reduction</span>
-                </li>
-              </ul>
-            </div>
 
-            <div>
-              <h4 className="text-lg font-semibold text-gray-900 mb-4">Target Segments</h4>
-              <ul className="space-y-3 text-gray-600">
-                <li className="flex items-center space-x-3">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <span><strong>Property Management Companies:</strong> 500+ buildings under management</span>
-                </li>
-                <li className="flex items-center space-x-3">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span><strong>Leasehold Properties:</strong> Individual building management</span>
-                </li>
-                <li className="flex items-center space-x-3">
-                  <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                  <span><strong>Real Estate Investors:</strong> Portfolio management and oversight</span>
-                </li>
-                <li className="flex items-center space-x-3">
-                  <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                  <span><strong>Managing Agents:</strong> Streamlined tenant and building services</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        {/* Brand Kit Section */}
-        <div className="bg-white rounded-xl shadow-lg p-8">
-          <h3 className="text-2xl font-bold text-gray-900 mb-6">BlocIQ Brand Kit Integration</h3>
-          
-          <div className="grid md:grid-cols-2 gap-8">
-            <div>
-              <h4 className="text-lg font-semibold text-gray-900 mb-4">Brand Color Palette</h4>
-              <div className="space-y-3">
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-blue-600 rounded"></div>
-                  <span className="text-sm text-gray-600">Primary Blue: #1976d2 (Trust, Professional)</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-purple-600 rounded"></div>
-                  <span className="text-sm text-gray-600">Secondary Purple: #7b1fa2 (Innovation, Premium)</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-green-600 rounded"></div>
-                  <span className="text-sm text-gray-600">Success Green: #388e3c (Growth, Efficiency)</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-orange-600 rounded"></div>
-                  <span className="text-sm text-gray-600">Warning Orange: #f57c00 (Information, Value)</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-red-600 rounded"></div>
-                  <span className="text-sm text-gray-600">Error Red: #d32f2f (Protection, Compliance)</span>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="text-lg font-semibold text-gray-900 mb-4">Brand Messaging Framework</h4>
-              <ul className="space-y-3 text-gray-600">
-                <li className="flex items-start space-x-2">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-                  <span><strong>Trust & Security:</strong> GDPR-compliant, EU data residency</span>
-                </li>
-                <li className="flex items-start space-x-2">
-                  <div className="w-2 h-2 bg-purple-500 rounded-full mt-2"></div>
-                  <span><strong>Innovation:</strong> AI-powered automation and analysis</span>
-                </li>
-                <li className="flex items-start space-x-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
-                  <span><strong>Efficiency:</strong> Streamlined workflows and cost reduction</span>
-                </li>
-                <li className="flex items-start space-x-2">
-                  <div className="w-2 h-2 bg-orange-500 rounded-full mt-2"></div>
-                  <span><strong>Transparency:</strong> Clear data handling and user access</span>
-                </li>
-                <li className="flex items-start space-x-2">
-                  <div className="w-2 h-2 bg-red-500 rounded-full mt-2"></div>
-                  <span><strong>Professional:</strong> Enterprise-grade security and compliance</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
 
         {/* Navigation */}
         <div className="mt-8 flex justify-center space-x-4">

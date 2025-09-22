@@ -1,16 +1,20 @@
 // app/api/addin/generate-reply/route.ts
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/utils/supabase/server';
+import { addinReplyAdapter } from '@/ai/adapters/addinReplyAdapter';
 
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { originalSubject, originalSender, originalBody, context } = body;
+        const { originalSubject, originalSender, originalBody, context, buildingId, unitId } = body;
 
-        console.log('Generate reply request received:', {
+        console.log('🔄 BlocIQ Add-in reply generation:', {
             subject: originalSubject,
             sender: originalSender,
             bodyLength: originalBody?.length || 0,
-            context
+            context,
+            buildingId,
+            unitId
         });
 
         // Validate required fields
@@ -21,23 +25,120 @@ export async function POST(request: NextRequest) {
             }, { status: 400 });
         }
 
-        // Generate reply using your AI service
-        // Replace this with your actual BlocIQ AI API call
-        const reply = await generateAIReply({
+        // Get authenticated user
+        const supabase = await createClient();
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+        if (userError || !user) {
+            return NextResponse.json({
+                success: false,
+                error: 'Authentication required'
+            }, { status: 401 });
+        }
+
+        // Resolve building/unit context from Supabase if provided
+        let buildingContext = null;
+        let leaseSummary = null;
+
+        if (buildingId || unitId) {
+            try {
+                // Get building details
+                if (buildingId) {
+                    const { data: buildingData } = await supabase
+                        .from('buildings')
+                        .select('id, name, address')
+                        .eq('id', buildingId)
+                        .single();
+
+                    if (buildingData) {
+                        buildingContext = {
+                            buildingId: buildingData.id,
+                            buildingName: buildingData.name,
+                            address: buildingData.address
+                        };
+                    }
+                }
+
+                // Get unit details if provided
+                if (unitId) {
+                    const { data: unitData } = await supabase
+                        .from('units')
+                        .select('id, unit_number, building_id')
+                        .eq('id', unitId)
+                        .single();
+
+                    if (unitData) {
+                        buildingContext = {
+                            ...buildingContext,
+                            unitId: unitData.id,
+                            unitNumber: unitData.unit_number
+                        };
+                    }
+                }
+
+                // Try to get lease summary data from document_jobs for this building/unit
+                if (buildingId) {
+                    const { data: leaseJobs } = await supabase
+                        .from('document_jobs')
+                        .select('summary_json')
+                        .eq('linked_building_id', buildingId)
+                        .eq('status', 'READY')
+                        .not('summary_json', 'is', null)
+                        .order('updated_at', { ascending: false })
+                        .limit(1);
+
+                    if (leaseJobs && leaseJobs.length > 0) {
+                        leaseSummary = leaseJobs[0].summary_json;
+                    }
+                }
+
+            } catch (error) {
+                console.error('⚠️ Error resolving building/unit context:', error);
+                // Continue without context
+            }
+        }
+
+        // Build Outlook context
+        const outlookContext = {
+            from: originalSender,
             subject: originalSubject,
-            sender: originalSender,
-            body: originalBody
+            bodyPreview: originalBody,
+            receivedDateTime: new Date().toISOString()
+        };
+
+        // Generate reply using BlocIQ pipeline
+        const replyResult = await addinReplyAdapter({
+            userInput: 'Generate a professional reply to this email',
+            outlookContext,
+            buildingContext,
+            leaseSummary,
+            userId: user.id
         });
 
+        if (!replyResult.success) {
+            return NextResponse.json({
+                success: false,
+                error: replyResult.message || 'Failed to generate reply'
+            }, { status: 500 });
+        }
+
+        // Return in the format expected by Outlook add-in
         return NextResponse.json({
             success: true,
-            reply: reply,
-            timestamp: new Date().toISOString()
+            reply: replyResult.bodyHtml,
+            subjectSuggestion: replyResult.subjectSuggestion,
+            usedFacts: replyResult.usedFacts || [],
+            sources: replyResult.sources || [],
+            timestamp: new Date().toISOString(),
+            buildingContext: buildingContext?.buildingName ? {
+                building: buildingContext.buildingName,
+                unit: buildingContext.unitNumber
+            } : null
         });
 
     } catch (error) {
-        console.error('Error generating reply:', error);
-        
+        console.error('❌ Error generating BlocIQ reply:', error);
+
         return NextResponse.json({
             success: false,
             error: 'Failed to generate reply'
@@ -58,107 +159,3 @@ export async function OPTIONS(request: NextRequest) {
     });
 }
 
-async function generateAIReply(emailData: {
-    subject: string;
-    sender: string;
-    body: string;
-}) {
-    // This is where you'd integrate with your actual AI service
-    // For now, I'll provide a template-based response
-    
-    const { subject, sender, body } = emailData;
-    
-    // Simple AI reply generation logic
-    // Replace this with your actual BlocIQ AI API call
-    
-    let replyTemplate = '';
-    
-    // Detect email type and generate appropriate response
-    if (body.toLowerCase().includes('property') || body.toLowerCase().includes('rent')) {
-        replyTemplate = `Thank you for your inquiry regarding the property matter.
-
-I've reviewed your message and will address your concerns promptly. Based on the information provided, I'll need to:
-
-• Review the relevant property details
-• Check current regulations and requirements  
-• Prepare a comprehensive response with next steps
-
-I'll get back to you within 24 hours with a detailed update.
-
-Best regards`;
-        
-    } else if (body.toLowerCase().includes('urgent') || body.toLowerCase().includes('asap')) {
-        replyTemplate = `Thank you for reaching out with this urgent matter.
-
-I understand the time-sensitive nature of your request and will prioritize this accordingly. I'm currently reviewing the details you've provided and will respond with a full update within the next few hours.
-
-In the meantime, please don't hesitate to call if you need immediate assistance.
-
-Best regards`;
-        
-    } else if (body.toLowerCase().includes('meeting') || body.toLowerCase().includes('schedule')) {
-        replyTemplate = `Thank you for your message regarding scheduling.
-
-I'd be happy to arrange a meeting to discuss this further. Based on your availability mentioned, I can offer the following time slots:
-
-• [Time slot 1]
-• [Time slot 2] 
-• [Time slot 3]
-
-Please let me know which works best for you, or suggest alternative times if none of these are suitable.
-
-Best regards`;
-        
-    } else {
-        replyTemplate = `Thank you for your email.
-
-I've received your message and will review the details carefully. I'll provide you with a comprehensive response addressing all your points within 24 hours.
-
-If you need any immediate assistance or have additional questions in the meantime, please don't hesitate to reach out.
-
-Best regards`;
-    }
-    
-    return replyTemplate;
-}
-
-// Alternative: Integration with your actual AI service
-async function generateAIReplyWithService(emailData: {
-    subject: string;
-    sender: string;
-    body: string;
-}) {
-    // Example integration with your AI service
-    try {
-        const response = await fetch('https://api.blociq.co.uk/ai/generate-reply', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${process.env.BLOCIQ_AI_API_KEY}`,
-            },
-            body: JSON.stringify({
-                prompt: `Generate a professional email reply for this property management email:
-                
-Subject: ${emailData.subject}
-From: ${emailData.sender}
-Message: ${emailData.body}
-
-Generate a helpful, professional reply that addresses the sender's needs.`,
-                maxTokens: 200,
-                temperature: 0.7
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error('AI service failed');
-        }
-
-        const result = await response.json();
-        return result.generatedText || 'Thank you for your email. I will review and respond shortly.';
-        
-    } catch (error) {
-        console.error('AI service error:', error);
-        // Fallback to template
-        return 'Thank you for your email. I will review and respond shortly.';
-    }
-}

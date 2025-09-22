@@ -62,124 +62,140 @@ export default function ArchitecturePage() {
             </div>
             
             {/* Visual Architecture Representation */}
-            <div className="space-y-6">
+            <div className="space-y-8">
               {/* User Layer */}
-              <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
-                <h4 className="text-lg font-bold text-blue-800 mb-3 flex items-center">
+              <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-6 text-center">
+                <h4 className="text-xl font-bold text-blue-800 mb-4 flex items-center justify-center">
                   👥 BlocIQ User Interface Layer
                 </h4>
-                <div className="grid md:grid-cols-3 gap-4">
-                  <div className="bg-white p-3 rounded border">
-                    <div className="font-semibold text-gray-800">Property Manager</div>
-                    <div className="text-sm text-gray-600">🏢 Building Management, Portfolio Oversight</div>
+                <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+                  <div className="bg-white p-4 rounded-lg border shadow-sm">
+                    <div className="font-semibold text-gray-800 text-lg">Property Manager</div>
+                    <div className="text-sm text-gray-600 mt-1">🏢 Building Management, Portfolio Oversight</div>
                   </div>
-                  <div className="bg-white p-3 rounded border">
-                    <div className="font-semibold text-gray-800">Leaseholder</div>
-                    <div className="text-sm text-gray-600">🏠 Tenant Portal, Digital Access</div>
-                  </div>
-                  <div className="bg-white p-3 rounded border">
-                    <div className="font-semibold text-gray-800">Investor</div>
-                    <div className="text-sm text-gray-600">📊 Portfolio View, Analytics Dashboard</div>
+                  <div className="bg-white p-4 rounded-lg border shadow-sm">
+                    <div className="font-semibold text-gray-800 text-lg">Leaseholder</div>
+                    <div className="text-sm text-gray-600 mt-1">🏠 Tenant Portal, Digital Access</div>
                   </div>
                 </div>
+              </div>
+
+              {/* Arrow Down */}
+              <div className="flex justify-center">
+                <div className="text-4xl text-gray-400">⬇️</div>
               </div>
 
               {/* Application Layer */}
-              <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-4">
-                <h4 className="text-lg font-bold text-purple-800 mb-3 flex items-center">
+              <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-6 text-center">
+                <h4 className="text-xl font-bold text-purple-800 mb-4 flex items-center justify-center">
                   📱 BlocIQ Application Layer
                 </h4>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="bg-white p-3 rounded border">
-                    <div className="font-semibold text-gray-800">Next.js Frontend</div>
-                    <div className="text-sm text-gray-600">React Components, TypeScript, Responsive UI</div>
+                <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+                  <div className="bg-white p-4 rounded-lg border shadow-sm">
+                    <div className="font-semibold text-gray-800 text-lg">Next.js Frontend</div>
+                    <div className="text-sm text-gray-600 mt-1">React Components, TypeScript, Responsive UI</div>
                   </div>
-                  <div className="bg-white p-3 rounded border">
-                    <div className="font-semibold text-gray-800">API Routes</div>
-                    <div className="text-sm text-gray-600">Server Actions, Authentication, Middleware</div>
+                  <div className="bg-white p-4 rounded-lg border shadow-sm">
+                    <div className="font-semibold text-gray-800 text-lg">API Routes</div>
+                    <div className="text-sm text-gray-600 mt-1">Server Actions, Authentication, Middleware</div>
                   </div>
                 </div>
+              </div>
+
+              {/* Arrow Down */}
+              <div className="flex justify-center">
+                <div className="text-4xl text-gray-400">⬇️</div>
               </div>
 
               {/* Core Services */}
-              <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4">
-                <h4 className="text-lg font-bold text-green-800 mb-3 flex items-center">
+              <div className="bg-green-50 border-2 border-green-200 rounded-lg p-6 text-center">
+                <h4 className="text-xl font-bold text-green-800 mb-4 flex items-center justify-center">
                   🔧 BlocIQ Core Services
                 </h4>
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div className="bg-white p-3 rounded border">
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-6xl mx-auto">
+                  <div className="bg-white p-4 rounded-lg border shadow-sm">
                     <div className="font-semibold text-gray-800">🗄️ Supabase Backend</div>
-                    <div className="text-sm text-gray-600">PostgreSQL, Real-time, File Storage</div>
+                    <div className="text-sm text-gray-600 mt-1">PostgreSQL, Real-time, File Storage</div>
                   </div>
-                  <div className="bg-white p-3 rounded border">
+                  <div className="bg-white p-4 rounded-lg border shadow-sm">
                     <div className="font-semibold text-gray-800">📧 Microsoft Graph</div>
-                    <div className="text-sm text-gray-600">Outlook Integration, OAuth 2.0</div>
+                    <div className="text-sm text-gray-600 mt-1">Outlook Integration, OAuth 2.0</div>
                   </div>
-                  <div className="bg-white p-3 rounded border">
+                  <div className="bg-white p-4 rounded-lg border shadow-sm">
                     <div className="font-semibold text-gray-800">🤖 OpenAI GPT-4</div>
-                    <div className="text-sm text-gray-600">Document Analysis, AI Drafting</div>
+                    <div className="text-sm text-gray-600 mt-1">Document Analysis, AI Drafting</div>
                   </div>
-                  <div className="bg-white p-3 rounded border">
+                  <div className="bg-white p-4 rounded-lg border shadow-sm">
                     <div className="font-semibold text-gray-800">📄 Google Document AI</div>
-                    <div className="text-sm text-gray-600">OCR Processing, EU Endpoints</div>
+                    <div className="text-sm text-gray-600 mt-1">OCR Processing, EU Endpoints</div>
                   </div>
-                  <div className="bg-white p-3 rounded border">
+                  <div className="bg-white p-4 rounded-lg border shadow-sm">
                     <div className="font-semibold text-gray-800">📬 SendGrid</div>
-                    <div className="text-sm text-gray-600">Email Delivery, GDPR Compliant</div>
+                    <div className="text-sm text-gray-600 mt-1">Email Delivery, GDPR Compliant</div>
                   </div>
                 </div>
+              </div>
+
+              {/* Arrow Down */}
+              <div className="flex justify-center">
+                <div className="text-4xl text-gray-400">⬇️</div>
               </div>
 
               {/* Data Model */}
-              <div className="bg-orange-50 border-2 border-orange-200 rounded-lg p-4">
-                <h4 className="text-lg font-bold text-orange-800 mb-3 flex items-center">
+              <div className="bg-orange-50 border-2 border-orange-200 rounded-lg p-6 text-center">
+                <h4 className="text-xl font-bold text-orange-800 mb-4 flex items-center justify-center">
                   📊 BlocIQ Data Model
                 </h4>
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div className="bg-white p-3 rounded border">
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-6xl mx-auto">
+                  <div className="bg-white p-4 rounded-lg border shadow-sm">
                     <div className="font-semibold text-gray-800">🏢 Buildings</div>
-                    <div className="text-sm text-gray-600">Property Information, Management Data</div>
+                    <div className="text-sm text-gray-600 mt-1">Property Information, Management Data</div>
                   </div>
-                  <div className="bg-white p-3 rounded border">
+                  <div className="bg-white p-4 rounded-lg border shadow-sm">
                     <div className="font-semibold text-gray-800">🏠 Units</div>
-                    <div className="text-sm text-gray-600">Individual Properties, Lease Details</div>
+                    <div className="text-sm text-gray-600 mt-1">Individual Properties, Lease Details</div>
                   </div>
-                  <div className="bg-white p-3 rounded border">
+                  <div className="bg-white p-4 rounded-lg border shadow-sm">
                     <div className="font-semibold text-gray-800">👥 Leaseholders</div>
-                    <div className="text-sm text-gray-600">Tenant Data, Contact Information</div>
+                    <div className="text-sm text-gray-600 mt-1">Tenant Data, Contact Information</div>
                   </div>
-                  <div className="bg-white p-3 rounded border">
+                  <div className="bg-white p-4 rounded-lg border shadow-sm">
                     <div className="font-semibold text-gray-800">💬 Communications</div>
-                    <div className="text-sm text-gray-600">Email History, Message Threads</div>
+                    <div className="text-sm text-gray-600 mt-1">Email History, Message Threads</div>
                   </div>
-                  <div className="bg-white p-3 rounded border">
+                  <div className="bg-white p-4 rounded-lg border shadow-sm">
                     <div className="font-semibold text-gray-800">📋 Compliance</div>
-                    <div className="text-sm text-gray-600">Safety Documents, Certificates</div>
+                    <div className="text-sm text-gray-600 mt-1">Safety Documents, Certificates</div>
                   </div>
-                  <div className="bg-white p-3 rounded border">
+                  <div className="bg-white p-4 rounded-lg border shadow-sm">
                     <div className="font-semibold text-gray-800">📄 Leases</div>
-                    <div className="text-sm text-gray-600">Legal Documents, Terms & Conditions</div>
+                    <div className="text-sm text-gray-600 mt-1">Legal Documents, Terms & Conditions</div>
                   </div>
                 </div>
               </div>
 
+              {/* Arrow Down */}
+              <div className="flex justify-center">
+                <div className="text-4xl text-gray-400">⬇️</div>
+              </div>
+
               {/* Security & Compliance */}
-              <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4">
-                <h4 className="text-lg font-bold text-red-800 mb-3 flex items-center">
+              <div className="bg-red-50 border-2 border-red-200 rounded-lg p-6 text-center">
+                <h4 className="text-xl font-bold text-red-800 mb-4 flex items-center justify-center">
                   🛡️ BlocIQ Security & Compliance
                 </h4>
-                <div className="grid md:grid-cols-3 gap-4">
-                  <div className="bg-white p-3 rounded border">
+                <div className="grid md:grid-cols-3 gap-4 max-w-4xl mx-auto">
+                  <div className="bg-white p-4 rounded-lg border shadow-sm">
                     <div className="font-semibold text-gray-800">🔒 GDPR Compliance</div>
-                    <div className="text-sm text-gray-600">EU/UK Data Residency, Privacy by Design</div>
+                    <div className="text-sm text-gray-600 mt-1">EU/UK Data Residency, Privacy by Design</div>
                   </div>
-                  <div className="bg-white p-3 rounded border">
+                  <div className="bg-white p-4 rounded-lg border shadow-sm">
                     <div className="font-semibold text-gray-800">🔐 Row Level Security</div>
-                    <div className="text-sm text-gray-600">Agency Data Isolation, Access Controls</div>
+                    <div className="text-sm text-gray-600 mt-1">Agency Data Isolation, Access Controls</div>
                   </div>
-                  <div className="bg-white p-3 rounded border">
+                  <div className="bg-white p-4 rounded-lg border shadow-sm">
                     <div className="font-semibold text-gray-800">🔑 OAuth 2.0 Security</div>
-                    <div className="text-sm text-gray-600">Microsoft Integration, Multi-Factor Auth</div>
+                    <div className="text-sm text-gray-600 mt-1">Microsoft Integration, Multi-Factor Auth</div>
                   </div>
                 </div>
               </div>

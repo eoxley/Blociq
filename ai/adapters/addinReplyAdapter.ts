@@ -101,6 +101,7 @@ export async function addinReplyAdapter(params: {
   userInput: string;
   outlookContext: any;
   buildingContext?: any;
+  leaseSummary?: any;
   userId: string;
 }): Promise<{
   success: boolean;
@@ -111,16 +112,36 @@ export async function addinReplyAdapter(params: {
   message?: string;
 }> {
   try {
-    const { userInput, outlookContext, buildingContext, userId } = params;
-    
-    // Create reply context
+    const { userInput, outlookContext, buildingContext, leaseSummary, userId } = params;
+
+    // Get user profile from Supabase
+    const supabase = createClient();
+    let userProfile = null;
+    try {
+      const { data: profile, error: profileError } = await supabase
+        .from('users')
+        .select('first_name, last_name, job_title, company_name, signature_text')
+        .eq('id', userId)
+        .single();
+
+      if (profile) {
+        userProfile = profile;
+      }
+    } catch (error) {
+      console.warn('Could not load user profile:', error);
+    }
+
+    // Create reply context with BlocIQ data
     const context: ReplyContext = {
       userInput,
       outlookContext,
       buildingContext,
+      leaseSummary,
       userSettings: {
-        signature: 'BlocIQ Property Management',
-        tone: 'professional'
+        signature: userProfile?.signature_text ||
+                  `${userProfile?.first_name || ''} ${userProfile?.last_name || ''}`.trim() ||
+                  'BlocIQ Property Management',
+        tone: 'formal'
       }
     };
     
@@ -146,34 +167,83 @@ export async function addinReplyAdapter(params: {
 }
 
 /**
- * Generate contextual reply using AI analysis of the email content
+ * Generate BlocIQ-aware contextual reply using building and lease knowledge
  */
 async function generateContextualReply(
   context: ReplyContext,
   replyContext: { replyFacts: string[]; sources: string[] }
 ): Promise<string> {
-  const { outlookContext } = context;
-  
-  if (!outlookContext?.bodyPreview) {
+  const { outlookContext, buildingContext, leaseSummary } = context;
+
+  if (!outlookContext?.bodyPreview && !outlookContext?.subject) {
     return '<p>I can help you draft an email, but I need more specific information about what type of email you\'d like to send.</p>\n\n';
   }
 
   try {
-    // Use OpenAI to generate contextual reply
-    const prompt = `You are a professional email assistant. Generate a brief, appropriate reply to the following email.
-    
-Email from: ${outlookContext.from || 'Sender'}
+    // Build BlocIQ-specific knowledge context
+    let blociqContext = 'BlocIQ BUILDING KNOWLEDGE:\n';
+
+    // Add building context
+    if (buildingContext?.buildingName) {
+      blociqContext += `Building: ${buildingContext.buildingName}\n`;
+      if (buildingContext.address) {
+        blociqContext += `Address: ${buildingContext.address}\n`;
+      }
+      if (buildingContext.unitNumber) {
+        blociqContext += `Unit: ${buildingContext.unitNumber}\n`;
+      }
+    }
+
+    // Add lease summary context
+    if (leaseSummary) {
+      blociqContext += '\nLEASE ANALYSIS DATA:\n';
+      if (leaseSummary.parties?.landlord) {
+        blociqContext += `Landlord: ${leaseSummary.parties.landlord.name}\n`;
+      }
+      if (leaseSummary.parties?.leaseholder) {
+        blociqContext += `Leaseholder: ${leaseSummary.parties.leaseholder.name}\n`;
+      }
+      if (leaseSummary.financials?.service_charge) {
+        blociqContext += `Service Charge: £${leaseSummary.financials.service_charge.annual_amount}/year\n`;
+      }
+      if (leaseSummary.repair_matrix && leaseSummary.repair_matrix.length > 0) {
+        blociqContext += 'Repair Obligations:\n';
+        leaseSummary.repair_matrix.slice(0, 3).forEach((repair: any) => {
+          blociqContext += `- ${repair.item}: ${repair.responsible_party}\n`;
+        });
+      }
+      if (leaseSummary.term?.end_date) {
+        blociqContext += `Lease Expiry: ${leaseSummary.term.end_date}\n`;
+      }
+    }
+
+    // If no specific BlocIQ data, add generic property management context
+    if (!buildingContext && !leaseSummary) {
+      blociqContext += 'No specific building or lease data available in BlocIQ system.\n';
+    }
+
+    // Use BlocIQ-aware prompt
+    const prompt = `You are the BlocIQ Outlook Add-in Assistant for UK leasehold block management.
+
+${blociqContext}
+
+EMAIL TO REPLY TO:
+From: ${outlookContext.from || 'Sender'}
 Subject: ${outlookContext.subject || 'No Subject'}
-Content: ${outlookContext.bodyPreview}
+Content: ${outlookContext.bodyPreview || 'No preview available'}
 
-Generate a professional reply that:
-1. Acknowledges receipt of the email
-2. Addresses the main points appropriately
-3. Is brief and professional
-4. Uses British English
-5. Is suitable for a business context
+IMPORTANT INSTRUCTIONS:
+1. Generate a professional British English reply
+2. Use ONLY the BlocIQ building and lease data provided above
+3. If specific information isn't in the BlocIQ data, state "Not specified in the lease/building records"
+4. Reference specific lease clauses, repair obligations, or building details when relevant
+5. Stay within UK leasehold block management domain
+6. Be helpful but factual - never invent information
+7. If the email asks about repairs, service charges, Section 20, or compliance, use the lease data
+8. Acknowledge receipt and address main points professionally
+9. Return only the main body content (no greeting or signature)
 
-Return only the main body content (no greeting or signature, as those are added separately).`;
+Generate an appropriate reply using BlocIQ knowledge:`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -186,15 +256,15 @@ Return only the main body content (no greeting or signature, as those are added 
         messages: [
           {
             role: 'system',
-            content: 'You are a professional email assistant. Generate appropriate, contextual email replies.'
+            content: 'You are the BlocIQ Outlook Add-in Assistant for UK leasehold block management. Use only provided building and lease data. Never invent facts. Use British English and professional property management terminology.'
           },
           {
             role: 'user',
             content: prompt
           }
         ],
-        max_tokens: 300,
-        temperature: 0.7
+        max_tokens: 400,
+        temperature: 0.3
       })
     });
 
@@ -204,17 +274,34 @@ Return only the main body content (no greeting or signature, as those are added 
 
     const data = await response.json();
     const aiReply = data.choices?.[0]?.message?.content?.trim();
-    
+
     if (aiReply) {
       return `<p>${aiReply.replace(/\n/g, '</p>\n<p>')}</p>\n\n`;
     }
-    
+
   } catch (error) {
-    console.error('Error generating contextual reply:', error);
+    console.error('Error generating BlocIQ contextual reply:', error);
   }
 
-  // Fallback if AI fails
-  return '<p>Thank you for your email. I have received your message and will review it accordingly.</p>\n\n';
+  // BlocIQ-aware fallback
+  let fallback = '<p>Thank you for your email. I have received your message and will review it in the context of ';
+  if (buildingContext?.buildingName) {
+    fallback += `${buildingContext.buildingName}`;
+    if (buildingContext.unitNumber) {
+      fallback += `, Unit ${buildingContext.unitNumber}`;
+    }
+  } else {
+    fallback += 'the property management requirements';
+  }
+  fallback += '.</p>\n\n';
+
+  if (leaseSummary) {
+    fallback += '<p>I have access to the lease analysis data and will provide a detailed response addressing your specific query.</p>\n\n';
+  } else {
+    fallback += '<p>For detailed lease-specific information, please upload the lease document to BlocIQ Lease Lab for analysis.</p>\n\n';
+  }
+
+  return fallback;
 }
 
 /**
