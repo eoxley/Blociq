@@ -70,8 +70,8 @@ export default function LandingPage() {
               BlocIQ helps property managers stay compliant, work faster, and deliver better service — from inbox to inspection.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Link 
-                href="/pricing"
+              <Link
+                href="/login"
                 className="inline-flex items-center gap-3 bg-white/20 hover:bg-white/30 text-white px-8 py-4 rounded-xl transition-all duration-200 font-semibold text-lg backdrop-blur-sm border border-white/30 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
               >
                 Get started today
@@ -540,8 +540,8 @@ export default function LandingPage() {
               Book a Demo
               <ArrowRight className="h-5 w-5" />
             </Link>
-            <Link 
-              href="/pricing"
+            <Link
+              href="/login"
               className="inline-flex items-center gap-3 bg-white text-[#6A00F5] hover:bg-gray-100 px-8 py-4 rounded-xl transition-all duration-200 font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1"
             >
               Get Started Today

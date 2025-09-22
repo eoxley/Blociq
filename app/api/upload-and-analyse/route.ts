@@ -367,7 +367,8 @@ export async function POST(request: NextRequest) {
         ocr_status: 'completed'
       });
       
-      const { data: documentData, error: docError } = await supabase
+      // Try building_documents table first, fall back to documents table if it doesn't exist
+      let { data: documentData, error: docError } = await supabase
         .from('building_documents')
         .insert({
           name: file.name,
@@ -390,6 +391,30 @@ export async function POST(request: NextRequest) {
         })
         .select('id')
         .single();
+
+      // If building_documents table doesn't exist, try a simpler documents table
+      if (docError && (docError.code === '42P01' || docError.message?.includes('does not exist'))) {
+        console.log('⚠️ building_documents table not found, trying simpler documents table');
+        const { data: simpleDocData, error: simpleDocError } = await supabase
+          .from('documents')
+          .insert({
+            name: file.name,
+            file_path: fileName,
+            uploaded_by: user.id.toString(),
+            metadata: {
+              original_filename: file.name,
+              public_url: publicUrl,
+              file_type: file.type,
+              building_id: buildingId,
+              classification: aiAnalysis?.classification
+            }
+          })
+          .select('id')
+          .single();
+
+        documentData = simpleDocData;
+        docError = simpleDocError;
+      }
 
       if (docError) {
         console.error('❌ Failed to create document record:', docError);
@@ -546,6 +571,17 @@ export async function POST(request: NextRequest) {
       try {
         console.log('🏗️ Creating compliance asset for:', aiAnalysis.classification);
 
+        // Check if compliance tables exist first
+        const { data: tablesCheck, error: tablesError } = await supabase
+          .from('compliance_assets')
+          .select('id')
+          .limit(1);
+
+        if (tablesError && (tablesError.code === '42P01' || tablesError.message?.includes('does not exist'))) {
+          console.log('⚠️ Compliance tables not yet available, skipping compliance asset creation');
+          complianceAssetResult = { created: false, error: 'Compliance system not yet set up' };
+        } else {
+
         // First, try to find or create the compliance asset type
         let { data: assetType, error: assetError } = await supabase
           .from('compliance_assets')
@@ -626,7 +662,7 @@ export async function POST(request: NextRequest) {
               complianceAssetResult = { updated: true, assetId: existing.id };
             }
           }
-        }
+        } // Close the else block for table existence check
       } catch (complianceError) {
         console.warn('⚠️ Error handling compliance asset:', complianceError);
         complianceAssetResult = { created: false, error: 'Compliance asset creation failed' };
