@@ -35,6 +35,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import EnhancedEditAssetModal from '@/components/compliance/EnhancedEditAssetModal'
+import ComplianceDocumentUploader from '@/components/compliance/ComplianceDocumentUploader'
 
 // Types
 interface ComplianceAsset {
@@ -108,6 +109,7 @@ export default function BuildingCompliancePage() {
   const [updatingAssets, setUpdatingAssets] = useState(false)
   const [editingAsset, setEditingAsset] = useState<BuildingComplianceAsset | null>(null)
   const [deletingAssets, setDeletingAssets] = useState<Set<string>>(new Set())
+  const [showComplianceUploader, setShowComplianceUploader] = useState(false)
 
   useEffect(() => {
     if (buildingId) {
@@ -397,6 +399,14 @@ export default function BuildingCompliancePage() {
                 >
                   <Settings className="h-4 w-4" />
                   Quick Setup
+                </button>
+                
+                <button
+                  onClick={() => setShowComplianceUploader(true)}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-white/20 backdrop-blur-sm text-white rounded-lg hover:bg-white/30 transition-all duration-200 border border-white/30"
+                >
+                  <Upload className="h-5 w-5" />
+                  Upload Document
                 </button>
                 
                 <button
@@ -746,6 +756,20 @@ export default function BuildingCompliancePage() {
             setEditingAsset(null)
             toast.success('Compliance asset updated successfully')
           }}
+        />
+      )}
+
+      {/* Compliance Document Uploader */}
+      {showComplianceUploader && (
+        <ComplianceDocumentUploader
+          buildingId={buildingId}
+          buildingName={building?.name || 'Building'}
+          onUploadSuccess={(result) => {
+            // Refresh compliance data after successful upload
+            fetchComplianceData()
+            toast.success('Compliance document uploaded and asset created successfully!')
+          }}
+          onClose={() => setShowComplianceUploader(false)}
         />
       )}
     </div>

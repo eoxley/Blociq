@@ -19,6 +19,12 @@ export interface EICRSummary {
   building_name?: string;
   inspector_name?: string;
   installation_address?: string;
+  contractor?: string;
+  certificate_number?: string;
+  overall_condition?: string;
+  recommendations?: string[];
+  observations?: string[];
+  contractor_contact?: string;
 }
 
 /**
@@ -53,6 +59,20 @@ export function parseEICR(text: string): EICRSummary {
   // Extract installation address
   const installationAddress = extractInstallationAddress(text);
   
+  // Extract contractor information
+  const contractor = extractContractor(text);
+  const contractorContact = extractContractorContact(text);
+  
+  // Extract certificate number
+  const certificateNumber = extractCertificateNumber(text);
+  
+  // Extract overall condition
+  const overallCondition = extractOverallCondition(text);
+  
+  // Extract recommendations and observations
+  const recommendations = extractRecommendations(text);
+  const observations = extractObservations(text);
+  
   const summary: EICRSummary = {
     doc_type: 'assessment',
     assessment_type: 'EICR',
@@ -64,7 +84,13 @@ export function parseEICR(text: string): EICRSummary {
     source_pages: [1], // Default to page 1
     building_name: buildingName,
     inspector_name: inspectorName,
-    installation_address: installationAddress
+    installation_address: installationAddress,
+    contractor,
+    certificate_number: certificateNumber,
+    overall_condition: overallCondition,
+    recommendations,
+    observations,
+    contractor_contact: contractorContact
   };
   
   console.log('✅ EICR parsed:', summary);
@@ -318,6 +344,145 @@ function parseDateString(dateStr: string): string | null {
   } catch (error) {
     return null;
   }
+}
+
+/**
+ * Extract contractor information
+ */
+function extractContractor(text: string): string | undefined {
+  const patterns = [
+    /(?:contractor|company|firm)[:\s]*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i,
+    /(?:electrical|electrical contractor)[:\s]*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i,
+    /(?:signed by|prepared by)[:\s]*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i
+  ];
+  
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      const contractor = match[1].trim();
+      if (contractor.length > 3 && contractor.length < 100) {
+        return contractor;
+      }
+    }
+  }
+  
+  return undefined;
+}
+
+/**
+ * Extract contractor contact information
+ */
+function extractContractorContact(text: string): string | undefined {
+  const patterns = [
+    /(?:contact|phone|tel)[:\s]*([0-9\s\-\+\(\)]{10,20})/i,
+    /(?:email)[:\s]*([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i,
+    /(?:address)[:\s]*([^\n\r]{20,100})/i
+  ];
+  
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      const contact = match[1].trim();
+      if (contact.length > 5 && contact.length < 200) {
+        return contact;
+      }
+    }
+  }
+  
+  return undefined;
+}
+
+/**
+ * Extract certificate number
+ */
+function extractCertificateNumber(text: string): string | undefined {
+  const patterns = [
+    /(?:certificate|cert|ref|reference)[:\s]*([A-Z0-9\-]{5,20})/i,
+    /(?:report|eicr)[:\s]*([A-Z0-9\-]{5,20})/i,
+    /(?:no|number)[:\s]*([A-Z0-9\-]{5,20})/i
+  ];
+  
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      const certNumber = match[1].trim();
+      if (certNumber.length > 3 && certNumber.length < 50) {
+        return certNumber;
+      }
+    }
+  }
+  
+  return undefined;
+}
+
+/**
+ * Extract overall condition
+ */
+function extractOverallCondition(text: string): string | undefined {
+  const patterns = [
+    /(?:overall|general|condition)[:\s]*(satisfactory|unsatisfactory|good|poor|excellent|fair)/i,
+    /(?:result|outcome)[:\s]*(satisfactory|unsatisfactory|good|poor|excellent|fair)/i,
+    /(?:assessment|evaluation)[:\s]*(satisfactory|unsatisfactory|good|poor|excellent|fair)/i
+  ];
+  
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      return match[1].toLowerCase();
+    }
+  }
+  
+  return undefined;
+}
+
+/**
+ * Extract recommendations
+ */
+function extractRecommendations(text: string): string[] {
+  const recommendations: string[] = [];
+  
+  const patterns = [
+    /(?:recommend|suggest|advise)[:\s]*([^\n\r]{20,200})/gi,
+    /(?:action required|must|should)[:\s]*([^\n\r]{20,200})/gi,
+    /(?:improvement|enhancement)[:\s]*([^\n\r]{20,200})/gi
+  ];
+  
+  for (const pattern of patterns) {
+    const matches = [...text.matchAll(pattern)];
+    for (const match of matches) {
+      const rec = match[1].trim();
+      if (rec.length > 10 && rec.length < 300) {
+        recommendations.push(rec);
+      }
+    }
+  }
+  
+  return recommendations.slice(0, 10); // Limit to 10 recommendations
+}
+
+/**
+ * Extract observations
+ */
+function extractObservations(text: string): string[] {
+  const observations: string[] = [];
+  
+  const patterns = [
+    /(?:observe|note|found|discovered)[:\s]*([^\n\r]{20,200})/gi,
+    /(?:condition|state|status)[:\s]*([^\n\r]{20,200})/gi,
+    /(?:inspection|examination)[:\s]*([^\n\r]{20,200})/gi
+  ];
+  
+  for (const pattern of patterns) {
+    const matches = [...text.matchAll(pattern)];
+    for (const match of matches) {
+      const obs = match[1].trim();
+      if (obs.length > 10 && obs.length < 300) {
+        observations.push(obs);
+      }
+    }
+  }
+  
+  return observations.slice(0, 10); // Limit to 10 observations
 }
 
 /**

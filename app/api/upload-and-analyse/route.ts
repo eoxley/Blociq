@@ -340,6 +340,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+
     // 6. Create document record after AI analysis
     let documentId: string | null = null;
     try {
@@ -543,12 +544,12 @@ export async function POST(request: NextRequest) {
         // If we have an asset type, create or update the building compliance asset
         if (assetType) {
           const complianceData = {
-            building_id: parseInt(buildingId),
+            building_id: buildingId,
             status: 'compliant',
             last_renewed_date: aiAnalysis.inspection_date || new Date().toISOString().split('T')[0],
             next_due_date: aiAnalysis.next_due_date,
             notes: aiAnalysis.summary?.substring(0, 500),
-            inspector_provider: aiAnalysis.contractor_name,
+            contractor: aiAnalysis.contractor_name,
             certificate_reference: documentId // Link to our document
           };
 
@@ -556,8 +557,8 @@ export async function POST(request: NextRequest) {
           const { data: existing, error: existingError } = await supabase
             .from('building_compliance_assets')
             .select('id')
-            .eq('building_id', parseInt(buildingId))
-            .eq('asset_id', assetType.id)
+            .eq('building_id', buildingId)
+            .eq('compliance_asset_id', assetType.id)
             .single();
 
           if (existingError && existingError.code === 'PGRST116') {
@@ -566,7 +567,7 @@ export async function POST(request: NextRequest) {
               .from('building_compliance_assets')
               .insert({
                 ...complianceData,
-                asset_id: assetType.id
+                compliance_asset_id: assetType.id
               })
               .select('id')
               .single();
