@@ -32,7 +32,7 @@ async function ensureUserHasAgency(supabase: any, userId: string): Promise<{ age
   let profileError: any = null;
 
   try {
-    const result = await supabase
+    const result = await serviceClient
       .from('profiles')
       .select('agency_id, user_id')
       .eq('id', userId)
