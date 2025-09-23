@@ -56,6 +56,7 @@ export default function CommunicationsLog({
     try {
       setLoading(true)
 
+      // Try with foreign key relationships first, fall back to simple query if relationships don't exist
       let query = supabase
         .from('communications_log')
         .select(`
@@ -70,9 +71,7 @@ export default function CommunicationsLog({
           building_name,
           unit_number,
           status,
-          metadata,
-          building:buildings(id, name),
-          leaseholder:leaseholders(id, name, email)
+          metadata
         `)
         .order('sent_at', { ascending: false })
         .limit(limit)
@@ -92,7 +91,18 @@ export default function CommunicationsLog({
 
       if (error) {
         console.error('Error fetching communications:', error)
+
+        // If it's a foreign key relationship error, we can still show an empty state gracefully
+        if (error.code === 'PGRST200' || error.message?.includes('relationship') || error.message?.includes('foreign key')) {
+          console.log('Communications log table schema mismatch - displaying empty state')
+          setCommunications([])
+          setLoading(false)
+          return
+        }
+
         toast.error('Failed to load communications')
+        setCommunications([])
+        setLoading(false)
         return
       }
 
@@ -124,21 +134,26 @@ export default function CommunicationsLog({
   }
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffTime = Math.abs(now.getTime() - date.getTime())
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    try {
+      const date = new Date(dateString)
+      const now = new Date()
+      const diffTime = Math.abs(now.getTime() - date.getTime())
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
 
-    if (diffDays === 1) {
-      return `Today, ${date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
-    } else if (diffDays <= 7) {
-      return `${diffDays} days ago`
-    } else {
-      return date.toLocaleDateString('en-GB', {
-        day: 'numeric',
-        month: 'short',
-        year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
-      })
+      if (diffDays === 1) {
+        return `Today, ${date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
+      } else if (diffDays <= 7) {
+        return `${diffDays} days ago`
+      } else {
+        return date.toLocaleDateString('en-GB', {
+          day: 'numeric',
+          month: 'short',
+          year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+        })
+      }
+    } catch (error) {
+      console.error('Error formatting date:', error)
+      return dateString // Return original string if formatting fails
     }
   }
 

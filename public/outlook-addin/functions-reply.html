@@ -44,7 +44,7 @@
          // Create contextual question for AI
          const contextualQuestion = createContextualQuestion(subject, body, building, unit);
 
-         return fetch("https://www.blociq.co.uk/api/ask-ai-outlook", {
+         return fetch("http://localhost:3001/api/ask-ai-outlook", {
            method: "POST",
            headers: {
              "Content-Type": "application/json",

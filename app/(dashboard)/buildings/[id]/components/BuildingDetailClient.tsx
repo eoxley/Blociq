@@ -494,7 +494,7 @@ export default function BuildingDetailClient({
                   {building.notes || 'No notes added yet. Click edit to add building information and instructions.'}
                 </p>
                 {building.updated_at && (
-                  <p className="text-xs text-gray-400 mt-2">
+                  <p className="text-xs text-gray-400 mt-2" suppressHydrationWarning>
                     Last updated: {new Date(building.updated_at).toLocaleDateString('en-GB', {
                       year: 'numeric',
                       month: 'long',
