@@ -124,7 +124,24 @@ async function syncCalendarEvents(req: NextRequest) {
 
     // Process and sync events to property_events table
     console.log('💾 Processing and syncing calendar events...');
-    
+
+    // Get user's agency_id from their profile
+    const { data: userProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('agency_id')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError || !userProfile?.agency_id) {
+      console.error('❌ Failed to get user agency:', profileError);
+      return NextResponse.json({
+        error: 'User agency not found',
+        message: 'Unable to determine user agency for calendar sync'
+      }, { status: 400 });
+    }
+
+    console.log('✅ User agency found:', userProfile.agency_id);
+
     let syncedCount = 0;
     let skippedCount = 0;
 
@@ -154,6 +171,7 @@ async function syncCalendarEvents(req: NextRequest) {
           outlook_event_id: event.id,
           location: event.location?.displayName || '',
           created_by: user.id,
+          agency_id: userProfile.agency_id,
           // Try to extract building info from event title or description
           building_id: extractBuildingId(event.subject, event.body?.content)
         };
