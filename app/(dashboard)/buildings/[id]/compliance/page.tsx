@@ -401,6 +401,40 @@ export default function BuildingCompliancePage() {
 
                 <button
                   onClick={async () => {
+                    if (!confirm('Are you sure you want to delete ALL compliance analysis data for this building? This will remove all documents, analysis, and action items but keep the compliance assets for future use.')) {
+                      return
+                    }
+
+                    try {
+                      const response = await fetch('/api/compliance/delete-analysis', {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          buildingId: buildingId,
+                          deleteType: 'analysis_only'
+                        })
+                      })
+
+                      const result = await response.json()
+
+                      if (response.ok) {
+                        toast.success(`All analysis cleared: ${result.message}`)
+                        fetchComplianceData()
+                      } else {
+                        throw new Error(result.error || 'Failed to clear analysis')
+                      }
+                    } catch (err) {
+                      toast.error('Failed to clear analysis: ' + err.message)
+                    }
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-orange-600/90 backdrop-blur-sm text-white rounded-lg hover:bg-orange-700 transition-all duration-200 text-sm"
+                >
+                  <X className="h-4 w-4" />
+                  Clear All Analysis
+                </button>
+
+                <button
+                  onClick={async () => {
                     try {
                       const fireRiskData = {
                         document_type: "Fire Risk Assessment",
@@ -815,19 +849,71 @@ export default function BuildingCompliancePage() {
                             <Settings className="h-4 w-4" />
                             Edit
                           </button>
-                          
+
+                          {item.compliance_documents && (
+                            <button
+                              onClick={async () => {
+                                if (!confirm('Are you sure you want to delete this compliance analysis and all related documents? This will remove all associated action items but keep the compliance asset for future use.')) {
+                                  return
+                                }
+
+                                setDeletingAssets(prev => new Set([...prev, item.id + '_analysis']))
+
+                                try {
+                                  const response = await fetch('/api/compliance/delete-analysis', {
+                                    method: 'DELETE',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                      buildingId: buildingId,
+                                      complianceAssetId: item.id,
+                                      deleteType: 'analysis_only'
+                                    })
+                                  })
+
+                                  const result = await response.json()
+
+                                  if (response.ok) {
+                                    toast.success(`Analysis deleted: ${result.message}`)
+                                    await fetchComplianceData()
+                                  } else {
+                                    throw new Error(result.error || 'Failed to delete analysis')
+                                  }
+                                } catch (error) {
+                                  console.error('Error deleting analysis:', error)
+                                  toast.error('Failed to delete compliance analysis')
+                                } finally {
+                                  setDeletingAssets(prev => {
+                                    const newSet = new Set(prev)
+                                    newSet.delete(item.id + '_analysis')
+                                    return newSet
+                                  })
+                                }
+                              }}
+                              disabled={deletingAssets.has(item.id + '_analysis')}
+                              className="inline-flex items-center gap-2 px-3 py-2 bg-orange-50 text-orange-700 text-sm rounded-lg hover:bg-orange-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Delete compliance analysis and documents"
+                            >
+                              {deletingAssets.has(item.id + '_analysis') ? (
+                                <RefreshCw className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <FileText className="h-4 w-4" />
+                              )}
+                              Clear Analysis
+                            </button>
+                          )}
+
                           <button
                             onClick={() => handleDeleteAsset(item.id)}
                             disabled={deletingAssets.has(item.id)}
                             className="inline-flex items-center gap-2 px-3 py-2 bg-red-50 text-red-700 text-sm rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            title="Delete compliance asset"
+                            title="Delete entire compliance asset"
                           >
                             {deletingAssets.has(item.id) ? (
                               <RefreshCw className="h-4 w-4 animate-spin" />
                             ) : (
                               <Trash2 className="h-4 w-4" />
                             )}
-                            Delete
+                            Delete Asset
                           </button>
                         </div>
                       </div>

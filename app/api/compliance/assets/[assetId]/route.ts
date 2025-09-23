@@ -35,7 +35,7 @@ export async function GET(
       .from('building_compliance_assets')
       .select(`
         *,
-        compliance_assets!asset_id (
+        compliance_assets!compliance_asset_id (
           id,
           name,
           category,
@@ -56,7 +56,7 @@ export async function GET(
         .from('building_compliance_assets')
         .select(`
           *,
-          compliance_assets!asset_id (
+          compliance_assets!compliance_asset_id (
             id,
             name,
             category,

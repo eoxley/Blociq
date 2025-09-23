@@ -102,12 +102,56 @@ export async function POST(request: NextRequest) {
       complianceAssetId = existingAssets[0].id
       console.log('✅ Using existing compliance asset:', complianceAssetId)
     } else {
-      // Create new compliance asset entry
+      // First, we need to create or find a base compliance asset
+      const { data: baseAsset, error: baseAssetError } = await supabase
+        .from('compliance_assets')
+        .select('id')
+        .eq('name', assetName)
+        .eq('category', category)
+        .single()
+
+      let baseAssetId: string
+
+      if (baseAssetError && baseAssetError.code === 'PGRST116') {
+        // Create new base compliance asset
+        const { data: newBaseAsset, error: createBaseError } = await supabase
+          .from('compliance_assets')
+          .insert({
+            name: assetName,
+            category: category,
+            description: `${analysis.document_type} for building compliance monitoring`,
+            frequency_months: 12 // Default annual frequency
+          })
+          .select()
+          .single()
+
+        if (createBaseError) {
+          console.error('❌ Failed to create base compliance asset:', createBaseError)
+          return NextResponse.json({
+            error: 'Failed to create base compliance asset',
+            details: createBaseError.message
+          }, { status: 500 })
+        }
+
+        baseAssetId = newBaseAsset.id
+        console.log('✅ Created new base compliance asset:', baseAssetId)
+      } else if (baseAssetError) {
+        console.error('❌ Error finding base compliance asset:', baseAssetError)
+        return NextResponse.json({
+          error: 'Error finding base compliance asset',
+          details: baseAssetError.message
+        }, { status: 500 })
+      } else {
+        baseAssetId = baseAsset.id
+        console.log('✅ Using existing base compliance asset:', baseAssetId)
+      }
+
+      // Create new building compliance asset entry
       const { data: newAsset, error: createError } = await supabase
         .from('building_compliance_assets')
         .insert({
           building_id: buildingId,
-          asset_id: null, // We'll create a custom entry
+          compliance_asset_id: baseAssetId,
           status: analysis.compliance_status === 'Requires-Action' ? 'remedial_action_pending' : 'compliant',
           next_due_date: analysis.inspection_details?.next_inspection_due || analysis.expiry_date,
           last_renewed_date: analysis.inspection_details?.inspection_date,

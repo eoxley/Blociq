@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Compliance API</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .test-section { border: 1px solid #ddd; padding: 20px; margin: 20px 0; border-radius: 8px; }
+        button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin: 10px 0; }
+        button:hover { background: #0056b3; }
+        .result { background: #f8f9fa; padding: 10px; border-radius: 4px; margin: 10px 0; white-space: pre-wrap; }
+        .error { background: #f8d7da; color: #721c24; }
+        .success { background: #d4edda; color: #155724; }
+    </style>
+</head>
+<body>
+    <h1>Compliance API Test</h1>
+
+    <div class="test-section">
+        <h2>Fire Risk Assessment Test</h2>
+        <p>This test simulates the Fire Risk Assessment analysis creation without authentication.</p>
+        <button onclick="testFireRiskAssessment()">Test Fire Risk Assessment</button>
+        <div id="fireRiskResult" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Delete Analysis Test</h2>
+        <p>Test deleting compliance analysis data.</p>
+        <button onclick="testDeleteAnalysis()">Test Delete Analysis</button>
+        <div id="deleteResult" class="result"></div>
+    </div>
+
+    <script>
+        const buildingId = '2beeec1d-a94e-4058-b881-213d74cc6830';
+
+        const fireRiskData = {
+            document_type: "Fire Risk Assessment",
+            compliance_status: "Requires-Action",
+            property_details: {
+                address: "42 Ashwood Gardens, London, SW19 8JR",
+                description: "Residential House (HMO)",
+                client: "Ashwood Property Management Ltd"
+            },
+            inspection_details: {
+                inspection_date: "2024-03-15",
+                next_inspection_due: "2025-03-15",
+                inspector: "Michael Thompson",
+                company: "Fire Safety Consultants Ltd",
+                certificate_number: "FRA-ASH-2024-003"
+            },
+            key_findings: [
+                {
+                    priority: "High",
+                    urgency: "IMMEDIATE",
+                    description: "Smoke detector in hallway not functioning",
+                    location: "Ground Floor",
+                    action: "Replace faulty smoke detector immediately"
+                },
+                {
+                    priority: "Medium",
+                    urgency: "WITHIN 1 MONTH",
+                    description: "Emergency lighting unit requires battery replacement",
+                    location: "Stairwell",
+                    action: "Replace emergency lighting battery"
+                }
+            ],
+            recommendations: [
+                {
+                    description: "Replace faulty smoke detector in ground floor hallway",
+                    reason: "Faulty smoke detector poses immediate fire risk",
+                    timeframe: "Within 24 hours",
+                    reference: "Regulatory Reform (Fire Safety) Order 2005"
+                }
+            ],
+            risk_assessment: {
+                overall_risk: "MEDIUM",
+                immediate_hazards: ["Faulty smoke detector in ground floor hallway"]
+            },
+            regulatory_compliance: {
+                meets_current_standards: false,
+                relevant_regulations: "Regulatory Reform (Fire Safety) Order 2005"
+            },
+            expiry_date: "2025-03-15"
+        };
+
+        async function testFireRiskAssessment() {
+            const resultDiv = document.getElementById('fireRiskResult');
+            resultDiv.textContent = 'Testing Fire Risk Assessment API...';
+            resultDiv.className = 'result';
+
+            try {
+                const response = await fetch('/api/compliance/create-from-analysis', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        buildingId: buildingId,
+                        analysisData: fireRiskData,
+                        documentJobId: 'test-fra-' + Date.now()
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    resultDiv.textContent = `✅ SUCCESS!\n\nResponse: ${JSON.stringify(result, null, 2)}`;
+                    resultDiv.className = 'result success';
+                } else {
+                    resultDiv.textContent = `❌ ERROR (${response.status})\n\nResponse: ${JSON.stringify(result, null, 2)}`;
+                    resultDiv.className = 'result error';
+                }
+            } catch (error) {
+                resultDiv.textContent = `❌ NETWORK ERROR\n\n${error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        async function testDeleteAnalysis() {
+            const resultDiv = document.getElementById('deleteResult');
+            resultDiv.textContent = 'Testing Delete Analysis API...';
+            resultDiv.className = 'result';
+
+            try {
+                const response = await fetch('/api/compliance/delete-analysis', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        buildingId: buildingId,
+                        deleteType: 'actions_only'
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    resultDiv.textContent = `✅ SUCCESS!\n\nResponse: ${JSON.stringify(result, null, 2)}`;
+                    resultDiv.className = 'result success';
+                } else {
+                    resultDiv.textContent = `❌ ERROR (${response.status})\n\nResponse: ${JSON.stringify(result, null, 2)}`;
+                    resultDiv.className = 'result error';
+                }
+            } catch (error) {
+                resultDiv.textContent = `❌ NETWORK ERROR\n\n${error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+    </script>
+</body>
+</html>
