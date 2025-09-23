@@ -370,11 +370,15 @@ REPLY FORMAT REQUIREMENTS - FOLLOW EXACTLY:
 7. Keep the tone professional, concise, and UK property management appropriate.
 8. NEVER include "Suggested next actions" sections or bullet point suggestions.
 
-AGM QUERY HANDLING:
-For Annual General Meeting queries, follow this search logic in order:
-1. First check upcoming events on the building for scheduled AGMs
-2. Check for general documents (AGM notices, minutes, etc.)
-3. If no information is found, use this graceful fallback: "We have not had instruction from the Board to arrange an AGM at this time, but I will raise this with them now advising there has been a request from a leaseholder."
+QUERY-SPECIFIC HANDLING:
+For specific queries (AGM, inspections, maintenance, insurance), follow this search logic in order:
+1. First check upcoming events on the building for scheduled items
+2. Check for relevant documents related to the query
+3. If no information is found, use contextually appropriate graceful fallbacks:
+   - AGM: "We have not had instruction from the Board to arrange an AGM at this time, but I will raise this with them now advising there has been a request from a leaseholder."
+   - Inspections: "I will check our compliance schedule and arrange the necessary inspection if one is due."
+   - Maintenance: "I will check our maintenance schedule and provide you with the relevant information."
+   - Insurance: "I will check our insurance records and provide you with the current policy information."
 
 When responding you must:
 • Prioritise accuracy over politeness; never invent details.
@@ -641,14 +645,164 @@ export async function POST(req: NextRequest) {
     const hit = FAQS.find(f => f.test.test(prompt));
     if (hit) {
       console.log('✅ FAQ hit:', hit.test.source);
-      return NextResponse.json({ 
-        success: true, 
-        answer: hit.answer, 
-        confidence: 95, 
+      return NextResponse.json({
+        success: true,
+        answer: hit.answer,
+        confidence: 95,
         route: "pinned_faq",
         result: hit.answer,
         response: hit.answer
       });
+    }
+
+    // 🏢 Smart Query Detection and Handling (AGM, Events, Documents)
+    // Check for various types of queries that should search events and documents first
+    const queryPatterns = {
+      agm: {
+        regex: /\b(AGM|annual general meeting|when.*next.*meeting|board meeting|annual meeting)\b/i,
+        eventType: 'AGM',
+        searchTerms: ['AGM', 'annual general', 'meeting'],
+        fallback: 'We have not had instruction from the Board to arrange an AGM at this time, but I will raise this with them now advising there has been a request from a leaseholder.'
+      },
+      inspection: {
+        regex: /\b(FRA|fire risk assessment|when.*next.*inspection|fire safety|gas safety|electrical inspection|EICR)\b/i,
+        eventType: 'INSPECTION',
+        searchTerms: ['FRA', 'fire risk', 'inspection', 'EICR', 'gas safety', 'electrical'],
+        fallback: 'I will check our compliance schedule and arrange the necessary inspection if one is due.'
+      },
+      maintenance: {
+        regex: /\b(next.*maintenance|when.*service|maintenance schedule|servicing)\b/i,
+        eventType: 'MAINTENANCE',
+        searchTerms: ['maintenance', 'service', 'servicing'],
+        fallback: 'I will check our maintenance schedule and provide you with the relevant information.'
+      },
+      insurance: {
+        regex: /\b(insurance|when.*renewal|insurance documents|policy)\b/i,
+        eventType: 'INSURANCE',
+        searchTerms: ['insurance', 'policy', 'renewal'],
+        fallback: 'I will check our insurance records and provide you with the current policy information.'
+      }
+    };
+
+    // Check each pattern
+    for (const [queryType, pattern] of Object.entries(queryPatterns)) {
+      if (pattern.regex.test(prompt) && building_id) {
+        console.log(`🏢 ${queryType.toUpperCase()} query detected, checking events and documents`);
+
+        try {
+          // First, check for upcoming events of this type
+          const { data: events } = await supabase
+            .from('property_events')
+            .select('*')
+            .eq('building_id', building_id)
+            .eq('event_type', pattern.eventType)
+            .gte('start_time', new Date().toISOString())
+            .order('start_time', { ascending: true })
+            .limit(1);
+
+          if (events && events.length > 0) {
+            const nextEvent = events[0];
+            const eventDate = new Date(nextEvent.start_time).toLocaleDateString('en-GB', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            });
+            const eventTime = new Date(nextEvent.start_time).toLocaleTimeString('en-GB', {
+              hour: '2-digit',
+              minute: '2-digit'
+            });
+
+            const eventResponse = `The next ${nextEvent.title || pattern.eventType.toLowerCase()} is scheduled for ${eventDate} at ${eventTime}${nextEvent.location ? ` at ${nextEvent.location}` : ''}.${nextEvent.description ? ` ${nextEvent.description}` : ''}`;
+
+            console.log(`✅ Found upcoming ${queryType} event`);
+            return NextResponse.json({
+              success: true,
+              result: eventResponse,
+              response: eventResponse,
+              conversationId: null,
+              context_type: `${queryType}_event`,
+              building_id: building_id,
+              document_count: 0,
+              has_email_thread: false,
+              has_leaseholder: false,
+              context: {
+                source: `${queryType}_event_lookup`,
+                event_date: nextEvent.start_time,
+                event_id: nextEvent.id
+              }
+            });
+          }
+
+          // Second, check for related documents
+          const searchConditions = pattern.searchTerms
+            .map(term => `name.ilike.%${term}%`)
+            .join(',');
+
+          const { data: docs } = await supabase
+            .from('building_documents')
+            .select('name, uploaded_at, type')
+            .eq('building_id', building_id)
+            .or(searchConditions)
+            .order('uploaded_at', { ascending: false })
+            .limit(3);
+
+          if (docs && docs.length > 0) {
+            const latestDoc = docs[0];
+            const docDate = new Date(latestDoc.uploaded_at).toLocaleDateString('en-GB');
+
+            let docResponse = `Based on our records, the most recent ${queryType} documentation is "${latestDoc.name}" from ${docDate}.`;
+            if (docs.length > 1) {
+              docResponse += ` We also have ${docs.length - 1} other related document${docs.length > 2 ? 's' : ''} on file.`;
+            }
+            docResponse += ` Please contact us if you need access to these documents or have specific questions.`;
+
+            console.log(`✅ Found ${queryType} documents`);
+            return NextResponse.json({
+              success: true,
+              result: docResponse,
+              response: docResponse,
+              conversationId: null,
+              context_type: `${queryType}_documents`,
+              building_id: building_id,
+              document_count: docs.length,
+              has_email_thread: false,
+              has_leaseholder: false,
+              context: {
+                source: `${queryType}_document_lookup`,
+                documents_found: docs.length,
+                latest_document: latestDoc.name
+              }
+            });
+          }
+
+          // Third, graceful fallback if no information found
+          console.log(`✅ Using ${queryType} fallback response`);
+          return NextResponse.json({
+            success: true,
+            result: pattern.fallback,
+            response: pattern.fallback,
+            conversationId: null,
+            context_type: `${queryType}_fallback`,
+            building_id: building_id,
+            document_count: 0,
+            has_email_thread: false,
+            has_leaseholder: false,
+            context: {
+              source: `${queryType}_fallback`,
+              no_events_found: true,
+              no_documents_found: true
+            }
+          });
+
+        } catch (queryError) {
+          console.error(`❌ Error handling ${queryType} query:`, queryError);
+          // Continue with normal processing if query handling fails
+        }
+
+        // Break after first match to avoid multiple responses
+        break;
+      }
     }
 
     // 🔍 Check for document intent
