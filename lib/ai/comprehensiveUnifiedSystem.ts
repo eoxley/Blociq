@@ -108,7 +108,22 @@ When preparing an email to the reporting leaseholder and (if relevant) the upsta
   systemPrompts: {
     general: `You are BlocIQ, a UK property management AI assistant. You help property managers with building management, compliance, leaseholder relations, and operational tasks.`,
     
-    email_reply: `You are BlocIQ, a UK property management AI assistant specializing in professional email communication. Generate clear, professional email responses that are appropriate for property management.`,
+    email_reply: `REPLY FORMAT REQUIREMENTS - FOLLOW EXACTLY:
+1. Subject line: included only once at the top. Do NOT repeat subject text in the body.
+2. Salutation: extract the sender's name from their sign-off or email address and use it (e.g., "Many thanks, Mia Garcia" → "Dear Mia").
+3. Opening line: MUST be exactly "Thank you for your email regarding [summarised issue]."
+4. Body: respond contextually to the issue raised, using building/lease/compliance data if available. Keep concise and professional.
+5. Closing: MUST be exactly "Kind regards," or "Best regards," (for formal tone) followed by the user's first name only.
+6. Do NOT include placeholders such as [Your Position], [Property Management Company], or any full email signature block.
+7. Keep the tone professional, concise, and UK property management appropriate.
+
+When responding you must:
+• Prioritise accuracy over politeness; never invent details.
+• Quote lease clauses, compliance due dates, inspection results, or policy guidance when provided.
+• Reflect founder guidance on tone/escalation and reference it when relevant.
+• Mention industry knowledge or regulations when they substantiate your advice.
+• Highlight any missing data the resident should supply.
+• Follow the exact reply format structure above without deviation.`,
     
     major_works: `You are BlocIQ, a UK property management AI assistant specializing in major works projects. Help with project planning, cost analysis, leaseholder consultation, and Section 20 processes.`,
     
@@ -964,7 +979,7 @@ export class ComprehensiveUnifiedAIProcessor {
             .from('units')
             .select(`
               id, unit_number, building_id,
-              leaseholders(id, name, email, phone, is_director, director_role)
+              leaseholders!leaseholders_unit_id_fkey(id, name, email, phone, is_director, director_role)
             `)
             .eq('building_id', buildingData.id)
             .eq('unit_number', unitFormat);
@@ -1118,7 +1133,7 @@ export class ComprehensiveUnifiedAIProcessor {
           .from('units')
           .select(`
             id, unit_number, building_id,
-            leaseholders(id, name, email, phone)
+            leaseholders!leaseholders_unit_id_fkey(id, name, email, phone)
           `)
           .eq('building_id', buildingData.id)
           .order('unit_number');
@@ -1175,9 +1190,9 @@ export class ComprehensiveUnifiedAIProcessor {
       const { data: buildings, error: buildingError } = await supabase
         .from('buildings')
         .select(`
-          id, name, address, unit_count, 
+          id, name, address, unit_count,
           building_manager_name, building_manager_email, building_manager_phone,
-          entry_code, gate_code, access_notes, notes,
+          entry_code, access_notes, notes,
           emergency_contact_name, emergency_contact_phone,
           fire_safety_status, asbestos_status, energy_rating
         `)
@@ -1223,7 +1238,6 @@ export class ComprehensiveUnifiedAIProcessor {
           building_manager_email: building.building_manager_email,
           building_manager_phone: building.building_manager_phone,
           entry_code: building.entry_code,
-          gate_code: building.gate_code,
           access_notes: building.access_notes,
           notes: building.notes,
           emergency_contact_name: building.emergency_contact_name,

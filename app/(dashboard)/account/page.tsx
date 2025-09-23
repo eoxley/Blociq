@@ -56,7 +56,7 @@ export default function AccountPage() {
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('id', user.id)
         .single();
 
       if (profileError && profileError.code !== 'PGRST116') {
@@ -68,7 +68,9 @@ export default function AccountPage() {
         const { data: newProfile, error: createError } = await supabase
           .from('profiles')
           .insert({
-            user_id: user.id
+            id: user.id,
+            user_id: user.id,
+            email: user.email
           })
           .select()
           .single();

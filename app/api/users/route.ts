@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('*') // Select all available columns
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single();
 
     if (profileError) {
