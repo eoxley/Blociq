@@ -4,8 +4,14 @@ import { createClient as createServiceClient } from '@supabase/supabase-js';
 
 export const maxDuration = 60; // 1 minute for confirmation processing
 
-// Helper function to create or find compliance document from document job
-async function createOrFindComplianceDocument(serviceSupabase: any, document_job_id: string, building_id: string, analysis_results: any): Promise<{ success: boolean, compliance_document_id?: string, error?: string }> {
+// Helper function to create building document and link to compliance asset
+async function createBuildingDocumentAndLink(
+  serviceSupabase: any,
+  document_job_id: string,
+  building_id: string,
+  analysis_results: any,
+  building_compliance_asset_id?: string
+): Promise<{ success: boolean, building_document_id?: string, error?: string }> {
   try {
     // First, get the document job details
     const { data: documentJob, error: jobError } = await serviceSupabase
@@ -19,58 +25,101 @@ async function createOrFindComplianceDocument(serviceSupabase: any, document_job
       return { success: false, error: 'Document job not found' };
     }
 
-    // Try to check if a compliance document already exists for this job
-    try {
-      let { data: existingDoc, error: lookupError } = await serviceSupabase
-        .from('compliance_documents')
-        .select('id')
-        .eq('document_job_id', document_job_id)
-        .single();
+    // Check if a building document already exists for this job
+    let { data: existingDoc, error: lookupError } = await serviceSupabase
+      .from('building_documents')
+      .select('id')
+      .or(`file_name.eq.${documentJob.filename},metadata->>document_job_id.eq.${document_job_id}`)
+      .eq('building_id', building_id)
+      .single();
 
-      if (existingDoc) {
-        console.log('📄 Found existing compliance document:', existingDoc.id);
-        return { success: true, compliance_document_id: existingDoc.id };
+    let buildingDocumentId;
+
+    if (existingDoc) {
+      console.log('📄 Found existing building document:', existingDoc.id);
+      buildingDocumentId = existingDoc.id;
+    } else {
+      // Create new building document
+      console.log('📝 Creating new building document from job:', document_job_id);
+
+      // Try to get file URL from OCR or summary JSON
+      let fileUrl = null;
+      if (documentJob.summary_json?.file_url) {
+        fileUrl = documentJob.summary_json.file_url;
+      } else if (documentJob.ocr_artifact_url) {
+        fileUrl = documentJob.ocr_artifact_url;
       }
-    } catch (lookupError) {
-      console.warn('⚠️ Could not lookup existing compliance document:', lookupError);
-    }
 
-    // Try to create new compliance document
-    console.log('📝 Attempting to create new compliance document from job:', document_job_id);
-    const complianceDocData = {
-      building_id: building_id,
-      document_job_id: document_job_id,
-      document_type: analysis_results.document_type || documentJob.doc_type_guess,
-      document_category: 'compliance',
-      original_filename: documentJob.filename,
-      file_size: documentJob.size_bytes,
-      processing_status: 'completed',
-      upload_date: documentJob.created_at,
-      uploaded_by: documentJob.user_id,
-      created_at: new Date().toISOString()
-    };
+      const buildingDocData = {
+        building_id: building_id,
+        name: documentJob.filename,
+        type: analysis_results.document_type || documentJob.doc_type_guess || 'Compliance Document',
+        category: 'compliance',
+        file_path: fileUrl || `processed/${document_job_id}`,
+        file_size: documentJob.size_bytes,
+        uploaded_at: documentJob.created_at,
+        uploaded_by: documentJob.user_id,
+        ocr_status: 'completed',
+        metadata: {
+          document_job_id: document_job_id,
+          document_type: analysis_results.document_type,
+          compliance_status: analysis_results.compliance_status,
+          inspection_date: analysis_results.inspection_details?.inspection_date,
+          certificate_number: analysis_results.inspection_details?.certificate_number,
+          inspector_name: analysis_results.inspection_details?.inspector_name,
+          inspector_company: analysis_results.inspection_details?.inspector_company,
+          ai_extracted: analysis_results
+        }
+      };
 
-    try {
       const { data: newDoc, error: createError } = await serviceSupabase
-        .from('compliance_documents')
-        .insert(complianceDocData)
+        .from('building_documents')
+        .insert(buildingDocData)
         .select('id')
         .single();
 
       if (createError) {
-        console.warn('⚠️ Failed to create compliance document:', createError.message);
+        console.error('❌ Failed to create building document:', createError);
         return { success: false, error: createError.message };
       }
 
-      console.log('✅ Created compliance document:', newDoc.id);
-      return { success: true, compliance_document_id: newDoc.id };
-    } catch (createError) {
-      console.warn('⚠️ Could not create compliance document:', createError);
-      return { success: false, error: 'Schema issue - compliance_documents table may not support document_job_id' };
+      console.log('✅ Created building document:', newDoc.id);
+      buildingDocumentId = newDoc.id;
     }
 
+    // If we have a building compliance asset, create the link
+    if (building_compliance_asset_id && buildingDocumentId) {
+      console.log('🔗 Linking document to compliance asset');
+
+      // Check if link already exists
+      const { data: existingLink } = await serviceSupabase
+        .from('building_compliance_documents')
+        .select('id')
+        .eq('building_compliance_asset_id', building_compliance_asset_id)
+        .eq('document_id', buildingDocumentId)
+        .single();
+
+      if (!existingLink) {
+        const { error: linkError } = await serviceSupabase
+          .from('building_compliance_documents')
+          .insert({
+            building_compliance_asset_id: building_compliance_asset_id,
+            document_id: buildingDocumentId,
+            created_at: new Date().toISOString()
+          });
+
+        if (linkError) {
+          console.warn('⚠️ Failed to link document to compliance asset:', linkError.message);
+        } else {
+          console.log('✅ Document linked to compliance asset');
+        }
+      }
+    }
+
+    return { success: true, building_document_id: buildingDocumentId };
+
   } catch (error) {
-    console.error('❌ Error in createOrFindComplianceDocument:', error);
+    console.error('❌ Error in createBuildingDocumentAndLink:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
@@ -212,16 +261,24 @@ export async function POST(req: NextRequest) {
     const complianceStatus = analysis_results.compliance_status === 'satisfactory' ? 'compliant' :
                             analysis_results.compliance_status === 'unsatisfactory' ? 'overdue' : 'requires_action';
 
+    // First create the building document from the job
+    const docResult = await createBuildingDocumentAndLink(
+      serviceSupabase,
+      document_id,
+      building_id,
+      analysis_results
+    );
+
     const buildingAssetData = {
       building_id: building_id,
       compliance_asset_id: complianceAsset.id,
       last_renewed_date: analysis_results.inspection_details?.inspection_date || new Date().toISOString().split('T')[0],
       next_due_date: analysis_results.inspection_details?.next_inspection_due,
       status: complianceStatus,
-      // Leave null to avoid foreign key violation - the document job ID is tracked elsewhere
-      latest_document_id: null,
+      // Use the building document ID if available, otherwise leave null
+      latest_document_id: docResult.success ? docResult.building_document_id : null,
       contractor: analysis_results.inspection_details?.inspector_company || analysis_results.inspection_details?.inspector_name,
-      notes: `${analysis_results.document_type} - ${analysis_results.compliance_status}. Certificate: ${analysis_results.inspection_details?.certificate_number || 'N/A'}. Source job: ${document_id}`,
+      notes: `${analysis_results.document_type} - ${analysis_results.compliance_status}. Certificate: ${analysis_results.inspection_details?.certificate_number || 'N/A'}`,
       updated_at: new Date().toISOString()
     };
 
@@ -241,6 +298,17 @@ export async function POST(req: NextRequest) {
         error: 'Failed to create building compliance asset',
         message: buildingAssetError.message
       }, { status: 500 });
+    }
+
+    // Now link the document to the compliance asset if we have both
+    if (docResult.success && buildingAsset && docResult.building_document_id) {
+      await createBuildingDocumentAndLink(
+        serviceSupabase,
+        document_id,
+        building_id,
+        analysis_results,
+        buildingAsset.id // Pass the building compliance asset ID
+      );
     }
 
     // Create compliance alerts for urgent findings (C1/C2)
