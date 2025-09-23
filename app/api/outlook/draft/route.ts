@@ -1,12 +1,13 @@
 // app/api/outlook/draft/route.ts
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/utils/supabase/server';
 import { EnrichmentResult } from '../enrich/route';
 import { ToneLabel, getToneGuidelines } from '@/lib/addin/tone';
 import { fallback, formatBuildingName, formatResidentName, ukDate } from '@/lib/addin/format';
 import {
   extractSenderNameFromLatestMessage,
   generateThankYouLine,
-  getClosingPhrase
+  getClosingPhraseWithUserName
 } from '@/lib/addin/name-extraction';
 
 export interface DraftRequest {
@@ -35,10 +36,31 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
+    // Get authenticated user and their profile
+    const supabase = await createClient();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+    let userFirstName = 'BlocIQ';
+    if (!userError && user) {
+      try {
+        const { data: profile } = await supabase
+          .from('users')
+          .select('first_name')
+          .eq('id', user.id)
+          .single();
+
+        if (profile?.first_name) {
+          userFirstName = profile.first_name;
+        }
+      } catch (profileError) {
+        console.warn('Could not fetch user profile:', profileError);
+      }
+    }
+
     const guidelines = getToneGuidelines(tone);
     const templateName = `${enrichment.topic}_${tone}`;
 
-    const draftResult = generateDraft(enrichment, tone, guidelines, originalSummary, rawEmailBody, outlookDisplayName);
+    const draftResult = generateDraft(enrichment, tone, guidelines, originalSummary, rawEmailBody, outlookDisplayName, userFirstName);
 
     return NextResponse.json({
       success: true,
@@ -60,7 +82,8 @@ function generateDraft(
   guidelines: ReturnType<typeof getToneGuidelines>,
   originalSummary?: string,
   rawEmailBody?: string,
-  outlookDisplayName?: string
+  outlookDisplayName?: string,
+  userFirstName?: string
 ): DraftResult {
   const { residentName, unitLabel, building, facts, topic } = enrichment;
 
@@ -75,7 +98,7 @@ function generateDraft(
 
   const senderName = formatResidentName(extractedName);
   const thankYouLine = generateThankYouLine(topic);
-  const closingPhrase = getClosingPhrase(senderName);
+  const closingPhrase = getClosingPhraseWithUserName(senderName, userFirstName);
   const buildingName = formatBuildingName(building?.name);
   const usedFacts: string[] = [];
 
@@ -84,6 +107,9 @@ function generateDraft(
 
   // Generate facts section based on topic
   const factsSection = generateFactsSection(topic, facts, usedFacts);
+
+  // Generate industry context section
+  const industryContext = generateIndustryContext(enrichment.industryKnowledge, enrichment.founderGuidance);
 
   // Generate next steps based on topic and tone
   const nextSteps = generateNextSteps(topic, tone);
@@ -98,22 +124,22 @@ function generateDraft(
   switch (topic) {
     case 'leak':
       template = 'leak_response';
-      bodyHtml = generateLeakTemplate(senderName, buildingName, thankYouLine, toneLead, factsSection, nextSteps, boundaryLines, closingPhrase, facts);
+      bodyHtml = generateLeakTemplate(senderName, buildingName, thankYouLine, toneLead, factsSection, industryContext, nextSteps, boundaryLines, closingPhrase, facts);
       break;
 
     case 'fire':
       template = 'fire_safety_response';
-      bodyHtml = generateFireTemplate(senderName, buildingName, thankYouLine, toneLead, factsSection, nextSteps, boundaryLines, closingPhrase, facts);
+      bodyHtml = generateFireTemplate(senderName, buildingName, thankYouLine, toneLead, factsSection, industryContext, nextSteps, boundaryLines, closingPhrase, facts);
       break;
 
     case 'compliance':
       template = 'compliance_response';
-      bodyHtml = generateComplianceTemplate(senderName, buildingName, thankYouLine, toneLead, factsSection, nextSteps, boundaryLines, closingPhrase, facts);
+      bodyHtml = generateComplianceTemplate(senderName, buildingName, thankYouLine, toneLead, factsSection, industryContext, nextSteps, boundaryLines, closingPhrase, facts);
       break;
 
     default:
       template = 'general_response';
-      bodyHtml = generateGeneralTemplate(senderName, buildingName, thankYouLine, toneLead, factsSection, nextSteps, boundaryLines, closingPhrase);
+      bodyHtml = generateGeneralTemplate(senderName, buildingName, thankYouLine, toneLead, factsSection, industryContext, nextSteps, boundaryLines, closingPhrase);
       break;
   }
 
@@ -194,6 +220,25 @@ function generateFactsSection(topic: string, facts: EnrichmentResult['facts'], u
   return section;
 }
 
+function generateIndustryContext(industryKnowledge: EnrichmentResult['industryKnowledge'], founderGuidance: EnrichmentResult['founderGuidance']): string {
+  let context = '';
+
+  // Add industry knowledge if available
+  if (industryKnowledge && industryKnowledge.length > 0) {
+    const topKnowledge = industryKnowledge.slice(0, 2); // Limit to 2 most relevant items
+    context += topKnowledge.map(item => `• ${item.text}`).join('\n');
+  }
+
+  // Add founder guidance if available
+  if (founderGuidance && founderGuidance.length > 0) {
+    const topGuidance = founderGuidance.slice(0, 1); // Limit to 1 most relevant item
+    if (context) context += '\n';
+    context += topGuidance.map(item => `• ${item.content}`).join('\n');
+  }
+
+  return context;
+}
+
 function generateNextSteps(topic: string, tone: ToneLabel): string {
   const timeframe = tone === 'angry' || tone === 'abusive' ? '24 hours' :
                    tone === 'concerned' ? '1 working day' : '2 working days';
@@ -232,6 +277,7 @@ function generateLeakTemplate(
   thankYouLine: string,
   toneLead: string,
   factsSection: string,
+  industryContext: string,
   nextSteps: string,
   boundaryLines: string,
   closingPhrase: string,
@@ -239,16 +285,17 @@ function generateLeakTemplate(
 ): string {
   return `Dear ${name},
 
-${thankYouLine} ${toneLead}
+${thankYouLine}
+
+${toneLead}
 
 **What we can see right now**
 ${factsSection}
 
-**Next steps**
+${industryContext ? `**Context**\n${industryContext}\n\n` : ''}**Next steps**
 ${nextSteps}${boundaryLines}
 
-${closingPhrase}
-Building Management Team`;
+${closingPhrase}`;
 }
 
 function generateFireTemplate(
@@ -257,6 +304,7 @@ function generateFireTemplate(
   thankYouLine: string,
   toneLead: string,
   factsSection: string,
+  industryContext: string,
   nextSteps: string,
   boundaryLines: string,
   closingPhrase: string,
@@ -264,16 +312,17 @@ function generateFireTemplate(
 ): string {
   return `Dear ${name},
 
-${thankYouLine} ${toneLead}
+${thankYouLine}
+
+${toneLead}
 
 **Current records**
 ${factsSection}
 
-**Next steps**
+${industryContext ? `**Context**\n${industryContext}\n\n` : ''}**Next steps**
 ${nextSteps}${boundaryLines}
 
-${closingPhrase}
-Building Management Team`;
+${closingPhrase}`;
 }
 
 function generateComplianceTemplate(
@@ -282,6 +331,7 @@ function generateComplianceTemplate(
   thankYouLine: string,
   toneLead: string,
   factsSection: string,
+  industryContext: string,
   nextSteps: string,
   boundaryLines: string,
   closingPhrase: string,
@@ -289,16 +339,17 @@ function generateComplianceTemplate(
 ): string {
   return `Dear ${name},
 
-${thankYouLine} ${toneLead}
+${thankYouLine}
+
+${toneLead}
 
 **Current compliance status**
 ${factsSection}
 
-**Next steps**
+${industryContext ? `**Context**\n${industryContext}\n\n` : ''}**Next steps**
 ${nextSteps}${boundaryLines}
 
-${closingPhrase}
-Building Management Team`;
+${closingPhrase}`;
 }
 
 function generateGeneralTemplate(
@@ -307,19 +358,21 @@ function generateGeneralTemplate(
   thankYouLine: string,
   toneLead: string,
   factsSection: string,
+  industryContext: string,
   nextSteps: string,
   boundaryLines: string,
   closingPhrase: string
 ): string {
   return `Dear ${name},
 
-${thankYouLine} ${toneLead}
+${thankYouLine}
 
-${factsSection ? `**Information available**\n${factsSection}\n` : ''}**Next steps**
+${toneLead}
+
+${factsSection ? `**Information available**\n${factsSection}\n` : ''}${industryContext ? `**Context**\n${industryContext}\n\n` : ''}**Next steps**
 ${nextSteps}${boundaryLines}
 
-${closingPhrase}
-Building Management Team`;
+${closingPhrase}`;
 }
 
 export async function OPTIONS(request: NextRequest) {

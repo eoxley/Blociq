@@ -12,6 +12,21 @@ interface EmailContext {
 interface Message {
   text: string;
   sender: 'user' | 'ai';
+  metadata?: {
+    source?: string;
+    wordCount?: number;
+    comprehensiveSearchUsed?: boolean;
+    searchMetadata?: {
+      buildings?: number;
+      units?: number;
+      leaseholders?: number;
+      documents?: number;
+      compliance?: number;
+      industryKnowledge?: number;
+      founderKnowledge?: number;
+    };
+  };
+  timestamp?: string;
 }
 
 export default function AskBlocIQTaskpane() {
@@ -95,7 +110,24 @@ export default function AskBlocIQTaskpane() {
       const result = await response.json();
 
       if (result.success) {
-        setMessages(prev => [...prev, { text: result.response, sender: 'ai' }]);
+        // Create enhanced message with metadata from Ask BlocIQ
+        const aiMessage: Message = {
+          text: result.response,
+          sender: 'ai',
+          metadata: result.metadata,
+          timestamp: result.timestamp
+        };
+
+        setMessages(prev => [...prev, aiMessage]);
+
+        // Log successful integration with Ask BlocIQ
+        if (result.source === 'ask_blociq') {
+          console.log('✅ Successfully integrated with Ask BlocIQ:', {
+            source: result.metadata?.source,
+            comprehensiveSearch: result.metadata?.comprehensiveSearchUsed,
+            searchResults: result.metadata?.searchMetadata
+          });
+        }
       } else {
         throw new Error(result.error || 'Unknown error');
       }
@@ -183,19 +215,47 @@ export default function AskBlocIQTaskpane() {
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-5 bg-gray-50">
           {messages.map((message, index) => (
-            <div 
+            <div
               key={index}
               className={`mb-4 ${message.sender === 'user' ? 'text-right' : 'text-left'}`}
             >
-              <div 
+              <div
                 className={`inline-block max-w-[80%] p-3 rounded-2xl text-sm leading-relaxed whitespace-pre-line ${
-                  message.sender === 'user' 
-                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white' 
+                  message.sender === 'user'
+                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white'
                     : 'bg-gray-100 text-gray-800 border border-gray-200'
                 }`}
               >
                 {message.text}
               </div>
+
+              {/* Show metadata for AI messages when available */}
+              {message.sender === 'ai' && message.metadata && (
+                <div className="mt-1 ml-2 text-xs text-gray-500 flex items-center gap-2">
+                  {message.metadata.source === 'ask_blociq' && (
+                    <>
+                      <span className="bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                        🧠 Ask BlocIQ
+                      </span>
+                      {message.metadata.comprehensiveSearchUsed && (
+                        <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                          🔍 Database Search
+                        </span>
+                      )}
+                      {message.metadata.searchMetadata?.industryKnowledge && message.metadata.searchMetadata.industryKnowledge > 0 && (
+                        <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded-full">
+                          📚 Industry Knowledge
+                        </span>
+                      )}
+                    </>
+                  )}
+                  {message.metadata.source === 'fallback' && (
+                    <span className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">
+                      ⚠️ Basic Mode
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           ))}
           

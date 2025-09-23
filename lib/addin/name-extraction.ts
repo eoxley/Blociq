@@ -334,3 +334,12 @@ export function generateThankYouLine(topic: string): string {
 export function getClosingPhrase(name: string): string {
   return isNameFormal(name) ? 'Yours sincerely,' : 'Kind regards,';
 }
+
+/**
+ * Generates complete closing with user's first name
+ */
+export function getClosingPhraseWithUserName(senderName: string, userFirstName?: string): string {
+  const closing = getClosingPhrase(senderName);
+  const userName = userFirstName || 'BlocIQ';
+  return `${closing}\n\n${userName}`;
+}

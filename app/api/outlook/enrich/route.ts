@@ -27,6 +27,16 @@ export interface EnrichmentResult {
     openLeakTicketRef?: string | null;
     emergencyContact?: string | null;
   };
+  industryKnowledge: Array<{
+    text: string;
+    category: string;
+    source: string;
+  }>;
+  founderGuidance: Array<{
+    title: string;
+    content: string;
+    priority: number;
+  }>;
   topic: 'leak' | 'fire' | 'compliance' | 'general';
 }
 
@@ -117,11 +127,62 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Step 4: Enrich with industry knowledge from PDF storage bucket
+    const industryKnowledge: EnrichmentResult['industryKnowledge'] = [];
+    try {
+      const searchTerms = getSearchTermsForTopic(topic, subject, bodyPreview);
+      const { data: knowledgeChunks } = await supabase
+        .from('industry_knowledge_chunks')
+        .select(`
+          chunk_text,
+          industry_knowledge_documents!inner(
+            title,
+            category,
+            subcategory
+          )
+        `)
+        .or(searchTerms.map(term => `chunk_text.ilike.%${term}%`).join(','))
+        .limit(5)
+        .order('created_at', { ascending: false });
+
+      if (knowledgeChunks) {
+        industryKnowledge.push(...knowledgeChunks.map(chunk => ({
+          text: chunk.chunk_text,
+          category: chunk.industry_knowledge_documents.category,
+          source: chunk.industry_knowledge_documents.title
+        })));
+      }
+    } catch (error) {
+      console.warn('Error enriching industry knowledge:', error);
+    }
+
+    // Step 5: Enrich with founder guidance
+    const founderGuidance: EnrichmentResult['founderGuidance'] = [];
+    try {
+      const topicHints = getFounderHintsForTopic(topic);
+      const { data: guidance } = await supabase
+        .from('founder_knowledge')
+        .select('title, content, priority')
+        .eq('is_active', true)
+        .overlaps('contexts', ['core', 'complaints'])
+        .or(topicHints.map(hint => `tags.cs.{${hint}}`).join(','))
+        .order('priority', { ascending: false })
+        .limit(3);
+
+      if (guidance) {
+        founderGuidance.push(...guidance);
+      }
+    } catch (error) {
+      console.warn('Error enriching founder guidance:', error);
+    }
+
     const result: EnrichmentResult = {
       residentName,
       unitLabel,
       building,
       facts,
+      industryKnowledge,
+      founderGuidance,
       topic
     };
 
@@ -273,6 +334,37 @@ async function enrichGeneralFacts(supabase: any, buildingId: string, facts: Enri
     }
   } catch (error) {
     console.warn('Error fetching general facts:', error);
+  }
+}
+
+function getSearchTermsForTopic(topic: string, subject: string, bodyPreview: string): string[] {
+  const content = `${subject} ${bodyPreview}`.toLowerCase();
+  const baseTerms = [topic];
+
+  switch (topic) {
+    case 'leak':
+      return [...baseTerms, 'water damage', 'ingress', 'flooding', 'pipe', 'plumbing', 'emergency', 'insurance'];
+    case 'fire':
+      return [...baseTerms, 'fire safety', 'fra', 'fire door', 'alarm', 'emergency exit', 'evacuation', 'building safety'];
+    case 'compliance':
+      return [...baseTerms, 'eicr', 'electrical', 'gas safety', 'asbestos', 'inspection', 'certificate', 'regulation'];
+    default:
+      // Extract keywords from content for general topics
+      const keywords = content.match(/\b\w{4,}\b/g) || [];
+      return [...baseTerms, ...keywords.slice(0, 3)];
+  }
+}
+
+function getFounderHintsForTopic(topic: string): string[] {
+  switch (topic) {
+    case 'leak':
+      return ['leaks', 'water_damage', 'insurance', 'emergency'];
+    case 'fire':
+      return ['fire_safety', 'compliance', 'emergency'];
+    case 'compliance':
+      return ['compliance', 'safety', 'regulations'];
+    default:
+      return ['general', 'property_management'];
   }
 }
 
