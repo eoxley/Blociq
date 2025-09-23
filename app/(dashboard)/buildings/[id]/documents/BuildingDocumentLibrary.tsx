@@ -118,17 +118,24 @@ export default function BuildingDocumentLibrary({ building }: { building: Buildi
 
   const fetchDocuments = useCallback(async () => {
     try {
-      console.log(`📂 Fetching all documents for building: ${building.id}`)
+      console.log(`📂 Fetching all documents for building: ${building.id} (${building.name})`)
 
       const allDocuments: Document[] = []
 
       // 1. Fetch building documents (general uploads)
       try {
+        console.log('📄 Querying building_documents table...')
         const { data: buildingDocs, error: buildingError } = await supabase
           .from('building_documents')
           .select('*')
           .eq('building_id', building.id)
           .order('uploaded_at', { ascending: false })
+
+        console.log('📄 Building documents query result:', {
+          count: buildingDocs?.length || 0,
+          error: buildingError?.message,
+          firstDoc: buildingDocs?.[0]
+        })
 
         if (!buildingError && buildingDocs) {
           const formattedBuildingDocs = buildingDocs.map((doc: any) => ({
@@ -155,6 +162,7 @@ export default function BuildingDocumentLibrary({ building }: { building: Buildi
 
       // 3. Fetch lease documents (from document_jobs and leases tables)
       try {
+        console.log('📄 Querying lease documents...')
         // Get lease analysis jobs for this building
         const { data: leaseJobs, error: leaseJobsError } = await supabase
           .from('document_jobs')
@@ -162,12 +170,25 @@ export default function BuildingDocumentLibrary({ building }: { building: Buildi
           .eq('status', 'completed')
           .order('created_at', { ascending: false })
 
+        console.log('📄 Document jobs query result:', {
+          count: leaseJobs?.length || 0,
+          error: leaseJobsError?.message,
+          firstJob: leaseJobs?.[0]
+        })
+
         if (!leaseJobsError && leaseJobs) {
           // Filter jobs that have been linked to this building
+          console.log('📄 Querying leases table for building...')
           const { data: linkedLeases, error: leasesError } = await supabase
             .from('leases')
             .select('document_job_id, leaseholder_name, start_date, end_date, scope')
             .eq('building_id', building.id)
+
+          console.log('📄 Leases query result:', {
+            count: linkedLeases?.length || 0,
+            error: leasesError?.message,
+            firstLease: linkedLeases?.[0]
+          })
 
           if (!leasesError && linkedLeases) {
             const linkedJobIds = linkedLeases.map(lease => lease.document_job_id).filter(Boolean)
