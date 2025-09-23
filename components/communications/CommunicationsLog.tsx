@@ -66,7 +66,6 @@ export default function CommunicationsLog({
           content,
           sent_at,
           building_id,
-          leaseholder_id,
           sent_by,
           building_name,
           unit_number,
@@ -80,9 +79,10 @@ export default function CommunicationsLog({
       if (buildingId) {
         query = query.eq('building_id', buildingId)
       }
-      if (leaseholderId) {
-        query = query.eq('leaseholder_id', leaseholderId)
-      }
+      // Note: leaseholder_id filtering temporarily disabled due to schema migration
+      // if (leaseholderId) {
+      //   query = query.eq('leaseholder_id', leaseholderId)
+      // }
       if (filter !== 'all') {
         query = query.eq('type', filter)
       }
