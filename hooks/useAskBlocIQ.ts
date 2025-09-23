@@ -180,7 +180,22 @@ export function useAskBlocIQ({ buildingId, buildingName, selectedMessage, isPubl
   const [usedMajorWorksData, setUsedMajorWorksData] = useState(false);
   const [addingToTodo, setAddingToTodo] = useState(false);
   const [addingToCalendar, setAddingToCalendar] = useState(false);
-  
+  const [messageIdCounter, setMessageIdCounter] = useState(1);
+  const [fileIdCounter, setFileIdCounter] = useState(1);
+
+  // Helper functions for consistent ID generation
+  const generateMessageId = () => {
+    const id = `msg-${messageIdCounter}`;
+    setMessageIdCounter(prev => prev + 1);
+    return id;
+  };
+
+  const generateFileId = () => {
+    const id = `file-${fileIdCounter}`;
+    setFileIdCounter(prev => prev + 1);
+    return id;
+  };
+
   const pathname = usePathname();
   const projectId = extractProjectId(pathname || '');
   const isMajorWorksContext = Boolean(pathname?.includes('major-works') && projectId);
@@ -316,7 +331,7 @@ export function useAskBlocIQ({ buildingId, buildingName, selectedMessage, isPubl
 
     // Add user message to history
     const userMessage: Message = {
-      id: Date.now().toString(),
+      id: generateMessageId(),
       role: 'user',
       content: question.trim(),
       timestamp: new Date(),
@@ -384,7 +399,7 @@ export function useAskBlocIQ({ buildingId, buildingName, selectedMessage, isPubl
                 
                 // Add document analysis to messages for display
                 const analysisMessage: Message = {
-                  id: Date.now().toString(),
+                  id: generateMessageId(),
                   role: 'assistant',
                   content: `📄 **${uploadedFile.name}** processed via ${ocrResult.ocrSource || 'Enhanced OCR'}!\n\n**Extraction Method:** ${ocrResult.ocrSource}\n**Text Length:** ${ocrResult.textLength || 0} characters\n**Analysis:** ${ocrResult.analysis || 'Document processed successfully'}`,
                   timestamp: new Date(),
@@ -417,7 +432,7 @@ export function useAskBlocIQ({ buildingId, buildingName, selectedMessage, isPubl
                 uploadedFileResults.push(documentAnalysis);
                 
                 const analysisMessage: Message = {
-                  id: Date.now().toString(),
+                  id: generateMessageId(),
                   role: 'assistant',
                   content: `📄 **${uploadedFile.name}** uploaded but OCR processing encountered an issue.\n\n**Status:** ${errorMessage}\n**File Type:** ${uploadedFile.file.type}\n**File Size:** ${(uploadedFile.file.size / 1024).toFixed(1)} KB\n\nThe file was received successfully, but text extraction failed. You can still ask questions about the document type or try uploading again.`,
                   timestamp: new Date(),
@@ -477,7 +492,7 @@ export function useAskBlocIQ({ buildingId, buildingName, selectedMessage, isPubl
                 
                 // Add document analysis to messages for display
                 const analysisMessage: Message = {
-                  id: Date.now().toString(),
+                  id: generateMessageId(),
                   role: 'assistant',
                   content: `📄 **${uploadedFile.name}** analyzed successfully!\n\n**Document Type:** ${analysisResult.documentType}\n**Summary:** ${analysisResult.analysis.summary}`,
                   timestamp: new Date(),
@@ -588,7 +603,7 @@ export function useAskBlocIQ({ buildingId, buildingName, selectedMessage, isPubl
     if (!files) return;
     
     const newFiles = Array.from(files).map(file => ({
-      id: Date.now().toString() + Math.random(),
+      id: generateFileId(),
       name: file.name,
       size: file.size,
       type: file.type,

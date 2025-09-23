@@ -36,6 +36,8 @@ export default function MobileNavigation() {
 
   // Add escape key handler and body scroll prevention for mobile
   useEffect(() => {
+    if (typeof document === 'undefined') return;
+
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && isOpen) {
         closeMenu();

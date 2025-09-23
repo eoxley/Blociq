@@ -58,6 +58,7 @@ export default function AskBlocIQHomepage() {
   const [isUploading, setIsUploading] = useState(false)
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null)
   const [fileIdCounter, setFileIdCounter] = useState(1)
+  const [messageIdCounter, setMessageIdCounter] = useState(1)
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [isSearching, setIsSearching] = useState(false)
   
@@ -172,8 +173,10 @@ export default function AskBlocIQHomepage() {
       return
     }
 
+    const userMessageId = `msg-${messageIdCounter}`;
+    setMessageIdCounter(prev => prev + 1);
     const userMessage: Message = {
-      id: Date.now().toString(),
+      id: userMessageId,
       role: 'user',
       content: prompt.trim(),
       timestamp: new Date('2024-01-01'),
@@ -220,8 +223,10 @@ export default function AskBlocIQHomepage() {
       const data: AIResponse = await response.json()
 
       if (data.success) {
+        const assistantMessageId = `msg-${messageIdCounter}`;
+        setMessageIdCounter(prev => prev + 1);
         const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
+          id: assistantMessageId,
           role: 'assistant',
           content: data.result || data.response, // Handle both response formats
           timestamp: new Date()
@@ -230,8 +235,10 @@ export default function AskBlocIQHomepage() {
         setMessages(prev => [...prev, assistantMessage])
       } else if (response.status === 401) {
         // Handle authentication error gracefully
+        const assistantMessageId = `msg-${messageIdCounter}`;
+        setMessageIdCounter(prev => prev + 1);
         const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
+          id: assistantMessageId,
           role: 'assistant',
           content: "I'd be happy to help! Please log in to use the full AI features, or try asking a general question about property management.",
           timestamp: new Date()
@@ -244,8 +251,10 @@ export default function AskBlocIQHomepage() {
       console.error('Error asking AI:', error)
       
       // Provide a helpful response even when AI fails
+      const assistantMessageId = `msg-${messageIdCounter}`;
+      setMessageIdCounter(prev => prev + 1);
       const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: assistantMessageId,
         role: 'assistant',
         content: "I'm having trouble connecting right now. Please try again in a moment, or contact support if the issue persists.",
         timestamp: new Date()
@@ -277,8 +286,10 @@ export default function AskBlocIQHomepage() {
       setSearchResults(data.results || [])
       
       // Add search results to messages
+      const searchMessageId = `msg-${messageIdCounter}`;
+      setMessageIdCounter(prev => prev + 1);
       const searchMessage: Message = {
-        id: Date.now().toString(),
+        id: searchMessageId,
         role: 'assistant',
         content: `Found ${data.results?.length || 0} documents matching your search.`,
         timestamp: new Date()

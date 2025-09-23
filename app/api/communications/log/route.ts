@@ -21,24 +21,44 @@ export async function GET(request: NextRequest) {
     const direction = searchParams.get('direction') // 'incoming', 'outgoing', or null for both
     const limit = parseInt(searchParams.get('limit') || '100')
 
-    // Fetch communications log with relationships (using safer selects)
+    // Fetch communications log with safer column selection
     let query = supabase
       .from('communications_log')
       .select(`
-        *,
-        building:buildings(id, name, address),
-        leaseholder:leaseholders(id, first_name, last_name, email)
+        id,
+        template_id,
+        template_name,
+        sent_by,
+        sent_at,
+        building_id,
+        building_name,
+        method,
+        recipients,
+        subject,
+        body,
+        status,
+        error_message,
+        metadata,
+        action_type,
+        created_from_ai,
+        ai_content,
+        direction,
+        content,
+        type,
+        recipient_email,
+        building:buildings(id, name, address)
       `)
       .order('sent_at', { ascending: false })
       .limit(limit)
 
-    // Apply filters
+    // Apply filters (skip leaseholder_id filter for now since column may not exist)
     if (building_id) {
       query = query.eq('building_id', building_id)
     }
-    if (leaseholder_id) {
-      query = query.eq('leaseholder_id', leaseholder_id)
-    }
+    // Skip leaseholder_id filter temporarily due to schema migration issues
+    // if (leaseholder_id) {
+    //   query = query.eq('leaseholder_id', leaseholder_id)
+    // }
     if (direction && (direction === 'incoming' || direction === 'outgoing')) {
       query = query.eq('direction', direction)
     }
@@ -116,18 +136,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Body content is required' }, { status: 400 });
     }
 
-    // Insert log entry using new schema
+    // Insert log entry (skip leaseholder_id temporarily due to schema issues)
+    const insertData: any = {
+      building_id: building_id || null,
+      sent_by: session.user.id,
+      direction,
+      subject: subject || null,
+      content: body_content,
+      metadata: metadata || {}
+    };
+
+    // Only include leaseholder_id if the column exists
+    // if (leaseholder_id) {
+    //   insertData.leaseholder_id = leaseholder_id;
+    // }
+
     const { data: log, error } = await supabase
       .from('communications_log')
-      .insert({
-        building_id: building_id || null,
-        leaseholder_id: leaseholder_id || null,
-        sent_by: session.user.id,
-        direction,
-        subject: subject || null,
-        content: body_content,
-        metadata: metadata || {}
-      })
+      .insert(insertData)
       .select()
       .single();
 

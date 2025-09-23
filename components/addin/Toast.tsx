@@ -109,8 +109,11 @@ export function useToasts() {
     duration?: number;
   }>>([]);
 
+  const [idCounter, setIdCounter] = useState(0);
+
   const addToast = (message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info', duration?: number) => {
-    const id = Math.random().toString(36).substr(2, 9);
+    const id = `toast-${idCounter}`;
+    setIdCounter(prev => prev + 1);
     setToasts(prev => [...prev, { id, message, type, duration }]);
   };
 

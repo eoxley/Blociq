@@ -65,12 +65,12 @@ export default function CommunicationsLog({
           content,
           sent_at,
           building_id,
-          leaseholder_id,
           sent_by,
           building_name,
           leaseholder_name,
           unit_number,
-          status
+          status,
+          metadata
         `)
         .order('sent_at', { ascending: false })
         .limit(limit)
@@ -79,9 +79,11 @@ export default function CommunicationsLog({
       if (buildingId) {
         query = query.eq('building_id', buildingId)
       }
-      if (leaseholderId) {
-        query = query.eq('leaseholder_id', leaseholderId)
-      }
+      // Skip leaseholder_id filter since column doesn't exist in current schema
+      // TODO: Re-enable when leaseholder_id column is properly added
+      // if (leaseholderId) {
+      //   query = query.eq('leaseholder_id', leaseholderId)
+      // }
       if (filter !== 'all') {
         query = query.eq('type', filter)
       }
@@ -127,7 +129,7 @@ export default function CommunicationsLog({
         body: comm.content || '', // Map content to body field
         building: comm.building_id ? buildingsMap[comm.building_id] : (comm.building_name ? { id: comm.building_id || '', name: comm.building_name } : null),
         leaseholder: comm.leaseholder_name ? {
-          id: comm.leaseholder_id || '',
+          id: '', // No leaseholder_id available in current schema
           name: comm.leaseholder_name,
           email: ''
         } : null,

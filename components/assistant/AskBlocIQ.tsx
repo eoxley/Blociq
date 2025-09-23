@@ -38,6 +38,8 @@ export default function PublicAskBlocIQ({ isPublic = true, isVisible = false }: 
   const [loading, setLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [fileIdCounter, setFileIdCounter] = useState(0);
+  const [messageIdCounter, setMessageIdCounter] = useState(0);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -79,10 +81,11 @@ export default function PublicAskBlocIQ({ isPublic = true, isVisible = false }: 
 
   const handleFileSelect = (files: FileList | null) => {
     if (!files) return;
-    
+
     Array.from(files).forEach(file => {
       if (validateFile(file)) {
-        const fileId = Math.random().toString(36).substr(2, 9);
+        const fileId = `file-${fileIdCounter}`;
+        setFileIdCounter(prev => prev + 1);
         const uploadedFile: UploadedFile = {
           file,
           id: fileId,
@@ -90,7 +93,7 @@ export default function PublicAskBlocIQ({ isPublic = true, isVisible = false }: 
           size: file.size,
           type: file.type
         };
-        
+
         setUploadedFiles(prev => [...prev, uploadedFile]);
         toast.success(`✅ ${file.name} uploaded. You can now ask questions about it.`);
       }
@@ -172,8 +175,10 @@ export default function PublicAskBlocIQ({ isPublic = true, isVisible = false }: 
     }
 
     // Add user message to history
+    const userMessageId = `msg-${messageIdCounter}`;
+    setMessageIdCounter(prev => prev + 1);
     const userMessage: Message = {
-      id: Date.now().toString(),
+      id: userMessageId,
       role: 'user',
       content: question.trim(),
       timestamp: new Date(),
@@ -241,8 +246,10 @@ export default function PublicAskBlocIQ({ isPublic = true, isVisible = false }: 
         
         if (displayContent) {
           // Add assistant message to history with structured flag for lease analysis
+          const assistantMessageId = `msg-${messageIdCounter}`;
+          setMessageIdCounter(prev => prev + 1);
           const assistantMessage: Message = {
-            id: (Date.now() + 1).toString(),
+            id: assistantMessageId,
             role: 'assistant',
             content: displayContent,
             timestamp: new Date(),

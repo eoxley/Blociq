@@ -67,8 +67,11 @@ export function ToastProvider({
   maxToasts = 5, 
   defaultDuration = 5000 
 }: ToastProviderProps) {
-  // Add CSS animation for progress bar
+  // Add CSS animation for progress bar (client-side only)
+  const [isClient, setIsClient] = useState(false);
+
   React.useEffect(() => {
+    setIsClient(true);
     const style = document.createElement('style');
     style.textContent = `
       @keyframes shrink {
@@ -77,7 +80,11 @@ export function ToastProvider({
       }
     `;
     document.head.appendChild(style);
-    return () => document.head.removeChild(style);
+    return () => {
+      if (document.head.contains(style)) {
+        document.head.removeChild(style);
+      }
+    };
   }, []);
   const [notifications, setNotifications] = useState<ToastNotification[]>([]);
   const [notificationIdCounter, setNotificationIdCounter] = useState(1);

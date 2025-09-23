@@ -9,13 +9,18 @@ interface TimeBasedGreetingProps {
   showSubtitle?: boolean;
 }
 
-export default function TimeBasedGreeting({ 
-  className = "", 
-  showSubtitle = true 
+export default function TimeBasedGreeting({
+  className = "",
+  showSubtitle = true
 }: TimeBasedGreetingProps) {
   const [greeting, setGreeting] = useState<string>("Hello!");
   const [userName, setUserName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const getUserData = async () => {
@@ -28,7 +33,7 @@ export default function TimeBasedGreeting({
             .select('name')
             .eq('id', user.id)
             .single();
-          
+
           setUserName(profile?.name || user.user_metadata?.name || user.email?.split('@')[0] || null);
         }
       } catch (error) {
@@ -38,15 +43,20 @@ export default function TimeBasedGreeting({
       }
     };
 
-    getUserData();
-  }, [supabase]);
+    if (mounted) {
+      getUserData();
+    }
+  }, [supabase, mounted]);
 
   useEffect(() => {
-    // Update greeting whenever userName changes
-    setGreeting(getTimeBasedGreeting(userName || undefined));
-  }, [userName]);
+    // Update greeting only after component has mounted (client-side)
+    if (mounted) {
+      setGreeting(getTimeBasedGreeting(userName || undefined));
+    }
+  }, [userName, mounted]);
 
-  if (loading) {
+  // Show static content during SSR and while loading to prevent hydration mismatch
+  if (!mounted || loading) {
     return (
       <div className={`bg-gradient-to-r from-[#008C8F] to-[#7645ED] rounded-2xl p-6 text-white shadow-md ${className}`}>
         <h1 className="text-3xl font-semibold">Hello!</h1>

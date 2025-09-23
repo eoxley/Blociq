@@ -35,7 +35,9 @@ export default function LoginForm({
       } else if (data.user) {
         // Successfully signed in, redirect to home
         setMessage('Successfully signed in! Redirecting...')
-        window.location.href = '/home'
+        if (typeof window !== 'undefined') {
+          window.location.href = '/home'
+        }
       } else {
         setError('Authentication failed. Please try again.')
       }
@@ -58,7 +60,7 @@ export default function LoginForm({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'}/auth/callback`,
         },
       })
 
@@ -74,7 +76,9 @@ export default function LoginForm({
             password,
           })
           if (!signInError) {
-            window.location.href = '/home'
+            if (typeof window !== 'undefined') {
+              window.location.href = '/home'
+            }
           }
         } else {
           setMessage('Account created! Please contact admin to activate your account.')

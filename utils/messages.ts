@@ -184,6 +184,9 @@ export const welcomeMessages: string[] = [
   "You're making property management look easy (it's not)."
 ];
 
+// Global counter to ensure consistent random generation
+let messageCounter = 0;
+
 /**
  * Get a random welcome message from the array, including dynamic industry facts
  * @returns A random welcome message or a default fallback
@@ -196,12 +199,13 @@ export async function getRandomWelcomeMessage(): Promise<string> {
     // Combine static messages with dynamic industry facts
     const allMessages = [...welcomeMessages, ...industryFacts];
 
-    const randomIndex = Math.floor(Math.random() * allMessages.length);
+    // Use deterministic selection to avoid hydration mismatches
+    const randomIndex = (messageCounter++ % allMessages.length);
     return allMessages[randomIndex] || "Making block management smarter, one step at a time.";
   } catch (error) {
     console.warn('Error getting dynamic welcome message, using static fallback:', error);
     // Fallback to static messages only
-    const randomIndex = Math.floor(Math.random() * welcomeMessages.length);
+    const randomIndex = (messageCounter++ % welcomeMessages.length);
     return welcomeMessages[randomIndex] || "Making block management smarter, one step at a time.";
   }
 }
@@ -211,6 +215,6 @@ export async function getRandomWelcomeMessage(): Promise<string> {
  * @returns A random welcome message from static messages only
  */
 export function getRandomWelcomeMessageSync(): string {
-  const randomIndex = Math.floor(Math.random() * welcomeMessages.length);
+  const randomIndex = (messageCounter++ % welcomeMessages.length);
   return welcomeMessages[randomIndex] || "Making block management smarter, one step at a time.";
 }

@@ -31,6 +31,11 @@ export interface ReplyContext {
     subject?: string;
     receivedDateTime?: string;
     bodyPreview?: string;
+    to?: string[];
+    cc?: string[];
+    bodyHtml?: string; // Full email body HTML
+    conversationId?: string;
+    internetMessageId?: string;
   };
   buildingContext?: {
     buildingId?: string;
@@ -182,13 +187,125 @@ export async function addinReplyAdapter(params: {
 }
 
 /**
- * Generate BlocIQ-aware contextual reply using building and lease knowledge
+ * Extract sender's name from email address or from line for proper salutation
+ */
+function extractSenderInfo(fromField: string): { firstName?: string; title?: string; surname?: string; fullName?: string } {
+  if (!fromField) return {};
+
+  // Clean up the from field - remove email address if present
+  let name = fromField.replace(/<[^>]*>/g, '').replace(/[""]/g, '').trim();
+
+  // If it's just an email address, extract the part before @
+  if (name.includes('@') && !name.includes(' ')) {
+    name = name.split('@')[0].replace(/[._]/g, ' ');
+  }
+
+  // Common title patterns
+  const titlePattern = /^(Mr|Mrs|Ms|Miss|Dr|Prof|Sir|Dame|Lord|Lady|Rev)\s+(.+)/i;
+  const titleMatch = name.match(titlePattern);
+
+  if (titleMatch) {
+    const title = titleMatch[1];
+    const remaining = titleMatch[2].trim();
+    const nameParts = remaining.split(/\s+/);
+
+    if (nameParts.length === 1) {
+      return { title, surname: nameParts[0] };
+    } else {
+      return { title, firstName: nameParts[0], surname: nameParts.slice(1).join(' ') };
+    }
+  }
+
+  // Split into parts
+  const nameParts = name.split(/\s+/).filter(part => part.length > 0);
+
+  if (nameParts.length === 1) {
+    return { firstName: nameParts[0] };
+  } else if (nameParts.length >= 2) {
+    return {
+      firstName: nameParts[0],
+      surname: nameParts.slice(1).join(' '),
+      fullName: name
+    };
+  }
+
+  return { fullName: name };
+}
+
+/**
+ * Generate appropriate salutation based on sender information
+ */
+function generateSalutation(senderInfo: { firstName?: string; title?: string; surname?: string; fullName?: string }): string {
+  if (senderInfo.title && senderInfo.surname) {
+    return `Dear ${senderInfo.title} ${senderInfo.surname}`;
+  } else if (senderInfo.firstName) {
+    return `Dear ${senderInfo.firstName}`;
+  } else if (senderInfo.fullName) {
+    return `Dear ${senderInfo.fullName}`;
+  }
+  return 'Dear Sir/Madam';
+}
+
+/**
+ * Extract and summarize the subject/issue from email content
+ */
+function summarizeEmailSubject(subject?: string, bodyPreview?: string): string {
+  if (!subject && !bodyPreview) return 'your inquiry';
+
+  // Use subject if available, otherwise extract from body
+  let topic = subject || bodyPreview || '';
+
+  // Clean up common email prefixes
+  topic = topic.replace(/^(Re:|RE:|Fwd:|FW:|FWD:)\s*/i, '').trim();
+
+  // Lowercase for analysis but keep original case for display
+  const lowerTopic = topic.toLowerCase();
+
+  // Common property management topics
+  if (lowerTopic.includes('leak') || lowerTopic.includes('water')) return 'the water ingress issue';
+  if (lowerTopic.includes('repair') || lowerTopic.includes('maintenance')) return 'the repair matter';
+  if (lowerTopic.includes('service charge')) return 'the service charge inquiry';
+  if (lowerTopic.includes('section 20') || lowerTopic.includes('s20')) return 'the Section 20 consultation';
+  if (lowerTopic.includes('insurance')) return 'the insurance matter';
+  if (lowerTopic.includes('noise') || lowerTopic.includes('neighbour')) return 'the neighbour issue';
+  if (lowerTopic.includes('compliance') || lowerTopic.includes('safety')) return 'the compliance matter';
+  if (lowerTopic.includes('ground rent')) return 'the ground rent inquiry';
+  if (lowerTopic.includes('lease')) return 'the lease matter';
+  if (lowerTopic.includes('parking') || lowerTopic.includes('car')) return 'the parking issue';
+  if (lowerTopic.includes('garden') || lowerTopic.includes('balcony')) return 'the garden/balcony matter';
+
+  // If topic is short, use it directly
+  if (topic.length <= 50) {
+    return topic.toLowerCase();
+  }
+
+  // Truncate long topics
+  return topic.substring(0, 50).trim() + '...';
+}
+
+/**
+ * Detect formal/legal tone in email content
+ */
+function detectFormalTone(content: string): boolean {
+  const formalIndicators = [
+    'pursuant to', 'in accordance with', 'hereby', 'whereas', 'heretofore',
+    'statutory', 'breach of', 'legal action', 'solicitor', 'tribunal',
+    'notice to quit', 'forfeiture', 'breach of covenant', 'demand',
+    'without prejudice', 'subject to contract', 'lease provisions'
+  ];
+
+  const lowerContent = content.toLowerCase();
+  return formalIndicators.some(indicator => lowerContent.includes(indicator));
+}
+
+/**
+ * Generate BlocIQ-aware contextual reply using building and lease knowledge with new reply rules
  */
 async function generateContextualReply(
   context: ReplyContext,
   replyContext: { replyFacts: string[]; sources: string[] }
 ): Promise<{ content: string; facts?: string[]; sources?: string[] }> {
-  const { outlookContext, buildingContext, leaseSummary } = context;
+  const { outlookContext, buildingContext, leaseSummary, userSettings } = context;
 
   if (!outlookContext?.bodyPreview && !outlookContext?.subject) {
     return {
@@ -199,29 +316,80 @@ async function generateContextualReply(
   }
 
   try {
-    // Build comprehensive BlocIQ context
-    let blociqContext = 'BlocIQ KNOWLEDGE BASE:\n\n';
+    // Extract sender information for proper salutation
+    const senderInfo = extractSenderInfo(outlookContext.from || '');
+    const salutation = generateSalutation(senderInfo);
+
+    // Summarize the email subject/issue
+    const subjectSummary = summarizeEmailSubject(outlookContext.subject, outlookContext.bodyPreview);
+
+    // Detect if formal tone is required
+    const emailContent = `${outlookContext.subject || ''} ${outlookContext.bodyPreview || ''}`;
+    const isFormalTone = detectFormalTone(emailContent);
+    const signOff = isFormalTone ? 'Yours sincerely' : 'Kind regards';
+
+    // Build comprehensive email thread context
+    let emailThreadText = '';
+
+    // Include full email thread information
+    if (outlookContext.subject) {
+      emailThreadText += `Subject: ${outlookContext.subject}\n`;
+    }
+    if (outlookContext.from) {
+      emailThreadText += `From: ${outlookContext.from}\n`;
+    }
+    if (outlookContext.to && outlookContext.to.length > 0) {
+      emailThreadText += `To: ${outlookContext.to.join(', ')}\n`;
+    }
+    if (outlookContext.cc && outlookContext.cc.length > 0) {
+      emailThreadText += `CC: ${outlookContext.cc.join(', ')}\n`;
+    }
+    if (outlookContext.receivedDateTime) {
+      emailThreadText += `Received: ${new Date(outlookContext.receivedDateTime).toLocaleString('en-GB')}\n`;
+    }
+
+    // Prioritize full email body content over preview
+    if (outlookContext.bodyHtml) {
+      // Strip HTML tags for plain text processing but preserve structure
+      const bodyText = outlookContext.bodyHtml
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      emailThreadText += `Full Email Content: ${bodyText}\n`;
+    } else if (outlookContext.bodyPreview) {
+      emailThreadText += `Message Preview: ${outlookContext.bodyPreview}\n`;
+    }
+
+    if (outlookContext.conversationId) {
+      emailThreadText += `Conversation ID: ${outlookContext.conversationId}\n`;
+    }
+
+    // Build comprehensive BlocIQ knowledge context
+    let knowledgeContext = '';
 
     // Get founder knowledge for email topic
-    const emailContent = `${outlookContext.subject || ''} ${outlookContext.bodyPreview || ''}`.toLowerCase();
     let founderGuidance = '';
-
     try {
       const topicHints = [];
-      if (emailContent.includes('section 20') || emailContent.includes('s20')) {
+      const lowerContent = emailContent.toLowerCase();
+
+      if (lowerContent.includes('section 20') || lowerContent.includes('s20')) {
         topicHints.push('section20', 'consultation');
       }
-      if (emailContent.includes('repair') || emailContent.includes('maintenance')) {
+      if (lowerContent.includes('repair') || lowerContent.includes('maintenance')) {
         topicHints.push('repairs', 'maintenance');
       }
-      if (emailContent.includes('service charge')) {
+      if (lowerContent.includes('service charge')) {
         topicHints.push('service_charge', 'financials');
       }
-      if (emailContent.includes('compliance') || emailContent.includes('safety')) {
+      if (lowerContent.includes('compliance') || lowerContent.includes('safety')) {
         topicHints.push('compliance', 'safety');
       }
-      if (emailContent.includes('insurance')) {
+      if (lowerContent.includes('insurance')) {
         topicHints.push('insurance', 'claims');
+      }
+      if (lowerContent.includes('leak') || lowerContent.includes('water')) {
+        topicHints.push('leaks', 'water_damage');
       }
 
       const guidance = await getFounderGuidance({
@@ -241,7 +409,7 @@ async function generateContextualReply(
 
     // Add founder knowledge to context
     if (founderGuidance) {
-      blociqContext += `FOUNDER GUIDANCE:\n${founderGuidance}\n\n`;
+      knowledgeContext += `FOUNDER GUIDANCE:\n${founderGuidance}\n\n`;
     }
 
     // Get comprehensive building context if building ID is available
@@ -249,63 +417,73 @@ async function generateContextualReply(
       try {
         const fullBuildingContext = await buildAIContext(buildingContext.buildingId);
         if (fullBuildingContext) {
-          blociqContext += `BUILDING DATA:\n${fullBuildingContext}\n\n`;
+          knowledgeContext += `BUILDING DATA:\n${fullBuildingContext}\n\n`;
         }
       } catch (error) {
         console.warn('Could not fetch comprehensive building context:', error);
         // Fall back to basic building context
         if (buildingContext?.buildingName) {
-          blociqContext += `Building: ${buildingContext.buildingName}\n`;
+          knowledgeContext += `BUILDING CONTEXT:\n`;
+          knowledgeContext += `Building: ${buildingContext.buildingName}\n`;
           if (buildingContext.unitNumber) {
-            blociqContext += `Unit: ${buildingContext.unitNumber}\n`;
+            knowledgeContext += `Unit: ${buildingContext.unitNumber}\n`;
           }
         }
       }
     } else if (buildingContext?.buildingName) {
       // Basic building context if no ID available
-      blociqContext += `BUILDING CONTEXT:\n`;
-      blociqContext += `Building: ${buildingContext.buildingName}\n`;
+      knowledgeContext += `BUILDING CONTEXT:\n`;
+      knowledgeContext += `Building: ${buildingContext.buildingName}\n`;
       if (buildingContext.unitNumber) {
-        blociqContext += `Unit: ${buildingContext.unitNumber}\n`;
+        knowledgeContext += `Unit: ${buildingContext.unitNumber}\n`;
       }
     }
 
     // Add lease summary context
     if (leaseSummary) {
-      blociqContext += '\nLEASE ANALYSIS DATA:\n';
+      knowledgeContext += '\nLEASE ANALYSIS DATA:\n';
       if (leaseSummary.parties?.landlord) {
-        blociqContext += `Landlord: ${leaseSummary.parties.landlord.name}\n`;
+        knowledgeContext += `Landlord: ${leaseSummary.parties.landlord.name}\n`;
       }
       if (leaseSummary.parties?.leaseholder) {
-        blociqContext += `Leaseholder: ${leaseSummary.parties.leaseholder.name}\n`;
+        knowledgeContext += `Leaseholder: ${leaseSummary.parties.leaseholder.name}\n`;
       }
       if (leaseSummary.financials?.service_charge) {
-        blociqContext += `Service Charge: £${leaseSummary.financials.service_charge.annual_amount}/year\n`;
+        knowledgeContext += `Service Charge: £${leaseSummary.financials.service_charge.annual_amount}/year\n`;
       }
       if (leaseSummary.repair_matrix && leaseSummary.repair_matrix.length > 0) {
-        blociqContext += 'Repair Obligations:\n';
+        knowledgeContext += 'Repair Obligations:\n';
         leaseSummary.repair_matrix.slice(0, 3).forEach((repair: any) => {
-          blociqContext += `- ${repair.item}: ${repair.responsible_party}\n`;
+          knowledgeContext += `- ${repair.item}: ${repair.responsible_party}\n`;
         });
       }
       if (leaseSummary.term?.end_date) {
-        blociqContext += `Lease Expiry: ${leaseSummary.term.end_date}\n`;
+        knowledgeContext += `Lease Expiry: ${leaseSummary.term.end_date}\n`;
       }
     }
 
-    // If no specific BlocIQ data, add generic property management context
-    if (!buildingContext && !leaseSummary && !founderGuidance) {
-      blociqContext += 'No specific building or lease data available in BlocIQ system.\n';
-    }
+    // Construct the structured prompt for the AI with new reply rules
+    const structuredPrompt = `You are generating an email reply following these specific rules:
 
-    // Route through the unified Ask BlocIQ knowledge stack
-    const fullEmailContent = `Subject: ${outlookContext.subject || 'No Subject'}
-From: ${outlookContext.from || 'Sender'}
-Content: ${outlookContext.bodyPreview || 'No preview available'}
+EMAIL THREAD CONTEXT:
+${emailThreadText}
 
-Please generate a professional reply to this email.`;
+KNOWLEDGE BASE:
+${knowledgeContext || 'No specific building or lease data available in BlocIQ system.'}
 
-    // Call the unified Ask BlocIQ endpoint
+REPLY REQUIREMENTS:
+1. Start with salutation: "${salutation}"
+2. Open with: "Thank you for your email regarding ${subjectSummary}."
+3. Generate contextual body using the email thread and knowledge base
+4. Close with: "${signOff}"
+5. The user's signature will be appended automatically
+6. Remove any generic placeholders or boilerplate text
+7. Use British English throughout
+8. Be specific and reference actual data from the knowledge base when available
+
+Generate a professional email reply that follows these rules exactly.`;
+
+    // Call the unified Ask BlocIQ endpoint with the structured prompt
     const askBlocIQUrl = process.env.NODE_ENV === 'production'
       ? `${process.env.NEXT_PUBLIC_SUPABASE_URL?.replace('/supabase/', '')}/api/ask-ai`
       : 'http://localhost:3000/api/ask-ai';
@@ -316,7 +494,7 @@ Please generate a professional reply to this email.`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        message: fullEmailContent,
+        message: structuredPrompt,
         building_id: buildingContext?.buildingId,
         context_type: 'email_reply',
         intent: 'REPLY',
@@ -381,8 +559,16 @@ Please generate a professional reply to this email.`;
         }
       }
 
+      // Format the response properly - ensure it's HTML paragraphs
+      let formattedReply = aiReply;
+
+      // If the AI response doesn't contain HTML tags, convert to paragraphs
+      if (!formattedReply.includes('<p>') && !formattedReply.includes('<div>')) {
+        formattedReply = `<p>${formattedReply.replace(/\n\n/g, '</p>\n<p>').replace(/\n/g, '<br>')}</p>`;
+      }
+
       return {
-        content: `<p>${aiReply.replace(/\n/g, '</p>\n<p>')}</p>\n\n`,
+        content: formattedReply,
         facts: extractedFacts,
         sources: extractedSources
       };
@@ -392,23 +578,29 @@ Please generate a professional reply to this email.`;
     console.error('Error generating BlocIQ contextual reply:', error);
   }
 
-  // BlocIQ-aware fallback
-  let fallback = '<p>Thank you for your email. I have received your message and will review it in the context of ';
+  // Enhanced fallback following new rules
+  const senderInfo = extractSenderInfo(outlookContext?.from || '');
+  const salutation = generateSalutation(senderInfo);
+  const subjectSummary = summarizeEmailSubject(outlookContext?.subject, outlookContext?.bodyPreview);
+
+  let fallback = `<p>${salutation},</p>\n\n`;
+  fallback += `<p>Thank you for your email regarding ${subjectSummary}.</p>\n\n`;
+
   if (buildingContext?.buildingName) {
-    fallback += `${buildingContext.buildingName}`;
+    fallback += `<p>I have reviewed your message in the context of ${buildingContext.buildingName}`;
     if (buildingContext.unitNumber) {
       fallback += `, Unit ${buildingContext.unitNumber}`;
     }
-  } else {
-    fallback += 'the property management requirements';
+    fallback += '.</p>\n\n';
   }
-  fallback += '.</p>\n\n';
 
   if (leaseSummary) {
-    fallback += '<p>I have access to the lease analysis data and will provide a detailed response addressing your specific query.</p>\n\n';
+    fallback += '<p>I have access to the lease analysis data and will provide a detailed response addressing your specific query shortly.</p>\n\n';
   } else {
-    fallback += '<p>For detailed lease-specific information, please upload the lease document to BlocIQ Lease Lab for analysis.</p>\n\n';
+    fallback += '<p>For detailed lease-specific information, I may need to review the relevant lease documentation.</p>\n\n';
   }
+
+  fallback += '<p>Kind regards</p>';
 
   return {
     content: fallback,
@@ -447,38 +639,30 @@ function generateSubjectSuggestion(context: ReplyContext): string {
 }
 
 /**
- * Generate reply body HTML
+ * Generate reply body HTML following new reply rules
  */
 async function generateReplyBody(
   context: ReplyContext,
   replyContext: { replyFacts: string[]; sources: string[]; buildingInfo?: string }
 ): Promise<{ bodyHtml: string; facts?: string[]; sources?: string[] }> {
-  const { userInput, buildingContext, leaseSummary, userSettings } = context;
-  const { replyFacts, sources, buildingInfo } = replyContext;
-  
-  let body = '';
-  
-  // Add greeting
-  const greeting = generateGreeting(context);
-  body += `<p>${greeting}</p>\n\n`;
-  
-  // Use AI to generate contextual reply for all emails - this is the main content
+  const { userSettings } = context;
+
+  // Use the enhanced contextual reply generation which includes all new rules
   const contextualReply = await generateContextualReply(context, replyContext);
-  body += contextualReply.content;
-  
-  // Add building context if available
-  if (buildingInfo) {
-    body += `<p><strong>Building:</strong> ${buildingInfo}</p>\n\n`;
-  }
-  
-  // Add lease reference if available
-  if (leaseSummary) {
-    body += `<p><em>Reference: Lease Lab Analysis - ${leaseSummary.doc_type || 'lease'} document</em></p>\n\n`;
-  }
-  
-  // Add signature
+
+  // The contextual reply now handles the complete email structure
+  let body = contextualReply.content;
+
+  // Ensure the signature is properly appended at the end
   const signature = userSettings?.signature || 'BlocIQ Property Management';
-  body += `<p>Kind regards,<br>${signature}</p>`;
+
+  // Check if the body already ends with a signature or sign-off
+  if (!body.includes('Kind regards') && !body.includes('Yours sincerely')) {
+    body += '<p>Kind regards</p>';
+  }
+
+  // Append user signature
+  body += `<br><p>${signature}</p>`;
 
   return {
     bodyHtml: body,
@@ -487,20 +671,6 @@ async function generateReplyBody(
   };
 }
 
-/**
- * Generate appropriate greeting
- */
-function generateGreeting(context: ReplyContext): string {
-  const from = context.outlookContext?.from;
-  
-  if (from) {
-    // Extract name from email
-    const name = from.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-    return `Dear ${name},`;
-  }
-  
-  return 'Dear Sir/Madam,';
-}
 
 /**
  * Generate Section 20 specific reply
