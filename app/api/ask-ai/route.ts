@@ -11,7 +11,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { AIContextHandler } from '../../../lib/ai-context-handler';
 import { logBuildingQuery, detectQueryContextType } from '../../../lib/ai/buildingQueryLogger';
 import { buildPrompt } from '../../../lib/buildPrompt';
@@ -24,6 +24,9 @@ export const runtime = "nodejs";
 async function ensureUserHasAgency(supabase: any, userId: string): Promise<{ agency_id: string } | null> {
   console.log('🔍 Checking agency for user:', userId);
 
+  // Create service client for administrative operations (bypasses RLS)
+  const serviceClient = createServiceClient();
+
   // Check if profiles table exists and get user's current profile
   let userProfile: any = null;
   let profileError: any = null;
@@ -31,7 +34,7 @@ async function ensureUserHasAgency(supabase: any, userId: string): Promise<{ age
   try {
     const result = await supabase
       .from('profiles')
-      .select('agency_id')
+      .select('agency_id, user_id')
       .eq('id', userId)
       .single();
     userProfile = result.data;
@@ -43,6 +46,32 @@ async function ensureUserHasAgency(supabase: any, userId: string): Promise<{ age
 
   console.log('📋 User profile:', userProfile, 'Error:', profileError);
 
+  // If profile doesn't exist, create one using service client
+  if (!userProfile && profileError?.code === 'PGRST116') { // No rows returned
+    console.log('🔄 No profile found, creating profile for user...');
+    try {
+      const { data: newProfile, error: createProfileError } = await serviceClient
+        .from('profiles')
+        .insert({
+          id: userId,
+          user_id: userId,
+          created_at: new Date().toISOString()
+        })
+        .select('agency_id, user_id')
+        .single();
+
+      if (!createProfileError && newProfile) {
+        console.log('✅ Created user profile');
+        userProfile = newProfile;
+        profileError = null;
+      } else {
+        console.warn('⚠️ Failed to create user profile:', createProfileError);
+      }
+    } catch (err) {
+      console.warn('⚠️ Error creating user profile:', err);
+    }
+  }
+
   // If user already has an agency, return it
   if (userProfile?.agency_id) {
     console.log('✅ User has agency_id:', userProfile.agency_id);
@@ -51,12 +80,12 @@ async function ensureUserHasAgency(supabase: any, userId: string): Promise<{ age
 
   console.log('🔄 User missing agency_id, checking agency memberships...');
 
-  // Check if user is a member of any agencies
+  // Check if user is a member of any agencies (using service client for reliable access)
   let agencyMemberships: any[] = [];
   let membershipsError: any = null;
 
   try {
-    const result = await supabase
+    const result = await serviceClient
       .from('agency_members')
       .select(`
         agency_id,
@@ -86,10 +115,13 @@ async function ensureUserHasAgency(supabase: any, userId: string): Promise<{ age
     // Use the first agency membership (oldest/primary)
     const primaryMembership = agencyMemberships[0];
 
-    // Update the user's profile with the agency from their membership
-    const { error: updateError } = await supabase
+    // Update the user's profile with the agency from their membership (using service client)
+    const { error: updateError } = await serviceClient
       .from('profiles')
-      .update({ agency_id: primaryMembership.agency_id })
+      .update({
+        agency_id: primaryMembership.agency_id,
+        user_id: userId // Ensure user_id is set for RLS policies
+      })
       .eq('id', userId);
 
     if (!updateError) {
@@ -101,12 +133,12 @@ async function ensureUserHasAgency(supabase: any, userId: string): Promise<{ age
   } else {
     console.log('🔄 No agency memberships found, attempting fallback assignment...');
 
-    // Fallback: Try to find and assign a default agency
+    // Fallback: Try to find and assign a default agency (using service client)
     let defaultAgency: any = null;
     let agencyError: any = null;
 
     try {
-      const result = await supabase
+      const result = await serviceClient
         .from('agencies')
         .select('id, name')
         .limit(1)
@@ -124,8 +156,8 @@ async function ensureUserHasAgency(supabase: any, userId: string): Promise<{ age
     if (defaultAgency) {
       console.log('✅ Found default agency, creating membership and updating profile...');
 
-      // Create agency membership first
-      const { error: membershipError } = await supabase
+      // Create agency membership first (using service client)
+      const { error: membershipError } = await serviceClient
         .from('agency_members')
         .insert({
           user_id: userId,
@@ -139,10 +171,13 @@ async function ensureUserHasAgency(supabase: any, userId: string): Promise<{ age
         console.warn('⚠️ Failed to create agency membership:', membershipError);
       }
 
-      // Update the user's profile with the default agency
-      const { error: updateError } = await supabase
+      // Update the user's profile with the default agency (using service client)
+      const { error: updateError } = await serviceClient
         .from('profiles')
-        .update({ agency_id: defaultAgency.id })
+        .update({
+          agency_id: defaultAgency.id,
+          user_id: userId // Ensure user_id is set for RLS policies
+        })
         .eq('id', userId);
 
       if (!updateError) {
@@ -154,8 +189,8 @@ async function ensureUserHasAgency(supabase: any, userId: string): Promise<{ age
     } else {
       console.log('🔄 No agencies found, creating default agency...');
 
-      // Create a default agency if none exists
-      const { data: newAgency, error: createAgencyError } = await supabase
+      // Create a default agency if none exists (using service client)
+      const { data: newAgency, error: createAgencyError } = await serviceClient
         .from('agencies')
         .insert({
           name: 'Default Agency',
@@ -168,8 +203,8 @@ async function ensureUserHasAgency(supabase: any, userId: string): Promise<{ age
       if (newAgency && !createAgencyError) {
         console.log('✅ Created default agency, assigning to user...');
 
-        // Create agency membership
-        await supabase
+        // Create agency membership (using service client)
+        await serviceClient
           .from('agency_members')
           .insert({
             user_id: userId,
@@ -179,10 +214,13 @@ async function ensureUserHasAgency(supabase: any, userId: string): Promise<{ age
             joined_at: new Date().toISOString()
           });
 
-        // Update the user's profile with the new agency
-        const { error: updateError } = await supabase
+        // Update the user's profile with the new agency (using service client)
+        const { error: updateError } = await serviceClient
           .from('profiles')
-          .update({ agency_id: newAgency.id })
+          .update({
+            agency_id: newAgency.id,
+            user_id: userId // Ensure user_id is set for RLS policies
+          })
           .eq('id', userId);
 
         if (!updateError) {
