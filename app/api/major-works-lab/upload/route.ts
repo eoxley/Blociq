@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createServiceClient } from '@supabase/supabase-js';
 
 // Configure Next.js API route to handle large file uploads
 export const runtime = 'nodejs';
@@ -20,6 +21,9 @@ export async function POST(req: NextRequest) {
     }
 
     const user = session.user;
+
+    // For major works lab, we don't require agency membership
+    // The system works directly with user authentication
     console.log('✅ User authenticated for major works lab upload');
 
     const formData = await req.formData();
@@ -32,7 +36,8 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // Server-side validation for major works documents
+    // Server-side validation (tamper-proof)
+    // Render supports larger file uploads than Vercel - we can be more generous
     const maxSize = parseInt(process.env.DOC_REVIEW_MAX_MB || '50') * 1024 * 1024;
     const maxPages = parseInt(process.env.DOC_REVIEW_MAX_PAGES || '300');
 
@@ -41,29 +46,18 @@ export async function POST(req: NextRequest) {
       const fileSizeMB = Math.round(file.size / (1024 * 1024));
       return NextResponse.json({
         error: 'File too large',
-        message: `File size (${fileSizeMB}MB) exceeds the ${maxSizeMB}MB limit. Please compress the file or split it into smaller parts.`,
+        message: `File size (${fileSizeMB}MB) exceeds the ${maxSizeMB}MB limit. Please compress the PDF or split it into smaller parts.`,
         maxSizeMB: maxSizeMB,
         fileSizeMB: fileSizeMB
       }, { status: 413 });
     }
 
-    // Check file type - Major works documents support more file types
-    const allowedTypes = [
-      'application/pdf',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'application/vnd.ms-excel',
-      'text/csv',
-      'image/jpeg',
-      'image/png',
-      'application/dwg',
-      'image/vnd.dwg'
-    ];
-
-    if (!allowedTypes.includes(file.type) && !file.name.toLowerCase().endsWith('.dwg')) {
+    // Check file type
+    const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    if (!allowedTypes.includes(file.type)) {
       return NextResponse.json({
         error: 'Unsupported file type',
-        message: "This file type isn't supported. Please upload PDF, DOCX, XLSX, CSV, JPG, PNG, or DWG files."
+        message: "This file type isn't supported. Please upload a PDF or DOCX."
       }, { status: 400 });
     }
 
@@ -74,8 +68,7 @@ export async function POST(req: NextRequest) {
       size_bytes: file.size,
       mime: file.type,
       user_id: user.id,
-      agency_id: user.user_metadata?.agency_id,
-      doc_category: 'major-works',
+      doc_category: 'major_works',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
@@ -88,6 +81,13 @@ export async function POST(req: NextRequest) {
 
     if (jobError) {
       console.error('Error creating major works job:', jobError);
+      console.error('Job data attempted:', {
+        filename: file.name,
+        status: 'QUEUED',
+        size_bytes: file.size,
+        mime: file.type,
+        user_id: user.id
+      });
       return NextResponse.json({
         error: 'Failed to create job',
         message: 'Unable to create processing job. Please try again.',
@@ -116,6 +116,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Trigger background processing via separate API call
+    // This ensures processing continues even after upload response is sent
     try {
       console.log('🔄 Triggering background processing for major works job:', job.id);
 
@@ -130,15 +131,14 @@ export async function POST(req: NextRequest) {
           filePath: filePath,
           filename: file.name,
           mime: file.type,
-          userId: user.id,
-          category: 'major-works'
+          userId: user.id
         })
       }).catch(error => {
-        console.error('❌ Failed to trigger background processing:', error);
+        console.error('❌ Failed to trigger major works background processing:', error);
       });
 
     } catch (error) {
-      console.error('❌ Error triggering background processing:', error);
+      console.error('❌ Error triggering major works background processing:', error);
     }
 
     return NextResponse.json({
@@ -151,15 +151,15 @@ export async function POST(req: NextRequest) {
         mime: job.mime,
         created_at: job.created_at,
         updated_at: job.updated_at,
-        user_id: job.user_id,
-        agency_id: job.agency_id
-      }
+        user_id: job.user_id
+      },
+      message: 'Major works document uploaded successfully'
     });
 
   } catch (error) {
-    console.error('Major works upload error:', error);
+    console.error('Unexpected error in major works upload:', error);
     return NextResponse.json({
-      error: 'Upload failed',
+      error: 'Internal server error',
       message: 'An unexpected error occurred. Please try again.'
     }, { status: 500 });
   }

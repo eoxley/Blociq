@@ -38,19 +38,21 @@ export default function GeneralLabClient() {
 
   const fetchJobs = async () => {
     try {
-      console.log('🔄 fetchJobs called - Fetching general jobs from server...');
-      const response = await fetch('/api/general-docs-lab/jobs');
+      console.log('🔄 fetchJobs called - Fetching general document jobs from server...');
+      const response = await fetch('/api/general-lab/jobs');
       console.log('📡 fetchJobs response status:', response.status);
       if (response.ok) {
         const data = await response.json();
-        console.log('📋 General jobs fetched from server:', data.jobs?.length || 0, 'jobs');
+        console.log('📋 General document jobs fetched from server:', data.jobs?.length || 0, 'jobs');
+        console.log('📋 Job IDs:', data.jobs?.map(job => job.id) || []);
+        console.log('🔄 Setting jobs state...');
         setJobs(data.jobs || []);
         console.log('✅ Jobs state updated');
       } else {
-        console.error('❌ Failed to fetch jobs:', response.status);
+        console.error('❌ Failed to fetch general document jobs:', response.status);
       }
     } catch (error) {
-      console.error('Error fetching jobs:', error);
+      console.error('Error fetching general document jobs:', error);
     } finally {
       setIsLoading(false);
     }
@@ -63,26 +65,6 @@ export default function GeneralLabClient() {
   const handleViewAnalysis = (job: DocumentJob) => {
     setSelectedJob(job);
     setShowAnalysis(true);
-  };
-
-  const handleAttachToBuilding = async (jobId: string, buildingId: string, unitId?: string) => {
-    try {
-      const response = await fetch(`/api/general-docs-lab/jobs/${jobId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          linked_building_id: buildingId,
-          linked_unit_id: unitId
-        })
-      });
-
-      if (response.ok) {
-        await fetchJobs(); // Refresh jobs list
-        setShowAnalysis(false);
-      }
-    } catch (error) {
-      console.error('Error attaching to building:', error);
-    }
   };
 
   return (
@@ -104,10 +86,9 @@ export default function GeneralLabClient() {
           </div>
         ) : jobs.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
-            <FileText className="mx-auto h-12 w-12 text-blue-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No general documents yet</h3>
-            <p className="text-gray-500">Upload meeting minutes, correspondence, or other business documents.</p>
-            <p className="text-sm text-gray-400 mt-2">PDF, DOCX, images, spreadsheets up to 50 MB.</p>
+            <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No analyses yet</h3>
+            <p className="text-gray-500">Upload any property-related document (PDF or DOCX up to 50 MB / 300 pages).</p>
           </div>
         ) : (
           <JobsList
@@ -117,7 +98,6 @@ export default function GeneralLabClient() {
               console.log('🔄 onRefresh callback called from GeneralLabClient');
               fetchJobs();
             }}
-            category="general"
           />
         )}
       </div>
@@ -126,9 +106,11 @@ export default function GeneralLabClient() {
       {showAnalysis && selectedJob && (
         <AnalysisDrawer
           job={selectedJob}
-          onClose={() => setShowAnalysis(false)}
-          onAttachToBuilding={handleAttachToBuilding}
-          category="general"
+          isOpen={showAnalysis}
+          onClose={() => {
+            setShowAnalysis(false);
+            setSelectedJob(null);
+          }}
         />
       )}
     </div>

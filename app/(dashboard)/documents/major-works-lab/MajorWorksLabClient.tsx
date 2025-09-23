@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Upload, FileText, Clock, CheckCircle, AlertCircle, Eye, Link, Download, Wrench, DollarSign } from 'lucide-react';
+import { Upload, FileText, Clock, CheckCircle, AlertCircle, Eye, Link, Download } from 'lucide-react';
 import UploadPanel from './components/UploadPanel';
 import JobsList from './components/JobsList';
 import AnalysisDrawer from './components/AnalysisDrawer';
@@ -49,10 +49,10 @@ export default function MajorWorksLabClient() {
         setJobs(data.jobs || []);
         console.log('✅ Jobs state updated');
       } else {
-        console.error('❌ Failed to fetch jobs:', response.status);
+        console.error('❌ Failed to fetch major works jobs:', response.status);
       }
     } catch (error) {
-      console.error('Error fetching jobs:', error);
+      console.error('Error fetching major works jobs:', error);
     } finally {
       setIsLoading(false);
     }
@@ -65,26 +65,6 @@ export default function MajorWorksLabClient() {
   const handleViewAnalysis = (job: DocumentJob) => {
     setSelectedJob(job);
     setShowAnalysis(true);
-  };
-
-  const handleAttachToBuilding = async (jobId: string, buildingId: string, unitId?: string) => {
-    try {
-      const response = await fetch(`/api/major-works-lab/jobs/${jobId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          linked_building_id: buildingId,
-          linked_unit_id: unitId
-        })
-      });
-
-      if (response.ok) {
-        await fetchJobs(); // Refresh jobs list
-        setShowAnalysis(false);
-      }
-    } catch (error) {
-      console.error('Error attaching to building:', error);
-    }
   };
 
   return (
@@ -106,10 +86,9 @@ export default function MajorWorksLabClient() {
           </div>
         ) : jobs.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
-            <Wrench className="mx-auto h-12 w-12 text-orange-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No major works analyses yet</h3>
-            <p className="text-gray-500">Upload contracts, specifications, or project documents to get started.</p>
-            <p className="text-sm text-gray-400 mt-2">PDF, DOCX, DWG up to 50 MB / 300 pages.</p>
+            <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No analyses yet</h3>
+            <p className="text-gray-500">Upload Section 20 notices, invoices, or project documents (PDF or DOCX up to 50 MB / 300 pages).</p>
           </div>
         ) : (
           <JobsList
@@ -119,7 +98,6 @@ export default function MajorWorksLabClient() {
               console.log('🔄 onRefresh callback called from MajorWorksLabClient');
               fetchJobs();
             }}
-            category="major-works"
           />
         )}
       </div>
@@ -128,9 +106,11 @@ export default function MajorWorksLabClient() {
       {showAnalysis && selectedJob && (
         <AnalysisDrawer
           job={selectedJob}
-          onClose={() => setShowAnalysis(false)}
-          onAttachToBuilding={handleAttachToBuilding}
-          category="major-works"
+          isOpen={showAnalysis}
+          onClose={() => {
+            setShowAnalysis(false);
+            setSelectedJob(null);
+          }}
         />
       )}
     </div>

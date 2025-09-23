@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createServiceClient } from '@supabase/supabase-js';
 
 // Configure Next.js API route to handle large file uploads
 export const runtime = 'nodejs';
@@ -20,7 +21,10 @@ export async function POST(req: NextRequest) {
     }
 
     const user = session.user;
-    console.log('✅ User authenticated for general docs lab upload');
+
+    // For general lab, we don't require agency membership
+    // The system works directly with user authentication
+    console.log('✅ User authenticated for general lab upload');
 
     const formData = await req.formData();
     const file = formData.get('file') as File;
@@ -32,36 +36,28 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // Server-side validation for general documents
+    // Server-side validation (tamper-proof)
+    // Render supports larger file uploads than Vercel - we can be more generous
     const maxSize = parseInt(process.env.DOC_REVIEW_MAX_MB || '50') * 1024 * 1024;
+    const maxPages = parseInt(process.env.DOC_REVIEW_MAX_PAGES || '300');
 
     if (file.size > maxSize) {
       const maxSizeMB = Math.floor(maxSize / (1024 * 1024));
       const fileSizeMB = Math.round(file.size / (1024 * 1024));
       return NextResponse.json({
         error: 'File too large',
-        message: `File size (${fileSizeMB}MB) exceeds the ${maxSizeMB}MB limit. Please compress the file or split it into smaller parts.`,
+        message: `File size (${fileSizeMB}MB) exceeds the ${maxSizeMB}MB limit. Please compress the PDF or split it into smaller parts.`,
         maxSizeMB: maxSizeMB,
         fileSizeMB: fileSizeMB
       }, { status: 413 });
     }
 
-    // Check file type - General documents support more file types
-    const allowedTypes = [
-      'application/pdf',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'application/vnd.ms-excel',
-      'text/csv',
-      'image/jpeg',
-      'image/png',
-      'text/plain'
-    ];
-
+    // Check file type
+    const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
     if (!allowedTypes.includes(file.type)) {
       return NextResponse.json({
         error: 'Unsupported file type',
-        message: "This file type isn't supported. Please upload PDF, DOCX, XLSX, CSV, TXT, JPG, or PNG files."
+        message: "This file type isn't supported. Please upload a PDF or DOCX."
       }, { status: 400 });
     }
 
@@ -72,7 +68,6 @@ export async function POST(req: NextRequest) {
       size_bytes: file.size,
       mime: file.type,
       user_id: user.id,
-      agency_id: user.user_metadata?.agency_id,
       doc_category: 'general',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -85,7 +80,14 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (jobError) {
-      console.error('Error creating general docs job:', jobError);
+      console.error('Error creating general document job:', jobError);
+      console.error('Job data attempted:', {
+        filename: file.name,
+        status: 'QUEUED',
+        size_bytes: file.size,
+        mime: file.type,
+        user_id: user.id
+      });
       return NextResponse.json({
         error: 'Failed to create job',
         message: 'Unable to create processing job. Please try again.',
@@ -96,7 +98,7 @@ export async function POST(req: NextRequest) {
     // Upload file to Supabase Storage
     const fileExt = file.name.split('.').pop();
     const fileName = `${job.id}.${fileExt}`;
-    const filePath = `general-docs-lab/${fileName}`;
+    const filePath = `general-lab/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
       .from('building_documents')
@@ -106,7 +108,7 @@ export async function POST(req: NextRequest) {
       });
 
     if (uploadError) {
-      console.error('Error uploading general docs file:', uploadError);
+      console.error('Error uploading general document file:', uploadError);
       return NextResponse.json({
         error: 'Upload failed',
         message: 'Failed to upload file. Please try again.'
@@ -114,11 +116,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Trigger background processing via separate API call
+    // This ensures processing continues even after upload response is sent
     try {
-      console.log('🔄 Triggering background processing for general docs job:', job.id);
+      console.log('🔄 Triggering background processing for general document job:', job.id);
 
       // Make non-blocking call to processing endpoint
-      fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/general-docs-lab/process`, {
+      fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/general-lab/process`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -128,15 +131,14 @@ export async function POST(req: NextRequest) {
           filePath: filePath,
           filename: file.name,
           mime: file.type,
-          userId: user.id,
-          category: 'general'
+          userId: user.id
         })
       }).catch(error => {
-        console.error('❌ Failed to trigger background processing:', error);
+        console.error('❌ Failed to trigger general document background processing:', error);
       });
 
     } catch (error) {
-      console.error('❌ Error triggering background processing:', error);
+      console.error('❌ Error triggering general document background processing:', error);
     }
 
     return NextResponse.json({
@@ -149,15 +151,15 @@ export async function POST(req: NextRequest) {
         mime: job.mime,
         created_at: job.created_at,
         updated_at: job.updated_at,
-        user_id: job.user_id,
-        agency_id: job.agency_id
-      }
+        user_id: job.user_id
+      },
+      message: 'General document uploaded successfully'
     });
 
   } catch (error) {
-    console.error('General docs upload error:', error);
+    console.error('Unexpected error in general document upload:', error);
     return NextResponse.json({
-      error: 'Upload failed',
+      error: 'Internal server error',
       message: 'An unexpected error occurred. Please try again.'
     }, { status: 500 });
   }
