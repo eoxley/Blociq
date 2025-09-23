@@ -135,6 +135,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   const [recentEmails, setRecentEmails] = useState<Email[]>([])
   const [loadingEmails, setLoadingEmails] = useState(true)
   const [userFirstName, setUserFirstName] = useState<string>('')
+  const [greeting, setGreeting] = useState<string>('')
   
   // Ask BlocIQ state
   const [askInput, setAskInput] = useState('')
@@ -375,6 +376,12 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     }
     loadWelcomeMessage()
   }, [])
+
+  // Set greeting on client-side to avoid hydration mismatch
+  useEffect(() => {
+    const name = userFirstName || userData.name
+    setGreeting(getTimeBasedGreeting(name))
+  }, [userFirstName, userData.name])
 
   useEffect(() => {
     fetchBuildings()
@@ -1115,7 +1122,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center">
             <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
-              {getTimeBasedGreeting(userFirstName || userData.name)}
+              {greeting || 'Welcome to BlocIQ'}
             </h1>
             <p className="text-xl text-white/90 max-w-3xl mx-auto leading-relaxed">
               {currentWelcomeMessage}
