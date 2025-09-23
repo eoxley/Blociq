@@ -326,17 +326,41 @@ export async function POST(req: NextRequest) {
 
     // Extract sender's name from the email content for personalized salutation
     let senderName = 'Resident';
-    if (sender_info?.name) {
+
+    console.log('🔍 Extracting sender name from:', {
+      sender_info_name: sender_info?.name,
+      sender_info_email: sender_info?.email,
+      email_body_preview: email_body?.substring(0, 100)
+    });
+
+    if (sender_info?.name && sender_info.name !== 'Unknown Sender') {
       // Extract first name from full name
-      const nameParts = sender_info.name.split(' ');
+      const nameParts = sender_info.name.trim().split(' ');
       senderName = nameParts[0];
+      console.log('✅ Extracted sender name from sender_info:', senderName);
     } else if (email_body) {
-      // Try to extract name from sign-off patterns
-      const signOffMatches = email_body.match(/(?:thanks|regards|sincerely),?\s*([A-Z][a-z]+)/i) ||
-                            email_body.match(/^([A-Z][a-z]+)\s*$/m) ||
-                            email_body.match(/Many thanks,?\s*([A-Z][a-z]+)/i);
-      if (signOffMatches && signOffMatches[1]) {
-        senderName = signOffMatches[1];
+      // Try to extract name from various sign-off patterns
+      const signOffPatterns = [
+        /Many thanks,?\s*([A-Z][a-z]+)/i,
+        /(?:thanks|regards|sincerely),?\s*([A-Z][a-z]+)/i,
+        /^([A-Z][a-z]+)\s*$/m,
+        /Best regards,?\s*([A-Z][a-z]+)/i,
+        /Kind regards,?\s*([A-Z][a-z]+)/i,
+        /Yours,?\s*([A-Z][a-z]+)/i,
+        /From[:\s]+([A-Z][a-z]+)/i
+      ];
+
+      for (const pattern of signOffPatterns) {
+        const match = email_body.match(pattern);
+        if (match && match[1]) {
+          senderName = match[1];
+          console.log('✅ Extracted sender name from email body:', senderName, 'using pattern:', pattern);
+          break;
+        }
+      }
+
+      if (senderName === 'Resident') {
+        console.log('⚠️ Could not extract sender name, using default');
       }
     }
 
@@ -356,15 +380,16 @@ export async function POST(req: NextRequest) {
 
     const systemPrompt = `Generate a professional email reply for BlocIQ property management with these EXACT formatting rules:
 
-STRICT FORMATTING REQUIREMENTS:
-1. Subject line: Only at the top, do NOT repeat in body
-2. Salutation: "Dear ${senderName}," (never use "Dear [Recipient's Name]" or placeholders)
+CRITICAL FORMATTING REQUIREMENTS - FOLLOW EXACTLY:
+1. NEVER include subject line in the response body - subject is handled separately
+2. Salutation: "Dear ${senderName}," (extract name from sender_info, never use placeholders)
 3. Opening line: ALWAYS "Thank you for your email regarding ${issueSummary}."
 4. Body: Address the specific concerns using building/property context if available
-5. Closing: "Best regards," or "Kind regards," followed by "${userFirstName}"
-6. NO placeholders like [Your Name], [Your Position], [Company], etc.
+5. Closing: "Best regards," or "Kind regards," followed by "${userFirstName}" ONLY
+6. ABSOLUTELY NO placeholders like [Your Name], [Resident's Name], [Your Position], [Company], etc.
 7. NO email signatures, contact details, or company information
-8. NO subject line repetition in the body text
+8. NO "Subject:" lines in the response body
+9. Response should start directly with "Dear [FirstName],"
 
 REPLY GENERATION RULES:
 - Use British English exclusively
@@ -396,9 +421,21 @@ ${founderGuidance || 'No specific founder guidance found'}
 REPLY INSTRUCTIONS:
 ${question.trim()}
 
-Generate the email reply body ONLY (no subject line repetition, no placeholders, first name closing only).`;
+Generate ONLY the email reply body with these exact specifications:
+- Start with "Dear ${senderName}," (never "Dear [Resident's Name]")
+- Second line: "Thank you for your email regarding ${issueSummary}."
+- Body paragraphs addressing the issue
+- End with "Best regards," or "Kind regards,"
+- Final line: "${userFirstName}"
+- NO subject lines, NO placeholders, NO company information`;
 
-    console.log('🤖 Calling OpenAI API');
+    console.log('🤖 Calling OpenAI API with extracted values:', {
+      senderName,
+      issueSummary,
+      userFirstName,
+      hasComprehensiveContext: !!comprehensiveContext,
+      hasIndustryKnowledge: !!industryKnowledge
+    });
 
     // Initialize OpenAI client
     const openai = new OpenAI({

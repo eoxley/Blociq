@@ -47,21 +47,26 @@ async function forwardToAskBlocIQ(
 ): Promise<NextResponse> {
     try {
         // Construct the Ask BlocIQ request payload matching main ask-ai endpoint format
+        // IMPORTANT: Use 'general' context to ensure chat responses, NOT email formatting
         const askBlocIQPayload = {
             message: message,
-            context_type: emailContext ? 'email_context' : 'general',
+            context_type: 'general', // Always use general for chat responses
             tone: 'Professional',
             source: source || 'outlook_chat_addin',
             is_public: false, // Ensure authenticated access for full functionality
-            // Include email context for better responses
-            manual_context: emailContext ? `Email Context:
+            intent: 'general', // Explicitly set to avoid email reply formatting
+            // Include email context as additional context without triggering email formatting
+            manual_context: emailContext ? `Current email context (for reference only):
 Subject: ${emailContext.subject || 'No subject'}
 From: ${emailContext.from || 'Unknown sender'}
-Item Type: ${emailContext.itemType || 'Email'}` : undefined
+Item Type: ${emailContext.itemType || 'Email'}
+
+Note: This is a chat conversation, provide conversational responses.` : undefined
         };
 
-        console.log('🔄 Forwarding to Ask BlocIQ:', {
+        console.log('🔄 Forwarding to Ask BlocIQ for CHAT response:', {
             context_type: askBlocIQPayload.context_type,
+            intent: askBlocIQPayload.intent,
             hasEmailContext: !!emailContext,
             hasManualContext: !!askBlocIQPayload.manual_context,
             source: askBlocIQPayload.source
