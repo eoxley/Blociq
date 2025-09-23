@@ -125,7 +125,7 @@ export default async function BuildingDocumentsPage({ params }: BuildingDocument
             </a>
           </div>
         </div>
-      );
-    }
+      </div>
+    );
   }
 }
