@@ -63,8 +63,7 @@ export async function getBuildingCommunications(buildingId: string, limit = 50) 
       .from('communications_log')
       .select(`
         *,
-        leaseholder:leaseholders(name, email),
-        user:users(email)
+        leaseholder:leaseholders(first_name, last_name, email)
       `)
       .eq('building_id', buildingId)
       .order('sent_at', { ascending: false })
@@ -93,8 +92,7 @@ export async function getLeaseholderCommunications(leaseholderId: string, limit 
       .from('communications_log')
       .select(`
         *,
-        building:buildings(name),
-        user:users(email)
+        building:buildings(name)
       `)
       .eq('leaseholder_id', leaseholderId)
       .order('sent_at', { ascending: false })

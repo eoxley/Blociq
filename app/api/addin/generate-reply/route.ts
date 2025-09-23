@@ -1,27 +1,37 @@
 // app/api/addin/generate-reply/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
-import { addinReplyAdapter } from '@/ai/adapters/addinReplyAdapter';
+import { detectTone } from '@/lib/addin/tone';
 
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { originalSubject, originalSender, originalBody, context, buildingId, unitId } = body;
+        const { originalSubject, originalSender, originalBody, context, senderEmail, subject, bodyPreview, conversationId } = body;
 
-        console.log('🔄 BlocIQ Add-in reply generation:', {
-            subject: originalSubject,
-            sender: originalSender,
-            bodyLength: originalBody?.length || 0,
-            context,
-            buildingId,
-            unitId
+        console.log('🔄 BlocIQ Add-in reply generation (upgraded):', {
+            subject: originalSubject || subject,
+            sender: originalSender || senderEmail,
+            bodyLength: (originalBody || bodyPreview)?.length || 0,
+            context
         });
 
+        // Support both old and new API formats
+        const emailSender = senderEmail || originalSender;
+        const emailSubject = subject || originalSubject;
+        const emailBody = bodyPreview || originalBody;
+
         // Validate required fields
-        if (!originalBody && !originalSubject) {
+        if (!emailBody && !emailSubject) {
             return NextResponse.json({
                 success: false,
                 error: 'Missing email content'
+            }, { status: 400 });
+        }
+
+        if (!emailSender) {
+            return NextResponse.json({
+                success: false,
+                error: 'Missing sender email'
             }, { status: 400 });
         }
 
@@ -36,114 +46,103 @@ export async function POST(request: NextRequest) {
             }, { status: 401 });
         }
 
-        // Resolve building/unit context from Supabase if provided
-        let buildingContext = null;
-        let leaseSummary = null;
-
-        if (buildingId || unitId) {
-            try {
-                // Get building details
-                if (buildingId) {
-                    const { data: buildingData } = await supabase
-                        .from('buildings')
-                        .select('id, name, address')
-                        .eq('id', buildingId)
-                        .single();
-
-                    if (buildingData) {
-                        buildingContext = {
-                            buildingId: buildingData.id,
-                            buildingName: buildingData.name,
-                            address: buildingData.address
-                        };
-                    }
-                }
-
-                // Get unit details if provided
-                if (unitId) {
-                    const { data: unitData } = await supabase
-                        .from('units')
-                        .select('id, unit_number, building_id')
-                        .eq('id', unitId)
-                        .single();
-
-                    if (unitData) {
-                        buildingContext = {
-                            ...buildingContext,
-                            unitId: unitData.id,
-                            unitNumber: unitData.unit_number
-                        };
-                    }
-                }
-
-                // Try to get lease summary data from document_jobs for this building/unit
-                if (buildingId) {
-                    const { data: leaseJobs } = await supabase
-                        .from('document_jobs')
-                        .select('summary_json')
-                        .eq('linked_building_id', buildingId)
-                        .eq('status', 'READY')
-                        .not('summary_json', 'is', null)
-                        .order('updated_at', { ascending: false })
-                        .limit(1);
-
-                    if (leaseJobs && leaseJobs.length > 0) {
-                        leaseSummary = leaseJobs[0].summary_json;
-                    }
-                }
-
-            } catch (error) {
-                console.error('⚠️ Error resolving building/unit context:', error);
-                // Continue without context
-            }
-        }
-
-        // Build Outlook context
-        const outlookContext = {
-            from: originalSender,
-            subject: originalSubject,
-            bodyPreview: originalBody,
-            receivedDateTime: new Date().toISOString()
-        };
-
-        // Generate reply using BlocIQ pipeline
-        const replyResult = await addinReplyAdapter({
-            userInput: 'Generate a professional reply to this email',
-            outlookContext,
-            buildingContext,
-            leaseSummary,
-            userId: user.id
+        // Step 1: Enrich context using new system
+        const enrichResponse = await fetch(`${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/api/outlook/enrich`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                senderEmail: emailSender,
+                subject: emailSubject,
+                bodyPreview: emailBody,
+                conversationId: conversationId || ''
+            })
         });
 
-        if (!replyResult.success) {
-            return NextResponse.json({
-                success: false,
-                error: replyResult.message || 'Failed to generate reply'
-            }, { status: 500 });
+        if (!enrichResponse.ok) {
+            console.error('Enrichment failed, falling back to basic reply');
+            return generateBasicReply(emailSender, emailSubject, emailBody);
+        }
+
+        const enrichResult = await enrichResponse.json();
+        if (!enrichResult.success) {
+            console.error('Enrichment error:', enrichResult.error);
+            return generateBasicReply(emailSender, emailSubject, emailBody);
+        }
+
+        // Step 2: Detect tone
+        const toneResult = detectTone(emailBody);
+
+        // Step 3: Generate draft using new system
+        const draftResponse = await fetch(`${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/api/outlook/draft`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                enrichment: enrichResult.data,
+                tone: toneResult.label,
+                rawEmailBody: emailBody
+            })
+        });
+
+        if (!draftResponse.ok) {
+            console.error('Draft generation failed, falling back to basic reply');
+            return generateBasicReply(emailSender, emailSubject, emailBody);
+        }
+
+        const draftResult = await draftResponse.json();
+        if (!draftResult.success) {
+            console.error('Draft error:', draftResult.error);
+            return generateBasicReply(emailSender, emailSubject, emailBody);
         }
 
         // Return in the format expected by Outlook add-in
         return NextResponse.json({
             success: true,
-            reply: replyResult.bodyHtml,
-            subjectSuggestion: replyResult.subjectSuggestion,
-            usedFacts: replyResult.usedFacts || [],
-            sources: replyResult.sources || [],
+            reply: draftResult.data.bodyHtml,
+            subjectSuggestion: `Re: ${emailSubject}`,
+            usedFacts: draftResult.data.usedFacts || [],
+            sources: [],
             timestamp: new Date().toISOString(),
-            buildingContext: buildingContext?.buildingName ? {
-                building: buildingContext.buildingName,
-                unit: buildingContext.unitNumber
-            } : null
+            buildingContext: enrichResult.data.building ? {
+                building: enrichResult.data.building.name,
+                unit: enrichResult.data.unitLabel
+            } : null,
+            tone: toneResult.label,
+            template: draftResult.data.template
         });
 
     } catch (error) {
         console.error('❌ Error generating BlocIQ reply:', error);
-
         return NextResponse.json({
             success: false,
             error: 'Failed to generate reply'
         }, { status: 500 });
     }
+}
+
+// Fallback function for basic replies when new system fails
+async function generateBasicReply(sender: string, subject: string, body: string) {
+    const basicReply = `Dear Resident,
+
+Thank you for getting in touch about ${subject}.
+
+We have received your enquiry and will respond within 2 working days.
+
+If this is an emergency, please contact our emergency line immediately.
+
+Best regards,
+Building Management Team`;
+
+    return NextResponse.json({
+        success: true,
+        reply: basicReply,
+        subjectSuggestion: `Re: ${subject}`,
+        usedFacts: [],
+        sources: [],
+        timestamp: new Date().toISOString(),
+        buildingContext: null,
+        tone: 'neutral',
+        template: 'basic_fallback'
+    });
 }
 
 // CORS headers for Outlook add-in

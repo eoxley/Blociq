@@ -21,14 +21,13 @@ export async function GET(request: NextRequest) {
     const direction = searchParams.get('direction') // 'incoming', 'outgoing', or null for both
     const limit = parseInt(searchParams.get('limit') || '100')
 
-    // Fetch communications log with relationships
+    // Fetch communications log with relationships (using safer selects)
     let query = supabase
       .from('communications_log')
       .select(`
         *,
         building:buildings(id, name, address),
-        leaseholder:leaseholders(id, name, email),
-        user:users(email)
+        leaseholder:leaseholders(id, first_name, last_name, email)
       `)
       .order('sent_at', { ascending: false })
       .limit(limit)
@@ -48,7 +47,25 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Error fetching communications log:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+
+      // If relationship queries fail, try a simple query without relationships
+      console.log('Attempting fallback query without relationships...');
+      const { data: fallbackLogs, error: fallbackError } = await supabase
+        .from('communications_log')
+        .select('*')
+        .order('sent_at', { ascending: false })
+        .limit(limit);
+
+      if (fallbackError) {
+        return NextResponse.json({ error: fallbackError.message }, { status: 500 });
+      }
+
+      return NextResponse.json({
+        communications: fallbackLogs || [],
+        data: fallbackLogs || [],
+        success: true,
+        fallback: true
+      });
     }
 
     return NextResponse.json({

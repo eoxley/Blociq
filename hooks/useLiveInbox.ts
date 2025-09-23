@@ -343,9 +343,20 @@ export function useLiveInbox(): UseLiveInboxReturn {
             }
           }
         )
-        .subscribe((status) => {
+        .subscribe((status, err) => {
           console.log('🔗 Real-time subscription status:', status);
+          if (err) {
+            console.warn('⚠️ Real-time subscription error:', err);
+          }
+
           setIsRealTimeEnabled(status === 'SUBSCRIBED');
+
+          // Handle connection failures gracefully
+          if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+            console.warn('⚠️ Real-time connection lost, falling back to polling');
+            setIsRealTimeEnabled(false);
+            // Don't show error to user as polling fallback is available
+          }
         });
 
       subscriptionRef.current = channel;

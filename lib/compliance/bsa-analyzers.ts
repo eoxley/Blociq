@@ -9,7 +9,10 @@ export type BSAComplianceStatus =
   | 'remedial_action_pending'
   | 'expired'
   | 'scheduled'
-  | 'under_review';
+  | 'under_review'
+  | 'pending'
+  | 'overdue'
+  | 'upcoming';
 
 export type BSAPriority = 'high' | 'medium' | 'low';
 

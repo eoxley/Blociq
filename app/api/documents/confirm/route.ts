@@ -169,7 +169,7 @@ async function handleComplianceConfirmation(serviceSupabase: any, user: any, doc
 
   // Create or update building compliance asset
   const complianceStatus = analysis_results.compliance_status === 'satisfactory' ? 'compliant' :
-                          analysis_results.compliance_status === 'unsatisfactory' ? 'overdue' : 'requires_action';
+                          analysis_results.compliance_status === 'unsatisfactory' ? 'overdue' : 'pending';
 
   const buildingAssetData = {
     building_id: building_id,
