@@ -175,14 +175,7 @@ async function handleComplianceConfirmation(serviceSupabase: any, user: any, doc
 
   console.log('✅ User confirmed compliance asset creation for building:', building.name);
 
-  // Create or find the compliance document first
-  const docResult = await createOrFindComplianceDocument(serviceSupabase, document_id, building_id, analysis_results);
-  if (!docResult.success) {
-    return NextResponse.json({
-      error: 'Failed to create compliance document',
-      message: docResult.error
-    }, { status: 500 });
-  }
+  // Note: We're creating a compliance asset based on the document analysis, not storing the document itself
 
   // Map document types to compliance asset categories
   const docTypeMapping: Record<string, string> = {
@@ -248,9 +241,10 @@ async function handleComplianceConfirmation(serviceSupabase: any, user: any, doc
     last_renewed_date: analysis_results.inspection_details?.inspection_date || new Date().toISOString().split('T')[0],
     next_due_date: analysis_results.inspection_details?.next_inspection_due,
     status: complianceStatus,
-    latest_document_id: docResult.compliance_document_id, // Use the compliance document ID, not the job ID
+    // Leave null to avoid foreign key violation - the document job ID is tracked elsewhere
+    latest_document_id: null,
     contractor: analysis_results.inspection_details?.inspector_company || analysis_results.inspection_details?.inspector_name,
-    notes: `${analysis_results.document_type} - ${analysis_results.compliance_status}. Certificate: ${analysis_results.inspection_details?.certificate_number || 'N/A'}`,
+    notes: `${analysis_results.document_type} - ${analysis_results.compliance_status}. Certificate: ${analysis_results.inspection_details?.certificate_number || 'N/A'}. Source job: ${document_id}`,
     updated_at: new Date().toISOString()
   };
 

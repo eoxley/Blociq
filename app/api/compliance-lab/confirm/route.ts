@@ -19,20 +19,24 @@ async function createOrFindComplianceDocument(serviceSupabase: any, document_job
       return { success: false, error: 'Document job not found' };
     }
 
-    // Check if a compliance document already exists for this job
-    let { data: existingDoc, error: lookupError } = await serviceSupabase
-      .from('compliance_documents')
-      .select('id')
-      .eq('document_job_id', document_job_id)
-      .single();
+    // Try to check if a compliance document already exists for this job
+    try {
+      let { data: existingDoc, error: lookupError } = await serviceSupabase
+        .from('compliance_documents')
+        .select('id')
+        .eq('document_job_id', document_job_id)
+        .single();
 
-    if (existingDoc) {
-      console.log('📄 Found existing compliance document:', existingDoc.id);
-      return { success: true, compliance_document_id: existingDoc.id };
+      if (existingDoc) {
+        console.log('📄 Found existing compliance document:', existingDoc.id);
+        return { success: true, compliance_document_id: existingDoc.id };
+      }
+    } catch (lookupError) {
+      console.warn('⚠️ Could not lookup existing compliance document:', lookupError);
     }
 
-    // Create new compliance document
-    console.log('📝 Creating new compliance document from job:', document_job_id);
+    // Try to create new compliance document
+    console.log('📝 Attempting to create new compliance document from job:', document_job_id);
     const complianceDocData = {
       building_id: building_id,
       document_job_id: document_job_id,
@@ -46,19 +50,24 @@ async function createOrFindComplianceDocument(serviceSupabase: any, document_job
       created_at: new Date().toISOString()
     };
 
-    const { data: newDoc, error: createError } = await serviceSupabase
-      .from('compliance_documents')
-      .insert(complianceDocData)
-      .select('id')
-      .single();
+    try {
+      const { data: newDoc, error: createError } = await serviceSupabase
+        .from('compliance_documents')
+        .insert(complianceDocData)
+        .select('id')
+        .single();
 
-    if (createError) {
-      console.error('❌ Failed to create compliance document:', createError);
-      return { success: false, error: createError.message };
+      if (createError) {
+        console.warn('⚠️ Failed to create compliance document:', createError.message);
+        return { success: false, error: createError.message };
+      }
+
+      console.log('✅ Created compliance document:', newDoc.id);
+      return { success: true, compliance_document_id: newDoc.id };
+    } catch (createError) {
+      console.warn('⚠️ Could not create compliance document:', createError);
+      return { success: false, error: 'Schema issue - compliance_documents table may not support document_job_id' };
     }
-
-    console.log('✅ Created compliance document:', newDoc.id);
-    return { success: true, compliance_document_id: newDoc.id };
 
   } catch (error) {
     console.error('❌ Error in createOrFindComplianceDocument:', error);
@@ -203,24 +212,16 @@ export async function POST(req: NextRequest) {
     const complianceStatus = analysis_results.compliance_status === 'satisfactory' ? 'compliant' :
                             analysis_results.compliance_status === 'unsatisfactory' ? 'overdue' : 'requires_action';
 
-    // Create or find the compliance document first
-    const docResult = await createOrFindComplianceDocument(serviceSupabase, document_id, building_id, analysis_results);
-    if (!docResult.success) {
-      return NextResponse.json({
-        error: 'Failed to create compliance document',
-        message: docResult.error
-      }, { status: 500 });
-    }
-
     const buildingAssetData = {
       building_id: building_id,
       compliance_asset_id: complianceAsset.id,
       last_renewed_date: analysis_results.inspection_details?.inspection_date || new Date().toISOString().split('T')[0],
       next_due_date: analysis_results.inspection_details?.next_inspection_due,
       status: complianceStatus,
-      latest_document_id: docResult.compliance_document_id, // Use the compliance document ID, not the job ID
+      // Leave null to avoid foreign key violation - the document job ID is tracked elsewhere
+      latest_document_id: null,
       contractor: analysis_results.inspection_details?.inspector_company || analysis_results.inspection_details?.inspector_name,
-      notes: `${analysis_results.document_type} - ${analysis_results.compliance_status}. Certificate: ${analysis_results.inspection_details?.certificate_number || 'N/A'}`,
+      notes: `${analysis_results.document_type} - ${analysis_results.compliance_status}. Certificate: ${analysis_results.inspection_details?.certificate_number || 'N/A'}. Source job: ${document_id}`,
       updated_at: new Date().toISOString()
     };
 
