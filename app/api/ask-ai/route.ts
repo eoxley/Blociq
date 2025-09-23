@@ -929,16 +929,21 @@ export async function POST(req: NextRequest) {
     // 🔐 Ensure authenticated users have agency linkage (skip for Outlook add-in)
     let userAgencyId = null;
     if (!isPublicAccess && !isOutlookAddin && user) {
-      const agencyCheck = await ensureUserHasAgency(supabase, user.id);
-      if (!agencyCheck?.agency_id) {
-        return createResponse({
-          success: false,
-          error: 'This user is not linked to an agency. Please check setup or contact support.',
-          message: 'Unable to establish agency connection. Please contact support to set up your account.'
-        }, 403);
+      try {
+        const agencyCheck = await ensureUserHasAgency(supabase, user.id);
+        if (agencyCheck?.agency_id) {
+          userAgencyId = agencyCheck.agency_id;
+          console.log('✅ User agency verified:', userAgencyId);
+        } else {
+          console.warn('⚠️ Could not establish agency linkage, proceeding with limited access');
+          // Instead of blocking with 403, proceed but log the issue
+          // This allows the user to still use Ask BlocIQ while we debug the agency system
+        }
+      } catch (error) {
+        console.error('❌ Agency check failed:', error);
+        console.warn('⚠️ Proceeding with limited access due to agency check failure');
+        // Allow the user to continue instead of blocking with 403
       }
-      userAgencyId = agencyCheck.agency_id;
-      console.log('✅ User agency verified:', userAgencyId);
     }
 
     // 🔍 Smart Building Detection from Prompt
