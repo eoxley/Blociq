@@ -50,11 +50,26 @@ export async function GET(request: NextRequest) {
 
     console.log('🔐 User authenticated:', user.id);
 
-    // Get user's buildings - try multiple approaches
+    // Get user's agency ID first
+    const { data: userProfile, error: profileError } = await supabase
+      .from('users')
+      .select('agency_id')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError) {
+      console.error('Error fetching user profile:', profileError);
+      return NextResponse.json({
+        success: false,
+        error: 'Failed to fetch user profile'
+      }, { status: 500 });
+    }
+
+    // Get user's buildings through agency membership
     let { data: buildings, error: buildingsError } = await supabase
       .from('buildings')
       .select('id, name, is_hrb')
-      .eq('user_id', user.id);
+      .eq('agency_id', userProfile.agency_id);
     
     // If no buildings found with user_id, try building_members table
     if ((!buildings || buildings.length === 0) && !buildingsError) {
