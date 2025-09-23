@@ -173,7 +173,7 @@ async function handleComplianceConfirmation(serviceSupabase: any, user: any, doc
 
   const buildingAssetData = {
     building_id: building_id,
-    asset_id: complianceAsset.id,
+    compliance_asset_id: complianceAsset.id,
     last_renewed_date: analysis_results.inspection_details?.inspection_date || new Date().toISOString().split('T')[0],
     next_due_date: analysis_results.inspection_details?.next_inspection_due,
     status: complianceStatus,
@@ -187,7 +187,7 @@ async function handleComplianceConfirmation(serviceSupabase: any, user: any, doc
   const { data: buildingAsset, error: buildingAssetError } = await serviceSupabase
     .from('building_compliance_assets')
     .upsert(buildingAssetData, {
-      onConflict: 'building_id,asset_id',
+      onConflict: 'building_id,compliance_asset_id',
       ignoreDuplicates: false
     })
     .select('id')
@@ -212,7 +212,7 @@ async function handleComplianceConfirmation(serviceSupabase: any, user: any, doc
 
     const alertsData = urgentFindings.map((finding: any) => ({
       building_id: building_id,
-      asset_id: complianceAsset.id,
+      compliance_asset_id: complianceAsset.id,
       alert_type: finding.classification === 'C1' ? 'immediate_danger' : 'potentially_dangerous',
       alert_message: `${finding.classification}: ${finding.observation}`,
       finding_details: finding,

@@ -116,7 +116,7 @@ export async function POST(req: Request) {
             .from('building_compliance_assets')
             .upsert({
               building_id: buildingId,
-              asset_id: complianceAsset.id,
+              compliance_asset_id: complianceAsset.id,
               status: 'Compliant',
               notes: `Document: ${document_type} - ${summary}`,
               next_due_date: next_due_date || null,
