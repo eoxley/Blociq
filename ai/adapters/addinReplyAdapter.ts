@@ -472,16 +472,16 @@ KNOWLEDGE BASE:
 ${knowledgeContext || 'No specific building or lease data available in BlocIQ system.'}
 
 REPLY REQUIREMENTS:
-1. Start with salutation: "${salutation}"
-2. Open with: "Thank you for your email regarding ${subjectSummary}."
-3. Generate contextual body using the email thread and knowledge base
-4. Close with: "${signOff}"
-5. The user's signature will be appended automatically
-6. Remove any generic placeholders or boilerplate text
-7. Use British English throughout
-8. Be specific and reference actual data from the knowledge base when available
+1. Subject line: included only once at the top. Do not repeat subject text in the body.
+2. Salutation: "${salutation}" (extracted from sender's name)
+3. Opening line: "Thank you for your email regarding ${subjectSummary}."
+4. Body: respond contextually to the issue raised, using building/lease/compliance data if available.
+5. Closing: "${signOff}," followed by the user's first name only.
+6. Do NOT include placeholders such as [Your Position], [Property Management Company], or the user's full email signature block in the draft.
+7. Keep the tone professional, concise, and UK property management appropriate.
+8. Use British English throughout and reference actual data from the knowledge base when available.
 
-Generate a professional email reply that follows these rules exactly.`;
+Generate a professional email reply that follows these rules exactly and uses the stripped-down format consistently.`;
 
     // Call the unified Ask BlocIQ endpoint with the structured prompt
     const askBlocIQUrl = process.env.NODE_ENV === 'production'
@@ -600,7 +600,7 @@ Generate a professional email reply that follows these rules exactly.`;
     fallback += '<p>For detailed lease-specific information, I may need to review the relevant lease documentation.</p>\n\n';
   }
 
-  fallback += '<p>Kind regards</p>';
+  fallback += '<p>Kind regards,</p>';
 
   return {
     content: fallback,
@@ -653,16 +653,23 @@ async function generateReplyBody(
   // The contextual reply now handles the complete email structure
   let body = contextualReply.content;
 
-  // Ensure the signature is properly appended at the end
-  const signature = userSettings?.signature || 'BlocIQ Property Management';
+  // Extract user's first name from signature or use default
+  let userFirstName = 'BlocIQ';
+  if (userSettings?.signature) {
+    // Try to extract first name from signature
+    const nameParts = userSettings.signature.split(/\s+/);
+    if (nameParts.length > 0 && nameParts[0] && !nameParts[0].toLowerCase().includes('blociq')) {
+      userFirstName = nameParts[0];
+    }
+  }
 
   // Check if the body already ends with a signature or sign-off
   if (!body.includes('Kind regards') && !body.includes('Yours sincerely')) {
-    body += '<p>Kind regards</p>';
+    body += '<p>Kind regards,</p>';
   }
 
-  // Append user signature
-  body += `<br><p>${signature}</p>`;
+  // Append only the user's first name
+  body += `<br><p>${userFirstName}</p>`;
 
   return {
     bodyHtml: body,
