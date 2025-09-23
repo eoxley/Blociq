@@ -106,7 +106,7 @@ async function callAskBlocIQ(prompt, emailContext) {
     console.log('📤 Request body:', requestBody);
 
     // Call the unified Ask BlocIQ endpoint
-    const response = await fetch('http://localhost:3001/api/addin/chat', {
+    const response = await fetch('https://www.blociq.co.uk/api/addin/chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
