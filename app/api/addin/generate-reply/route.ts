@@ -1,7 +1,6 @@
 // app/api/addin/generate-reply/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
-import { detectTone } from '@/lib/addin/tone';
 
 export async function POST(request: NextRequest) {
     try {
@@ -46,68 +45,67 @@ export async function POST(request: NextRequest) {
             }, { status: 401 });
         }
 
-        // Step 1: Enrich context using new system
-        const enrichResponse = await fetch(`${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/api/outlook/enrich`, {
+        // Use unified Ask BlocIQ system with email_reply system prompt
+        const askResponse = await fetch(`${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/api/ask-ai`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': request.headers.get('Authorization') || '',
+                'Cookie': request.headers.get('Cookie') || ''
+            },
             body: JSON.stringify({
-                senderEmail: emailSender,
-                subject: emailSubject,
-                bodyPreview: emailBody,
-                conversationId: conversationId || ''
+                message: `Generate a professional email reply to this message:
+
+Subject: ${emailSubject}
+From: ${emailSender}
+Body: ${emailBody}
+
+Please provide a context-aware, professional response following BlocIQ standards.`,
+                emailContext: {
+                    subject: emailSubject,
+                    sender: emailSender,
+                    body: emailBody,
+                    conversationId: conversationId || ''
+                },
+                systemPrompt: 'email_reply',
+                source: 'outlook_addin_reply'
             })
         });
 
-        if (!enrichResponse.ok) {
-            console.error('Enrichment failed, falling back to basic reply');
+        if (!askResponse.ok) {
+            console.error('Ask BlocIQ failed, falling back to basic reply');
             return generateBasicReply(emailSender, emailSubject, emailBody);
         }
 
-        const enrichResult = await enrichResponse.json();
-        if (!enrichResult.success) {
-            console.error('Enrichment error:', enrichResult.error);
+        const askResult = await askResponse.json();
+        if (!askResult.success) {
+            console.error('Ask BlocIQ error:', askResult.error);
             return generateBasicReply(emailSender, emailSubject, emailBody);
         }
 
-        // Step 2: Detect tone
-        const toneResult = detectTone(emailBody);
+        // Parse the structured response from Ask BlocIQ
+        const response = askResult.response;
+        let reply = response;
+        let usedFacts = [];
+        let buildingContext = null;
 
-        // Step 3: Generate draft using new system
-        const draftResponse = await fetch(`${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/api/outlook/draft`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                enrichment: enrichResult.data,
-                tone: toneResult.label,
-                rawEmailBody: emailBody
-            })
-        });
-
-        if (!draftResponse.ok) {
-            console.error('Draft generation failed, falling back to basic reply');
-            return generateBasicReply(emailSender, emailSubject, emailBody);
-        }
-
-        const draftResult = await draftResponse.json();
-        if (!draftResult.success) {
-            console.error('Draft error:', draftResult.error);
-            return generateBasicReply(emailSender, emailSubject, emailBody);
+        // Extract metadata if available
+        if (askResult.metadata) {
+            usedFacts = askResult.metadata.usedFacts || [];
+            buildingContext = askResult.metadata.buildingContext || null;
         }
 
         // Return in the format expected by Outlook add-in
         return NextResponse.json({
             success: true,
-            reply: draftResult.data.bodyHtml,
+            reply: reply,
             subjectSuggestion: `Re: ${emailSubject}`,
-            usedFacts: draftResult.data.usedFacts || [],
+            usedFacts: usedFacts,
             sources: [],
             timestamp: new Date().toISOString(),
-            buildingContext: enrichResult.data.building ? {
-                building: enrichResult.data.building.name,
-                unit: enrichResult.data.unitLabel
-            } : null,
-            tone: toneResult.label,
-            template: draftResult.data.template
+            buildingContext: buildingContext,
+            tone: 'professional',
+            template: 'unified_system'
         });
 
     } catch (error) {
@@ -121,20 +119,25 @@ export async function POST(request: NextRequest) {
 
 // Fallback function for basic replies when new system fails
 async function generateBasicReply(sender: string, subject: string, body: string) {
-    // Extract first name from sender for proper salutation and closing
+    // Extract first name from sender for proper salutation
     const senderName = extractFirstNameFromSender(sender);
     const salutation = senderName ? `Dear ${senderName}` : 'Dear Resident';
 
-    const basicReply = `${salutation},
+    // Follow the new 7-step structure even in fallback
+    const basicReply = `Subject: Re: ${subject}
 
-Thank you for your email regarding ${subject}.
+${salutation},
 
-We have received your enquiry and will respond within 2 working days.
+Thank you for reaching out to us regarding your enquiry.
 
-If this is an emergency, please contact our emergency line immediately.
+We have received your message and will review it carefully. Our team will respond within 2 working days with a detailed response.
+
+If this matter is urgent or concerns an emergency, please contact our emergency line immediately for immediate assistance.
+
+Thank you for your patience.
 
 Kind regards,
-BlocIQ`;
+BlocIQ Property Management Team`;
 
     return NextResponse.json({
         success: true,
@@ -144,8 +147,8 @@ BlocIQ`;
         sources: [],
         timestamp: new Date().toISOString(),
         buildingContext: null,
-        tone: 'neutral',
-        template: 'basic_fallback'
+        tone: 'professional',
+        template: 'structured_fallback'
     });
 }
 
