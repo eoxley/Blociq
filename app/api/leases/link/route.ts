@@ -242,16 +242,46 @@ export async function POST(req: NextRequest) {
       null;
 
     // Check for existing lease for this building/unit combination
-    const { data: existingLease } = await supabase
+    // Be more specific about the conflict - check if this exact lease already exists
+    let conflictQuery = supabase
       .from('leases')
-      .select('id')
-      .eq('building_id', buildingId)
-      .single();
+      .select('id, unit_number, leaseholder_name, document_job_id')
+      .eq('building_id', buildingId);
 
-    if (existingLease) {
+    // If we have a document job ID, check for that specific document
+    if (documentJobId) {
+      conflictQuery = conflictQuery.eq('document_job_id', documentJobId);
+    }
+
+    // If we have unit scope, check for that specific unit
+    if (scope === 'unit' && unitId) {
+      conflictQuery = conflictQuery.eq('unit_number', `Unit ${unitId}`);
+    }
+
+    const { data: existingLeases } = await conflictQuery;
+
+    if (existingLeases && existingLeases.length > 0) {
+      const existingLease = existingLeases[0];
+
+      // If it's the same document job, return success (already processed)
+      if (existingLease.document_job_id === documentJobId) {
+        return NextResponse.json({
+          success: true,
+          lease: existingLease,
+          message: 'Lease already linked from this document',
+          action: 'already_exists'
+        });
+      }
+
+      // Otherwise, it's a genuine conflict
       return NextResponse.json({
         error: 'Lease already exists',
-        message: `A lease already exists for this building.`
+        message: `A lease already exists for this ${scope === 'unit' ? 'unit' : 'building'}. Existing lease: ${existingLease.leaseholder_name || 'Unknown'} (${existingLease.unit_number || 'Building-wide'})`,
+        existing_lease: {
+          id: existingLease.id,
+          unit_number: existingLease.unit_number,
+          leaseholder_name: existingLease.leaseholder_name
+        }
       }, { status: 409 });
     }
 
@@ -287,6 +317,10 @@ export async function POST(req: NextRequest) {
       ).map((s: any) => s.content).flat() || [],
       file_path: `lease-lab/${documentJobId}.pdf`,
       ocr_text: documentJob.filename || 'Document',
+      // New columns
+      scope: scope,
+      document_job_id: documentJobId,
+      analysis_json: finalAnalysisJson,
       metadata: {
         created_from_job: documentJobId,
         original_filename: documentJob.filename,

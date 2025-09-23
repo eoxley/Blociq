@@ -85,19 +85,37 @@ export async function POST(req: Request) {
     console.log("🏢 Building ID from context:", buildingId);
     console.log("🏠 Unit ID from context:", unitId);
 
-    // 🔍 Comprehensive data gathering
-    const buildingData = await gatherBuildingData(supabase, buildingId);
-    const unitsData = await gatherUnitsData(supabase, buildingId);
-    const leaseholdersData = await gatherLeaseholdersData(supabase, buildingId);
-    const complianceData = await gatherComplianceData(supabase, buildingId);
-    const emailsData = await gatherEmailsData(supabase, buildingId);
-    const tasksData = await gatherTasksData(supabase, buildingId);
-    const documentsData = await gatherDocumentsData(supabase, buildingId);
-    const eventsData = await gatherEventsData(supabase, buildingId);
-    const majorWorksData = await gatherMajorWorksData(supabase, buildingId);
+    // Get user's agency_id for secure data filtering
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    const { data: userProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('agency_id')
+      .eq('id', session.user.id)
+      .single();
+
+    if (profileError || !userProfile?.agency_id) {
+      return NextResponse.json({ error: 'User agency not found' }, { status: 403 });
+    }
+
+    const userAgencyId = userProfile.agency_id;
+    console.log("🏢 User agency for secure filtering:", userAgencyId);
+
+    // 🔍 Comprehensive data gathering (now agency-filtered for security)
+    const buildingData = await gatherBuildingData(supabase, userAgencyId, buildingId);
+    const unitsData = await gatherUnitsData(supabase, userAgencyId, buildingId);
+    const leaseholdersData = await gatherLeaseholdersData(supabase, userAgencyId, buildingId);
+    const complianceData = await gatherComplianceData(supabase, userAgencyId, buildingId);
+    const emailsData = await gatherEmailsData(supabase, userAgencyId, buildingId);
+    const tasksData = await gatherTasksData(supabase, userAgencyId, buildingId);
+    const documentsData = await gatherDocumentsData(supabase, userAgencyId, buildingId);
+    const eventsData = await gatherEventsData(supabase, userAgencyId, buildingId);
+    const majorWorksData = await gatherMajorWorksData(supabase, userAgencyId, buildingId);
 
     // 🔍 Enhanced document search with semantic matching
-    const relevantDocuments = await findRelevantDocuments(supabase, message, buildingId);
+    const relevantDocuments = await findRelevantDocuments(supabase, userAgencyId, message, buildingId);
     const documentContext = relevantDocuments.length > 0 
       ? relevantDocuments.map((doc: any) => 
           `Document: ${doc.file_name}\nType: ${doc.type}\nSummary: ${doc.summary || 'No summary available'}\n\nRelevant Content:\n${doc.text_content?.substring(0, 2000) || 'No text content available'}`
@@ -204,21 +222,21 @@ Provide accurate, detailed answers based on the data provided. If information is
   }
 }
 
-// Data gathering functions (same as ask-ai endpoint)
-async function gatherBuildingData(supabase: any, buildingId?: string) {
+// Data gathering functions (now agency-filtered for security)
+async function gatherBuildingData(supabase: any, userAgencyId: string, buildingId?: string) {
   try {
-    let query = supabase.from('buildings').select('*')
-    
+    let query = supabase.from('buildings').select('*').eq('agency_id', userAgencyId)
+
     if (buildingId) {
       query = query.eq('id', buildingId)
     }
-    
+
     const { data: buildings } = await query
-    
+
     if (buildingId) {
       return buildings?.[0] || null
     }
-    
+
     return buildings || []
   } catch (error) {
     console.error('Error gathering building data:', error)
@@ -226,12 +244,13 @@ async function gatherBuildingData(supabase: any, buildingId?: string) {
   }
 }
 
-async function gatherUnitsData(supabase: any, buildingId?: string) {
+async function gatherUnitsData(supabase: any, userAgencyId: string, buildingId?: string) {
   try {
     let query = supabase
       .from('units')
       .select(`
         *,
+        buildings!inner(agency_id),
         leaseholders (
           id,
           name,
@@ -250,11 +269,12 @@ async function gatherUnitsData(supabase: any, buildingId?: string) {
           status
         )
       `)
-    
+      .eq('buildings.agency_id', userAgencyId)
+
     if (buildingId) {
       query = query.eq('building_id', buildingId)
     }
-    
+
     const { data: units } = await query
     return units || []
   } catch (error) {
@@ -263,7 +283,7 @@ async function gatherUnitsData(supabase: any, buildingId?: string) {
   }
 }
 
-async function gatherLeaseholdersData(supabase: any, buildingId?: string) {
+async function gatherLeaseholdersData(supabase: any, userAgencyId: string, buildingId?: string) {
   try {
     let query = supabase
       .from('leaseholders')
@@ -272,14 +292,16 @@ async function gatherLeaseholdersData(supabase: any, buildingId?: string) {
         units!inner (
           id,
           unit_number,
-          building_id
+          building_id,
+          buildings!inner(agency_id)
         )
       `)
-    
+      .eq('units.buildings.agency_id', userAgencyId)
+
     if (buildingId) {
       query = query.eq('units.building_id', buildingId)
     }
-    
+
     const { data: leaseholders } = await query
     return leaseholders || []
   } catch (error) {
@@ -288,7 +310,7 @@ async function gatherLeaseholdersData(supabase: any, buildingId?: string) {
   }
 }
 
-async function gatherComplianceData(supabase: any, buildingId?: string) {
+async function gatherComplianceData(supabase: any, userAgencyId: string, buildingId?: string) {
   try {
     let query = supabase
       .from('building_compliance_assets')
@@ -298,13 +320,15 @@ async function gatherComplianceData(supabase: any, buildingId?: string) {
           name,
           category,
           description
-        )
+        ),
+        buildings!inner(agency_id)
       `)
-    
+      .eq('buildings.agency_id', userAgencyId)
+
     if (buildingId) {
       query = query.eq('building_id', buildingId)
     }
-    
+
     const { data: compliance } = await query
     return compliance || []
   } catch (error) {
@@ -313,18 +337,20 @@ async function gatherComplianceData(supabase: any, buildingId?: string) {
   }
 }
 
-async function gatherEmailsData(supabase: any, buildingId?: string) {
+async function gatherEmailsData(supabase: any, userAgencyId: string, buildingId?: string) {
   try {
+    // Filter emails by agency_id if the table has that column, otherwise use building relationship
     let query = supabase
       .from('incoming_emails')
       .select('*')
+      .eq('agency_id', userAgencyId)
       .order('received_at', { ascending: false })
       .limit(20)
-    
+
     if (buildingId) {
       query = query.eq('building_id', buildingId)
     }
-    
+
     const { data: emails } = await query
     return emails || []
   } catch (error) {
@@ -333,18 +359,22 @@ async function gatherEmailsData(supabase: any, buildingId?: string) {
   }
 }
 
-async function gatherTasksData(supabase: any, buildingId?: string) {
+async function gatherTasksData(supabase: any, userAgencyId: string, buildingId?: string) {
   try {
     let query = supabase
       .from('building_todos')
-      .select('*')
+      .select(`
+        *,
+        buildings!inner(agency_id)
+      `)
+      .eq('buildings.agency_id', userAgencyId)
       .order('due_date', { ascending: true })
       .limit(20)
-    
+
     if (buildingId) {
       query = query.eq('building_id', buildingId)
     }
-    
+
     const { data: tasks } = await query
     return tasks || []
   } catch (error) {
@@ -353,18 +383,22 @@ async function gatherTasksData(supabase: any, buildingId?: string) {
   }
 }
 
-async function gatherDocumentsData(supabase: any, buildingId?: string) {
+async function gatherDocumentsData(supabase: any, userAgencyId: string, buildingId?: string) {
   try {
     let query = supabase
       .from('building_documents')
-      .select('*')
+      .select(`
+        *,
+        buildings!inner(agency_id)
+      `)
+      .eq('buildings.agency_id', userAgencyId)
       .order('created_at', { ascending: false })
       .limit(20)
-    
+
     if (buildingId) {
       query = query.eq('building_id', buildingId)
     }
-    
+
     const { data: documents } = await query
     return documents || []
   } catch (error) {
@@ -373,19 +407,20 @@ async function gatherDocumentsData(supabase: any, buildingId?: string) {
   }
 }
 
-async function gatherEventsData(supabase: any, buildingId?: string) {
+async function gatherEventsData(supabase: any, userAgencyId: string, buildingId?: string) {
   try {
     let query = supabase
       .from('property_events')
       .select('*')
+      .eq('agency_id', userAgencyId)
       .gte('start_time', new Date().toISOString())
       .order('start_time', { ascending: true })
       .limit(20)
-    
+
     if (buildingId) {
       query = query.eq('building_id', buildingId)
     }
-    
+
     const { data: events } = await query
     return events || []
   } catch (error) {
@@ -394,7 +429,7 @@ async function gatherEventsData(supabase: any, buildingId?: string) {
   }
 }
 
-async function gatherMajorWorksData(supabase: any, buildingId?: string) {
+async function gatherMajorWorksData(supabase: any, userAgencyId: string, buildingId?: string) {
   try {
     let query = supabase
       .from('major_works_projects')
@@ -402,15 +437,17 @@ async function gatherMajorWorksData(supabase: any, buildingId?: string) {
         *,
         major_works_documents (*),
         major_works_logs (*),
-        major_works_observations (*)
+        major_works_observations (*),
+        buildings!inner(agency_id)
       `)
+      .eq('buildings.agency_id', userAgencyId)
       .order('created_at', { ascending: false })
       .limit(20)
-    
+
     if (buildingId) {
       query = query.eq('building_id', buildingId)
     }
-    
+
     const { data: majorWorks } = await query
     return majorWorks || []
   } catch (error) {
@@ -419,14 +456,23 @@ async function gatherMajorWorksData(supabase: any, buildingId?: string) {
   }
 }
 
-async function findRelevantDocuments(supabase: any, userQuestion: string, buildingId?: string) {
+async function findRelevantDocuments(supabase: any, userAgencyId: string, userQuestion: string, buildingId?: string) {
   try {
     console.log('🔍 Searching for relevant documents...');
-    
-    // Build query
+
+    // Build query with agency filtering
     let query = supabase
       .from('building_documents')
-      .select('file_name, text_content, type, summary, building_id, created_at')
+      .select(`
+        file_name,
+        text_content,
+        type,
+        summary,
+        building_id,
+        created_at,
+        buildings!inner(agency_id)
+      `)
+      .eq('buildings.agency_id', userAgencyId)
       .limit(20); // Increased limit for better matching
 
     // Filter by building if specified

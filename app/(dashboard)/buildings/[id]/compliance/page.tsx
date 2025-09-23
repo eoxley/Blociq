@@ -398,6 +398,106 @@ export default function BuildingCompliancePage() {
                   <Settings className="h-4 w-4" />
                   Quick Setup
                 </button>
+
+                <button
+                  onClick={async () => {
+                    try {
+                      const fireRiskData = {
+                        document_type: "Fire Risk Assessment",
+                        compliance_status: "Requires-Action",
+                        property_details: {
+                          address: "42 Ashwood Gardens, London, SW19 8JR",
+                          description: "Residential House (HMO)",
+                          client: "Ashwood Property Management Ltd"
+                        },
+                        inspection_details: {
+                          inspection_date: "2024-03-15",
+                          next_inspection_due: "2025-03-15",
+                          inspector: "Michael Thompson",
+                          company: "Fire Safety Consultants Ltd",
+                          certificate_number: "FRA-ASH-2024-003"
+                        },
+                        key_findings: [
+                          {
+                            priority: "High",
+                            urgency: "IMMEDIATE",
+                            description: "Smoke detector in hallway not functioning",
+                            location: "Ground Floor",
+                            action: "Replace faulty smoke detector immediately"
+                          },
+                          {
+                            priority: "Medium",
+                            urgency: "WITHIN 1 MONTH",
+                            description: "Emergency lighting unit requires battery replacement",
+                            location: "Stairwell",
+                            action: "Replace emergency lighting battery"
+                          },
+                          {
+                            priority: "Medium",
+                            urgency: "WITHIN 2 MONTHS",
+                            description: "Fire extinguisher requires annual service",
+                            location: "Kitchen",
+                            action: "Arrange professional service"
+                          },
+                          {
+                            priority: "Low",
+                            urgency: "WITHIN 3 MONTHS",
+                            description: "Fire door closer requires adjustment",
+                            location: "Bedroom 3",
+                            action: "Adjust door closer mechanism"
+                          }
+                        ],
+                        recommendations: [
+                          {
+                            description: "Replace faulty smoke detector in ground floor hallway",
+                            reason: "Faulty smoke detector poses immediate fire risk",
+                            timeframe: "Within 24 hours",
+                            reference: "Regulatory Reform (Fire Safety) Order 2005"
+                          },
+                          {
+                            description: "Replace emergency lighting battery in main stairwell",
+                            reason: "Non-functional emergency lighting poses risk in case of fire",
+                            timeframe: "Within 1 month",
+                            reference: "Regulatory Reform (Fire Safety) Order 2005"
+                          }
+                        ],
+                        risk_assessment: {
+                          overall_risk: "MEDIUM",
+                          immediate_hazards: ["Faulty smoke detector in ground floor hallway"]
+                        },
+                        regulatory_compliance: {
+                          meets_current_standards: false,
+                          relevant_regulations: "Regulatory Reform (Fire Safety) Order 2005"
+                        },
+                        expiry_date: "2025-03-15"
+                      };
+
+                      const response = await fetch('/api/compliance/create-from-analysis', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          buildingId: buildingId,
+                          analysisData: fireRiskData,
+                          documentJobId: 'test-fra-' + Date.now()
+                        })
+                      });
+
+                      const result = await response.json();
+                      if (result.success) {
+                        toast.success(`Fire Risk Assessment processed! Created ${result.actions_created} action items`);
+                        fetchComplianceData();
+                      } else {
+                        toast.error('Processing failed: ' + result.error);
+                      }
+                    } catch (err) {
+                      toast.error('Processing failed: ' + err.message);
+                    }
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-red-600/90 backdrop-blur-sm text-white rounded-lg hover:bg-red-700 transition-all duration-200 text-sm"
+                >
+                  <Shield className="h-4 w-4" />
+                  Test Fire Assessment
+                </button>
                 
                 <button
                   onClick={() => router.push('/documents/compliance')}

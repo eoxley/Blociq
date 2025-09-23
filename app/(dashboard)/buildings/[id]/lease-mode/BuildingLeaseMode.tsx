@@ -66,7 +66,8 @@ export default function BuildingLeaseMode({ building }: { building: Building }) 
 
   const fetchLeases = async () => {
     try {
-      const { data, error } = await supabase
+      // Try to fetch with analysis_json first, fallback if column doesn't exist
+      let query = supabase
         .from('leases')
         .select(`
           id,
@@ -84,13 +85,52 @@ export default function BuildingLeaseMode({ building }: { building: Building }) 
           ocr_text,
           metadata,
           created_at,
-          updated_at
+          updated_at,
+          analysis_json,
+          scope,
+          apportionment
         `)
         .eq('building_id', building.id)
         .order('created_at', { ascending: false })
 
-      if (error) throw error
-      setLeases(data || [])
+      const { data, error } = await query
+
+      if (error) {
+        // If analysis_json column doesn't exist, try without it
+        if (error.code === '42703') {
+          console.log('analysis_json column not found, querying without it')
+          const fallbackQuery = supabase
+            .from('leases')
+            .select(`
+              id,
+              unit_number,
+              leaseholder_name,
+              start_date,
+              end_date,
+              status,
+              ground_rent,
+              service_charge_percentage,
+              responsibilities,
+              restrictions,
+              rights,
+              file_path,
+              ocr_text,
+              metadata,
+              created_at,
+              updated_at
+            `)
+            .eq('building_id', building.id)
+            .order('created_at', { ascending: false })
+
+          const { data: fallbackData, error: fallbackError } = await fallbackQuery
+          if (fallbackError) throw fallbackError
+          setLeases(fallbackData || [])
+        } else {
+          throw error
+        }
+      } else {
+        setLeases(data || [])
+      }
     } catch (error) {
       console.error('Error fetching leases:', error)
       toast.error('Failed to load leases')

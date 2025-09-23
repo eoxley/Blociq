@@ -1,39 +1,19 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import {
-  ChevronDown,
-  ChevronRight,
-  Shield,
-  Home,
-  Scissors,
-  AlertTriangle,
-  DollarSign,
+  ArrowLeft,
   FileText,
-  Bell,
-  Gavel,
-  PawPrint,
-  Briefcase,
-  Wrench,
-  RotateCcw,
-  ArrowLeft
+  Calendar,
+  DollarSign,
+  Shield,
+  AlertTriangle,
+  Building2,
+  Home,
+  Users,
+  Clock,
+  X
 } from 'lucide-react'
-import { useSupabase } from '@/components/SupabaseProvider'
-import { toast } from 'sonner'
-
-interface LeaseClause {
-  id: string
-  clause_type: string
-  original_text: string
-  ai_summary: string
-  interpretation: string
-  parties: any
-  obligations: any
-  permissions: any
-  restrictions_data: any
-  confidence_score: number
-  extraction_method: string
-}
 
 interface Lease {
   id: string
@@ -44,6 +24,14 @@ interface Lease {
   status: string
   ground_rent: string
   service_charge_percentage: number
+  analysis_json?: any
+  responsibilities?: string[]
+  restrictions?: string[]
+  rights?: string[]
+  scope?: string
+  apportionment?: number
+  created_at: string
+  updated_at: string
 }
 
 interface ClauseViewerProps {
@@ -52,183 +40,318 @@ interface ClauseViewerProps {
   onBack: () => void
 }
 
-interface ClauseSection {
-  type: string
-  title: string
-  icon: React.ComponentType<{ className?: string }>
-  description: string
-  clauses: LeaseClause[]
-}
-
 export default function ClauseViewer({ lease, buildingId, onBack }: ClauseViewerProps) {
-  const { supabase } = useSupabase()
-  const [clauses, setClauses] = useState<LeaseClause[]>([])
-  const [loading, setLoading] = useState(true)
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
+  const [activeTab, setActiveTab] = useState('overview')
 
-  useEffect(() => {
-    fetchLeaseClauses()
-  }, [lease.id])
+  const analysis = lease.analysis_json || {}
 
-  const fetchLeaseClauses = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('lease_clauses')
-        .select('*')
-        .eq('lease_id', lease.id)
-        .order('clause_type')
+  const tabs = [
+    { id: 'overview', label: 'Overview', icon: FileText },
+    { id: 'details', label: 'Property Details', icon: Home },
+    { id: 'sections', label: 'Detailed Sections', icon: FileText },
+    { id: 'provisions', label: 'Other Provisions', icon: Shield },
+  ]
 
-      if (error) {
-        if (error.code === '42P01' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
-          // Table doesn't exist - handle gracefully
-          console.log('Lease clauses table not yet available')
-          setClauses([])
-        } else {
-          throw error
-        }
-      } else {
-        setClauses(data || [])
-      }
-    } catch (error) {
-      console.error('Error fetching lease clauses:', error)
-      // Don't show error toast for missing table - just log it
-      console.log('Lease clause analysis feature not yet available')
-      setClauses([])
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const toggleSection = (sectionType: string) => {
-    const newExpanded = new Set(expandedSections)
-    if (newExpanded.has(sectionType)) {
-      newExpanded.delete(sectionType)
-    } else {
-      newExpanded.add(sectionType)
-    }
-    setExpandedSections(newExpanded)
-  }
-
-  const clauseSections: ClauseSection[] = [
-    {
-      type: 'insurance',
-      title: 'Insurance Obligations',
-      icon: Shield,
-      description: 'Insurance requirements and responsibilities',
-      clauses: clauses.filter(c => c.clause_type === 'insurance')
-    },
-    {
-      type: 'assignment',
-      title: 'Assignment Rights',
-      icon: FileText,
-      description: 'Rules for transferring lease ownership',
-      clauses: clauses.filter(c => c.clause_type === 'assignment')
-    },
-    {
-      type: 'subletting',
-      title: 'Subletting Rules',
-      icon: Home,
-      description: 'Permissions and restrictions for subletting',
-      clauses: clauses.filter(c => c.clause_type === 'subletting')
-    },
-    {
-      type: 'consents',
-      title: 'Consent Requirements',
-      icon: FileText,
-      description: 'Activities requiring landlord consent',
-      clauses: clauses.filter(c => c.clause_type === 'consents')
-    },
-    {
-      type: 'alterations',
-      title: 'Alterations & Improvements',
-      icon: Wrench,
-      description: 'Rules for modifying the property',
-      clauses: clauses.filter(c => c.clause_type === 'alterations')
-    },
-    {
-      type: 'pets',
-      title: 'Pet Policy',
-      icon: PawPrint,
-      description: 'Rules regarding pets in the property',
-      clauses: clauses.filter(c => c.clause_type === 'pets')
-    },
-    {
-      type: 'business_use',
-      title: 'Business Use',
-      icon: Briefcase,
-      description: 'Commercial activity permissions',
-      clauses: clauses.filter(c => c.clause_type === 'business_use')
-    },
-    {
-      type: 'restrictions',
-      title: 'General Restrictions',
-      icon: AlertTriangle,
-      description: 'General prohibitions and limitations',
-      clauses: clauses.filter(c => c.clause_type === 'restrictions')
-    },
-    {
-      type: 'ground_rent',
-      title: 'Ground Rent',
-      icon: DollarSign,
-      description: 'Ground rent obligations and payment terms',
-      clauses: clauses.filter(c => c.clause_type === 'ground_rent')
-    },
-    {
-      type: 'service_charge',
-      title: 'Service Charges',
-      icon: DollarSign,
-      description: 'Service charge obligations and calculations',
-      clauses: clauses.filter(c => c.clause_type === 'service_charge')
-    },
-    {
-      type: 'repairs',
-      title: 'Repair Responsibilities',
-      icon: Wrench,
-      description: 'Maintenance and repair obligations',
-      clauses: clauses.filter(c => c.clause_type === 'repairs')
-    },
-    {
-      type: 'notices',
-      title: 'Notices & Communications',
-      icon: Bell,
-      description: 'Notice requirements and procedures',
-      clauses: clauses.filter(c => c.clause_type === 'notices')
-    },
-    {
-      type: 'forfeiture',
-      title: 'Forfeiture Clauses',
-      icon: Gavel,
-      description: 'Conditions for lease termination',
-      clauses: clauses.filter(c => c.clause_type === 'forfeiture')
-    },
-    {
-      type: 'renewals',
-      title: 'Renewal Terms',
-      icon: RotateCcw,
-      description: 'Lease renewal and extension provisions',
-      clauses: clauses.filter(c => c.clause_type === 'renewals')
-    }
-  ].filter(section => section.clauses.length > 0)
-
-  if (loading) {
-    return (
-      <div className="space-y-8">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Lease Index
-          </button>
-        </div>
-        <div className="animate-pulse space-y-4">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="h-24 bg-gray-200 rounded-lg"></div>
-          ))}
+  const renderOverview = () => (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-medium text-gray-900 mb-3">Executive Summary</h3>
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <p className="text-gray-700 leading-relaxed">
+            {analysis.executive_summary || 'No executive summary available. This lease analysis provides a comprehensive breakdown of all key terms, obligations, and rights contained within the lease agreement.'}
+          </p>
         </div>
       </div>
-    )
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-blue-50 p-4 rounded-lg">
+          <div className="flex items-center space-x-2 mb-2">
+            <Calendar className="h-5 w-5 text-blue-600" />
+            <h4 className="font-medium text-blue-900">Lease Term</h4>
+          </div>
+          <p className="text-sm text-blue-800">
+            {lease.start_date && lease.end_date
+              ? `${new Date(lease.start_date).getFullYear()} - ${new Date(lease.end_date).getFullYear()}`
+              : 'Term not specified'}
+          </p>
+        </div>
+
+        <div className="bg-green-50 p-4 rounded-lg">
+          <div className="flex items-center space-x-2 mb-2">
+            <Users className="h-5 w-5 text-green-600" />
+            <h4 className="font-medium text-green-900">Leaseholder</h4>
+          </div>
+          <p className="text-sm text-green-800">
+            {lease.leaseholder_name || 'Not specified'}
+          </p>
+        </div>
+
+        <div className="bg-yellow-50 p-4 rounded-lg">
+          <div className="flex items-center space-x-2 mb-2">
+            <DollarSign className="h-5 w-5 text-yellow-600" />
+            <h4 className="font-medium text-yellow-900">Ground Rent</h4>
+          </div>
+          <p className="text-sm text-yellow-800">
+            {lease.ground_rent || 'Not specified'}
+          </p>
+        </div>
+
+        <div className="bg-purple-50 p-4 rounded-lg">
+          <div className="flex items-center space-x-2 mb-2">
+            <DollarSign className="h-5 w-5 text-purple-600" />
+            <h4 className="font-medium text-purple-900">Service Charge</h4>
+          </div>
+          <p className="text-sm text-purple-800">
+            {lease.service_charge_percentage ? `${lease.service_charge_percentage}%` :
+             lease.apportionment ? `${lease.apportionment}%` : 'Not specified'}
+          </p>
+        </div>
+      </div>
+
+      {/* Scope Information */}
+      <div className="bg-indigo-50 border border-indigo-200 p-4 rounded-lg">
+        <div className="flex items-center space-x-2 mb-2">
+          {lease.scope === 'building' ? (
+            <Building2 className="h-5 w-5 text-indigo-600" />
+          ) : (
+            <Home className="h-5 w-5 text-indigo-600" />
+          )}
+          <h4 className="font-medium text-indigo-900">
+            {lease.scope === 'building' ? 'Building-wide Lease' : 'Unit-specific Lease'}
+          </h4>
+        </div>
+        <p className="text-sm text-indigo-800">
+          {lease.scope === 'building'
+            ? 'This lease contains clauses that apply to all units in the building.'
+            : `This lease is specific to ${lease.unit_number || 'a particular unit'}.`}
+        </p>
+      </div>
+    </div>
+  )
+
+  const renderPropertyDetails = () => (
+    <div className="space-y-6">
+      {analysis.basic_property_details && (
+        <div>
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Basic Property Details</h3>
+          <div className="space-y-4">
+            {analysis.basic_property_details.property_description && (
+              <div>
+                <h4 className="font-medium text-gray-900 mb-2">Property Description</h4>
+                <p className="text-gray-700 bg-gray-50 p-3 rounded">
+                  {analysis.basic_property_details.property_description}
+                </p>
+              </div>
+            )}
+
+            {analysis.basic_property_details.lease_term && (
+              <div>
+                <h4 className="font-medium text-gray-900 mb-2">Lease Term</h4>
+                <p className="text-gray-700 bg-gray-50 p-3 rounded">
+                  {analysis.basic_property_details.lease_term}
+                </p>
+              </div>
+            )}
+
+            {analysis.basic_property_details.parties && Array.isArray(analysis.basic_property_details.parties) && (
+              <div>
+                <h4 className="font-medium text-gray-900 mb-2">Parties</h4>
+                <ul className="space-y-2">
+                  {analysis.basic_property_details.parties.map((party: string, index: number) => (
+                    <li key={index} className="text-gray-700 bg-gray-50 p-3 rounded">
+                      {party}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {analysis.basic_property_details.title_number && (
+              <div>
+                <h4 className="font-medium text-gray-900 mb-2">Title Number</h4>
+                <p className="text-gray-700 bg-gray-50 p-3 rounded">
+                  {analysis.basic_property_details.title_number}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* If no analysis data, show basic lease info */}
+      {!analysis.basic_property_details && (
+        <div>
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Lease Information</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h4 className="font-medium text-gray-900 mb-2">Unit</h4>
+              <p className="text-gray-700">{lease.unit_number}</p>
+            </div>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h4 className="font-medium text-gray-900 mb-2">Leaseholder</h4>
+              <p className="text-gray-700">{lease.leaseholder_name}</p>
+            </div>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h4 className="font-medium text-gray-900 mb-2">Start Date</h4>
+              <p className="text-gray-700">{new Date(lease.start_date).toLocaleDateString('en-GB')}</p>
+            </div>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h4 className="font-medium text-gray-900 mb-2">End Date</h4>
+              <p className="text-gray-700">{new Date(lease.end_date).toLocaleDateString('en-GB')}</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+
+  const renderDetailedSections = () => (
+    <div className="space-y-6">
+      {analysis.detailed_sections && Array.isArray(analysis.detailed_sections) ? (
+        analysis.detailed_sections.map((section: any, index: number) => (
+          <div key={index} className="border border-gray-200 rounded-lg p-4">
+            <h4 className="font-medium text-gray-900 mb-3">{section.section_title}</h4>
+            {section.content && Array.isArray(section.content) && (
+              <div className="space-y-2 mb-3">
+                {section.content.map((item: string, itemIndex: number) => (
+                  <p key={itemIndex} className="text-gray-700 text-sm leading-relaxed">
+                    {item}
+                  </p>
+                ))}
+              </div>
+            )}
+            {section.referenced_clauses && Array.isArray(section.referenced_clauses) && (
+              <div className="mt-3 pt-3 border-t border-gray-100">
+                <p className="text-xs text-gray-500 mb-1">Referenced Clauses:</p>
+                <p className="text-xs text-gray-600">
+                  {section.referenced_clauses.join(', ')}
+                </p>
+              </div>
+            )}
+          </div>
+        ))
+      ) : (
+        <div className="text-center py-8">
+          <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+          <p className="text-gray-500 italic">No detailed sections available.</p>
+          <p className="text-sm text-gray-400 mt-2">
+            This lease may not have been processed for detailed analysis yet.
+          </p>
+        </div>
+      )}
+    </div>
+  )
+
+  const renderOtherProvisions = () => (
+    <div className="space-y-6">
+      {analysis.other_provisions && Array.isArray(analysis.other_provisions) ? (
+        analysis.other_provisions.map((provision: any, index: number) => (
+          <div key={index} className="border border-gray-200 rounded-lg p-4">
+            <h4 className="font-medium text-gray-900 mb-2">
+              {provision.title || provision.provision_title || `Provision ${index + 1}`}
+            </h4>
+            <p className="text-gray-700 text-sm leading-relaxed mb-2">
+              {provision.description || provision.content}
+            </p>
+            {provision.referenced_clauses && Array.isArray(provision.referenced_clauses) && (
+              <div className="mt-3 pt-3 border-t border-gray-100">
+                <p className="text-xs text-gray-500 mb-1">Referenced Clauses:</p>
+                <p className="text-xs text-gray-600">
+                  {provision.referenced_clauses.join(', ')}
+                </p>
+              </div>
+            )}
+          </div>
+        ))
+      ) : (
+        <div>
+          {/* Quick Access to Arrays */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            {lease.responsibilities && lease.responsibilities.length > 0 && (
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h4 className="font-medium text-blue-900 mb-2">Responsibilities</h4>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  {lease.responsibilities.slice(0, 3).map((item: string, index: number) => (
+                    <li key={index}>{item.substring(0, 60)}...</li>
+                  ))}
+                  {lease.responsibilities.length > 3 && (
+                    <li className="text-blue-600">+{lease.responsibilities.length - 3} more</li>
+                  )}
+                </ul>
+              </div>
+            )}
+
+            {lease.restrictions && lease.restrictions.length > 0 && (
+              <div className="bg-red-50 p-4 rounded-lg">
+                <h4 className="font-medium text-red-900 mb-2">Restrictions</h4>
+                <ul className="text-sm text-red-800 space-y-1">
+                  {lease.restrictions.slice(0, 3).map((item: string, index: number) => (
+                    <li key={index}>{item.substring(0, 60)}...</li>
+                  ))}
+                  {lease.restrictions.length > 3 && (
+                    <li className="text-red-600">+{lease.restrictions.length - 3} more</li>
+                  )}
+                </ul>
+              </div>
+            )}
+
+            {lease.rights && lease.rights.length > 0 && (
+              <div className="bg-green-50 p-4 rounded-lg">
+                <h4 className="font-medium text-green-900 mb-2">Rights</h4>
+                <ul className="text-sm text-green-800 space-y-1">
+                  {lease.rights.slice(0, 3).map((item: string, index: number) => (
+                    <li key={index}>{item.substring(0, 60)}...</li>
+                  ))}
+                  {lease.rights.length > 3 && (
+                    <li className="text-green-600">+{lease.rights.length - 3} more</li>
+                  )}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          {(!lease.responsibilities || lease.responsibilities.length === 0) &&
+           (!lease.restrictions || lease.restrictions.length === 0) &&
+           (!lease.rights || lease.rights.length === 0) && (
+            <div className="text-center py-8">
+              <Shield className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500 italic">No other provisions available.</p>
+              <p className="text-sm text-gray-400 mt-2">
+                Additional lease terms and conditions will appear here once processed.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Disclaimer */}
+      {analysis.disclaimer && (
+        <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
+          <div className="flex items-start space-x-2">
+            <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+            <div>
+              <h4 className="font-medium text-yellow-900 mb-1">Disclaimer</h4>
+              <p className="text-sm text-yellow-800">{analysis.disclaimer}</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'overview':
+        return renderOverview()
+      case 'details':
+        return renderPropertyDetails()
+      case 'sections':
+        return renderDetailedSections()
+      case 'provisions':
+        return renderOtherProvisions()
+      default:
+        return renderOverview()
+    }
   }
 
   const formatDate = (dateString: string) => {
@@ -240,201 +363,75 @@ export default function ClauseViewer({ lease, buildingId, onBack }: ClauseViewer
   }
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Lease Index
-        </button>
-      </div>
+    <div className="fixed inset-0 z-50 overflow-hidden">
+      <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={onBack}></div>
 
-      {/* Lease Summary Card */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              {lease.unit_number} - Clause Analysis
-            </h1>
-            <p className="text-gray-600 mt-1">{lease.leaseholder_name}</p>
+      <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 h-[90vh] w-[90vw] max-w-4xl bg-white rounded-lg shadow-xl">
+        <div className="flex flex-col h-full">
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">
+                Lease Analysis - {lease.unit_number}
+              </h2>
+              <p className="text-sm text-gray-500">
+                {lease.leaseholder_name} •
+                Created {new Date(lease.created_at).toLocaleDateString()}
+              </p>
+            </div>
+            <button
+              onClick={onBack}
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
-          <div className="text-right">
-            <div className="text-sm text-gray-500">Lease Term</div>
-            <div className="font-medium">
-              {formatDate(lease.start_date)} - {formatDate(lease.end_date)}
+
+          {/* Tabs */}
+          <div className="border-b border-gray-200">
+            <nav className="flex space-x-8 px-6">
+              {tabs.map((tab) => {
+                const Icon = tab.icon
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                      activeTab === tab.id
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span>{tab.label}</span>
+                  </button>
+                )
+              })}
+            </nav>
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 overflow-auto p-6">
+            {renderContent()}
+          </div>
+
+          {/* Footer */}
+          <div className="border-t border-gray-200 p-4 bg-gray-50">
+            <div className="flex items-center justify-between">
+              <div className="text-xs text-gray-500">
+                Last updated: {new Date(lease.updated_at).toLocaleString()}
+              </div>
+              <div className="flex items-center space-x-2">
+                <Clock className="h-4 w-4 text-gray-400" />
+                <span className="text-xs text-gray-500">
+                  Status: {lease.status || 'Active'}
+                </span>
+              </div>
             </div>
           </div>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-200">
-          <div>
-            <div className="text-sm text-gray-500">Status</div>
-            <div className="font-medium capitalize">{lease.status}</div>
-          </div>
-          <div>
-            <div className="text-sm text-gray-500">Ground Rent</div>
-            <div className="font-medium">{lease.ground_rent}</div>
-          </div>
-          <div>
-            <div className="text-sm text-gray-500">Service Charge</div>
-            <div className="font-medium">{lease.service_charge_percentage}%</div>
-          </div>
-        </div>
       </div>
-
-      {/* Clause Sections */}
-      {clauseSections.length === 0 ? (
-        <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
-          <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No Clause Analysis Available</h3>
-          <p className="text-gray-500">
-            This lease hasn't been analyzed for detailed clauses yet.
-            Clause extraction will be available once the lease document is processed.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-gray-900">Lease Clauses & Terms</h2>
-
-          {clauseSections.map(section => {
-            const Icon = section.icon
-            const isExpanded = expandedSections.has(section.type)
-
-            return (
-              <div key={section.type} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                <button
-                  onClick={() => toggleSection(section.type)}
-                  className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <Icon className="h-5 w-5 text-blue-600" />
-                    <div className="text-left">
-                      <div className="font-medium text-gray-900">{section.title}</div>
-                      <div className="text-sm text-gray-500">{section.description}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">
-                      {section.clauses.length} clause{section.clauses.length !== 1 ? 's' : ''}
-                    </span>
-                    {isExpanded ? (
-                      <ChevronDown className="h-5 w-5 text-gray-400" />
-                    ) : (
-                      <ChevronRight className="h-5 w-5 text-gray-400" />
-                    )}
-                  </div>
-                </button>
-
-                {isExpanded && (
-                  <div className="border-t border-gray-200">
-                    {section.clauses.map((clause, index) => (
-                      <div key={clause.id} className="p-6 border-b border-gray-100 last:border-b-0">
-                        <div className="space-y-4">
-                          {/* AI Summary */}
-                          {clause.ai_summary && (
-                            <div>
-                              <h4 className="text-sm font-medium text-gray-900 mb-2">Summary</h4>
-                              <p className="text-sm text-gray-700 bg-blue-50 p-3 rounded-lg">
-                                {clause.ai_summary}
-                              </p>
-                            </div>
-                          )}
-
-                          {/* Interpretation */}
-                          {clause.interpretation && (
-                            <div>
-                              <h4 className="text-sm font-medium text-gray-900 mb-2">Interpretation</h4>
-                              <p className="text-sm text-gray-700">
-                                {clause.interpretation}
-                              </p>
-                            </div>
-                          )}
-
-                          {/* Structured Data */}
-                          {(clause.obligations || clause.permissions || clause.restrictions_data) && (
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                              {clause.obligations && (
-                                <div>
-                                  <h5 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">
-                                    Obligations
-                                  </h5>
-                                  <div className="text-sm text-gray-700">
-                                    {typeof clause.obligations === 'string'
-                                      ? clause.obligations
-                                      : JSON.stringify(clause.obligations, null, 2)
-                                    }
-                                  </div>
-                                </div>
-                              )}
-
-                              {clause.permissions && (
-                                <div>
-                                  <h5 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">
-                                    Permissions
-                                  </h5>
-                                  <div className="text-sm text-gray-700">
-                                    {typeof clause.permissions === 'string'
-                                      ? clause.permissions
-                                      : JSON.stringify(clause.permissions, null, 2)
-                                    }
-                                  </div>
-                                </div>
-                              )}
-
-                              {clause.restrictions_data && (
-                                <div>
-                                  <h5 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">
-                                    Restrictions
-                                  </h5>
-                                  <div className="text-sm text-gray-700">
-                                    {typeof clause.restrictions_data === 'string'
-                                      ? clause.restrictions_data
-                                      : JSON.stringify(clause.restrictions_data, null, 2)
-                                    }
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Original Text */}
-                          {clause.original_text && (
-                            <details className="mt-4">
-                              <summary className="text-sm font-medium text-gray-900 cursor-pointer hover:text-blue-600">
-                                View Original Clause Text
-                              </summary>
-                              <div className="mt-2 p-3 bg-gray-50 rounded-lg text-sm text-gray-700 font-mono">
-                                {clause.original_text}
-                              </div>
-                            </details>
-                          )}
-
-                          {/* Confidence Score */}
-                          {clause.confidence_score && (
-                            <div className="flex items-center gap-2 text-xs text-gray-500">
-                              <span>Confidence:</span>
-                              <div className="flex-1 bg-gray-200 rounded-full h-2 max-w-24">
-                                <div
-                                  className="bg-blue-600 h-2 rounded-full"
-                                  style={{ width: `${clause.confidence_score * 100}%` }}
-                                ></div>
-                              </div>
-                              <span>{Math.round(clause.confidence_score * 100)}%</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      )}
     </div>
   )
 }

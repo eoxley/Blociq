@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import {
   Shield,
   PawPrint,
@@ -54,11 +54,7 @@ export default function BuildingLeaseSummary({ buildingId, buildingName }: Build
   const [loading, setLoading] = useState(true)
   const [expandedCard, setExpandedCard] = useState<string | null>(null)
 
-  useEffect(() => {
-    fetchBuildingSummary()
-  }, [buildingId])
-
-  const fetchBuildingSummary = async () => {
+  const fetchBuildingSummary = useCallback(async () => {
     try {
       // First try to get pre-computed building lease summary
       const { data: existingSummary, error: summaryError } = await supabase
@@ -77,33 +73,86 @@ export default function BuildingLeaseSummary({ buildingId, buildingName }: Build
       console.log('Building lease summary table not available, generating from lease data...')
 
       // Fetch leases for this building that have analysis data
-      const { data: leases, error: leasesError } = await supabase
-        .from('leases')
-        .select(`
-          id,
-          unit_number,
-          leaseholder_name,
-          building_id,
-          unit_id,
-          scope,
-          analysis_json,
-          created_at
-        `)
-        .eq('building_id', buildingId)
-        .not('analysis_json', 'is', null)
-
-      if (leasesError) {
-        throw leasesError
+      // Handle missing analysis_json column gracefully
+      let leasesQuery;
+      try {
+        // Try with analysis_json first
+        leasesQuery = await supabase
+          .from('leases')
+          .select(`
+            id,
+            unit_number,
+            leaseholder_name,
+            building_id,
+            analysis_json
+          `)
+          .eq('building_id', buildingId);
+      } catch (error: any) {
+        if (error?.code === '42703') {
+          // Column doesn't exist, query without it
+          console.log('analysis_json column not found, querying without it')
+          leasesQuery = await supabase
+            .from('leases')
+            .select(`
+              id,
+              unit_number,
+              leaseholder_name,
+              building_id
+            `)
+            .eq('building_id', buildingId);
+        } else {
+          throw error;
+        }
       }
 
-      if (!leases || leases.length === 0) {
+      const { data: leases, error: leasesError } = leasesQuery;
+
+      if (leasesError) {
+        console.error('Error fetching building leases:', leasesError)
+        // Generate empty summary if we can't fetch leases
+        const emptySummary = {
+          id: null,
+          building_id: buildingId,
+          total_leases: 0,
+          analyzed_leases: 0,
+          insurance_landlord_responsible: false,
+          insurance_tenant_responsible: false,
+          insurance_shared_responsibility: false,
+          pets_allowed: false,
+          pets_restricted: false,
+          pets_prohibited: false,
+          subletting_allowed: false,
+          subletting_restricted: false,
+          subletting_prohibited: false,
+          alterations_allowed: false,
+          alterations_restricted: false,
+          alterations_prohibited: false,
+          business_use_allowed: false,
+          business_use_restricted: false,
+          business_use_prohibited: false,
+          last_updated: new Date().toISOString()
+        };
+        setSummary(emptySummary);
+        setLoading(false);
+        return;
+      }
+
+      // Process leases data (handle missing analysis_json)
+      const processedLeases = leases?.map(lease => ({
+        ...lease,
+        analysis_json: lease.analysis_json || null
+      })) || [];
+
+      const generatedSummary = generateBuildingSummaryFromLeases(processedLeases);
+
+      if (!processedLeases || processedLeases.length === 0) {
         setSummary(null)
         setLoading(false)
         return
       }
 
-      // Generate building summary from lease analysis data
-      const buildingSummary = generateBuildingSummaryFromLeases(leases)
+      // Use the generated summary
+      const buildingSummary = generatedSummary;
       setSummary(buildingSummary)
 
     } catch (error) {
@@ -112,7 +161,11 @@ export default function BuildingLeaseSummary({ buildingId, buildingName }: Build
     } finally {
       setLoading(false)
     }
-  }
+  }, [buildingId, supabase])
+
+  useEffect(() => {
+    fetchBuildingSummary()
+  }, [fetchBuildingSummary])
 
   const generateBuildingSummaryFromLeases = (leases: any[]) => {
     const totalLeases = leases.length
