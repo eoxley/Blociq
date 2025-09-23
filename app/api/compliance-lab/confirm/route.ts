@@ -4,6 +4,68 @@ import { createClient as createServiceClient } from '@supabase/supabase-js';
 
 export const maxDuration = 60; // 1 minute for confirmation processing
 
+// Helper function to create or find compliance document from document job
+async function createOrFindComplianceDocument(serviceSupabase: any, document_job_id: string, building_id: string, analysis_results: any): Promise<{ success: boolean, compliance_document_id?: string, error?: string }> {
+  try {
+    // First, get the document job details
+    const { data: documentJob, error: jobError } = await serviceSupabase
+      .from('document_jobs')
+      .select('*')
+      .eq('id', document_job_id)
+      .single();
+
+    if (jobError || !documentJob) {
+      console.error('❌ Failed to find document job:', jobError);
+      return { success: false, error: 'Document job not found' };
+    }
+
+    // Check if a compliance document already exists for this job
+    let { data: existingDoc, error: lookupError } = await serviceSupabase
+      .from('compliance_documents')
+      .select('id')
+      .eq('document_job_id', document_job_id)
+      .single();
+
+    if (existingDoc) {
+      console.log('📄 Found existing compliance document:', existingDoc.id);
+      return { success: true, compliance_document_id: existingDoc.id };
+    }
+
+    // Create new compliance document
+    console.log('📝 Creating new compliance document from job:', document_job_id);
+    const complianceDocData = {
+      building_id: building_id,
+      document_job_id: document_job_id,
+      document_type: analysis_results.document_type || documentJob.doc_type_guess,
+      document_category: 'compliance',
+      original_filename: documentJob.filename,
+      file_size: documentJob.size_bytes,
+      processing_status: 'completed',
+      upload_date: documentJob.created_at,
+      uploaded_by: documentJob.user_id,
+      created_at: new Date().toISOString()
+    };
+
+    const { data: newDoc, error: createError } = await serviceSupabase
+      .from('compliance_documents')
+      .insert(complianceDocData)
+      .select('id')
+      .single();
+
+    if (createError) {
+      console.error('❌ Failed to create compliance document:', createError);
+      return { success: false, error: createError.message };
+    }
+
+    console.log('✅ Created compliance document:', newDoc.id);
+    return { success: true, compliance_document_id: newDoc.id };
+
+  } catch (error) {
+    console.error('❌ Error in createOrFindComplianceDocument:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createClient();
@@ -141,13 +203,22 @@ export async function POST(req: NextRequest) {
     const complianceStatus = analysis_results.compliance_status === 'satisfactory' ? 'compliant' :
                             analysis_results.compliance_status === 'unsatisfactory' ? 'overdue' : 'requires_action';
 
+    // Create or find the compliance document first
+    const docResult = await createOrFindComplianceDocument(serviceSupabase, document_id, building_id, analysis_results);
+    if (!docResult.success) {
+      return NextResponse.json({
+        error: 'Failed to create compliance document',
+        message: docResult.error
+      }, { status: 500 });
+    }
+
     const buildingAssetData = {
       building_id: building_id,
       compliance_asset_id: complianceAsset.id,
       last_renewed_date: analysis_results.inspection_details?.inspection_date || new Date().toISOString().split('T')[0],
       next_due_date: analysis_results.inspection_details?.next_inspection_due,
       status: complianceStatus,
-      latest_document_id: document_id,
+      latest_document_id: docResult.compliance_document_id, // Use the compliance document ID, not the job ID
       contractor: analysis_results.inspection_details?.inspector_company || analysis_results.inspection_details?.inspector_name,
       notes: `${analysis_results.document_type} - ${analysis_results.compliance_status}. Certificate: ${analysis_results.inspection_details?.certificate_number || 'N/A'}`,
       updated_at: new Date().toISOString()

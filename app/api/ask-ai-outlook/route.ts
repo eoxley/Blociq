@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
+import { searchBuildingAndUnits, searchLeaseholderDirect } from '../../../lib/supabase/buildingSearch';
+import { searchEntireDatabase, formatSearchResultsForAI, extractRelevantContext } from '../../../lib/supabase/comprehensiveDataSearch';
 
 // Initialize Supabase admin client
 const supabaseAdmin = createClient(
@@ -43,11 +45,24 @@ export async function OPTIONS(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    console.log('📧 Outlook Ask BlocIQ: Processing request');
+    console.log('📧 Outlook Reply Generator: Processing request');
 
     // Parse request body
     const body = await req.json();
-    const { question, building, unit } = body;
+    const {
+      question,
+      building,
+      unit,
+      contextType,
+      is_outlook_addin,
+      email_subject,
+      email_body,
+      sender_info,
+      recipient_info,
+      compliance_context,
+      leaseholder_context,
+      diary_context
+    } = body;
 
     // Validate required fields
     if (!question || typeof question !== 'string' || question.trim().length === 0) {
@@ -116,8 +131,9 @@ export async function POST(req: NextRequest) {
 
     const userId = user.id;
     const agencyId = user.agency_id;
+    const userFirstName = user.first_name || user.email?.split('@')[0] || 'Eleanor';
 
-    console.log('✅ User found/created:', { userId, agencyId });
+    console.log('✅ User found/created:', { userId, agencyId, userFirstName });
 
     // Building lookup
     let buildingObj: { id: string; name: string; address?: string } | null = null;
@@ -232,6 +248,50 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Perform comprehensive database search for building context and industry knowledge
+    console.log('🔍 Performing comprehensive database search for enhanced context');
+    let comprehensiveContext = '';
+    let industryKnowledge = '';
+    let founderGuidance = '';
+
+    try {
+      // Search using the question content plus email context for better results
+      const searchQuery = `${question} ${email_subject || ''} ${email_body?.substring(0, 200) || ''}`.trim();
+
+      const searchResults = await searchEntireDatabase(searchQuery, userId);
+
+      if (searchResults) {
+        // Extract relevant context using smart filtering
+        const relevantContext = extractRelevantContext(searchResults, searchQuery);
+        comprehensiveContext = relevantContext;
+
+        // Extract industry knowledge specifically
+        if (searchResults.industryKnowledge && searchResults.industryKnowledge.length > 0) {
+          industryKnowledge = searchResults.industryKnowledge
+            .slice(0, 3) // Limit to most relevant
+            .map(item => `- ${item.title || item.content || item.knowledge}`)
+            .join('\n');
+        }
+
+        // Extract founder guidance
+        if (searchResults.founderKnowledge && searchResults.founderKnowledge.length > 0) {
+          founderGuidance = searchResults.founderKnowledge
+            .slice(0, 2) // Limit to most relevant
+            .map(item => `- ${item.guidance || item.content || item.knowledge}`)
+            .join('\n');
+        }
+
+        console.log('✅ Database search completed:', {
+          comprehensiveResults: !!comprehensiveContext,
+          industryKnowledge: !!industryKnowledge,
+          founderGuidance: !!founderGuidance
+        });
+      }
+    } catch (searchError) {
+      console.warn('⚠️ Comprehensive search failed:', searchError);
+      // Continue without enhanced context
+    }
+
     // Build context for AI prompt
     const contextLines: string[] = [];
 
@@ -258,31 +318,85 @@ export async function POST(req: NextRequest) {
       contextLines.push(`Compliance status: ${complianceItems.join(', ')}`);
     }
 
-    // Create comprehensive AI prompt
-    const systemPrompt = `You are BlocIQ, a specialist AI assistant for UK leasehold block management and property management.
+    // Create reply-specific AI prompt
+    const emailContextInfo = [];
+    if (email_subject) emailContextInfo.push(`Email Subject: ${email_subject}`);
+    if (email_body) emailContextInfo.push(`Email Content: ${email_body.substring(0, 500)}`);
+    if (sender_info?.name) emailContextInfo.push(`From: ${sender_info.name}${sender_info.email ? ` (${sender_info.email})` : ''}`);
 
-IMPORTANT GUIDELINES:
+    // Extract sender's name from the email content for personalized salutation
+    let senderName = 'Resident';
+    if (sender_info?.name) {
+      // Extract first name from full name
+      const nameParts = sender_info.name.split(' ');
+      senderName = nameParts[0];
+    } else if (email_body) {
+      // Try to extract name from sign-off patterns
+      const signOffMatches = email_body.match(/(?:thanks|regards|sincerely),?\s*([A-Z][a-z]+)/i) ||
+                            email_body.match(/^([A-Z][a-z]+)\s*$/m) ||
+                            email_body.match(/Many thanks,?\s*([A-Z][a-z]+)/i);
+      if (signOffMatches && signOffMatches[1]) {
+        senderName = signOffMatches[1];
+      }
+    }
+
+    // Extract issue summary for thank you line
+    let issueSummary = 'your email';
+    if (email_subject) {
+      // Clean up subject line for thank you message
+      let cleanSubject = email_subject.replace(/^(re:|fwd?:)/i, '').trim();
+      cleanSubject = cleanSubject.toLowerCase();
+      if (cleanSubject.includes('clean')) issueSummary = 'the cleaning of the building';
+      else if (cleanSubject.includes('repair') || cleanSubject.includes('maintenance')) issueSummary = 'the maintenance issue';
+      else if (cleanSubject.includes('noise')) issueSummary = 'the noise concerns';
+      else if (cleanSubject.includes('heat') || cleanSubject.includes('boiler')) issueSummary = 'the heating issue';
+      else if (cleanSubject.includes('service charge') || cleanSubject.includes('billing')) issueSummary = 'the service charge enquiry';
+      else issueSummary = cleanSubject;
+    }
+
+    const systemPrompt = `Generate a professional email reply for BlocIQ property management with these EXACT formatting rules:
+
+STRICT FORMATTING REQUIREMENTS:
+1. Subject line: Only at the top, do NOT repeat in body
+2. Salutation: "Dear ${senderName}," (never use "Dear [Recipient's Name]" or placeholders)
+3. Opening line: ALWAYS "Thank you for your email regarding ${issueSummary}."
+4. Body: Address the specific concerns using building/property context if available
+5. Closing: "Best regards," or "Kind regards," followed by "${userFirstName}"
+6. NO placeholders like [Your Name], [Your Position], [Company], etc.
+7. NO email signatures, contact details, or company information
+8. NO subject line repetition in the body text
+
+REPLY GENERATION RULES:
 - Use British English exclusively
-- Adopt a property manager's perspective (not tenancy/AST)
-- Apply Section 20 consultation stages and statutory caps knowledge
-- Show awareness of Building Safety Act (BSA) requirements
-- Provide precise, professional responses
-- When information is missing, suggest specific next actions
+- Write from Property Manager perspective
+- Apply BlocIQ founder's property management expertise from the database
+- Reference industry knowledge and regulations when relevant to the query
+- Use comprehensive database context to provide specific, informed responses
+- Distinguish between demised parts (leaseholder responsibility) and common parts (freeholder responsibility)
+- Reference Section 20 consultation requirements if works exceed £250 per unit
+- Use professional language like "we will endeavour" instead of "we guarantee"
+- Cite specific compliance deadlines, lease clauses, or policy guidance when available in the context
+- Provide specific next steps with timelines where appropriate
 
-CONTEXT:
+EMAIL CONTEXT:
+${emailContextInfo.length > 0 ? emailContextInfo.join('\n') : 'No email context provided'}
+
+BUILDING/PROPERTY CONTEXT:
 ${contextLines.length > 0 ? contextLines.join('\n') : 'No matched records in system'}
 
-SECTION 20 KNOWLEDGE:
-- Stage 1: Notice of Intention (30 days consultation)
-- Stage 2: Estimates (30 days consultation)
-- Statutory cap: £250 per leaseholder per year for works
-- £100 per leaseholder per year for long-term agreements
-- Failure to consult = contribution limited to statutory amounts
+COMPREHENSIVE DATABASE CONTEXT:
+${comprehensiveContext || 'No additional context found'}
 
-USER QUESTION:
+INDUSTRY KNOWLEDGE:
+${industryKnowledge || 'No specific industry knowledge found'}
+
+FOUNDER GUIDANCE:
+${founderGuidance || 'No specific founder guidance found'}
+
+REPLY INSTRUCTIONS:
 ${question.trim()}
 
-Provide a concise, professional response. If data is incomplete, suggest exact queries or actions.`;
+Generate the email reply body ONLY (no subject line repetition, no placeholders, first name closing only).`;
 
     console.log('🤖 Calling OpenAI API');
 
@@ -303,7 +417,7 @@ Provide a concise, professional response. If data is incomplete, suggest exact q
       messages: [
         {
           role: 'system',
-          content: 'You are BlocIQ, a UK property management AI assistant. Be concise, professional, and use British English.'
+          content: 'You are a professional email reply generator for BlocIQ property management. Generate complete, contextual email replies using British English and property management expertise. Focus on actionable solutions and professional communication.'
         },
         {
           role: 'user',
@@ -344,13 +458,21 @@ Provide a concise, professional response. If data is incomplete, suggest exact q
           building_id: buildingObj?.id || null,
           question: question.trim(),
           response: answer,
-          context_type: 'outlook_ask_ai',
+          context_type: 'outlook_reply_generation',
           metadata: {
-            client: 'outlook',
+            client: 'outlook_reply_addin',
             building_name: buildingObj?.name,
             units_found: units.length,
             leaseholders_found: leaseholders.length,
             has_compliance: !!compliance,
+            has_email_context: !!(email_subject || email_body),
+            email_subject: email_subject?.substring(0, 100),
+            sender_name: sender_info?.name,
+            reply_type: contextType || 'general_reply',
+            has_comprehensive_context: !!comprehensiveContext,
+            has_industry_knowledge: !!industryKnowledge,
+            has_founder_guidance: !!founderGuidance,
+            search_query_used: `${question} ${email_subject || ''}`.substring(0, 100),
             suggestions: suggestions
           }
         });

@@ -88,6 +88,68 @@ export async function POST(req: NextRequest) {
   }
 }
 
+// Helper function to create or find compliance document from document job
+async function createOrFindComplianceDocument(serviceSupabase: any, document_job_id: string, building_id: string, analysis_results: any): Promise<{ success: boolean, compliance_document_id?: string, error?: string }> {
+  try {
+    // First, get the document job details
+    const { data: documentJob, error: jobError } = await serviceSupabase
+      .from('document_jobs')
+      .select('*')
+      .eq('id', document_job_id)
+      .single();
+
+    if (jobError || !documentJob) {
+      console.error('❌ Failed to find document job:', jobError);
+      return { success: false, error: 'Document job not found' };
+    }
+
+    // Check if a compliance document already exists for this job
+    let { data: existingDoc, error: lookupError } = await serviceSupabase
+      .from('compliance_documents')
+      .select('id')
+      .eq('document_job_id', document_job_id)
+      .single();
+
+    if (existingDoc) {
+      console.log('📄 Found existing compliance document:', existingDoc.id);
+      return { success: true, compliance_document_id: existingDoc.id };
+    }
+
+    // Create new compliance document
+    console.log('📝 Creating new compliance document from job:', document_job_id);
+    const complianceDocData = {
+      building_id: building_id,
+      document_job_id: document_job_id,
+      document_type: analysis_results.document_type || documentJob.doc_type_guess,
+      document_category: 'compliance',
+      original_filename: documentJob.filename,
+      file_size: documentJob.size_bytes,
+      processing_status: 'completed',
+      upload_date: documentJob.created_at,
+      uploaded_by: documentJob.user_id,
+      created_at: new Date().toISOString()
+    };
+
+    const { data: newDoc, error: createError } = await serviceSupabase
+      .from('compliance_documents')
+      .insert(complianceDocData)
+      .select('id')
+      .single();
+
+    if (createError) {
+      console.error('❌ Failed to create compliance document:', createError);
+      return { success: false, error: createError.message };
+    }
+
+    console.log('✅ Created compliance document:', newDoc.id);
+    return { success: true, compliance_document_id: newDoc.id };
+
+  } catch (error) {
+    console.error('❌ Error in createOrFindComplianceDocument:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
 // Compliance document confirmation handler
 async function handleComplianceConfirmation(serviceSupabase: any, user: any, document_id: string, building_id: string, analysis_results: any) {
   if (!building_id) {
@@ -112,6 +174,15 @@ async function handleComplianceConfirmation(serviceSupabase: any, user: any, doc
   }
 
   console.log('✅ User confirmed compliance asset creation for building:', building.name);
+
+  // Create or find the compliance document first
+  const docResult = await createOrFindComplianceDocument(serviceSupabase, document_id, building_id, analysis_results);
+  if (!docResult.success) {
+    return NextResponse.json({
+      error: 'Failed to create compliance document',
+      message: docResult.error
+    }, { status: 500 });
+  }
 
   // Map document types to compliance asset categories
   const docTypeMapping: Record<string, string> = {
@@ -177,7 +248,7 @@ async function handleComplianceConfirmation(serviceSupabase: any, user: any, doc
     last_renewed_date: analysis_results.inspection_details?.inspection_date || new Date().toISOString().split('T')[0],
     next_due_date: analysis_results.inspection_details?.next_inspection_due,
     status: complianceStatus,
-    latest_document_id: document_id,
+    latest_document_id: docResult.compliance_document_id, // Use the compliance document ID, not the job ID
     contractor: analysis_results.inspection_details?.inspector_company || analysis_results.inspection_details?.inspector_name,
     notes: `${analysis_results.document_type} - ${analysis_results.compliance_status}. Certificate: ${analysis_results.inspection_details?.certificate_number || 'N/A'}`,
     updated_at: new Date().toISOString()
@@ -274,10 +345,14 @@ async function handleMajorWorksConfirmation(serviceSupabase: any, user: any, doc
 
   console.log('✅ User confirmed major works tracking creation');
 
+  // For major works, we may also need to create a proper document reference
+  // But for now, we'll leave document_id as the job ID since major_works_projects
+  // table structure may be different. This should be reviewed based on the actual schema.
+
   // Create major works project record
   const projectData = {
     building_id: building_id,
-    latest_document_id: document_id,
+    latest_document_id: document_id, // Note: This may need similar fix if major_works_projects has foreign key constraint
     project_type: analysis_results.document_type,
     stage: analysis_results.stage || 'NOI',
     description: analysis_results.project_description || `${analysis_results.document_type} - ${analysis_results.stage || 'Stage unknown'}`,
@@ -321,8 +396,9 @@ async function handleGeneralConfirmation(serviceSupabase: any, user: any, docume
   console.log('✅ User confirmed general document filing');
 
   // For general documents, we might just want to update metadata or create a filing record
+  // Note: document_filings table may also need schema review for foreign key constraints
   const filingData = {
-    latest_document_id: document_id,
+    latest_document_id: document_id, // Note: This may need similar fix if document_filings has foreign key constraint
     building_id: building_id || null,
     document_type: analysis_results.document_type,
     category: 'general',

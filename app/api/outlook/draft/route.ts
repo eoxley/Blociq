@@ -283,16 +283,13 @@ function generateLeakTemplate(
   closingPhrase: string,
   facts: EnrichmentResult['facts']
 ): string {
+  // 7-step structure implementation
   return `Dear ${name},
 
 ${thankYouLine}
 
-${toneLead}
+${toneLead}${factsSection ? `\n\n${factsSection}` : ''}${industryContext ? `\n\n${industryContext}` : ''}
 
-**What we can see right now**
-${factsSection}
-
-${industryContext ? `**Context**\n${industryContext}\n\n` : ''}**Next steps**
 ${nextSteps}${boundaryLines}
 
 ${closingPhrase}`;
@@ -310,16 +307,13 @@ function generateFireTemplate(
   closingPhrase: string,
   facts: EnrichmentResult['facts']
 ): string {
+  // 7-step structure implementation
   return `Dear ${name},
 
 ${thankYouLine}
 
-${toneLead}
+${toneLead}${factsSection ? `\n\n${factsSection}` : ''}${industryContext ? `\n\n${industryContext}` : ''}
 
-**Current records**
-${factsSection}
-
-${industryContext ? `**Context**\n${industryContext}\n\n` : ''}**Next steps**
 ${nextSteps}${boundaryLines}
 
 ${closingPhrase}`;
@@ -337,16 +331,13 @@ function generateComplianceTemplate(
   closingPhrase: string,
   facts: EnrichmentResult['facts']
 ): string {
+  // 7-step structure implementation
   return `Dear ${name},
 
 ${thankYouLine}
 
-${toneLead}
+${toneLead}${factsSection ? `\n\n${factsSection}` : ''}${industryContext ? `\n\n${industryContext}` : ''}
 
-**Current compliance status**
-${factsSection}
-
-${industryContext ? `**Context**\n${industryContext}\n\n` : ''}**Next steps**
 ${nextSteps}${boundaryLines}
 
 ${closingPhrase}`;
@@ -363,13 +354,13 @@ function generateGeneralTemplate(
   boundaryLines: string,
   closingPhrase: string
 ): string {
+  // 7-step structure implementation
   return `Dear ${name},
 
 ${thankYouLine}
 
-${toneLead}
+${toneLead}${factsSection ? `\n\n${factsSection}` : ''}${industryContext ? `\n\n${industryContext}` : ''}
 
-${factsSection ? `**Information available**\n${factsSection}\n` : ''}${industryContext ? `**Context**\n${industryContext}\n\n` : ''}**Next steps**
 ${nextSteps}${boundaryLines}
 
 ${closingPhrase}`;

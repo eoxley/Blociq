@@ -46,25 +46,25 @@ async function forwardToAskBlocIQ(
     source?: string
 ): Promise<NextResponse> {
     try {
-        // Construct the Ask BlocIQ request payload
+        // Construct the Ask BlocIQ request payload matching main ask-ai endpoint format
         const askBlocIQPayload = {
             message: message,
-            contextType: emailContext ? 'email_reply' : 'general',
-            intent: emailContext ? 'REPLY' : 'general',
+            context_type: emailContext ? 'email_context' : 'general',
             tone: 'Professional',
-            source: source || 'outlook_addin',
-            // Include email context for reply generation
-            outlook_email: emailContext ? {
-                subject: emailContext.subject || '',
-                from: emailContext.from || '',
-                itemType: emailContext.itemType || 'Email'
-            } : undefined
+            source: source || 'outlook_chat_addin',
+            is_public: false, // Ensure authenticated access for full functionality
+            // Include email context for better responses
+            manual_context: emailContext ? `Email Context:
+Subject: ${emailContext.subject || 'No subject'}
+From: ${emailContext.from || 'Unknown sender'}
+Item Type: ${emailContext.itemType || 'Email'}` : undefined
         };
 
         console.log('🔄 Forwarding to Ask BlocIQ:', {
-            contextType: askBlocIQPayload.contextType,
+            context_type: askBlocIQPayload.context_type,
             hasEmailContext: !!emailContext,
-            intent: askBlocIQPayload.intent
+            hasManualContext: !!askBlocIQPayload.manual_context,
+            source: askBlocIQPayload.source
         });
 
         // Get the base URL for the internal request
