@@ -253,6 +253,7 @@ export async function POST(req: NextRequest) {
     let comprehensiveContext = '';
     let industryKnowledge = '';
     let founderGuidance = '';
+    let leaseDocuments = '';
 
     try {
       // Search using the question content plus email context for better results
@@ -264,6 +265,25 @@ export async function POST(req: NextRequest) {
         // Extract relevant context using smart filtering
         const relevantContext = extractRelevantContext(searchResults, searchQuery);
         comprehensiveContext = relevantContext;
+
+        // Extract lease documents specifically for this building
+        if (buildingObj && searchResults.documents && searchResults.documents.length > 0) {
+          const buildingLeaseDocuments = searchResults.documents.filter(doc =>
+            doc.building_id === buildingObj.id &&
+            (doc.type?.toLowerCase().includes('lease') ||
+             doc.file_name?.toLowerCase().includes('lease') ||
+             doc.text_content?.toLowerCase().includes('subletting') ||
+             doc.text_content?.toLowerCase().includes('sub-let'))
+          );
+
+          if (buildingLeaseDocuments.length > 0) {
+            leaseDocuments = buildingLeaseDocuments
+              .slice(0, 2) // Limit to most relevant lease docs
+              .map(doc => `LEASE DOCUMENT: ${doc.file_name}\nContent: ${doc.text_content?.substring(0, 1000) || 'Content not available'}`)
+              .join('\n\n');
+            console.log('📋 Found lease documents for building:', buildingLeaseDocuments.length);
+          }
+        }
 
         // Extract industry knowledge specifically
         if (searchResults.industryKnowledge && searchResults.industryKnowledge.length > 0) {
@@ -284,7 +304,8 @@ export async function POST(req: NextRequest) {
         console.log('✅ Database search completed:', {
           comprehensiveResults: !!comprehensiveContext,
           industryKnowledge: !!industryKnowledge,
-          founderGuidance: !!founderGuidance
+          founderGuidance: !!founderGuidance,
+          leaseDocuments: !!leaseDocuments
         });
       }
     } catch (searchError) {
@@ -391,17 +412,24 @@ CRITICAL FORMATTING REQUIREMENTS - FOLLOW EXACTLY:
 8. NO "Subject:" lines in the response body
 9. Response should start directly with "Dear [FirstName],"
 
+CRITICAL ANTI-HALLUCINATION RULES:
+- ONLY reference lease clauses, terms, or sections if they are EXPLICITLY provided in the ACTUAL LEASE DOCUMENTS above
+- NEVER invent clause numbers, section references, or lease terms (e.g. "Clause 15", "Section 3.2")
+- If no lease documents are provided, state "Please refer to your lease agreement for specific terms"
+- ONLY mention Section 20 if the query is about ACTUAL WORKS or REPAIRS, NOT for subletting/permissions
+- DO NOT assume standard lease terms - only use what is explicitly provided in the database
+
 REPLY GENERATION RULES:
 - Use British English exclusively
 - Write from Property Manager perspective
 - Apply BlocIQ founder's property management expertise from the database
 - Reference industry knowledge and regulations when relevant to the query
 - Use comprehensive database context to provide specific, informed responses
+- Only cite specific lease clauses if they are provided in the ACTUAL LEASE DOCUMENTS section above
 - Distinguish between demised parts (leaseholder responsibility) and common parts (freeholder responsibility)
-- Reference Section 20 consultation requirements if works exceed £250 per unit
 - Use professional language like "we will endeavour" instead of "we guarantee"
-- Cite specific compliance deadlines, lease clauses, or policy guidance when available in the context
 - Provide specific next steps with timelines where appropriate
+- If specific lease terms are not available, provide general guidance and refer to their lease agreement
 
 EMAIL CONTEXT:
 ${emailContextInfo.length > 0 ? emailContextInfo.join('\n') : 'No email context provided'}
@@ -417,6 +445,9 @@ ${industryKnowledge || 'No specific industry knowledge found'}
 
 FOUNDER GUIDANCE:
 ${founderGuidance || 'No specific founder guidance found'}
+
+ACTUAL LEASE DOCUMENTS FOR THIS BUILDING:
+${leaseDocuments || 'No lease documents found in database for this building'}
 
 REPLY INSTRUCTIONS:
 ${question.trim()}
