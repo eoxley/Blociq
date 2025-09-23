@@ -919,12 +919,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     await loadOutlookEvents()
   }
 
-  // Auto-scroll to latest messages when chat is open
-  useEffect(() => {
-    if (showChat && messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
-    }
-  }, [messages, showChat])
+  // Auto-scroll removed - let users manually control scrolling
 
   // Handle Ask BlocIQ submission
   const handleAskSubmit = async (prompt: string) => {
@@ -1031,43 +1026,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   }
 
 
-  // Preload compliance summary on component mount
-  useEffect(() => {
-    const preloadComplianceSummary = async () => {
-      try {
-        console.log('🔄 Preloading compliance summary for homepage...');
-        const response = await fetch('/api/ask-ai/compliance-upcoming');
-
-        if (!response.ok) {
-          console.warn('Compliance summary API failed:', response.status, response.statusText);
-          return;
-        }
-
-        const data = await response.json();
-
-        if (data.summary) {
-          // Add the preloaded message to the chat
-          const preloadMessage = {
-            sender: 'ai' as const,
-            text: data.summary,
-            timestamp: new Date('2024-01-01')
-          };
-
-          setMessages(prev => [...prev, preloadMessage]);
-          console.log('✅ Compliance summary preloaded on homepage');
-        } else {
-          console.log('⚠️ No compliance summary available for preload');
-        }
-      } catch (error) {
-        console.warn('⚠️ Error preloading compliance summary:', error);
-      }
-    };
-
-    // Only preload if user is authenticated and no messages exist yet
-    if (userData && messages.length === 0) {
-      preloadComplianceSummary();
-    }
-  }, [userData, messages.length]);
+  // Compliance summary preloading removed - only load when user requests it
 
   const fetchUserFirstName = async () => {
     try {

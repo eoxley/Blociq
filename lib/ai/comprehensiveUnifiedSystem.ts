@@ -268,14 +268,26 @@ export class ComprehensiveQueryParser {
   
   static parseLeaseholderQuery(prompt: string): { unit?: string; building?: string } {
     const promptLower = prompt.toLowerCase();
-    
+
+    // First check if this is actually a leaseholder-related query
+    const leaseholderKeywords = ['leaseholder', 'tenant', 'resident', 'occupant', 'who is', 'who lives', 'contact', 'email', 'phone'];
+    const isLeaseholderQuery = leaseholderKeywords.some(keyword => promptLower.includes(keyword));
+
+    // Also exclude obvious non-leaseholder terms
+    const excludeKeywords = ['section', 'notice', 'act', 'regulation', 'compliance', 'what is', 'how to', 'definition', 'best practice'];
+    const shouldExclude = excludeKeywords.some(keyword => promptLower.includes(keyword));
+
+    if (!isLeaseholderQuery || shouldExclude) {
+      return {}; // Not a leaseholder query
+    }
+
     // Extract unit number - multiple formats with smart conversion
     const unitPatterns = [
       // Explicit unit/flat/apartment references
       /(?:unit|flat|apartment|apt)\s*([0-9]+[a-zA-Z]?)/,
       // Just a number (common when user says "unit 8" or "flat 8")
       /(?:^|\s)([0-9]+[a-zA-Z]?)(?:\s+(?:at|in|of|in|at))/,
-      // Number at end of sentence
+      // Number at end of sentence (but more restrictive)
       /(?:^|\s)([0-9]+[a-zA-Z]?)(?:\s|$|,|\?)/
     ];
     
@@ -876,12 +888,19 @@ export class ComprehensiveUnifiedAIProcessor {
         };
       } else {
         const result = await this.findBuilding(buildingFromQuery, userId);
-        return {
-          success: true,
-          response: ComprehensiveResponseGenerator.generateBuildingResponse(result),
-          metadata: { queryType: 'building', building: buildingFromQuery },
-          source: 'Database Query'
-        };
+        // Only return a response if we found a building, otherwise fall back to AI processing
+        if (result.success) {
+          return {
+            success: true,
+            response: ComprehensiveResponseGenerator.generateBuildingResponse(result),
+            metadata: { queryType: 'building', building: buildingFromQuery },
+            source: 'Database Query'
+          };
+        } else {
+          console.log('🔄 COMPREHENSIVE: Building not found in database, falling back to industry knowledge');
+          // Return null to let the main AI processor handle it with industry knowledge
+          return null;
+        }
       }
     }
     
