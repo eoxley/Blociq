@@ -601,11 +601,11 @@ export async function POST(req: NextRequest) {
     
     // 🔍 NEW: Auto-detect building from request context
     const referer = req.headers.get('referer') || '';
-    const userAgent = req.headers.get('user-agent') || '';
-    
+    const requestUserAgent = req.headers.get('user-agent') || '';
+
     console.log('🔍 Request context analysis:');
     console.log('  - Referer:', referer);
-    console.log('  - User Agent:', userAgent.substring(0, 100) + '...');
+    console.log('  - User Agent:', requestUserAgent.substring(0, 100) + '...');
     console.log('  - Context Type:', contextType);
     console.log('  - Is Public:', isPublic);
     console.log('  - Building ID:', building_id);
@@ -644,27 +644,43 @@ export async function POST(req: NextRequest) {
     }
 
     // 🔍 Check for document intent
-    if (!isPublic && user) {
+    // 🔍 Detect Outlook add-in requests first (before all other processing)
+    const addinUserAgent = req.headers.get('user-agent') || '';
+    const addinReferer = req.headers.get('referer') || '';
+    const isOutlookAddin = addinUserAgent.includes('Office') ||
+                          addinUserAgent.includes('Microsoft') ||
+                          addinReferer.includes('outlook') ||
+                          addinReferer.includes('office.com') ||
+                          req.headers.get('x-outlook-addin') === 'true';
+
+    if (isOutlookAddin) {
+      console.log('🏢 Outlook add-in detected, bypassing agency authentication');
+      isPublicAccess = true; // Force public access mode for Outlook add-in
+    }
+
+    if (!isPublic && user && !isOutlookAddin) {
       try {
         const { detectDocumentIntent } = await import('../../../ai/intent/document');
         const { getLatestDocument, formatDocumentDate, extractSummarySnippet } = await import('../../../lib/docs/getLatestDocument');
         const { resolveBuildingContext } = await import('../../../lib/buildings/resolveContext');
         const { getDocumentTypeDisplayName } = await import('../../../ai/intent/document');
-        
+
         const documentIntent = detectDocumentIntent(prompt, building_id);
         
         if (documentIntent) {
           console.log('📄 Document intent detected:', documentIntent);
 
-          // Ensure user has agency_id (with auto-assignment fallback)
-          const userProfile = await ensureUserHasAgency(supabase, user.id);
+          // Ensure user has agency_id (with auto-assignment fallback) - skip for Outlook add-in
+          if (!isOutlookAddin) {
+            const userProfile = await ensureUserHasAgency(supabase, user.id);
 
-          if (!userProfile?.agency_id) {
-            return NextResponse.json({
-              success: false,
-              error: 'User not linked to agency',
-              message: 'No agencies available. Please contact support to set up your account.'
-            }, { status: 403 });
+            if (!userProfile?.agency_id) {
+              return NextResponse.json({
+                success: false,
+                error: 'User not linked to agency',
+                message: 'No agencies available. Please contact support to set up your account.'
+              }, { status: 403 });
+            }
           }
           
           // Resolve building context
@@ -847,15 +863,17 @@ export async function POST(req: NextRequest) {
         if (reportIntent) {
           console.log('📊 Report intent detected:', reportIntent);
 
-          // Ensure user has agency_id (with auto-assignment fallback)
-          const userProfile = await ensureUserHasAgency(supabase, user.id);
+          // Ensure user has agency_id (with auto-assignment fallback) - skip for Outlook add-in
+          if (!isOutlookAddin) {
+            const userProfile = await ensureUserHasAgency(supabase, user.id);
 
-          if (!userProfile?.agency_id) {
-            return NextResponse.json({
-              success: false,
-              error: 'User not linked to agency',
-              message: 'No agencies available. Please contact support to set up your account.'
-            }, { status: 403 });
+            if (!userProfile?.agency_id) {
+              return NextResponse.json({
+                success: false,
+                error: 'User not linked to agency',
+                message: 'No agencies available. Please contact support to set up your account.'
+              }, { status: 403 });
+            }
           }
 
           // Execute the report
@@ -907,9 +925,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 🔐 Ensure authenticated users have agency linkage
+
+    // 🔐 Ensure authenticated users have agency linkage (skip for Outlook add-in)
     let userAgencyId = null;
-    if (!isPublicAccess && user) {
+    if (!isPublicAccess && !isOutlookAddin && user) {
       const agencyCheck = await ensureUserHasAgency(supabase, user.id);
       if (!agencyCheck?.agency_id) {
         return createResponse({
