@@ -327,11 +327,7 @@
          result += '<br><br><p>Kind regards,<br>Property Management Team</p>';
        }
 
-       // Add suggested queries if the response seems generic
-       if (formatted.toLowerCase().includes('please let me know') || 
-           formatted.toLowerCase().includes('if you have any questions')) {
-         result += '<br><br><p><em>Suggested next actions:</em><br>• Would you like me to draft a Section 20 Notice of Intention?<br>• Should I arrange a site visit to assess the issue?<br>• Would you like to schedule a call to discuss this further?</p>';
-       }
+       // No longer adding suggested next actions - removed as per client request
 
        return result;
      }
