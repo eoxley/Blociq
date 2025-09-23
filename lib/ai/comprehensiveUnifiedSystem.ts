@@ -26,6 +26,7 @@ import { createClient } from '@supabase/supabase-js';
 import { searchEntireDatabase, ComprehensiveSearchResult } from '../supabase/comprehensiveDataSearch';
 import { searchBuildingAndUnits, searchLeaseholderDirect } from '../supabase/buildingSearch';
 import { AIContextHandler } from '../ai-context-handler';
+import { getFounderGuidance } from './founder';
 import OpenAI from 'openai';
 
 // Initialize Supabase client
@@ -556,8 +557,125 @@ export class ComprehensiveResponseGenerator {
 }
 
 /**
+ * INDUSTRY KNOWLEDGE RETRIEVAL
+ *
+ * Functions to access industry knowledge and founder guidance from Supabase
+ */
+export class IndustryKnowledgeRetriever {
+
+  /**
+   * Search industry knowledge chunks based on query relevance
+   */
+  static async searchIndustryKnowledge(query: string, limit: number = 10): Promise<string[]> {
+    try {
+      console.log('🔍 Searching industry knowledge for:', query);
+
+      const { data: chunks, error } = await supabase
+        .from('industry_knowledge_chunks')
+        .select(`
+          chunk_text,
+          industry_knowledge_documents!inner(
+            title,
+            category,
+            subcategory
+          )
+        `)
+        .ilike('chunk_text', `%${query}%`)
+        .limit(limit)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.warn('Industry knowledge search error:', error);
+        return [];
+      }
+
+      if (!chunks || chunks.length === 0) {
+        console.log('No industry knowledge chunks found for query');
+        return [];
+      }
+
+      const relevantChunks = chunks
+        .filter(chunk => chunk.chunk_text && chunk.chunk_text.length > 50)
+        .map(chunk => {
+          const doc = chunk.industry_knowledge_documents;
+          return `Industry Knowledge (${doc.category}): ${chunk.chunk_text.trim()}`;
+        });
+
+      console.log(`✅ Found ${relevantChunks.length} industry knowledge chunks`);
+      return relevantChunks;
+
+    } catch (error) {
+      console.error('Error searching industry knowledge:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get founder guidance for specific topics
+   */
+  static async getFounderKnowledge(query: string): Promise<string[]> {
+    try {
+      console.log('🔍 Getting founder guidance for:', query);
+
+      const guidance = await getFounderGuidance({
+        topicHints: [query],
+        limit: 5
+      });
+
+      if (!guidance) {
+        console.log('No founder guidance found');
+        return [];
+      }
+
+      // Handle both string and array returns from getFounderGuidance
+      if (typeof guidance === 'string') {
+        console.log('✅ Found founder guidance (string format)');
+        return [guidance];
+      }
+
+      if (Array.isArray(guidance)) {
+        const guidanceTexts = guidance.map((item: any) => {
+          if (typeof item === 'string') return item;
+          return `Founder Guidance: ${item.title || 'Untitled'}\n${item.content || ''}`;
+        });
+        console.log(`✅ Found ${guidanceTexts.length} founder guidance items`);
+        return guidanceTexts;
+      }
+
+      return [];
+
+    } catch (error) {
+      console.error('Error getting founder guidance:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get comprehensive industry context for a query
+   */
+  static async getIndustryContext(query: string): Promise<string> {
+    const [industryKnowledge, founderGuidance] = await Promise.all([
+      this.searchIndustryKnowledge(query, 8),
+      this.getFounderKnowledge(query)
+    ]);
+
+    let context = '';
+
+    if (industryKnowledge.length > 0) {
+      context += `\n\n🏢 INDUSTRY KNOWLEDGE:\n${industryKnowledge.join('\n\n')}`;
+    }
+
+    if (founderGuidance.length > 0) {
+      context += `\n\n👤 FOUNDER GUIDANCE:\n${founderGuidance.join('\n\n')}`;
+    }
+
+    return context;
+  }
+}
+
+/**
  * COMPREHENSIVE UNIFIED AI PROCESSOR
- * 
+ *
  * Main processor that handles all queries with complete functionality
  */
 export class ComprehensiveUnifiedAIProcessor {
@@ -641,18 +759,26 @@ export class ComprehensiveUnifiedAIProcessor {
       // Add comprehensive search results to context
       if (comprehensiveResults.buildings.length > 0 || comprehensiveResults.leaseholders.length > 0) {
         fullPrompt += `\n\nDatabase Context:\n`;
-        
+
         if (comprehensiveResults.buildings.length > 0) {
           fullPrompt += `Buildings: ${comprehensiveResults.buildings.map(b => `${b.name} (${b.address})`).join(', ')}\n`;
         }
-        
+
         if (comprehensiveResults.leaseholders.length > 0) {
           fullPrompt += `Leaseholders: ${comprehensiveResults.leaseholders.map(l => `${l.name} - ${l.units?.[0]?.unit_number || 'Unknown unit'}`).join(', ')}\n`;
         }
-        
+
         if (comprehensiveResults.units.length > 0) {
           fullPrompt += `Units: ${comprehensiveResults.units.map(u => `Unit ${u.unit_number} - ${u.buildings?.name || 'Unknown building'}`).join(', ')}\n`;
         }
+      }
+
+      // Add industry knowledge and founder guidance context
+      console.log('🔍 COMPREHENSIVE: Retrieving industry knowledge and founder guidance...');
+      const industryContext = await IndustryKnowledgeRetriever.getIndustryContext(prompt);
+      if (industryContext) {
+        fullPrompt += industryContext;
+        console.log('✅ COMPREHENSIVE: Added industry knowledge context');
       }
       
       // Add email context if available
@@ -696,7 +822,9 @@ export class ComprehensiveUnifiedAIProcessor {
             units: comprehensiveResults.units.length,
             leaseholders: comprehensiveResults.leaseholders.length,
             documents: comprehensiveResults.documents.length,
-            compliance: comprehensiveResults.compliance.length
+            compliance: comprehensiveResults.compliance.length,
+            industryKnowledge: comprehensiveResults.industryKnowledge.length,
+            founderKnowledge: comprehensiveResults.founderKnowledge.length
           }
         },
         source: 'Comprehensive AI Processor'

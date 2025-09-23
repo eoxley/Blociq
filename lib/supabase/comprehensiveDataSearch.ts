@@ -18,6 +18,8 @@ export interface ComprehensiveSearchResult {
   events: any[];
   assets: any[];
   maintenance: any[];
+  industryKnowledge: any[];
+  founderKnowledge: any[];
 }
 
 /**
@@ -43,7 +45,9 @@ export async function searchEntireDatabase(
     financials: [],
     events: [],
     assets: [],
-    maintenance: []
+    maintenance: [],
+    industryKnowledge: [],
+    founderKnowledge: []
   };
 
   try {
@@ -247,6 +251,44 @@ export async function searchEntireDatabase(
       console.warn('Maintenance search failed (table may not exist):', error);
     }
 
+    // 📚 Industry Knowledge Search
+    try {
+      const { data: industryKnowledge } = await supabase
+        .from('industry_knowledge_chunks')
+        .select(`
+          chunk_text,
+          industry_knowledge_documents!inner(
+            title,
+            category,
+            subcategory
+          )
+        `)
+        .ilike('chunk_text', `%${searchTerm}%`)
+        .limit(Math.min(10, maxResults))
+        .order('created_at', { ascending: false });
+
+      results.industryKnowledge = industryKnowledge || [];
+      console.log(`📚 Found ${results.industryKnowledge.length} industry knowledge chunks`);
+    } catch (error) {
+      console.warn('Industry knowledge search failed (table may not exist):', error);
+    }
+
+    // 👤 Founder Knowledge Search
+    try {
+      const { data: founderKnowledge } = await supabase
+        .from('founder_knowledge')
+        .select('id, title, content, tags, contexts, priority')
+        .eq('is_active', true)
+        .or(`title.ilike.%${searchTerm}%,content.ilike.%${searchTerm}%`)
+        .limit(Math.min(5, maxResults))
+        .order('priority', { ascending: false });
+
+      results.founderKnowledge = founderKnowledge || [];
+      console.log(`👤 Found ${results.founderKnowledge.length} founder knowledge items`);
+    } catch (error) {
+      console.warn('Founder knowledge search failed (table may not exist):', error);
+    }
+
     // Calculate total results
     const totalResults = Object.values(results).reduce((sum, arr) => sum + arr.length, 0);
     console.log(`✅ Comprehensive search completed: ${totalResults} total results found`);
@@ -422,6 +464,29 @@ export function formatSearchResultsForAI(results: ComprehensiveSearchResult): st
     });
   }
 
+  // Industry Knowledge
+  if (results.industryKnowledge.length > 0) {
+    context += `📚 INDUSTRY KNOWLEDGE (${results.industryKnowledge.length} found):\n`;
+    results.industryKnowledge.forEach(item => {
+      const doc = item.industry_knowledge_documents;
+      context += `• ${doc.category}: ${item.chunk_text.substring(0, 150)}${item.chunk_text.length > 150 ? '...' : ''}\n`;
+      context += `  Source: ${doc.title}\n`;
+      if (doc.subcategory) context += `  Subcategory: ${doc.subcategory}\n`;
+      context += '\n';
+    });
+  }
+
+  // Founder Knowledge
+  if (results.founderKnowledge.length > 0) {
+    context += `👤 FOUNDER GUIDANCE (${results.founderKnowledge.length} found):\n`;
+    results.founderKnowledge.forEach(item => {
+      context += `• ${item.title}\n`;
+      context += `  ${item.content.substring(0, 150)}${item.content.length > 150 ? '...' : ''}\n`;
+      if (item.tags && item.tags.length > 0) context += `  Tags: ${item.tags.join(', ')}\n`;
+      context += '\n';
+    });
+  }
+
   return context;
 }
 
@@ -465,6 +530,15 @@ export function extractRelevantContext(
     if (results.documents.length > 0) {
       relevantContext += formatDocumentContext(results.documents);
     }
+  }
+
+  // Always include industry knowledge and founder guidance if available
+  if (results.industryKnowledge.length > 0) {
+    relevantContext += formatIndustryKnowledgeContext(results.industryKnowledge);
+  }
+
+  if (results.founderKnowledge.length > 0) {
+    relevantContext += formatFounderKnowledgeContext(results.founderKnowledge);
   }
 
   // If no specific context found, return formatted full results
@@ -534,6 +608,30 @@ function formatDocumentContext(documents: any[]): string {
     context += `  Building: ${doc.buildings?.name}\n`;
     context += `  Created: ${new Date(doc.created_at).toLocaleDateString()}\n`;
     if (doc.notes) context += `  Notes: ${doc.notes}\n`;
+    context += '\n';
+  });
+  return context;
+}
+
+function formatIndustryKnowledgeContext(industryKnowledge: any[]): string {
+  let context = `📚 INDUSTRY KNOWLEDGE (${industryKnowledge.length} found):\n`;
+  industryKnowledge.forEach(item => {
+    const doc = item.industry_knowledge_documents;
+    context += `• ${doc.category}: ${item.chunk_text.substring(0, 200)}${item.chunk_text.length > 200 ? '...' : ''}\n`;
+    context += `  Source: ${doc.title}\n`;
+    if (doc.subcategory) context += `  Subcategory: ${doc.subcategory}\n`;
+    context += '\n';
+  });
+  return context;
+}
+
+function formatFounderKnowledgeContext(founderKnowledge: any[]): string {
+  let context = `👤 FOUNDER GUIDANCE (${founderKnowledge.length} found):\n`;
+  founderKnowledge.forEach(item => {
+    context += `• ${item.title}\n`;
+    context += `  ${item.content.substring(0, 200)}${item.content.length > 200 ? '...' : ''}\n`;
+    if (item.tags && item.tags.length > 0) context += `  Tags: ${item.tags.join(', ')}\n`;
+    if (item.contexts && item.contexts.length > 0) context += `  Contexts: ${item.contexts.join(', ')}\n`;
     context += '\n';
   });
   return context;
