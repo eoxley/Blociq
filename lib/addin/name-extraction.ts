@@ -313,18 +313,18 @@ export function isNameFormal(name: string): boolean {
 }
 
 /**
- * Generates appropriate thank-you/acknowledgement line based on topic
+ * Generates appropriate thank-you/acknowledgement line based on topic following new rules
  */
 export function generateThankYouLine(topic: string): string {
   switch (topic) {
     case 'leak':
       return 'Thank you for your email regarding the water ingress.';
     case 'fire':
-      return 'Thank you for raising this concern about fire safety.';
+      return 'Thank you for your email regarding fire safety.';
     case 'compliance':
-      return 'Thank you for your enquiry about compliance matters.';
+      return 'Thank you for your email regarding compliance matters.';
     default:
-      return 'Thank you for getting in touch.';
+      return 'Thank you for your email regarding your inquiry.';
   }
 }
 

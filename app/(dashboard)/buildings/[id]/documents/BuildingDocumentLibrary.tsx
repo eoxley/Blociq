@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
   Upload,
   Search,
@@ -13,6 +13,8 @@ import {
   CheckCircle,
   Clock,
   AlertCircle,
+  AlertTriangle,
+  Shield,
   Plus,
   Grid,
   List,
@@ -108,13 +110,13 @@ export default function BuildingDocumentLibrary({ building }: { building: Buildi
 
   useEffect(() => {
     fetchDocuments()
-  }, [building.id])
+  }, [fetchDocuments])
 
   useEffect(() => {
     filterDocuments()
-  }, [documents, selectedFolder, searchTerm])
+  }, [filterDocuments])
 
-  const fetchDocuments = async () => {
+  const fetchDocuments = useCallback(async () => {
     try {
       console.log(`📂 Fetching all documents for building: ${building.id}`)
 
@@ -149,38 +151,7 @@ export default function BuildingDocumentLibrary({ building }: { building: Buildi
         console.warn('Building documents table not accessible:', error)
       }
 
-      // 2. Fetch compliance documents (simplified query)
-      try {
-        const { data: complianceDocs, error: complianceError } = await supabase
-          .from('building_documents')
-          .select('*')
-          .eq('building_id', building.id)
-          .eq('category', 'compliance')
-          .order('uploaded_at', { ascending: false })
-
-        if (!complianceError && complianceDocs) {
-          const formattedComplianceDocs = complianceDocs.map((doc: any) => ({
-            id: doc.id,
-            name: doc.name || 'Compliance Document',
-            type: doc.type || 'application/pdf',
-            category: `Compliance - ${doc.type || 'Other'}`,
-            file_path: doc.file_path,
-            file_size: doc.file_size || 0,
-            uploaded_at: doc.uploaded_at,
-            uploaded_by: doc.uploaded_by || 'Unknown',
-            ocr_status: doc.ocr_status || 'pending',
-            metadata: {
-              source: 'building_documents',
-              document_type: doc.type,
-              category: doc.category
-            }
-          }))
-          allDocuments.push(...formattedComplianceDocs)
-          console.log(`🛡️ Found ${formattedComplianceDocs.length} compliance documents`)
-        }
-      } catch (error) {
-        console.warn('Compliance documents not accessible:', error)
-      }
+      // Note: Compliance documents are now included in the general building_documents query above
 
       // 3. Fetch lease documents (from document_jobs and leases tables)
       try {
@@ -259,9 +230,9 @@ export default function BuildingDocumentLibrary({ building }: { building: Buildi
       setDocuments([])
       toast.error('Failed to load documents')
     }
-  }
+  }, [building.id, supabase])
 
-  const filterDocuments = () => {
+  const filterDocuments = useCallback(() => {
     let filtered = documents
 
     if (selectedFolder) {
@@ -276,7 +247,7 @@ export default function BuildingDocumentLibrary({ building }: { building: Buildi
     }
 
     setFilteredDocuments(filtered)
-  }
+  }, [documents, selectedFolder, searchTerm])
 
   const handleFileSelect = (file: File) => {
     setSelectedFile(file)
@@ -325,7 +296,7 @@ export default function BuildingDocumentLibrary({ building }: { building: Buildi
       
       setShowUploadModal(false)
       setSelectedFile(null)
-      fetchDocuments()
+      await fetchDocuments()
     } catch (error) {
       console.error('Upload error:', error)
       toast.error('Failed to upload document')

@@ -9,16 +9,7 @@ const chatContainer = document.getElementById('chatContainer');
 const inputField = document.getElementById('inputField');
 const sendButton = document.getElementById('sendButton');
 
-// AI Reply elements
-const aiReplyButton = document.getElementById('aiReplyButton');
-const confirmationPanel = document.getElementById('confirmationPanel');
-const confirmationTitle = document.getElementById('confirmationTitle');
-const closeConfirmation = document.getElementById('closeConfirmation');
-const factsSection = document.getElementById('factsSection');
-const factsList = document.getElementById('factsList');
-const draftTextarea = document.getElementById('draftTextarea');
-const insertDraftButton = document.getElementById('insertDraftButton');
-const cancelButton = document.getElementById('cancelButton');
+// Note: AI Reply functionality removed - this is now a pure chat interface
 
 // Tone elements
 const toneLabel = document.getElementById('toneLabel');
@@ -42,8 +33,6 @@ const toastClose = document.getElementById('toastClose');
 Office.onReady(() => {
   console.log('📋 BlocIQ Taskpane loaded successfully');
   setupEventListeners();
-  setupAIReplyListeners();
-  setupItemSendHandler();
   addWelcomeMessage();
 
   // Focus on input field
@@ -127,22 +116,17 @@ async function handleSendMessage() {
 async function callAskBlocIQ(prompt, emailContext) {
   try {
     console.log('🔍 Calling BlocIQ API with prompt:', prompt);
-    
-    const requestBody = {
-      prompt: prompt,
-      contextType: 'general',
-      is_outlook_addin: true,
-    };
 
-    // Add email context if available
-    if (emailContext) {
-      requestBody.emailContext = emailContext;
-    }
+    const requestBody = {
+      message: prompt,
+      emailContext: emailContext,
+      source: 'outlook_addin'
+    };
 
     console.log('📤 Request body:', requestBody);
 
-    // Call the main Ask AI endpoint
-    const response = await fetch('https://www.blociq.co.uk/api/ask-ai-v2', {
+    // Call the unified Ask BlocIQ endpoint
+    const response = await fetch('https://www.blociq.co.uk/api/addin/chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -160,13 +144,16 @@ async function callAskBlocIQ(prompt, emailContext) {
 
     const data = await response.json();
     console.log('📥 Response data:', data);
-    
-    // Return the response
-    return data.response || data.message || 'I apologize, but I couldn\'t generate a response. Please try again.';
+
+    if (data.success) {
+      return data.response || 'I apologize, but I couldn\'t generate a response. Please try again.';
+    } else {
+      throw new Error(data.error || 'Unknown API error');
+    }
 
   } catch (error) {
     console.error('Ask BlocIQ API call failed:', error);
-    
+
     // Provide more specific error messages
     if (error.message.includes('401')) {
       return '🔐 Authentication needed. Please ensure you are logged into your BlocIQ account.';

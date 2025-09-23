@@ -187,12 +187,37 @@ export async function addinReplyAdapter(params: {
 }
 
 /**
- * Extract sender's name from email address or from line for proper salutation
+ * Extract sender's name from email address, from line, or sign-off for proper salutation
  */
-function extractSenderInfo(fromField: string): { firstName?: string; title?: string; surname?: string; fullName?: string } {
+function extractSenderInfo(fromField: string, bodyText?: string): { firstName?: string; title?: string; surname?: string; fullName?: string } {
   if (!fromField) return {};
 
-  // Clean up the from field - remove email address if present
+  // First try to extract from sign-off in body text
+  if (bodyText) {
+    const signOffPatterns = [
+      /(?:many thanks|kind regards|best regards|regards|yours sincerely|yours faithfully),?\s*\n?\s*([A-Z][a-z]+ [A-Z][a-z]+)/i,
+      /(?:thanks|cheers),?\s*\n?\s*([A-Z][a-z]+ [A-Z][a-z]+)/i,
+      /\n\s*([A-Z][a-z]+ [A-Z][a-z]+)\s*$/m
+    ];
+
+    for (const pattern of signOffPatterns) {
+      const match = bodyText.match(pattern);
+      if (match && match[1]) {
+        const nameParts = match[1].trim().split(/\s+/);
+        if (nameParts.length >= 2) {
+          return {
+            firstName: nameParts[0],
+            surname: nameParts.slice(1).join(' '),
+            fullName: match[1].trim()
+          };
+        } else if (nameParts.length === 1) {
+          return { firstName: nameParts[0] };
+        }
+      }
+    }
+  }
+
+  // Fall back to extracting from fromField
   let name = fromField.replace(/<[^>]*>/g, '').replace(/[""]/g, '').trim();
 
   // If it's just an email address, extract the part before @
@@ -316,8 +341,9 @@ async function generateContextualReply(
   }
 
   try {
-    // Extract sender information for proper salutation
-    const senderInfo = extractSenderInfo(outlookContext.from || '');
+    // Extract sender information for proper salutation (from sign-off or from field)
+    const emailBodyText = outlookContext.bodyHtml || outlookContext.bodyPreview || '';
+    const senderInfo = extractSenderInfo(outlookContext.from || '', emailBodyText);
     const salutation = generateSalutation(senderInfo);
 
     // Summarize the email subject/issue
@@ -471,17 +497,27 @@ ${emailThreadText}
 KNOWLEDGE BASE:
 ${knowledgeContext || 'No specific building or lease data available in BlocIQ system.'}
 
-REPLY REQUIREMENTS:
-1. Subject line: included only once at the top. Do not repeat subject text in the body.
+REPLY REQUIREMENTS - FOLLOW EXACTLY:
+1. Subject line: included only once at the top. Do NOT repeat subject text in the body.
 2. Salutation: "${salutation}" (extracted from sender's name)
-3. Opening line: "Thank you for your email regarding ${subjectSummary}."
-4. Body: respond contextually to the issue raised, using building/lease/compliance data if available.
-5. Closing: "${signOff}," followed by the user's first name only.
-6. Do NOT include placeholders such as [Your Position], [Property Management Company], or the user's full email signature block in the draft.
-7. Keep the tone professional, concise, and UK property management appropriate.
-8. Use British English throughout and reference actual data from the knowledge base when available.
+3. Opening line: MUST be exactly "Thank you for your email regarding ${subjectSummary}."
+4. Body: respond contextually to the issue raised, using building/lease/compliance data if available. Keep concise and professional.
+5. Closing: MUST be exactly "${signOff}," followed by the user's first name only.
+6. Do NOT include placeholders such as [Your Position], [Property Management Company], or any full email signature block.
+7. Do NOT add "Kind regards" or closing phrases if they are already provided in requirement 5.
+8. Keep the tone professional, concise, and UK property management appropriate.
+9. Use British English throughout and reference actual data from the knowledge base when available.
+10. Output ONLY the email body content - no subject line as that is handled separately.
 
-Generate a professional email reply that follows these rules exactly and uses the stripped-down format consistently.`;
+Generate a professional email reply that follows these rules exactly. The format must be:
+${salutation},
+
+Thank you for your email regarding ${subjectSummary}.
+
+[Contextual response body using available data]
+
+${signOff},
+[User's first name]`;
 
     // Call the unified Ask BlocIQ endpoint with the structured prompt
     const askBlocIQUrl = process.env.NODE_ENV === 'production'
@@ -579,7 +615,8 @@ Generate a professional email reply that follows these rules exactly and uses th
   }
 
   // Enhanced fallback following new rules
-  const senderInfo = extractSenderInfo(outlookContext?.from || '');
+  const emailBodyText = outlookContext?.bodyHtml || outlookContext?.bodyPreview || '';
+  const senderInfo = extractSenderInfo(outlookContext?.from || '', emailBodyText);
   const salutation = generateSalutation(senderInfo);
   const subjectSummary = summarizeEmailSubject(outlookContext?.subject, outlookContext?.bodyPreview);
 
@@ -663,13 +700,15 @@ async function generateReplyBody(
     }
   }
 
-  // Check if the body already ends with a signature or sign-off
-  if (!body.includes('Kind regards') && !body.includes('Yours sincerely')) {
-    body += '<p>Kind regards,</p>';
+  // The new rules enforce that the sign-off is already included in the contextual reply
+  // Only add user name if not already present
+  if (!body.includes(userFirstName) && (body.includes('Kind regards') || body.includes('Yours sincerely'))) {
+    // Replace the sign-off line to include the user's first name
+    body = body.replace(/(Kind regards|Yours sincerely),?\s*(<\/p>)?$/m, `$1,</p>\n<p>${userFirstName}</p>`);
+  } else if (!body.includes('Kind regards') && !body.includes('Yours sincerely')) {
+    // Add complete sign-off if missing
+    body += `<p>Kind regards,</p>\n<p>${userFirstName}</p>`;
   }
-
-  // Append only the user's first name
-  body += `<br><p>${userFirstName}</p>`;
 
   return {
     bodyHtml: body,

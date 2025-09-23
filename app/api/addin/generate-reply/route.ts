@@ -121,16 +121,20 @@ export async function POST(request: NextRequest) {
 
 // Fallback function for basic replies when new system fails
 async function generateBasicReply(sender: string, subject: string, body: string) {
-    const basicReply = `Dear Resident,
+    // Extract first name from sender for proper salutation and closing
+    const senderName = extractFirstNameFromSender(sender);
+    const salutation = senderName ? `Dear ${senderName}` : 'Dear Resident';
 
-Thank you for getting in touch about ${subject}.
+    const basicReply = `${salutation},
+
+Thank you for your email regarding ${subject}.
 
 We have received your enquiry and will respond within 2 working days.
 
 If this is an emergency, please contact our emergency line immediately.
 
-Best regards,
-Building Management Team`;
+Kind regards,
+BlocIQ`;
 
     return NextResponse.json({
         success: true,
@@ -143,6 +147,28 @@ Building Management Team`;
         tone: 'neutral',
         template: 'basic_fallback'
     });
+}
+
+// Helper function to extract first name from sender email or display name
+function extractFirstNameFromSender(sender: string): string | null {
+    if (!sender) return null;
+
+    // Remove email address if present
+    let name = sender.replace(/<[^>]*>/g, '').replace(/[""]/g, '').trim();
+
+    // If it's just an email address, extract the part before @
+    if (name.includes('@') && !name.includes(' ')) {
+        name = name.split('@')[0].replace(/[._]/g, ' ');
+    }
+
+    // Split into parts and return first part if it looks like a name
+    const nameParts = name.split(/\s+/).filter(part => part.length > 0);
+
+    if (nameParts.length > 0 && nameParts[0].length > 1 && /^[A-Z][a-z]+$/.test(nameParts[0])) {
+        return nameParts[0];
+    }
+
+    return null;
 }
 
 // CORS headers for Outlook add-in
