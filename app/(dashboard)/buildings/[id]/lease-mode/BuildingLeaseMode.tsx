@@ -252,7 +252,7 @@ export default function BuildingLeaseMode({ building }: { building: Building }) 
                       End Date
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Ground Rent
+                      View Lease
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status
@@ -282,7 +282,17 @@ export default function BuildingLeaseMode({ building }: { building: Building }) 
                         {formatDate(lease.end_date)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {formatCurrency(lease.ground_rent)}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setSelectedLease(lease)
+                          }}
+                          className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
+                          title="View full lease document and analysis"
+                        >
+                          <FileText className="h-4 w-4" />
+                          View Lease
+                        </button>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(lease.status)}`}>

@@ -60,33 +60,175 @@ export default function BuildingLeaseSummary({ buildingId, buildingName }: Build
 
   const fetchBuildingSummary = async () => {
     try {
-      const { data, error } = await supabase
+      // First try to get pre-computed building lease summary
+      const { data: existingSummary, error: summaryError } = await supabase
         .from('building_lease_summary')
         .select('*')
         .eq('building_id', buildingId)
         .single()
 
-      if (error) {
-        if (error.code === 'PGRST116') {
-          // No data found - this is normal for new buildings
-          setSummary(null)
-        } else if (error.code === '42P01' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
-          // Table doesn't exist - handle gracefully
-          console.log('Building lease summary table not yet available')
-          setSummary(null)
-        } else {
-          throw error
-        }
-      } else {
-        setSummary(data)
+      if (existingSummary && !summaryError) {
+        setSummary(existingSummary)
+        setLoading(false)
+        return
       }
+
+      // If no pre-computed summary exists or table doesn't exist, generate from lease data
+      console.log('Building lease summary table not available, generating from lease data...')
+
+      // Fetch leases for this building that have analysis data
+      const { data: leases, error: leasesError } = await supabase
+        .from('leases')
+        .select(`
+          id,
+          unit_number,
+          leaseholder_name,
+          building_id,
+          unit_id,
+          scope,
+          analysis_json,
+          created_at
+        `)
+        .eq('building_id', buildingId)
+        .not('analysis_json', 'is', null)
+
+      if (leasesError) {
+        throw leasesError
+      }
+
+      if (!leases || leases.length === 0) {
+        setSummary(null)
+        setLoading(false)
+        return
+      }
+
+      // Generate building summary from lease analysis data
+      const buildingSummary = generateBuildingSummaryFromLeases(leases)
+      setSummary(buildingSummary)
+
     } catch (error) {
       console.error('Error fetching building lease summary:', error)
-      // Don't show error toast for missing table - just log it
-      console.log('Building lease summary feature not yet available')
       setSummary(null)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const generateBuildingSummaryFromLeases = (leases: any[]) => {
+    const totalLeases = leases.length
+    const analyzedLeases = leases.filter(lease => lease.analysis_json).length
+
+    // Aggregate data from all leases
+    const insuranceSummaries: any[] = []
+    const petsSummaries: any[] = []
+    const sublettingSummaries: any[] = []
+    const alterationsSummaries: any[] = []
+    const businessUseSummaries: any[] = []
+
+    leases.forEach(lease => {
+      if (lease.analysis_json) {
+        const analysis = lease.analysis_json
+
+        // Extract clause summaries from analysis
+        if (analysis.clauses || analysis.extracted_clauses) {
+          const clauses = analysis.clauses || analysis.extracted_clauses
+
+          // Insurance
+          if (clauses.insurance || clauses.insurance_clause) {
+            insuranceSummaries.push(clauses.insurance || clauses.insurance_clause)
+          }
+
+          // Pets
+          if (clauses.pets || clauses.pets_clause) {
+            petsSummaries.push(clauses.pets || clauses.pets_clause)
+          }
+
+          // Subletting
+          if (clauses.subletting || clauses.assignment_subletting) {
+            sublettingSummaries.push(clauses.subletting || clauses.assignment_subletting)
+          }
+
+          // Alterations
+          if (clauses.alterations || clauses.alterations_clause) {
+            alterationsSummaries.push(clauses.alterations || clauses.alterations_clause)
+          }
+
+          // Business use
+          if (clauses.business_use || clauses.permitted_use) {
+            businessUseSummaries.push(clauses.business_use || clauses.permitted_use)
+          }
+        }
+      }
+    })
+
+    // Create summary based on aggregated data
+    const buildingSummary: BuildingLeaseSummary = {
+      id: `generated-${buildingId}`,
+      building_id: buildingId,
+      insurance_summary: createClauseSummary('Insurance', insuranceSummaries, totalLeases),
+      pets_summary: createClauseSummary('Pet Policy', petsSummaries, totalLeases),
+      subletting_summary: createClauseSummary('Subletting', sublettingSummaries, totalLeases),
+      alterations_summary: createClauseSummary('Alterations', alterationsSummaries, totalLeases),
+      business_use_summary: createClauseSummary('Business Use', businessUseSummaries, totalLeases),
+      discrepancies: {},
+      total_leases: totalLeases,
+      analyzed_leases: analyzedLeases,
+      last_analysis_date: new Date().toISOString()
+    }
+
+    return buildingSummary
+  }
+
+  const createClauseSummary = (title: string, summaries: any[], totalLeases: number) => {
+    if (summaries.length === 0) {
+      return {
+        status: 'unknown',
+        summary: `No ${title.toLowerCase()} clauses found in analyzed leases`,
+        applicable_leases: 0,
+        details: []
+      }
+    }
+
+    // Determine status based on clause content analysis
+    const allowedTerms = ['permitted', 'allowed', 'may', 'can', 'consent not required']
+    const restrictedTerms = ['prohibited', 'not permitted', 'forbidden', 'consent required', 'landlord approval']
+
+    let allowedCount = 0
+    let restrictedCount = 0
+    const details: string[] = []
+
+    summaries.forEach((summary, index) => {
+      const text = typeof summary === 'string' ? summary : JSON.stringify(summary)
+      const lowerText = text.toLowerCase()
+
+      if (allowedTerms.some(term => lowerText.includes(term))) {
+        allowedCount++
+      } else if (restrictedTerms.some(term => lowerText.includes(term))) {
+        restrictedCount++
+      }
+
+      details.push(text.length > 200 ? text.substring(0, 200) + '...' : text)
+    })
+
+    let status = 'unknown'
+    let summaryText = `${title} provisions vary by lease`
+
+    if (allowedCount > restrictedCount) {
+      status = 'allowed'
+      summaryText = `${title} is generally permitted across most leases`
+    } else if (restrictedCount > allowedCount) {
+      status = 'restricted'
+      summaryText = `${title} generally requires consent or is restricted`
+    } else if (allowedCount > 0 && restrictedCount > 0) {
+      status = 'mixed'
+      summaryText = `${title} policies vary significantly between leases`
+    }
+
+    return {
+      status,
+      summary: summaryText,
+      applicable_leases: summaries.length,
+      details: details.slice(0, 5) // Limit to 5 details
     }
   }
 
