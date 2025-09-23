@@ -280,15 +280,15 @@ const TrackerItemRow: React.FC<TrackerItemRowProps> = ({
   // Row background based on status
   const getRowClasses = () => {
     if (item.completed) {
-      return 'bg-gray-50 border-gray-200';
+      return 'bg-gray-50/70 backdrop-blur-sm border-gray-200/50';
     }
     if (isOverdue) {
-      return 'bg-red-50 border-red-200';
+      return 'bg-red-50/70 backdrop-blur-sm border-red-200/50';
     }
     if (isDueSoon) {
-      return 'bg-amber-50 border-amber-200';
+      return 'bg-amber-50/70 backdrop-blur-sm border-amber-200/50';
     }
-    return 'bg-white border-gray-200 hover:bg-gray-50';
+    return 'bg-white/70 backdrop-blur-sm border-gray-200/50 hover:bg-gray-50/80';
   };
 
   return (
@@ -419,7 +419,7 @@ const TrackerItemRow: React.FC<TrackerItemRowProps> = ({
 
               {/* Expanded details */}
               {isExpanded && item.notes && (
-                <div className="mt-2 p-2 bg-gray-100 rounded text-xs text-gray-600">
+                <div className="mt-2 p-2 bg-gray-100/70 backdrop-blur-sm rounded text-xs text-gray-600 border border-gray-200/50">
                   {item.notes}
                 </div>
               )}
@@ -479,8 +479,8 @@ export default function ActionTracker({ buildingId }: ActionTrackerProps) {
 
   return (
     <>
-      <SectionCard className="group">
-        <div className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] px-4 py-3 rounded-t-2xl">
+      <SectionCard className="group backdrop-blur-sm bg-white/80">
+        <div className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] px-4 py-3 rounded-t-2xl backdrop-blur-md bg-opacity-90">
           <div className="flex items-center justify-between text-white">
             <div className="flex items-center gap-2">
               <ClipboardList className="h-5 w-5" />
@@ -513,23 +513,23 @@ export default function ActionTracker({ buildingId }: ActionTrackerProps) {
           <div className="absolute bottom-0 left-4 w-8 h-8 bg-white/5 rounded-full blur-lg"></div>
         </div>
 
-        <div className="p-4">
+        <div className="p-4 backdrop-blur-sm bg-white/50">
           {/* Stats overview */}
           {!isLoading && stats.total > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-              <div className="bg-blue-50 rounded-lg p-3 text-center">
+              <div className="bg-blue-50/70 backdrop-blur-sm rounded-lg p-3 text-center border border-blue-100/50">
                 <div className="text-lg font-bold text-blue-600">{stats.active}</div>
                 <div className="text-xs text-blue-600">Active</div>
               </div>
-              <div className="bg-red-50 rounded-lg p-3 text-center">
+              <div className="bg-red-50/70 backdrop-blur-sm rounded-lg p-3 text-center border border-red-100/50">
                 <div className="text-lg font-bold text-red-600">{stats.overdue}</div>
                 <div className="text-xs text-red-600">Overdue</div>
               </div>
-              <div className="bg-amber-50 rounded-lg p-3 text-center">
+              <div className="bg-amber-50/70 backdrop-blur-sm rounded-lg p-3 text-center border border-amber-100/50">
                 <div className="text-lg font-bold text-amber-600">{stats.dueSoon}</div>
                 <div className="text-xs text-amber-600">Due Soon</div>
               </div>
-              <div className="bg-green-50 rounded-lg p-3 text-center">
+              <div className="bg-green-50/70 backdrop-blur-sm rounded-lg p-3 text-center border border-green-100/50">
                 <div className="text-lg font-bold text-green-600">{stats.completed}</div>
                 <div className="text-xs text-green-600">Completed</div>
               </div>

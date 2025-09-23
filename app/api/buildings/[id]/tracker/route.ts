@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 export async function GET(
   request: NextRequest,
@@ -146,8 +146,23 @@ export async function POST(
       return NextResponse.json({ error: 'item_text is required' }, { status: 400 })
     }
 
-    // Create new tracker item
-    const { data: newItem, error: createError } = await supabase
+    // First verify user has access to this building via regular client (RLS check)
+    const { data: buildingAccess, error: accessError } = await supabase
+      .from('buildings')
+      .select('id, agency_id')
+      .eq('id', buildingId)
+      .single()
+
+    if (accessError || !buildingAccess) {
+      console.error('User does not have access to building:', buildingId, accessError)
+      return NextResponse.json({
+        error: 'Access denied to this building'
+      }, { status: 403 })
+    }
+
+    // Use service client for insert (bypasses RLS but we already checked permissions)
+    const serviceClient = createServiceClient()
+    const { data: newItem, error: createError } = await serviceClient
       .from('building_action_tracker')
       .insert({
         building_id: buildingId,
@@ -173,7 +188,21 @@ export async function POST(
 
     if (createError) {
       console.error('Error creating tracker item:', createError)
-      return NextResponse.json({ error: 'Failed to create tracker item' }, { status: 400 })
+      console.error('Error details:', {
+        code: createError.code,
+        message: createError.message,
+        details: createError.details,
+        hint: createError.hint
+      })
+      console.error('User ID:', user.id)
+      console.error('Building ID:', buildingId)
+      console.error('Request body:', { item_text, due_date, notes, priority, source })
+
+      return NextResponse.json({
+        error: 'Failed to create tracker item',
+        details: createError.message,
+        code: createError.code
+      }, { status: 400 })
     }
 
     return NextResponse.json({

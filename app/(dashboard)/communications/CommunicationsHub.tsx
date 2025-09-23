@@ -58,13 +58,17 @@ interface CommunicationLog {
   id: string
   type?: 'call' | 'email' | 'letter'
   leaseholder_id: string
-  leaseholder_name: string
   building_name: string
   unit_number: string
   subject: string
   content: string
   created_at: string
   status: 'sent' | 'failed' | 'pending'
+  leaseholder?: {
+    id: string
+    name: string
+    email: string
+  } | null
 }
 
 export default function CommunicationsHub() {
@@ -91,14 +95,15 @@ export default function CommunicationsHub() {
         .from('communications_log')
         .select(`
           id,
+          type,
           leaseholder_id,
-          leaseholder_name,
           building_name,
           unit_number,
           subject,
           content,
           created_at,
-          status
+          status,
+          leaseholder:leaseholders(id, name, email)
         `)
         .order('created_at', { ascending: false })
         .limit(5)
@@ -237,7 +242,6 @@ export default function CommunicationsHub() {
         .insert({
           type: 'call',
           leaseholder_id: leaseholder.id,
-          leaseholder_name: leaseholder.name || 'Unknown',
           building_name: leaseholder.unit?.building?.name || 'Unknown',
           unit_number: leaseholder.unit?.unit_number || 'Unknown',
           subject: 'Phone Call',
@@ -371,7 +375,7 @@ export default function CommunicationsHub() {
                       </div>
                       <div>
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="font-semibold text-gray-900">{comm.leaseholder_name}</span>
+                          <span className="font-semibold text-gray-900">{comm.leaseholder?.name || 'Unknown'}</span>
                           <span className="px-2 py-1 bg-gray-200 text-gray-700 rounded-full text-xs">
                             {comm.unit_number}
                           </span>

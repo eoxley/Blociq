@@ -65,12 +65,14 @@ export default function CommunicationsLog({
           content,
           sent_at,
           building_id,
+          leaseholder_id,
           sent_by,
           building_name,
-          leaseholder_name,
           unit_number,
           status,
-          metadata
+          metadata,
+          building:buildings(id, name),
+          leaseholder:leaseholders(id, name, email)
         `)
         .order('sent_at', { ascending: false })
         .limit(limit)
@@ -79,11 +81,9 @@ export default function CommunicationsLog({
       if (buildingId) {
         query = query.eq('building_id', buildingId)
       }
-      // Skip leaseholder_id filter since column doesn't exist in current schema
-      // TODO: Re-enable when leaseholder_id column is properly added
-      // if (leaseholderId) {
-      //   query = query.eq('leaseholder_id', leaseholderId)
-      // }
+      if (leaseholderId) {
+        query = query.eq('leaseholder_id', leaseholderId)
+      }
       if (filter !== 'all') {
         query = query.eq('type', filter)
       }
@@ -101,38 +101,16 @@ export default function CommunicationsLog({
         return
       }
 
-      // Fetch related building data if needed
-      const buildingIds = [...new Set(data.map(comm => comm.building_id).filter(Boolean))]
-      let buildingsMap: Record<string, { id: string; name: string }> = {}
-
-      if (buildingIds.length > 0) {
-        const { data: buildings } = await supabase
-          .from('buildings')
-          .select('id, name')
-          .in('id', buildingIds)
-
-        if (buildings) {
-          buildingsMap = buildings.reduce((acc, building) => {
-            acc[building.id] = building
-            return acc
-          }, {} as Record<string, { id: string; name: string }>)
-        }
-      }
-
-      // Use leaseholder data directly from communications_log since it has leaseholder_name
-      // Skip separate leaseholder fetch to avoid schema issues
-
-      // Map the data with related entities
+      // Map the data with related entities from JOINed data
       const enrichedCommunications = data.map(comm => ({
         ...comm,
         direction: 'outbound', // Default since no direction field in schema
         body: comm.content || '', // Map content to body field
-        building: comm.building_id ? buildingsMap[comm.building_id] : (comm.building_name ? { id: comm.building_id || '', name: comm.building_name } : null),
-        leaseholder: comm.leaseholder_name ? {
-          id: '', // No leaseholder_id available in current schema
-          name: comm.leaseholder_name,
-          email: ''
-        } : null,
+        building: comm.building || (comm.building_name ? {
+          id: comm.building_id || '',
+          name: comm.building_name
+        } : null),
+        leaseholder: comm.leaseholder || null,
         user: null // User data can be fetched if needed
       }))
 
