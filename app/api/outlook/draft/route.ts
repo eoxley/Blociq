@@ -98,22 +98,22 @@ function generateDraft(
   switch (topic) {
     case 'leak':
       template = 'leak_response';
-      bodyHtml = generateLeakTemplate(name, buildingName, toneLead, factsSection, nextSteps, boundaryLines, facts);
+      bodyHtml = generateLeakTemplate(senderName, buildingName, thankYouLine, toneLead, factsSection, nextSteps, boundaryLines, closingPhrase, facts);
       break;
 
     case 'fire':
       template = 'fire_safety_response';
-      bodyHtml = generateFireTemplate(name, buildingName, toneLead, factsSection, nextSteps, boundaryLines, facts);
+      bodyHtml = generateFireTemplate(senderName, buildingName, thankYouLine, toneLead, factsSection, nextSteps, boundaryLines, closingPhrase, facts);
       break;
 
     case 'compliance':
       template = 'compliance_response';
-      bodyHtml = generateComplianceTemplate(name, buildingName, toneLead, factsSection, nextSteps, boundaryLines, facts);
+      bodyHtml = generateComplianceTemplate(senderName, buildingName, thankYouLine, toneLead, factsSection, nextSteps, boundaryLines, closingPhrase, facts);
       break;
 
     default:
       template = 'general_response';
-      bodyHtml = generateGeneralTemplate(name, buildingName, toneLead, factsSection, nextSteps, boundaryLines);
+      bodyHtml = generateGeneralTemplate(senderName, buildingName, thankYouLine, toneLead, factsSection, nextSteps, boundaryLines, closingPhrase);
       break;
   }
 
@@ -229,15 +229,17 @@ function generateBoundaryLines(guidelines: ReturnType<typeof getToneGuidelines>)
 function generateLeakTemplate(
   name: string,
   buildingName: string,
+  thankYouLine: string,
   toneLead: string,
   factsSection: string,
   nextSteps: string,
   boundaryLines: string,
+  closingPhrase: string,
   facts: EnrichmentResult['facts']
 ): string {
   return `Dear ${name},
 
-Thank you for getting in touch about the water ingress at ${buildingName}. ${toneLead}
+${thankYouLine} ${toneLead}
 
 **What we can see right now**
 ${factsSection}
@@ -245,22 +247,24 @@ ${factsSection}
 **Next steps**
 ${nextSteps}${boundaryLines}
 
-Best regards,
+${closingPhrase}
 Building Management Team`;
 }
 
 function generateFireTemplate(
   name: string,
   buildingName: string,
+  thankYouLine: string,
   toneLead: string,
   factsSection: string,
   nextSteps: string,
   boundaryLines: string,
+  closingPhrase: string,
   facts: EnrichmentResult['facts']
 ): string {
   return `Dear ${name},
 
-Thank you for raising this — I understand how important the fire doors and alarm maintenance are at ${buildingName}. ${toneLead}
+${thankYouLine} ${toneLead}
 
 **Current records**
 ${factsSection}
@@ -268,22 +272,24 @@ ${factsSection}
 **Next steps**
 ${nextSteps}${boundaryLines}
 
-Best regards,
+${closingPhrase}
 Building Management Team`;
 }
 
 function generateComplianceTemplate(
   name: string,
   buildingName: string,
+  thankYouLine: string,
   toneLead: string,
   factsSection: string,
   nextSteps: string,
   boundaryLines: string,
+  closingPhrase: string,
   facts: EnrichmentResult['facts']
 ): string {
   return `Dear ${name},
 
-Thank you for your enquiry about compliance matters at ${buildingName}. ${toneLead}
+${thankYouLine} ${toneLead}
 
 **Current compliance status**
 ${factsSection}
@@ -291,26 +297,28 @@ ${factsSection}
 **Next steps**
 ${nextSteps}${boundaryLines}
 
-Best regards,
+${closingPhrase}
 Building Management Team`;
 }
 
 function generateGeneralTemplate(
   name: string,
   buildingName: string,
+  thankYouLine: string,
   toneLead: string,
   factsSection: string,
   nextSteps: string,
-  boundaryLines: string
+  boundaryLines: string,
+  closingPhrase: string
 ): string {
   return `Dear ${name},
 
-Thank you for getting in touch about ${buildingName}. ${toneLead}
+${thankYouLine} ${toneLead}
 
 ${factsSection ? `**Information available**\n${factsSection}\n` : ''}**Next steps**
 ${nextSteps}${boundaryLines}
 
-Best regards,
+${closingPhrase}
 Building Management Team`;
 }
 
