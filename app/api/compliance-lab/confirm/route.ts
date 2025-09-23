@@ -269,14 +269,44 @@ export async function POST(req: NextRequest) {
       analysis_results
     );
 
+    // Create compliance_documents record first if we have a building document
+    let complianceDocumentId = null;
+    if (docResult.success && docResult.building_document_id) {
+      try {
+        const { data: complianceDoc, error: complianceDocError } = await serviceSupabase
+          .from('compliance_documents')
+          .insert({
+            building_document_id: docResult.building_document_id,
+            compliance_type: analysis_results.document_type,
+            inspection_date: analysis_results.inspection_details?.inspection_date,
+            certificate_number: analysis_results.inspection_details?.certificate_number,
+            inspector_name: analysis_results.inspection_details?.inspector_name,
+            inspector_company: analysis_results.inspection_details?.inspector_company,
+            status: complianceStatus,
+            created_at: new Date().toISOString()
+          })
+          .select('id')
+          .single();
+
+        if (!complianceDocError && complianceDoc) {
+          complianceDocumentId = complianceDoc.id;
+          console.log('✅ Created compliance document record:', complianceDocumentId);
+        } else {
+          console.warn('⚠️ Failed to create compliance document:', complianceDocError?.message);
+        }
+      } catch (error) {
+        console.warn('⚠️ Error creating compliance document:', error);
+      }
+    }
+
     const buildingAssetData = {
       building_id: building_id,
       compliance_asset_id: complianceAsset.id,
       last_renewed_date: analysis_results.inspection_details?.inspection_date || new Date().toISOString().split('T')[0],
       next_due_date: analysis_results.inspection_details?.next_inspection_due,
       status: complianceStatus,
-      // Use the building document ID if available, otherwise leave null
-      latest_document_id: docResult.success ? docResult.building_document_id : null,
+      // Use the compliance document ID if available, otherwise leave null
+      latest_document_id: complianceDocumentId,
       contractor: analysis_results.inspection_details?.inspector_company || analysis_results.inspection_details?.inspector_name,
       notes: `${analysis_results.document_type} - ${analysis_results.compliance_status}. Certificate: ${analysis_results.inspection_details?.certificate_number || 'N/A'}`,
       updated_at: new Date().toISOString()

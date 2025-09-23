@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>BlocIQ Triage Functions</title>
+  <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+</head>
+<body>
+  <h3 style="font-family: sans-serif; color: #444;">BlocIQ Triage Functions Loaded ✅</h3>
+  <p style="font-family: sans-serif; color: #666; font-size: 12px;">
+    This page is used by Outlook as the FunctionFile entry point for the BlocIQ Triage add-in.
+  </p>
+
+  <script>
+    let triageProgress = {
+      total: 0,
+      processed: 0,
+      created: 0,
+      failed: 0
+    };
+
+    function triageInboxWithBlocIQ(event) {
+      const userEmail = Office.context.mailbox.userProfile.emailAddress || "";
+      console.log("BlocIQ Triage triggered for user:", userEmail);
+
+      showProgressNotification("🔄 Starting inbox triage...");
+
+      // Get the user's inbox folder
+      Office.context.mailbox.getCallbackTokenAsync({ isRest: true }, (tokenResult) => {
+        if (tokenResult.status !== Office.AsyncResultStatus.Succeeded) {
+          console.error("Failed to get callback token:", tokenResult.error);
+          showToastNotification("❌ Failed to access mailbox. Please try again.");
+          event.completed();
+          return;
+        }
+
+        const token = tokenResult.value;
+        const ewsUrl = Office.context.mailbox.ewsUrl || Office.context.mailbox.restUrl;
+
+        // Use Microsoft Graph API to get inbox messages
+        fetchInboxMessages(token, userEmail)
+          .then(messages => {
+            if (!messages || messages.length === 0) {
+              showToastNotification("📭 No unread messages found in inbox.");
+              event.completed();
+              return;
+            }
+
+            triageProgress.total = messages.length;
+            triageProgress.processed = 0;
+            triageProgress.created = 0;
+            triageProgress.failed = 0;
+
+            showProgressNotification(`📧 Found ${messages.length} messages. Processing...`);
+            console.log(`Starting triage of ${messages.length} messages`);
+
+            // Process messages in batches to avoid overwhelming the system
+            return processMessagesInBatches(messages, token, userEmail, 3); // Process 3 at a time
+          })
+          .then(() => {
+            const summary = `✅ Triage complete! Created ${triageProgress.created} drafts, ${triageProgress.failed} failed out of ${triageProgress.total} messages.`;
+            showToastNotification(summary);
+            console.log(summary);
+            event.completed();
+          })
+          .catch(error => {
+            console.error("Triage process failed:", error);
+            showToastNotification("❌ Triage process failed. Please try again.");
+            event.completed();
+          });
+      });
+    }
+
+    async function fetchInboxMessages(token, userEmail) {
+      try {
+        // Use Microsoft Graph API to get unread messages from inbox
+        const graphUrl = `https://graph.microsoft.com/v1.0/me/messages?$filter=isRead eq false and parentFolderId eq 'inbox'&$top=20&$select=id,subject,from,bodyPreview,body,receivedDateTime,hasAttachments`;
+
+        const response = await fetch(graphUrl, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`Graph API request failed: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.value || [];
+      } catch (error) {
+        console.error("Failed to fetch inbox messages:", error);
+        // Fallback: return empty array
+        return [];
+      }
+    }
+
+    async function processMessagesInBatches(messages, token, userEmail, batchSize) {
+      for (let i = 0; i < messages.length; i += batchSize) {
+        const batch = messages.slice(i, i + batchSize);
+        await Promise.all(batch.map(message => processMessage(message, token, userEmail)));
+
+        // Update progress
+        const processed = Math.min(i + batchSize, messages.length);
+        showProgressNotification(`📧 Processed ${processed}/${messages.length} messages...`);
+
+        // Add small delay between batches to avoid rate limiting
+        if (i + batchSize < messages.length) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+    }
+
+    async function processMessage(message, token, userEmail) {
+      try {
+        console.log(`Processing message: ${message.subject?.substring(0, 50)}...`);
+
+        // Extract context from the message
+        const subject = message.subject || "";
+        const bodyText = message.bodyPreview || "";
+        const senderName = message.from?.emailAddress?.name || "Unknown";
+        const senderEmail = message.from?.emailAddress?.address || "unknown@example.com";
+
+        // Parse building/unit references from email content
+        const emailContent = `${subject}\n\n${bodyText}`;
+        const building = extractBuildingReference(emailContent);
+        const unit = extractUnitReference(emailContent);
+
+        // Create contextual question for AI
+        const contextualQuestion = createContextualQuestion(subject, bodyText, building, unit);
+
+        // Generate AI reply using the same API as the reply add-in
+        const aiResponse = await fetch("https://www.blociq.co.uk/api/ask-ai-outlook", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-User-Email": userEmail
+          },
+          body: JSON.stringify({
+            question: contextualQuestion,
+            building: building,
+            unit: unit,
+            contextType: "outlook_triage",
+            is_outlook_addin: true,
+            email_subject: subject,
+            email_body: bodyText,
+            sender_info: {
+              name: senderName,
+              email: senderEmail,
+              is_leaseholder: !senderEmail.includes('blociq.co.uk')
+            },
+            compliance_context: true,
+            leaseholder_context: true,
+            diary_context: true
+          })
+        });
+
+        const aiData = await aiResponse.json();
+
+        if (aiData.ok && aiData.answer) {
+          // Format the AI response
+          const formattedReply = formatEmailReply(aiData.answer, senderName);
+
+          // Create draft email
+          await createDraftReply(message, formattedReply, token);
+          triageProgress.created++;
+        } else {
+          console.error(`AI reply failed for message ${message.id}:`, aiData.error);
+          triageProgress.failed++;
+        }
+
+        triageProgress.processed++;
+
+      } catch (error) {
+        console.error(`Failed to process message ${message.id}:`, error);
+        triageProgress.failed++;
+        triageProgress.processed++;
+      }
+    }
+
+    async function createDraftReply(originalMessage, replyContent, token) {
+      try {
+        const replySubject = originalMessage.subject?.startsWith('Re: ')
+          ? originalMessage.subject
+          : `Re: ${originalMessage.subject || 'Your enquiry'}`;
+
+        const draftMessage = {
+          subject: replySubject,
+          body: {
+            contentType: 'HTML',
+            content: replyContent
+          },
+          toRecipients: [{
+            emailAddress: {
+              address: originalMessage.from?.emailAddress?.address,
+              name: originalMessage.from?.emailAddress?.name
+            }
+          }],
+          // Reference the original message
+          conversationId: originalMessage.conversationId
+        };
+
+        // Create draft using Microsoft Graph API
+        const createDraftUrl = 'https://graph.microsoft.com/v1.0/me/messages';
+
+        const response = await fetch(createDraftUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(draftMessage)
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to create draft: ${response.status}`);
+        }
+
+        const createdDraft = await response.json();
+        console.log(`✅ Created draft for: ${originalMessage.subject}`);
+
+        return createdDraft;
+      } catch (error) {
+        console.error(`Failed to create draft for message ${originalMessage.id}:`, error);
+        throw error;
+      }
+    }
+
+    // Extract building references from email content - reuse from reply add-in
+    function extractBuildingReference(content) {
+      if (!content) return null;
+
+      const patterns = [
+        /(?:building|block|development|estate|court|house|towers?|apartments?|flats?)[:\s]+([a-zA-Z0-9\s,'-]+)/gi,
+        /([a-zA-Z0-9\s,'-]+)\s+(?:building|block|development|estate|court|house|towers?|apartments?|flats?)/gi,
+        /(?:at|@)\s+([a-zA-Z0-9\s,'-]+?)(?:\s+(?:flat|unit|apartment|building)|,|\.|\n|$)/gi
+      ];
+
+      for (const pattern of patterns) {
+        const matches = [...content.matchAll(pattern)];
+        if (matches.length > 0) {
+          return matches[0][1]?.trim().substring(0, 100);
+        }
+      }
+
+      return null;
+    }
+
+    // Extract unit references from email content - reuse from reply add-in
+    function extractUnitReference(content) {
+      if (!content) return null;
+
+      const patterns = [
+        /(?:flat|unit|apartment|apt)\s*#?([a-zA-Z0-9]+)/gi,
+        /(?:flat|unit|apartment|apt)[:\s]+([a-zA-Z0-9]+)/gi,
+        /([a-zA-Z0-9]+[a-zA-Z]?)\s*(?:flat|unit|apartment|apt)/gi,
+        /#([a-zA-Z0-9]+)/g
+      ];
+
+      for (const pattern of patterns) {
+        const matches = [...content.matchAll(pattern)];
+        if (matches.length > 0) {
+          return matches[0][1]?.trim().substring(0, 20);
+        }
+      }
+
+      return null;
+    }
+
+    // Create contextual question - reuse from reply add-in
+    function createContextualQuestion(subject, body, building, unit) {
+      const baseContext = [];
+
+      if (building) baseContext.push(`building "${building}"`);
+      if (unit) baseContext.push(`unit ${unit}`);
+
+      const contextStr = baseContext.length > 0 ? ` for ${baseContext.join(' ')}` : '';
+      const content = `${subject} ${body}`.toLowerCase();
+
+      // BlocIQ-specific contextual prompts
+      if (content.includes('repair') || content.includes('maintenance') || content.includes('fault') || content.includes('broken')) {
+        return `Generate a professional property management email reply regarding maintenance/repair issues${contextStr}.
+
+        IMPORTANT: Use British English only. Write from Property Manager perspective (not tenancy).
+        Distinguish between demised parts (leaseholder responsibility) and common parts (freeholder/management responsibility).
+        If works exceed £250 per unit, mention Section 20 consultation requirements.
+        Address the concerns raised and provide clear next steps with timelines.`;
+      }
+
+      if (content.includes('service charge') || content.includes('billing') || content.includes('invoice') || content.includes('payment')) {
+        return `Generate a professional property management email reply regarding service charges or billing${contextStr}.
+
+        IMPORTANT: Use British English only. Write from Property Manager perspective.
+        Reference Section 20 consultation stages and statutory caps (£250/£100).
+        Provide clear breakdown of charges and payment processes.
+        If applicable, mention Building Safety Act compliance for HRBs.`;
+      }
+
+      if (content.includes('complaint') || content.includes('issue') || content.includes('problem') || content.includes('concern')) {
+        return `Generate a professional property management email reply addressing resident concerns${contextStr}.
+
+        IMPORTANT: Use British English only. Write from Property Manager perspective.
+        Show understanding and empathy while maintaining professional boundaries.
+        Provide specific solutions or next steps with clear timelines.
+        Avoid liability statements like "we guarantee" - use "we will endeavour" instead.`;
+      }
+
+      if (content.includes('lease') || content.includes('tenancy') || content.includes('agreement')) {
+        return `Generate a professional property management email reply regarding lease or tenancy matters${contextStr}.
+
+        IMPORTANT: Use British English only. Write from Property Manager perspective (not tenancy).
+        Provide accurate leasehold information and guidance.
+        Reference relevant lease clauses where appropriate.
+        Distinguish between leaseholder and freeholder responsibilities.`;
+      }
+
+      if (content.includes('fire') || content.includes('safety') || content.includes('evacuation') || content.includes('alarm')) {
+        return `Generate a professional property management email reply regarding fire safety${contextStr}.
+
+        IMPORTANT: Use British English only. Write from Property Manager perspective.
+        Reference Building Safety Act 2022 and FRAEW requirements if applicable.
+        Emphasise safety compliance and statutory obligations.
+        Provide clear next steps for safety-related concerns.`;
+      }
+
+      // Default contextual question
+      return `Generate a professional property management email reply${contextStr} based on the email content.
+
+      IMPORTANT: Use British English only. Write from Property Manager perspective (not tenancy).
+      Be helpful, professional, and provide specific next steps where appropriate.
+      Distinguish between demised and common parts where relevant.
+      Reference Section 20 consultation requirements if works exceed £250 per unit.
+      Avoid liability statements - use professional language like "we will endeavour" instead of "we guarantee".`;
+    }
+
+    // Format AI response - adapted from reply add-in
+    function formatEmailReply(aiResponse, senderName) {
+      if (!aiResponse) return "";
+
+      let formatted = aiResponse.trim();
+
+      // Handle personalization
+      if (senderName) {
+        formatted = formatted.replace(/\[Recipient's Name\]/g, senderName);
+        formatted = formatted.replace(/\[Recipient Name\]/g, senderName);
+        formatted = formatted.replace(/\[Name\]/g, senderName);
+      }
+
+      // Add placeholder for user name
+      formatted = formatted.replace(/\[Your Name\]/g, '[Your Name]');
+      formatted = formatted.replace(/\[Your Position\]/g, '[Your Position]');
+      formatted = formatted.replace(/\[Company Signature\]/g, '[Company Signature]');
+
+      // Ensure proper paragraph spacing
+      formatted = formatted.replace(/\n\n+/g, '\n\n');
+      formatted = formatted.replace(/\n(?!\n)/g, '\n\n');
+
+      // Convert to HTML with proper spacing
+      const paragraphs = formatted.split('\n\n').filter(p => p.trim());
+
+      const htmlParagraphs = paragraphs.map(paragraph => {
+        const trimmed = paragraph.trim();
+        if (!trimmed) return '';
+
+        // Handle lists
+        if (trimmed.includes('\n- ') || trimmed.includes('\n• ') || /\n\d+\./.test(trimmed)) {
+          const lines = trimmed.split('\n');
+          const firstLine = lines[0];
+          const listItems = lines.slice(1).map(line => {
+            if (line.startsWith('- ') || line.startsWith('• ')) {
+              return `<li>${line.substring(2)}</li>`;
+            } else if (/^\d+\.\s/.test(line)) {
+              return `<li>${line.replace(/^\d+\.\s/, '')}</li>`;
+            }
+            return line;
+          }).join('');
+
+          const listType = /^\d+\./.test(lines[1]) ? 'ol' : 'ul';
+          return `<p>${firstLine}</p><${listType}>${listItems}</${listType}>`;
+        }
+
+        // Handle compliance deadline highlighting
+        const compliancePattern = /(EICR|PAT|Fire Risk Assessment|Gas Safety|Lift|Asbestos|Insurance).*?(\d{1,2}\/\d{1,2}\/\d{4})/gi;
+        const highlightedParagraph = trimmed.replace(compliancePattern, '<strong>$1 renewal is due on $2</strong>');
+
+        return `<p>${highlightedParagraph}</p>`;
+      });
+
+      let result = htmlParagraphs.join('<br><br>');
+
+      // Add professional closing if not present
+      if (!result.toLowerCase().includes('regards') && !result.toLowerCase().includes('yours')) {
+        result += '<br><br><p>Kind regards,<br>Property Management Team</p>';
+      }
+
+      return result;
+    }
+
+    // Show toast notification to user
+    function showToastNotification(message) {
+      try {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: #4CAF50;
+          color: white;
+          padding: 12px 20px;
+          border-radius: 4px;
+          font-family: sans-serif;
+          font-size: 14px;
+          z-index: 10000;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+          max-width: 300px;
+        `;
+        notification.textContent = message;
+
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+          }
+        }, 5000); // Show for 5 seconds for triage notifications
+
+        console.log('🔔 Toast notification:', message);
+      } catch (error) {
+        console.warn('Could not show toast notification:', error);
+      }
+    }
+
+    // Show progress notification (persistent)
+    let progressNotification = null;
+    function showProgressNotification(message) {
+      try {
+        // Remove existing progress notification
+        if (progressNotification && progressNotification.parentNode) {
+          progressNotification.parentNode.removeChild(progressNotification);
+        }
+
+        progressNotification = document.createElement('div');
+        progressNotification.style.cssText = `
+          position: fixed;
+          top: 20px;
+          left: 20px;
+          background: #2196F3;
+          color: white;
+          padding: 12px 20px;
+          border-radius: 4px;
+          font-family: sans-serif;
+          font-size: 14px;
+          z-index: 10001;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+          max-width: 350px;
+        `;
+        progressNotification.textContent = message;
+
+        document.body.appendChild(progressNotification);
+
+        console.log('📊 Progress notification:', message);
+      } catch (error) {
+        console.warn('Could not show progress notification:', error);
+      }
+    }
+
+    // Initialize Office.js and register function
+    Office.onReady(() => {
+      if (Office.actions && Office.actions.associate) {
+        Office.actions.associate("triageInboxWithBlocIQ", triageInboxWithBlocIQ);
+      }
+      console.log("✅ BlocIQ triage function registered");
+    });
+
+    // Global function registration for legacy support
+    if (typeof window !== 'undefined') {
+      window.triageInboxWithBlocIQ = triageInboxWithBlocIQ;
+    }
+  </script>
+</body>
+</html>

@@ -17,10 +17,31 @@ export async function GET() {
 
     console.log('🏢 Fetching buildings for user:', session.user.id)
 
-    // Fetch all buildings
+    // Get user's agency_id first to filter buildings
+    const { data: userProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('agency_id')
+      .eq('id', session.user.id)
+      .single()
+
+    if (profileError || !userProfile?.agency_id) {
+      console.error('Error fetching user profile or no agency:', profileError)
+      return NextResponse.json({
+        buildings: [],
+        totalBuildings: 0,
+        totalUnits: 0,
+        isDummyData: false,
+        error: 'User profile or agency not found'
+      })
+    }
+
+    console.log('👤 User agency:', userProfile.agency_id)
+
+    // Fetch buildings filtered by user's agency
     const { data: buildings, error: buildingsError } = await supabase
       .from('buildings')
       .select('*')
+      .eq('agency_id', userProfile.agency_id)
       .order('name')
 
     if (buildingsError) {

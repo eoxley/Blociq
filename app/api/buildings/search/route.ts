@@ -13,10 +13,28 @@ export async function GET(request: Request) {
 
     const supabase = createClient(cookies());
 
-    // Search buildings by name or address
+    // Check authentication
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    if (sessionError || !session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Get user's agency_id first to filter search results
+    const { data: userProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('agency_id')
+      .eq('id', session.user.id)
+      .single()
+
+    if (profileError || !userProfile?.agency_id) {
+      return NextResponse.json({ error: 'User agency not found' }, { status: 403 })
+    }
+
+    // Search buildings by name or address - only within user's agency
     const { data: buildings, error } = await supabase
       .from('buildings')
       .select('id, name, address, property_manager, manager')
+      .eq('agency_id', userProfile.agency_id)
       .or(`name.ilike.%${query}%,address.ilike.%${query}%`)
       .limit(5);
 

@@ -16,11 +16,23 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get building information
+    // Get user's agency_id first to verify access
+    const { data: userProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('agency_id')
+      .eq('id', session.user.id)
+      .single()
+
+    if (profileError || !userProfile?.agency_id) {
+      return NextResponse.json({ error: 'User agency not found' }, { status: 403 })
+    }
+
+    // Get building information - only if it belongs to user's agency
     const { data: building, error: buildingError } = await supabase
       .from('buildings')
       .select('*')
       .eq('id', buildingId)
+      .eq('agency_id', userProfile.agency_id)
       .single()
 
     if (buildingError) {

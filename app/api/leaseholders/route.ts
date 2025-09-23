@@ -13,6 +13,38 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Get authenticated user
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Get user's agency_id
+    const { data: userProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('agency_id')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError || !userProfile?.agency_id) {
+      return NextResponse.json({ error: 'User agency not found' }, { status: 403 });
+    }
+
+    // Verify the unit belongs to the user's agency by checking the building
+    const { data: unitCheck, error: unitError } = await supabase
+      .from('units')
+      .select(`
+        id,
+        buildings!inner(agency_id)
+      `)
+      .eq('id', unitId)
+      .single();
+
+    if (unitError || !unitCheck || unitCheck.buildings.agency_id !== userProfile.agency_id) {
+      return NextResponse.json({ error: 'Unit not found or access denied' }, { status: 404 });
+    }
+
+    // Now safely get leaseholders for this unit
     const { data, error } = await supabase
       .from('leaseholders')
       .select('*')
@@ -47,6 +79,37 @@ export async function POST(request: NextRequest) {
         { error: 'Unit ID and full name are required' },
         { status: 400 }
       );
+    }
+
+    // Get authenticated user
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Get user's agency_id
+    const { data: userProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('agency_id')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError || !userProfile?.agency_id) {
+      return NextResponse.json({ error: 'User agency not found' }, { status: 403 });
+    }
+
+    // Verify the unit belongs to the user's agency
+    const { data: unitCheck, error: unitError } = await supabase
+      .from('units')
+      .select(`
+        id,
+        buildings!inner(agency_id)
+      `)
+      .eq('id', unit_id)
+      .single();
+
+    if (unitError || !unitCheck || unitCheck.buildings.agency_id !== userProfile.agency_id) {
+      return NextResponse.json({ error: 'Unit not found or access denied' }, { status: 404 });
     }
 
     const leaseholderData = {
