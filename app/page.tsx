@@ -5,13 +5,19 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowRight, Brain, FileText, Calendar, Shield, Zap, Building2, Users, Home, CheckCircle, Star, MessageSquare, Settings, BarChart3, Mail, Lock, Eye, Heart, Play, X } from 'lucide-react';
 import BlocIQLogo from '@/components/BlocIQLogo';
+import PublicAskBlocIQ from '@/components/PublicAskBlocIQ';
 
 export default function LandingPage() {
   const featuresRef = useRef<HTMLElement>(null);
+  const askBlocIQRef = useRef<HTMLElement>(null);
   const [showAIPopup, setShowAIPopup] = useState(false);
 
   const scrollToFeatures = () => {
     featuresRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const scrollToAskBlocIQ = () => {
+    askBlocIQRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   // Show AI chat popup after a short delay when component mounts
@@ -711,6 +717,13 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Ask BlocIQ Section */}
+      <section ref={askBlocIQRef} className="py-20 bg-gradient-to-br from-slate-50 to-blue-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <PublicAskBlocIQ />
+        </div>
+      </section>
+
       {/* Section 5: CTA */}
       <section className="hero-banner py-16 mx-6" style={{ background: 'linear-gradient(135deg, #6A00F5 0%, #8A2BE2 100%)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-white">
@@ -819,14 +832,16 @@ export default function LandingPage() {
             </p>
 
             <div className="space-y-3">
-              <Link
-                href="/outlook-subscription"
-                onClick={closeAIPopup}
+              <button
+                onClick={() => {
+                  closeAIPopup();
+                  scrollToAskBlocIQ();
+                }}
                 className="w-full bg-gradient-to-r from-[#6A00F5] to-[#8A2BE2] text-white px-6 py-3 rounded-lg hover:from-[#5A00E5] hover:to-[#7A2BE2] transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
               >
                 <Brain className="h-5 w-5" />
-                Try BlocIQ Outlook AI
-              </Link>
+                Try Ask BlocIQ
+              </button>
 
               <button
                 onClick={closeAIPopup}
