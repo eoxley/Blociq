@@ -92,32 +92,84 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Demo Video Section */}
+      {/* BlocIQ Outlook Add-in Section */}
       <section className="py-20 bg-white">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
-              <Play className="h-10 w-10 text-white" />
+            <div className="w-20 h-20 bg-gradient-to-br from-[#6A00F5] to-[#8A2BE2] rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+              <Mail className="h-10 w-10 text-white" />
             </div>
             <h2 className="text-4xl font-bold text-gray-900 mb-6">
-              See BlocIQ in Action
+              BlocIQ Outlook Add-in
             </h2>
             <p className="text-xl text-gray-600 leading-relaxed max-w-3xl mx-auto">
-              Watch how BlocIQ transforms property management with AI-powered workflows, 
-              compliance tracking, and intelligent document processing.
+              Work directly from your Outlook inbox with AI-powered property management assistance. 
+              Get instant responses, compliance guidance, and document insights without leaving your email.
             </p>
           </div>
 
-          <div className="bg-gradient-to-br from-gray-900 to-black rounded-2xl p-8 shadow-2xl">
-            <div className="aspect-video bg-gray-800 rounded-xl overflow-hidden relative">
-              <video
-                className="w-full h-full object-cover"
-                controls
-                preload="metadata"
-              >
-                <source src="/demo-video.mp4" type="video/mp4" />
-                Your browser does not support the video tag.
-              </video>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            {/* Video Section */}
+            <div className="bg-gradient-to-br from-gray-900 to-black rounded-2xl p-8 shadow-2xl">
+              <div className="aspect-video bg-gray-800 rounded-xl overflow-hidden relative">
+                <video
+                  className="w-full h-full object-cover"
+                  controls
+                  preload="metadata"
+                >
+                  <source src="/outlook-addin-demo.mp4" type="video/mp4" />
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+            </div>
+
+            {/* Features and CTA */}
+            <div className="space-y-8">
+              <div className="space-y-6">
+                <h3 className="text-2xl font-bold text-gray-900">
+                  Powerful AI Assistant in Your Inbox
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="h-5 w-5 text-green-500 mt-1 flex-shrink-0" />
+                    <span className="text-gray-600">Instant AI responses to property management questions</span>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="h-5 w-5 text-green-500 mt-1 flex-shrink-0" />
+                    <span className="text-gray-600">Compliance guidance based on UK leasehold law</span>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="h-5 w-5 text-green-500 mt-1 flex-shrink-0" />
+                    <span className="text-gray-600">Document analysis and insights on demand</span>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="h-5 w-5 text-green-500 mt-1 flex-shrink-0" />
+                    <span className="text-gray-600">Seamless integration with your existing workflow</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Trial CTA */}
+              <div className="bg-gradient-to-br from-[#6A00F5] to-[#8A2BE2] rounded-2xl p-8 text-white">
+                <h4 className="text-xl font-bold mb-4">Start Your 30-Day Free Trial</h4>
+                <p className="text-white/90 mb-6">
+                  Experience the power of AI-driven property management directly in your Outlook inbox. 
+                  No credit card required for the trial.
+                </p>
+                <button 
+                  onClick={() => {
+                    // This will be integrated with Stripe checkout
+                    window.open('/api/stripe/create-checkout-session?product=outlook-addin-trial', '_blank');
+                  }}
+                  className="w-full bg-white text-[#6A00F5] hover:bg-gray-100 px-8 py-4 rounded-xl transition-all duration-200 font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                >
+                  Start Free Trial
+                  <ArrowRight className="h-5 w-5 inline ml-2" />
+                </button>
+                <p className="text-sm text-white/70 mt-3">
+                  Cancel anytime. No setup fees. Full support included.
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -205,32 +257,6 @@ export default function LandingPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {/* AI Inbox Assistant */}
-            <div className="bg-white rounded-2xl p-8 shadow-xl border border-gray-100 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
-              <div className="w-16 h-16 bg-gradient-to-br from-[#6A00F5] to-[#8A2BE2] rounded-2xl flex items-center justify-center mb-6 shadow-lg">
-                <Brain className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                AI Inbox Assistant 🤖
-              </h3>
-              <p className="text-gray-600 mb-6 leading-relaxed">
-                Automatically categorize, prioritize, and draft responses to resident emails using AI trained on property management best practices.
-              </p>
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span>Smart email categorization</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span>Auto-draft responses</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span>Priority flagging</span>
-                </div>
-              </div>
-            </div>
 
             {/* Compliance & Document Hub */}
             <div className="bg-white rounded-2xl p-8 shadow-xl border border-gray-100 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">

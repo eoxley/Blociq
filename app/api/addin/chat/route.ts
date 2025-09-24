@@ -1,4 +1,11 @@
 // app/api/addin/chat/route.ts
+// BlocIQ Outlook Add-in Chat API
+//
+// This endpoint provides AI chat functionality for Outlook add-in users.
+// IMPORTANT: Uses PUBLIC ACCESS mode - no building or agency-specific data
+// This ensures add-in-only users get general property management assistance
+// without access to sensitive building/agency information.
+//
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
@@ -46,14 +53,14 @@ async function forwardToAskBlocIQ(
     source?: string
 ): Promise<NextResponse> {
     try {
-        // Construct the Ask BlocIQ request payload matching main ask-ai endpoint format
-        // IMPORTANT: Use 'general' context to ensure chat responses, NOT email formatting
+        // Construct the Ask BlocIQ request payload for PUBLIC ACCESS (no building/agency data)
+        // IMPORTANT: Use 'public' context to ensure general knowledge responses without agency data
         const askBlocIQPayload = {
             message: message,
-            context_type: 'general', // Always use general for chat responses
+            context_type: 'public', // Use public for general property management advice
             tone: 'Professional',
             source: source || 'outlook_chat_addin',
-            is_public: false, // Ensure authenticated access for full functionality
+            is_public: true, // CRITICAL: Force public access to avoid agency data access
             intent: 'general', // Explicitly set to avoid email reply formatting
             // Include email context as additional context without triggering email formatting
             manual_context: emailContext ? `Current email context (for reference only):
@@ -61,12 +68,13 @@ Subject: ${emailContext.subject || 'No subject'}
 From: ${emailContext.from || 'Unknown sender'}
 Item Type: ${emailContext.itemType || 'Email'}
 
-Note: This is a chat conversation, provide conversational responses.` : undefined
+Note: This is a chat conversation about general property management. Provide helpful advice based on UK property management best practices, but do not reference specific building or agency data.` : undefined
         };
 
-        console.log('🔄 Forwarding to Ask BlocIQ for CHAT response:', {
+        console.log('🔄 Forwarding to Ask BlocIQ for PUBLIC CHAT response (no agency data):', {
             context_type: askBlocIQPayload.context_type,
             intent: askBlocIQPayload.intent,
+            is_public: askBlocIQPayload.is_public,
             hasEmailContext: !!emailContext,
             hasManualContext: !!askBlocIQPayload.manual_context,
             source: askBlocIQPayload.source
@@ -121,7 +129,7 @@ Note: This is a chat conversation, provide conversational responses.` : undefine
         // Fallback to basic response if Ask BlocIQ is unavailable
         return NextResponse.json({
             success: true,
-            response: "I'm currently experiencing connectivity issues with the main AI system. Please try again in a moment, or use the web interface for full functionality.",
+            response: "I'm currently experiencing connectivity issues. Please try again in a moment. I can help with general UK property management questions, compliance guidance, and industry best practices.",
             timestamp: new Date().toISOString(),
             source: 'fallback'
         }, {

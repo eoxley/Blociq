@@ -338,7 +338,7 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
               {/* Chat Messages Area with Enhanced Scrolling and Scroll Indicator */}
               <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-visible scrollbar-thumb-blue-400 hover:scrollbar-thumb-blue-500 scrollbar-track-gray-100 scrollbar-corner-gray-100 relative">
                 {/* Scroll indicator when messages overflow */}
-                {messages.length > 3 && (
+                {messages.length > 2 && (
                   <div className="absolute top-2 right-4 z-10 bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-xs font-medium shadow-sm animate-pulse">
                     Scroll for more messages ↕️
                   </div>
@@ -426,10 +426,14 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
         .scrollbar-visible {
           scrollbar-width: auto;
           scrollbar-color: #60a5fa #f3f4f6;
+          /* Force scrollbar to always be visible */
+          overflow-y: scroll !important;
         }
         
         .scrollbar-visible::-webkit-scrollbar {
           width: 16px;
+          /* Always show scrollbar */
+          display: block !important;
         }
         
         .scrollbar-visible::-webkit-scrollbar-track {
@@ -444,6 +448,8 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
           border-radius: 8px;
           border: 2px solid #f3f4f6;
           box-shadow: inset 0 1px 0 rgba(255,255,255,0.5);
+          /* Ensure thumb is always visible */
+          min-height: 40px;
         }
         
         .scrollbar-visible::-webkit-scrollbar-thumb:hover {
@@ -473,6 +479,11 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
           background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
         }
         
+        /* Force minimum content height to ensure scrollbar appears */
+        .scrollbar-visible {
+          min-height: 200px;
+        }
+        
         /* Ensure text fits and wraps properly */
         .break-words {
           word-wrap: break-word;
@@ -491,6 +502,11 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
             font-size: 0.875rem;
             line-height: 1.25rem;
           }
+        }
+        
+        /* Force scrollbar visibility on all browsers */
+        .scrollbar-visible {
+          -ms-overflow-style: scrollbar;
         }
       `}</style>
     </div>

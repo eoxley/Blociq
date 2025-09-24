@@ -51,7 +51,7 @@ function setupEventListeners() {
 
 // Add welcome message
 function addWelcomeMessage() {
-  const welcomeMessage = "Hi! I'm your BlocIQ Assistant. I can help you with property management, compliance questions, building information, and more. How can I assist you today?";
+  const welcomeMessage = "Hi! I'm your BlocIQ Assistant. I can help you with general property management questions, UK compliance guidance, leasehold advice, and industry best practices. How can I assist you today?";
   addMessage(welcomeMessage, 'assistant');
 }
 
