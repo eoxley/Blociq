@@ -5,15 +5,24 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 export async function POST(request: NextRequest) {
   try {
     // Check if Stripe key is available
-    if (!process.env.STRIPE_SECRET_KEY) {
+    const stripeKey = process.env.STRIPE_SECRET_KEY;
+    if (!stripeKey) {
       console.error('STRIPE_SECRET_KEY environment variable not set')
       return NextResponse.json({
         error: 'Stripe configuration error. Please contact support.'
       }, { status: 500 })
     }
 
+    // Log key info for debugging (without exposing the key)
+    console.log('Stripe key info:', {
+      hasKey: !!stripeKey,
+      keyLength: stripeKey.length,
+      keyPrefix: stripeKey.substring(0, 12),
+      isLiveKey: stripeKey.startsWith('sk_live_')
+    })
+
     // Initialize Stripe
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+    const stripe = new Stripe(stripeKey, {
       apiVersion: '2024-06-20',
     })
 
