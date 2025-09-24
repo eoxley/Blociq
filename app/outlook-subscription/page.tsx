@@ -12,7 +12,7 @@ const PRICING_PLANS = [
   {
     id: 'professional',
     name: 'BlocIQ Outlook AI',
-    priceId: 'price_1S4FGI2MJXtvDEifOutlookAI15', // Replace with actual Stripe price ID
+    priceId: 'price_1SAuvE2MJXtvDEif4tjlcyrS', // Live Stripe price ID for £15/month
     price: '£15',
     period: 'month',
     originalPrice: '£15',
