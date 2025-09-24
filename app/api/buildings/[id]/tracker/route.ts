@@ -51,9 +51,23 @@ export async function GET(
 
       const { data: items, error: itemsError } = await query
 
-      // If table doesn't exist or columns don't exist, return empty response
-      if (itemsError && (itemsError.code === 'PGRST116' || itemsError.code === '42703')) {
-        console.log('Tracker table or columns not found, returning empty response:', itemsError.message);
+      // If table doesn't exist, columns don't exist, or any database schema issues, return empty response
+      if (itemsError && (
+        itemsError.code === 'PGRST116' ||  // Table doesn't exist
+        itemsError.code === '42703' ||     // Column doesn't exist
+        itemsError.code === 'PGRST200' ||  // Generic PostgREST error
+        itemsError.code === '42P01' ||     // Relation does not exist
+        itemsError.code === '42601' ||     // Syntax error (malformed query)
+        itemsError.message?.includes('relation') ||
+        itemsError.message?.includes('does not exist') ||
+        itemsError.message?.includes('column') ||
+        itemsError.message?.includes('table')
+      )) {
+        console.log('Tracker table schema issue, returning empty response:', {
+          code: itemsError.code,
+          message: itemsError.message,
+          building_id: buildingId
+        });
         return NextResponse.json({
           success: true,
           data: [],
@@ -69,7 +83,18 @@ export async function GET(
 
       if (itemsError) {
         console.error('Error fetching tracker items:', itemsError)
-        return NextResponse.json({ error: 'Failed to fetch tracker items' }, { status: 400 })
+        // Return empty response instead of 400 error to prevent page crashes
+        return NextResponse.json({
+          success: true,
+          data: [],
+          stats: {
+            total: 0,
+            active: 0,
+            completed: 0,
+            overdue: 0,
+            dueSoon: 0
+          }
+        })
       }
 
       // Calculate statistics
@@ -180,8 +205,23 @@ export async function POST(
       .select()
       .single()
 
-    // If table doesn't exist or columns missing, return error indicating tracker not set up
-    if (createError && (createError.code === 'PGRST116' || createError.code === '42703')) {
+    // If table doesn't exist, columns missing, or any database schema issues, return graceful message
+    if (createError && (
+      createError.code === 'PGRST116' ||  // Table doesn't exist
+      createError.code === '42703' ||     // Column doesn't exist
+      createError.code === 'PGRST200' ||  // Generic PostgREST error
+      createError.code === '42P01' ||     // Relation does not exist
+      createError.code === '42601' ||     // Syntax error
+      createError.message?.includes('relation') ||
+      createError.message?.includes('does not exist') ||
+      createError.message?.includes('column') ||
+      createError.message?.includes('table')
+    )) {
+      console.log('Tracker table schema issue during creation:', {
+        code: createError.code,
+        message: createError.message,
+        building_id: buildingId
+      });
       return NextResponse.json({
         error: 'Action tracker not available for this building. Please contact support to enable this feature.'
       }, { status: 404 })

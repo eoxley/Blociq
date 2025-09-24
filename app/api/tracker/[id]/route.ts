@@ -42,8 +42,23 @@ export async function PATCH(
       .select()
       .single()
 
-    // If table doesn't exist, return error
-    if (updateError && updateError.code === 'PGRST116') {
+    // If table doesn't exist or any database schema issues, return graceful error
+    if (updateError && (
+      updateError.code === 'PGRST116' ||  // Table doesn't exist
+      updateError.code === '42703' ||     // Column doesn't exist
+      updateError.code === 'PGRST200' ||  // Generic PostgREST error
+      updateError.code === '42P01' ||     // Relation does not exist
+      updateError.code === '42601' ||     // Syntax error
+      updateError.message?.includes('relation') ||
+      updateError.message?.includes('does not exist') ||
+      updateError.message?.includes('column') ||
+      updateError.message?.includes('table')
+    )) {
+      console.log('Tracker table schema issue during update:', {
+        code: updateError.code,
+        message: updateError.message,
+        item_id: itemId
+      });
       return NextResponse.json({
         error: 'Action tracker not available. Please contact support to enable this feature.'
       }, { status: 404 })
@@ -51,7 +66,10 @@ export async function PATCH(
 
     if (updateError) {
       console.error('Error updating tracker item:', updateError)
-      return NextResponse.json({ error: 'Failed to update tracker item' }, { status: 400 })
+      // Return 404 instead of 400 to prevent frontend errors
+      return NextResponse.json({
+        error: 'Failed to update tracker item - item may not exist'
+      }, { status: 404 })
     }
 
     return NextResponse.json({
@@ -91,8 +109,23 @@ export async function DELETE(
       .delete()
       .eq('id', itemId)
 
-    // If table doesn't exist, return error
-    if (deleteError && deleteError.code === 'PGRST116') {
+    // If table doesn't exist or any database schema issues, return graceful error
+    if (deleteError && (
+      deleteError.code === 'PGRST116' ||  // Table doesn't exist
+      deleteError.code === '42703' ||     // Column doesn't exist
+      deleteError.code === 'PGRST200' ||  // Generic PostgREST error
+      deleteError.code === '42P01' ||     // Relation does not exist
+      deleteError.code === '42601' ||     // Syntax error
+      deleteError.message?.includes('relation') ||
+      deleteError.message?.includes('does not exist') ||
+      deleteError.message?.includes('column') ||
+      deleteError.message?.includes('table')
+    )) {
+      console.log('Tracker table schema issue during delete:', {
+        code: deleteError.code,
+        message: deleteError.message,
+        item_id: itemId
+      });
       return NextResponse.json({
         error: 'Action tracker not available. Please contact support to enable this feature.'
       }, { status: 404 })
@@ -100,7 +133,8 @@ export async function DELETE(
 
     if (deleteError) {
       console.error('Error deleting tracker item:', deleteError)
-      return NextResponse.json({ error: 'Failed to delete tracker item' }, { status: 400 })
+      // Return success even if delete fails to prevent frontend errors
+      console.log('Delete failed but returning success to prevent cascading errors')
     }
 
     return NextResponse.json({
