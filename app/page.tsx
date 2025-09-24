@@ -820,12 +820,12 @@ export default function LandingPage() {
 
             <div className="space-y-3">
               <Link
-                href="/ask-ai"
+                href="/outlook-subscription"
                 onClick={closeAIPopup}
                 className="w-full bg-gradient-to-r from-[#6A00F5] to-[#8A2BE2] text-white px-6 py-3 rounded-lg hover:from-[#5A00E5] hover:to-[#7A2BE2] transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
               >
                 <Brain className="h-5 w-5" />
-                Try AI Chat Now
+                Try BlocIQ Outlook AI
               </Link>
 
               <button
