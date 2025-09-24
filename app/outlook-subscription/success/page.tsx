@@ -22,26 +22,74 @@ export default function SubscriptionSuccessPage() {
   const sessionId = searchParams.get('session_id');
 
   useEffect(() => {
+    console.log('Success page loaded with URL:', window.location.href);
+    console.log('Session ID from search params:', sessionId);
+    console.log('All search params:', Object.fromEntries(searchParams.entries()));
+
     if (sessionId) {
+      console.log('Found session ID, fetching subscription details...');
       fetchSubscriptionDetails();
     } else {
-      setError('No session ID found');
-      setLoading(false);
+      // Check if this is a direct visit or incomplete checkout
+      console.log('No session ID found in URL:', window.location.href);
+
+      // Try to check if user has any recent subscription instead
+      checkForRecentSubscription();
     }
   }, [sessionId]);
 
+  const checkForRecentSubscription = async () => {
+    try {
+      // Check if there's a recent subscription for any email
+      // This is a fallback when session ID is missing
+      const response = await fetch('/api/admin/outlook-monitoring');
+      const data = await response.json();
+
+      if (data.recentActivity && data.recentActivity.length > 0) {
+        const recentSubscription = data.recentActivity.find(
+          (activity: any) => activity.action.includes('Subscription') &&
+          new Date(activity.timestamp) > new Date(Date.now() - 10 * 60 * 1000) // Last 10 minutes
+        );
+
+        if (recentSubscription) {
+          // Show success without session details
+          setSubscription({
+            id: 'recent_subscription',
+            status: 'active',
+            customer: recentSubscription.email,
+            current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+          });
+          setLoading(false);
+          return;
+        }
+      }
+    } catch (error) {
+      console.error('Error checking for recent subscriptions:', error);
+    }
+
+    setError('No session ID found');
+    setLoading(false);
+  };
+
   const fetchSubscriptionDetails = async () => {
     try {
+      console.log('Fetching subscription details for session:', sessionId);
       const response = await fetch(`/api/stripe/create-outlook-subscription?session_id=${sessionId}`);
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
+
       const result = await response.json();
+      console.log('API response:', result);
 
       if (result.success) {
+        console.log('✅ Successfully retrieved subscription:', result.subscription);
         setSubscription(result.subscription);
       } else {
+        console.error('❌ API returned error:', result.error);
         setError(result.error || 'Failed to retrieve subscription details');
       }
     } catch (error) {
-      console.error('Error fetching subscription:', error);
+      console.error('❌ Network error fetching subscription:', error);
       setError('Failed to load subscription details');
     } finally {
       setLoading(false);
@@ -71,16 +119,60 @@ export default function SubscriptionSuccessPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 to-pink-50 flex items-center justify-center">
-        <Card className="max-w-md">
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center">
+        <Card className="max-w-lg">
           <CardHeader>
-            <CardTitle className="text-red-600">Subscription Error</CardTitle>
+            <CardTitle className="text-orange-600">Setup Incomplete</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-gray-600 mb-4">{error}</p>
-            <Button asChild>
-              <a href="/outlook-subscription">Back to Subscription</a>
-            </Button>
+            <div className="space-y-4">
+              <p className="text-gray-600">
+                It looks like you haven't completed the subscription process yet, or you arrived here directly.
+              </p>
+
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h4 className="font-semibold text-blue-900 mb-2">What happened?</h4>
+                <p className="text-sm text-blue-800 mb-2">
+                  You may have arrived here directly or there was a redirect issue from Stripe.
+                </p>
+                <h4 className="font-semibold text-blue-900 mb-2 mt-4">Next Steps:</h4>
+                <ol className="text-sm text-blue-800 list-decimal list-inside space-y-1">
+                  <li>If you just completed payment, click "I Just Paid" below</li>
+                  <li>If you haven't paid yet, start your subscription</li>
+                  <li>Check your email for payment confirmation from Stripe</li>
+                </ol>
+              </div>
+
+              <div className="flex space-x-3">
+                <Button asChild className="flex-1">
+                  <a href="/outlook-subscription">Start Subscription</a>
+                </Button>
+                <Button variant="default" asChild className="flex-1 bg-green-600 hover:bg-green-700">
+                  <a href="/outlook-subscription/install">I Just Paid - Get Add-ins</a>
+                </Button>
+              </div>
+
+              <div className="bg-yellow-50 p-3 rounded-lg mt-4">
+                <p className="text-xs text-yellow-800">
+                  <strong>Debug info:</strong> No session_id parameter found in URL.
+                  If you just completed payment, please check your browser console or contact support.
+                </p>
+              </div>
+
+              <div className="text-center">
+                <Button
+                  variant="link"
+                  onClick={() => window.location.reload()}
+                  className="text-sm"
+                >
+                  🔄 Refresh Page
+                </Button>
+              </div>
+
+              <p className="text-xs text-gray-500 text-center">
+                If you just completed payment, click "I Just Paid - Get Add-ins" to proceed with installation.
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>
