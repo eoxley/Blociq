@@ -1,16 +1,30 @@
 "use client";
 
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight, Brain, FileText, Calendar, Shield, Zap, Building2, Users, Home, CheckCircle, Star, MessageSquare, Settings, BarChart3, Mail, Lock, Eye, Heart, Play } from 'lucide-react';
+import { ArrowRight, Brain, FileText, Calendar, Shield, Zap, Building2, Users, Home, CheckCircle, Star, MessageSquare, Settings, BarChart3, Mail, Lock, Eye, Heart, Play, X } from 'lucide-react';
 import BlocIQLogo from '@/components/BlocIQLogo';
 
 export default function LandingPage() {
   const featuresRef = useRef<HTMLElement>(null);
+  const [showAIPopup, setShowAIPopup] = useState(false);
 
   const scrollToFeatures = () => {
     featuresRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  // Show AI chat popup after a short delay when component mounts
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowAIPopup(true);
+    }, 2500); // Show after 2.5 seconds
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  const closeAIPopup = () => {
+    setShowAIPopup(false);
   };
 
   return (
@@ -92,42 +106,163 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* BlocIQ Outlook Add-in Section */}
+      {/* BlocIQ Platform Section */}
       <section className="py-20 bg-white">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <div className="w-20 h-20 bg-gradient-to-br from-[#6A00F5] to-[#8A2BE2] rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+              <Building2 className="h-10 w-10 text-white" />
+            </div>
+            <h2 className="text-4xl font-bold text-gray-900 mb-6">
+              BlocIQ Platform
+            </h2>
+            <p className="text-xl text-gray-600 leading-relaxed max-w-4xl mx-auto mb-8">
+              A comprehensive property management platform designed specifically for UK leasehold compliance.
+              From document management to AI-powered assistance, BlocIQ transforms how you manage your property portfolio.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-16">
+            {/* Platform Features */}
+            <div className="space-y-8">
+              <div className="space-y-6">
+                <h3 className="text-2xl font-bold text-gray-900">
+                  Everything You Need in One Platform
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="h-5 w-5 text-green-500 mt-1 flex-shrink-0" />
+                    <div>
+                      <span className="font-semibold text-gray-900">Compliance Management:</span>
+                      <span className="text-gray-600 ml-1">Track deadlines, manage certificates, and stay on top of regulations</span>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="h-5 w-5 text-green-500 mt-1 flex-shrink-0" />
+                    <div>
+                      <span className="font-semibold text-gray-900">AI-Powered Assistant:</span>
+                      <span className="text-gray-600 ml-1">Get instant answers on UK leasehold law and property regulations</span>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="h-5 w-5 text-green-500 mt-1 flex-shrink-0" />
+                    <div>
+                      <span className="font-semibold text-gray-900">Document Vault:</span>
+                      <span className="text-gray-600 ml-1">Centralized, secure storage with AI-powered search and organization</span>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="h-5 w-5 text-green-500 mt-1 flex-shrink-0" />
+                    <div>
+                      <span className="font-semibold text-gray-900">Portfolio Calendar:</span>
+                      <span className="text-gray-600 ml-1">Manage inspections, maintenance, and events across all properties</span>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="h-5 w-5 text-green-500 mt-1 flex-shrink-0" />
+                    <div>
+                      <span className="font-semibold text-gray-900">Communication Hub:</span>
+                      <span className="text-gray-600 ml-1">Track all communications with automated logging and audit trails</span>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="h-5 w-5 text-green-500 mt-1 flex-shrink-0" />
+                    <div>
+                      <span className="font-semibold text-gray-900">Outlook Integration:</span>
+                      <span className="text-gray-600 ml-1">Work directly from your inbox with our powerful Outlook add-in</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Demo Video Section */}
+            <div className="bg-gradient-to-br from-gray-900 to-black rounded-2xl p-8 shadow-2xl">
+              <div className="mb-4">
+                <h4 className="text-xl font-bold text-white mb-2">See BlocIQ in Action</h4>
+                <p className="text-gray-300 text-sm">Watch how BlocIQ transforms property management workflows</p>
+              </div>
+              <div className="aspect-video bg-gray-800 rounded-xl overflow-hidden relative">
+                <video
+                  className="w-full h-full object-cover"
+                  controls
+                  preload="metadata"
+                  poster="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjQ1MCIgdmlld0JveD0iMCAwIDgwMCA0NTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI4MDAiIGhlaWdodD0iNDUwIiBmaWxsPSIjMzc0MTUxIi8+CjxwYXRoIGQ9Ik0zNjAgMjAwTDQ0MCAyNjBMMzYwIDMyMFYyMDBaIiBmaWxsPSIjNkEwMEY1Ii8+Cjx0ZXh0IHg9IjQwMCIgeT0iMzgwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjQiPkJsb2NJUSBEZW1vIFZpZGVvPC90ZXh0Pgo8L3N2Zz4="
+                  onError={(e) => {
+                    const target = e.target as HTMLVideoElement;
+                    target.style.display = 'none';
+                    const parent = target.parentElement;
+                    if (parent) {
+                      parent.innerHTML = '<div class="flex items-center justify-center h-full bg-gray-800 text-white"><p>Video temporarily unavailable</p></div>';
+                    }
+                  }}
+                >
+                  <source src="/demo-video.mp4" type="video/mp4" />
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+            </div>
+          </div>
+
+          {/* Platform Benefits */}
+          <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-8 shadow-lg border border-gray-100">
+            <div className="text-center mb-8">
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">
+                Built for Property Management Professionals
+              </h3>
+              <p className="text-gray-600 max-w-3xl mx-auto">
+                Every feature is designed with real property managers in mind, combining regulatory expertise with modern technology
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="text-center">
+                <div className="w-12 h-12 bg-gradient-to-br from-[#6A00F5] to-[#8A2BE2] rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <Shield className="h-6 w-6 text-white" />
+                </div>
+                <h4 className="font-semibold text-gray-900 mb-2">Compliance-First</h4>
+                <p className="text-sm text-gray-600">Built specifically for UK leasehold regulations and Building Safety Act requirements</p>
+              </div>
+              <div className="text-center">
+                <div className="w-12 h-12 bg-gradient-to-br from-[#6A00F5] to-[#8A2BE2] rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <Users className="h-6 w-6 text-white" />
+                </div>
+                <h4 className="font-semibold text-gray-900 mb-2">Team-Friendly</h4>
+                <p className="text-sm text-gray-600">Intuitive design that works for both tech-savvy users and those new to digital tools</p>
+              </div>
+              <div className="text-center">
+                <div className="w-12 h-12 bg-gradient-to-br from-[#6A00F5] to-[#8A2BE2] rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <Zap className="h-6 w-6 text-white" />
+                </div>
+                <h4 className="font-semibold text-gray-900 mb-2">Always Improving</h4>
+                <p className="text-sm text-gray-600">Regular updates with new features based on user feedback and regulatory changes</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* BlocIQ Outlook Add-in Section */}
+      <section className="py-20 bg-gray-50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <div className="w-20 h-20 bg-gradient-to-br from-[#6A00F5] to-[#8A2BE2] rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
               <Mail className="h-10 w-10 text-white" />
             </div>
             <h2 className="text-4xl font-bold text-gray-900 mb-6">
-              BlocIQ Outlook Add-in
+              Work Directly from Your Inbox
             </h2>
             <p className="text-xl text-gray-600 leading-relaxed max-w-3xl mx-auto">
-              Work directly from your Outlook inbox with AI-powered property management assistance. 
-              Get instant responses, compliance guidance, and document insights without leaving your email.
+              The BlocIQ Outlook Add-in brings AI-powered property management assistance directly to your email.
+              Get instant responses, compliance guidance, and document insights without switching applications.
             </p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            {/* Video Section */}
-            <div className="bg-gradient-to-br from-gray-900 to-black rounded-2xl p-8 shadow-2xl">
-              <div className="aspect-video bg-gray-800 rounded-xl overflow-hidden relative">
-                <video
-                  className="w-full h-full object-cover"
-                  controls
-                  preload="metadata"
-                >
-                  <source src="/outlook-addin-demo.mp4" type="video/mp4" />
-                  Your browser does not support the video tag.
-                </video>
-              </div>
-            </div>
-
-            {/* Features and CTA */}
+            {/* Features */}
             <div className="space-y-8">
               <div className="space-y-6">
                 <h3 className="text-2xl font-bold text-gray-900">
-                  Powerful AI Assistant in Your Inbox
+                  Your AI Assistant, Right in Outlook
                 </h3>
                 <div className="space-y-4">
                   <div className="flex items-start gap-3">
@@ -153,13 +288,13 @@ export default function LandingPage() {
               <div className="bg-gradient-to-br from-[#6A00F5] to-[#8A2BE2] rounded-2xl p-8 text-white">
                 <h4 className="text-xl font-bold mb-4">Start Your 30-Day Free Trial</h4>
                 <p className="text-white/90 mb-6">
-                  Experience the power of AI-driven property management directly in your Outlook inbox. 
+                  Experience the power of AI-driven property management directly in your Outlook inbox.
                   No credit card required for the trial.
                 </p>
-                <button 
+                <button
                   onClick={() => {
-                    // This will be integrated with Stripe checkout
-                    window.open('/api/stripe/create-checkout-session?product=outlook-addin-trial', '_blank');
+                    // Redirect to subscription page
+                    window.location.href = '/outlook-subscription';
                   }}
                   className="w-full bg-white text-[#6A00F5] hover:bg-gray-100 px-8 py-4 rounded-xl transition-all duration-200 font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1"
                 >
@@ -169,6 +304,33 @@ export default function LandingPage() {
                 <p className="text-sm text-white/70 mt-3">
                   Cancel anytime. No setup fees. Full support included.
                 </p>
+              </div>
+            </div>
+
+            {/* Outlook Add-in Demo Video */}
+            <div className="bg-gradient-to-br from-gray-900 to-black rounded-2xl p-8 shadow-2xl">
+              <div className="mb-4">
+                <h4 className="text-xl font-bold text-white mb-2">Outlook Add-in in Action</h4>
+                <p className="text-gray-300 text-sm">See how BlocIQ integrates seamlessly with your Outlook workflow</p>
+              </div>
+              <div className="aspect-video bg-gray-800 rounded-xl overflow-hidden relative">
+                <video
+                  className="w-full h-full object-cover"
+                  controls
+                  preload="metadata"
+                  poster="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjQ1MCIgdmlld0JveD0iMCAwIDgwMCA0NTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI4MDAiIGhlaWdodD0iNDUwIiBmaWxsPSIjMzc0MTUxIi8+CjxwYXRoIGQ9Ik0zNjAgMjAwTDQ0MCAyNjBMMzYwIDMyMFYyMDBaIiBmaWxsPSIjNkEwMEY1Ii8+Cjx0ZXh0IHg9IjQwMCIgeT0iMzUwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjQiPk91dGxvb2sgSW50ZWdyYXRpb248L3RleHQ+Cjx0ZXh0IHg9IjQwMCIgeT0iMzgwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOTlBM0I1IiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNiI+QUktUG93ZXJlZCBFbWFpbCBBc3Npc3RhbnQ8L3RleHQ+Cjwvc3ZnPg=="
+                  onError={(e) => {
+                    const target = e.target as HTMLVideoElement;
+                    target.style.display = 'none';
+                    const parent = target.parentElement;
+                    if (parent) {
+                      parent.innerHTML = '<div class="flex items-center justify-center h-full bg-gray-800 text-white"><p>Video temporarily unavailable</p></div>';
+                    }
+                  }}
+                >
+                  <source src="/outlook-addin-new-demo.mp4" type="video/mp4" />
+                  Your browser does not support the video tag.
+                </video>
               </div>
             </div>
           </div>
@@ -631,6 +793,55 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+
+      {/* AI Chat Popup */}
+      {showAIPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl transform animate-in fade-in zoom-in duration-300">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-[#6A00F5] to-[#8A2BE2] rounded-xl flex items-center justify-center shadow-lg">
+                  <Brain className="h-6 w-6 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900">Try Our AI Chat!</h3>
+              </div>
+              <button
+                onClick={closeAIPopup}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <p className="text-gray-600 mb-6 leading-relaxed">
+              Get instant answers to property management questions with our UK leasehold-trained AI assistant.
+              Ask about compliance, regulations, or any property management topic!
+            </p>
+
+            <div className="space-y-3">
+              <Link
+                href="/ask-ai"
+                onClick={closeAIPopup}
+                className="w-full bg-gradient-to-r from-[#6A00F5] to-[#8A2BE2] text-white px-6 py-3 rounded-lg hover:from-[#5A00E5] hover:to-[#7A2BE2] transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
+              >
+                <Brain className="h-5 w-5" />
+                Try AI Chat Now
+              </Link>
+
+              <button
+                onClick={closeAIPopup}
+                className="w-full text-gray-500 hover:text-gray-700 px-6 py-2 transition-colors font-medium"
+              >
+                Maybe later
+              </button>
+            </div>
+
+            <p className="text-xs text-gray-400 mt-4 text-center">
+              No account required • Instant responses • UK property expertise
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
