@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Download,
   CheckCircle,
@@ -59,7 +58,6 @@ const MANIFEST_FILES = [
 ];
 
 export default function OutlookInstallPage() {
-  const [selectedTab, setSelectedTab] = useState('web');
   const [downloadedManifests, setDownloadedManifests] = useState<string[]>([]);
 
   const downloadManifest = (manifestId: string, filename: string) => {
@@ -162,168 +160,85 @@ export default function OutlookInstallPage() {
         {/* Installation Instructions */}
         <Card className="mb-8">
           <CardHeader>
-            <CardTitle>Step-by-Step Installation Guide</CardTitle>
+            <CardTitle>Installation Instructions - Outlook Desktop Only</CardTitle>
             <CardDescription>
-              Choose your platform below for detailed installation instructions
+              BlocIQ add-ins work best with Outlook Desktop application. Web and mobile have limited functionality.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="web" className="flex items-center">
-                  <Globe className="w-4 h-4 mr-1" />
-                  Outlook Web
-                </TabsTrigger>
-                <TabsTrigger value="desktop" className="flex items-center">
-                  <Monitor className="w-4 h-4 mr-1" />
-                  Outlook Desktop
-                </TabsTrigger>
-                <TabsTrigger value="mobile" className="flex items-center">
-                  <Smartphone className="w-4 h-4 mr-1" />
-                  Outlook Mobile
-                </TabsTrigger>
-              </TabsList>
-
-              {/* Outlook Web Instructions */}
-              <TabsContent value="web" className="space-y-6">
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-blue-900 mb-2">Outlook Web App (outlook.office.com)</h3>
-                  <p className="text-blue-700 text-sm">Most common installation method</p>
+            {/* Compatibility Notice */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <div className="flex items-start">
+                <Monitor className="h-5 w-5 text-blue-600 mr-2 mt-0.5" />
+                <div>
+                  <h4 className="font-semibold text-blue-800">Recommended: Outlook Desktop</h4>
+                  <p className="text-blue-700 text-sm mt-1">
+                    For the best experience with BlocIQ AI add-ins, use the Outlook Desktop application.
+                    Web and mobile versions have limited add-in support and may not display all features properly.
+                  </p>
                 </div>
+              </div>
+            </div>
 
-                <div className="space-y-4">
-                  {[
-                    {
-                      step: 1,
-                      title: "Open Outlook Web",
-                      content: "Go to outlook.office.com and sign in with your Microsoft account"
-                    },
-                    {
-                      step: 2,
-                      title: "Access Add-ins Menu",
-                      content: "Click on 'Get Add-ins' in the ribbon, or go to Settings (gear icon) → View all Outlook settings → Add-ins"
-                    },
-                    {
-                      step: 3,
-                      title: "Add Custom Add-in",
-                      content: "Click 'My add-ins' → 'Add a custom add-in' → 'Add from file'"
-                    },
-                    {
-                      step: 4,
-                      title: "Upload Manifest Files",
-                      content: "Upload each of the 3 downloaded manifest files one by one. Start with the Ask AI manifest."
-                    },
-                    {
-                      step: 5,
-                      title: "Install Each Add-in",
-                      content: "Click 'Install' for each manifest. You may see security warnings - click 'Install' to proceed."
-                    },
-                    {
-                      step: 6,
-                      title: "Verify Installation",
-                      content: "Look for the BlocIQ buttons in your email ribbon. You should see 'Ask BlocIQ', 'Generate Reply', and 'Triage Inbox'."
-                    }
-                  ].map((instruction) => (
-                    <div key={instruction.step} className="flex items-start p-4 bg-white rounded-lg border">
-                      <div className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold mr-4 flex-shrink-0">
-                        {instruction.step}
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-gray-900 mb-1">{instruction.title}</h4>
-                        <p className="text-gray-600 text-sm">{instruction.content}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </TabsContent>
-
-              {/* Outlook Desktop Instructions */}
-              <TabsContent value="desktop" className="space-y-6">
-                <div className="bg-purple-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-purple-900 mb-2">Outlook Desktop App</h3>
-                  <p className="text-purple-700 text-sm">For Windows and Mac desktop versions</p>
-                </div>
-
-                <div className="space-y-4">
-                  {[
-                    {
-                      step: 1,
-                      title: "Open Outlook Desktop",
-                      content: "Launch your Outlook desktop application"
-                    },
-                    {
-                      step: 2,
-                      title: "Access Store",
-                      content: "Go to Home tab → Store (or Get Add-ins) in the ribbon"
-                    },
-                    {
-                      step: 3,
-                      title: "My Add-ins",
-                      content: "Click 'My Add-ins' in the left sidebar of the store"
-                    },
-                    {
-                      step: 4,
-                      title: "Add from File",
-                      content: "Click 'Add a custom add-in' → 'Add from file' and select your downloaded manifest files"
-                    },
-                    {
-                      step: 5,
-                      title: "Install All Three",
-                      content: "Install each manifest file: Ask AI, Smart Reply, and Inbox Triage"
-                    },
-                    {
-                      step: 6,
-                      title: "Restart if Needed",
-                      content: "Some versions may require restarting Outlook. The BlocIQ buttons will appear in your ribbon."
-                    }
-                  ].map((instruction) => (
-                    <div key={instruction.step} className="flex items-start p-4 bg-white rounded-lg border">
-                      <div className="bg-purple-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold mr-4 flex-shrink-0">
-                        {instruction.step}
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-gray-900 mb-1">{instruction.title}</h4>
-                        <p className="text-gray-600 text-sm">{instruction.content}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </TabsContent>
-
-              {/* Mobile Instructions */}
-              <TabsContent value="mobile" className="space-y-6">
-                <div className="bg-orange-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-orange-900 mb-2">Outlook Mobile App</h3>
-                  <p className="text-orange-700 text-sm">Limited add-in support - use web version for best experience</p>
-                </div>
-
-                <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                  <div className="flex items-start">
-                    <AlertCircle className="h-5 w-5 text-yellow-600 mr-2 mt-0.5" />
-                    <div>
-                      <h4 className="font-semibold text-yellow-800">Mobile Limitations</h4>
-                      <p className="text-yellow-700 text-sm mt-1">
-                        Outlook mobile apps have limited add-in support. For the best BlocIQ AI experience,
-                        we recommend using Outlook Web App on your mobile browser instead.
-                      </p>
-                    </div>
+            {/* Desktop Installation Steps */}
+            <div className="space-y-4">
+              {[
+                {
+                  step: 1,
+                  title: "Open Outlook Desktop",
+                  content: "Launch your Outlook desktop application (Windows or Mac)"
+                },
+                {
+                  step: 2,
+                  title: "Access Add-ins Store",
+                  content: "Go to Home tab → Store (or Get Add-ins) in the ribbon"
+                },
+                {
+                  step: 3,
+                  title: "My Add-ins",
+                  content: "Click 'My Add-ins' in the left sidebar of the store"
+                },
+                {
+                  step: 4,
+                  title: "Add Custom Add-in",
+                  content: "Click 'Add a custom add-in' → 'Add from file' and select your downloaded manifest files"
+                },
+                {
+                  step: 5,
+                  title: "Install All Three Add-ins",
+                  content: "Install each manifest file one by one: Ask AI, Smart Reply, and Inbox Triage. Click 'Install' for each one."
+                },
+                {
+                  step: 6,
+                  title: "Restart Outlook",
+                  content: "Close and restart Outlook. The BlocIQ buttons will appear in your ribbon when you open emails."
+                }
+              ].map((instruction) => (
+                <div key={instruction.step} className="flex items-start p-4 bg-white rounded-lg border">
+                  <div className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold mr-4 flex-shrink-0">
+                    {instruction.step}
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-1">{instruction.title}</h4>
+                    <p className="text-gray-600 text-sm">{instruction.content}</p>
                   </div>
                 </div>
+              ))}
+            </div>
 
-                <div className="space-y-4">
-                  <div className="p-4 bg-white rounded-lg border">
-                    <h4 className="font-semibold text-gray-900 mb-2">Recommended Mobile Approach</h4>
-                    <ol className="list-decimal list-inside space-y-2 text-sm text-gray-600">
-                      <li>Open your mobile browser (Safari, Chrome, etc.)</li>
-                      <li>Navigate to outlook.office.com</li>
-                      <li>Sign in with your Microsoft account</li>
-                      <li>Use the BlocIQ add-ins through the web interface</li>
-                      <li>Add outlook.office.com to your home screen for quick access</li>
-                    </ol>
-                  </div>
+            {/* Alternative Platform Notice */}
+            <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="flex items-start">
+                <AlertCircle className="h-5 w-5 text-yellow-600 mr-2 mt-0.5" />
+                <div>
+                  <h4 className="font-semibold text-yellow-800">Other Platforms</h4>
+                  <p className="text-yellow-700 text-sm mt-1">
+                    <strong>Outlook Web:</strong> Limited functionality - add-ins may not load properly.<br/>
+                    <strong>Outlook Mobile:</strong> No add-in support - use desktop version for BlocIQ features.
+                  </p>
                 </div>
-              </TabsContent>
-            </Tabs>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
