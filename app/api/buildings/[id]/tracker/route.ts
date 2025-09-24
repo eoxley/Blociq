@@ -51,8 +51,9 @@ export async function GET(
 
       const { data: items, error: itemsError } = await query
 
-      // If table doesn't exist, return empty response
-      if (itemsError && itemsError.code === 'PGRST116') {
+      // If table doesn't exist or columns don't exist, return empty response
+      if (itemsError && (itemsError.code === 'PGRST116' || itemsError.code === '42703')) {
+        console.log('Tracker table or columns not found, returning empty response:', itemsError.message);
         return NextResponse.json({
           success: true,
           data: [],
@@ -179,8 +180,8 @@ export async function POST(
       .select()
       .single()
 
-    // If table doesn't exist, return error indicating tracker not set up
-    if (createError && createError.code === 'PGRST116') {
+    // If table doesn't exist or columns missing, return error indicating tracker not set up
+    if (createError && (createError.code === 'PGRST116' || createError.code === '42703')) {
       return NextResponse.json({
         error: 'Action tracker not available for this building. Please contact support to enable this feature.'
       }, { status: 404 })

@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OfficeApp
+  xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+  xmlns:mailappor="http://schemas.microsoft.com/office/mailappversionoverrides/1.1"
+  xsi:type="MailApp">
+
+  <Id>d4e7d201-1122-44d1-99ab-123456789abc</Id>
+  <Version>1.0.0.0</Version>
+  <ProviderName>BlocIQ Ltd</ProviderName>
+  <DefaultLocale>en-GB</DefaultLocale>
+  <DisplayName DefaultValue="BlocIQ Outlook Add-in"/>
+  <Description DefaultValue="AI-powered tools for property management: Generate Reply, Triage Inbox, Ask BlocIQ"/>
+
+  <IconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-32.png"/>
+  <HighResolutionIconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-80.png"/>
+  <SupportUrl DefaultValue="https://www.blociq.co.uk"/>
+
+  <AppDomains>
+    <AppDomain>https://blociq.co.uk</AppDomain>
+    <AppDomain>https://www.blociq.co.uk</AppDomain>
+  </AppDomains>
+
+  <Hosts>
+    <Host Name="Mailbox"/>
+  </Hosts>
+
+  <Requirements>
+    <Sets>
+      <Set Name="Mailbox" MinVersion="1.3"/>
+    </Sets>
+  </Requirements>
+
+  <FormSettings>
+    <Form xsi:type="ItemEdit">
+      <DesktopSettings>
+        <SourceLocation DefaultValue="https://www.blociq.co.uk/outlook-addin/home.html"/>
+      </DesktopSettings>
+    </Form>
+  </FormSettings>
+
+  <Permissions>ReadWriteMailbox</Permissions>
+
+  <Rule xsi:type="RuleCollection" Mode="Or">
+    <Rule xsi:type="ItemIs" ItemType="Message" FormType="Edit"/>
+  </Rule>
+
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides"
+                    xsi:type="VersionOverridesV1_0">
+
+    <Hosts>
+      <Host xsi:type="MailHost">
+        <DesktopFormFactor>
+          <!-- Single function file for all buttons -->
+          <FunctionFile resid="blocIQFunctions"/>
+
+          <ExtensionPoint xsi:type="MessageComposeCommandSurface">
+            <OfficeTab id="TabDefault">
+              <Group id="blocIQGroup">
+                <Label resid="groupLabel"/>
+
+                <!-- Button 1: Generate Reply -->
+                <Control xsi:type="Button" id="btnGenerateReply">
+                  <Label resid="labelGenerateReply"/>
+                  <Supertip>
+                    <Title resid="tipTitleReply"/>
+                    <Description resid="tipDescReply"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="icon16"/>
+                    <bt:Image size="32" resid="icon32"/>
+                    <bt:Image size="80" resid="icon80"/>
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>generateBlocIQReply</FunctionName>
+                  </Action>
+                </Control>
+
+                <!-- Button 2: Triage Inbox -->
+                <Control xsi:type="Button" id="btnTriageInbox">
+                  <Label resid="labelTriageInbox"/>
+                  <Supertip>
+                    <Title resid="tipTitleTriage"/>
+                    <Description resid="tipDescTriage"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="icon16"/>
+                    <bt:Image size="32" resid="icon32"/>
+                    <bt:Image size="80" resid="icon80"/>
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>triageInbox</FunctionName>
+                  </Action>
+                </Control>
+
+                <!-- Button 3: Ask BlocIQ -->
+                <Control xsi:type="Button" id="btnAskBlocIQ">
+                  <Label resid="labelAskBlocIQ"/>
+                  <Supertip>
+                    <Title resid="tipTitleAsk"/>
+                    <Description resid="tipDescAsk"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="icon16"/>
+                    <bt:Image size="32" resid="icon32"/>
+                    <bt:Image size="80" resid="icon80"/>
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>askBlocIQ</FunctionName>
+                  </Action>
+                </Control>
+
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </DesktopFormFactor>
+      </Host>
+    </Hosts>
+
+    <Resources>
+      <bt:Images>
+        <bt:Image id="icon16" DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-16.png"/>
+        <bt:Image id="icon32" DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-32.png"/>
+        <bt:Image id="icon80" DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-80.png"/>
+      </bt:Images>
+
+      <bt:Urls>
+        <bt:Url id="blocIQFunctions" DefaultValue="https://www.blociq.co.uk/outlook-addin/functions.html"/>
+      </bt:Urls>
+
+      <bt:ShortStrings>
+        <bt:String id="groupLabel" DefaultValue="BlocIQ"/>
+        <bt:String id="labelGenerateReply" DefaultValue="Generate Reply"/>
+        <bt:String id="labelTriageInbox" DefaultValue="Triage Inbox"/>
+        <bt:String id="labelAskBlocIQ" DefaultValue="Ask BlocIQ"/>
+        <bt:String id="tipTitleReply" DefaultValue="AI Reply"/>
+        <bt:String id="tipTitleTriage" DefaultValue="AI Triage"/>
+        <bt:String id="tipTitleAsk" DefaultValue="Ask BlocIQ"/>
+      </bt:ShortStrings>
+
+      <bt:LongStrings>
+        <bt:String id="tipDescReply" DefaultValue="Generate an AI-powered reply for this email"/>
+        <bt:String id="tipDescTriage" DefaultValue="Triage all unread emails with AI"/>
+        <bt:String id="tipDescAsk" DefaultValue="Ask BlocIQ any property management question"/>
+      </bt:LongStrings>
+    </Resources>
+
+  </VersionOverrides>
+</OfficeApp>

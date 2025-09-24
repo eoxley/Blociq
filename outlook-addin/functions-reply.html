@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>BlocIQ Reply Functions</title>
+  <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+</head>
+<body>
+  <h3 style="font-family: sans-serif; color: #444;">BlocIQ Reply Functions Loaded ✅</h3>
+  <p style="font-family: sans-serif; color: #666; font-size: 12px;">
+    This page is used by Outlook as the FunctionFile entry point for the BlocIQ Reply add-in.
+  </p>
+
+  <script>
+    function generateBlocIQReply(event) {
+      const userEmail = Office.context.mailbox.userProfile.emailAddress || "";
+      console.log("BlocIQ Reply triggered for user:", userEmail);
+
+      // Extract email context for better AI responses
+      Promise.all([
+        new Promise(resolve => {
+          Office.context.mailbox.item.subject.getAsync((result) => {
+            resolve(result.status === Office.AsyncResultStatus.Succeeded ? result.value : "");
+          });
+        }),
+        new Promise(resolve => {
+          Office.context.mailbox.item.body.getAsync(Office.CoercionType.Text, (result) => {
+            resolve(result.status === Office.AsyncResultStatus.Succeeded ? result.value : "");
+          });
+        })
+      ])
+       .then(([subject, body]) => {
+         console.log("Email context extracted:", { subject: subject?.substring(0, 50) });
+
+         // Parse building/unit references from email content
+         const emailContent = `${subject}\n\n${body}`;
+         const building = extractBuildingReference(emailContent);
+         const unit = extractUnitReference(emailContent);
+
+         // Extract additional context
+         const senderInfo = getSenderInfo();
+         const recipientInfo = getRecipientInfo();
+
+         // Create contextual question for AI
+         const contextualQuestion = createContextualQuestion(subject, body, building, unit);
+
+         return fetch("https://www.blociq.co.uk/api/ask-ai-outlook", {
+           method: "POST",
+           headers: {
+             "Content-Type": "application/json",
+             "X-User-Email": userEmail
+           },
+           body: JSON.stringify({
+             question: contextualQuestion,
+             building: building,
+             unit: unit,
+             contextType: "outlook_reply",
+             is_outlook_addin: true,
+             email_subject: subject,
+             email_body: body?.substring(0, 1000), // Increased to 1000 chars
+             sender_info: senderInfo,
+             recipient_info: recipientInfo,
+             // Additional context for backend processing
+             compliance_context: true,
+             leaseholder_context: true,
+             diary_context: true
+           })
+         });
+       })
+      .then(res => res.json())
+       .then(data => {
+         if (data.ok && data.answer) {
+           // Format the AI response with proper email formatting
+           const formattedReply = formatEmailReply(data.answer);
+
+           Office.context.mailbox.item.body.setSelectedDataAsync(
+             formattedReply,
+             { coercionType: Office.CoercionType.Html },
+             (result) => {
+               if (result.status === Office.AsyncResultStatus.Succeeded) {
+                 showToastNotification("✅ BlocIQ AI reply generated successfully!");
+                 console.log("✅ BlocIQ reply inserted successfully");
+               } else {
+                 console.error("❌ Failed to insert BlocIQ reply:", result.error);
+                 showToastNotification("❌ Failed to insert reply. Please try again.");
+               }
+               event.completed();
+             }
+           );
+         } else {
+           console.error("BlocIQ reply failed:", data.error);
+           showToastNotification("❌ Failed to generate AI reply. Please try again.");
+           event.completed();
+         }
+       })
+      .catch(err => {
+        console.error("BlocIQ API call failed:", err);
+        event.completed();
+      });
+    }
+
+    // Extract building references from email content
+    function extractBuildingReference(content) {
+      if (!content) return null;
+
+      // Common building reference patterns
+      const patterns = [
+        /(?:building|block|development|estate|court|house|towers?|apartments?|flats?)[:\s]+([a-zA-Z0-9\s,'-]+)/gi,
+        /([a-zA-Z0-9\s,'-]+)\s+(?:building|block|development|estate|court|house|towers?|apartments?|flats?)/gi,
+        /(?:at|@)\s+([a-zA-Z0-9\s,'-]+?)(?:\s+(?:flat|unit|apartment|building)|,|\.|\n|$)/gi
+      ];
+
+      for (const pattern of patterns) {
+        const matches = [...content.matchAll(pattern)];
+        if (matches.length > 0) {
+          return matches[0][1]?.trim().substring(0, 100); // First match, max 100 chars
+        }
+      }
+
+      return null;
+    }
+
+     // Extract unit references from email content
+     function extractUnitReference(content) {
+       if (!content) return null;
+
+       // Common unit reference patterns
+       const patterns = [
+         /(?:flat|unit|apartment|apt)\s*#?([a-zA-Z0-9]+)/gi,
+         /(?:flat|unit|apartment|apt)[:\s]+([a-zA-Z0-9]+)/gi,
+         /([a-zA-Z0-9]+[a-zA-Z]?)\s*(?:flat|unit|apartment|apt)/gi,
+         /#([a-zA-Z0-9]+)/g
+       ];
+
+       for (const pattern of patterns) {
+         const matches = [...content.matchAll(pattern)];
+         if (matches.length > 0) {
+           return matches[0][1]?.trim().substring(0, 20); // First match, max 20 chars
+         }
+       }
+
+       return null;
+     }
+
+     // Extract sender information
+     function getSenderInfo() {
+       try {
+         const item = Office.context.mailbox.item;
+         if (!item || !item.from) return null;
+
+         return {
+           name: item.from.displayName || 'Unknown Sender',
+           email: item.from.emailAddress || 'unknown@example.com',
+           // Additional sender context
+           is_leaseholder: item.from.emailAddress ? 
+             item.from.emailAddress.includes('@') && 
+             !item.from.emailAddress.includes('blociq.co.uk') : false
+         };
+       } catch (error) {
+         console.warn('Could not extract sender info:', error);
+         return null;
+       }
+     }
+
+     // Extract recipient information
+     function getRecipientInfo() {
+       try {
+         const item = Office.context.mailbox.item;
+         if (!item) return null;
+
+         const recipients = {
+           to: [],
+           cc: []
+         };
+
+         // Extract TO recipients
+         if (item.to && Array.isArray(item.to)) {
+           recipients.to = item.to.map(recipient => ({
+             name: recipient.displayName || recipient.emailAddress || recipient,
+             email: recipient.emailAddress || recipient
+           }));
+         }
+
+         // Extract CC recipients
+         if (item.cc && Array.isArray(item.cc)) {
+           recipients.cc = item.cc.map(recipient => ({
+             name: recipient.displayName || recipient.emailAddress || recipient,
+             email: recipient.emailAddress || recipient
+           }));
+         }
+
+         return recipients;
+       } catch (error) {
+         console.warn('Could not extract recipient info:', error);
+         return null;
+       }
+     }
+
+     // Create a contextual question based on email content
+     function createContextualQuestion(subject, body, building, unit) {
+       const baseContext = [];
+
+       if (building) baseContext.push(`building "${building}"`);
+       if (unit) baseContext.push(`unit ${unit}`);
+
+       const contextStr = baseContext.length > 0 ? ` for ${baseContext.join(' ')}` : '';
+
+       // Determine response type based on email content
+       const content = `${subject} ${body}`.toLowerCase();
+
+       // BlocIQ-specific contextual prompts with founder rules
+       if (content.includes('repair') || content.includes('maintenance') || content.includes('fault') || content.includes('broken')) {
+         return `Generate a professional property management email reply regarding maintenance/repair issues${contextStr}. 
+         
+         IMPORTANT: Use British English only. Write from Property Manager perspective (not tenancy). 
+         Distinguish between demised parts (leaseholder responsibility) and common parts (freeholder/management responsibility).
+         If works exceed £250 per unit, mention Section 20 consultation requirements.
+         Address the concerns raised and provide clear next steps with timelines.`;
+       }
+
+       if (content.includes('service charge') || content.includes('billing') || content.includes('invoice') || content.includes('payment')) {
+         return `Generate a professional property management email reply regarding service charges or billing${contextStr}.
+         
+         IMPORTANT: Use British English only. Write from Property Manager perspective.
+         Reference Section 20 consultation stages and statutory caps (£250/£100).
+         Provide clear breakdown of charges and payment processes.
+         If applicable, mention Building Safety Act compliance for HRBs.`;
+       }
+
+       if (content.includes('complaint') || content.includes('issue') || content.includes('problem') || content.includes('concern')) {
+         return `Generate a professional property management email reply addressing resident concerns${contextStr}.
+         
+         IMPORTANT: Use British English only. Write from Property Manager perspective.
+         Show understanding and empathy while maintaining professional boundaries.
+         Provide specific solutions or next steps with clear timelines.
+         Avoid liability statements like "we guarantee" - use "we will endeavour" instead.`;
+       }
+
+       if (content.includes('lease') || content.includes('tenancy') || content.includes('agreement')) {
+         return `Generate a professional property management email reply regarding lease or tenancy matters${contextStr}.
+         
+         IMPORTANT: Use British English only. Write from Property Manager perspective (not tenancy).
+         Provide accurate leasehold information and guidance.
+         Reference relevant lease clauses where appropriate.
+         Distinguish between leaseholder and freeholder responsibilities.`;
+       }
+
+       if (content.includes('fire') || content.includes('safety') || content.includes('evacuation') || content.includes('alarm')) {
+         return `Generate a professional property management email reply regarding fire safety${contextStr}.
+         
+         IMPORTANT: Use British English only. Write from Property Manager perspective.
+         Reference Building Safety Act 2022 and FRAEW requirements if applicable.
+         Emphasise safety compliance and statutory obligations.
+         Provide clear next steps for safety-related concerns.`;
+       }
+
+       // Default contextual question with BlocIQ rules
+       return `Generate a professional property management email reply${contextStr} based on the email content.
+       
+       IMPORTANT: Use British English only. Write from Property Manager perspective (not tenancy).
+       Be helpful, professional, and provide specific next steps where appropriate.
+       Distinguish between demised and common parts where relevant.
+       Reference Section 20 consultation requirements if works exceed £250 per unit.
+       Avoid liability statements - use professional language like "we will endeavour" instead of "we guarantee".`;
+     }
+
+     // Format AI response with proper email formatting
+     function formatEmailReply(aiResponse) {
+       if (!aiResponse) return "";
+
+       // Add proper email greeting if not present
+       let formatted = aiResponse.trim();
+
+       // Handle placeholders for personalization
+       const senderInfo = getSenderInfo();
+       if (senderInfo && senderInfo.name) {
+         formatted = formatted.replace(/\[Recipient's Name\]/g, senderInfo.name);
+         formatted = formatted.replace(/\[Recipient Name\]/g, senderInfo.name);
+         formatted = formatted.replace(/\[Name\]/g, senderInfo.name);
+       }
+
+       // Add placeholder for user name if not resolvable
+       formatted = formatted.replace(/\[Your Name\]/g, '[Your Name]');
+       formatted = formatted.replace(/\[Your Position\]/g, '[Your Position]');
+       formatted = formatted.replace(/\[Company Signature\]/g, '[Company Signature]');
+
+       // Ensure proper paragraph spacing by converting single newlines to double
+       formatted = formatted.replace(/\n\n+/g, '\n\n'); // Normalize multiple newlines
+       formatted = formatted.replace(/\n(?!\n)/g, '\n\n'); // Convert single newlines to double
+
+       // Convert to HTML with proper spacing
+       const paragraphs = formatted.split('\n\n').filter(p => p.trim());
+
+       const htmlParagraphs = paragraphs.map(paragraph => {
+         const trimmed = paragraph.trim();
+         if (!trimmed) return '';
+
+         // Handle lists (bullets or numbered)
+         if (trimmed.includes('\n- ') || trimmed.includes('\n• ') || /\n\d+\./.test(trimmed)) {
+           const lines = trimmed.split('\n');
+           const firstLine = lines[0];
+           const listItems = lines.slice(1).map(line => {
+             if (line.startsWith('- ') || line.startsWith('• ')) {
+               return `<li>${line.substring(2)}</li>`;
+             } else if (/^\d+\.\s/.test(line)) {
+               return `<li>${line.replace(/^\d+\.\s/, '')}</li>`;
+             }
+             return line;
+           }).join('');
+
+           const listType = /^\d+\./.test(lines[1]) ? 'ol' : 'ul';
+           return `<p>${firstLine}</p><${listType}>${listItems}</${listType}>`;
+         }
+
+         // Handle compliance deadline highlighting
+         const compliancePattern = /(EICR|PAT|Fire Risk Assessment|Gas Safety|Lift|Asbestos|Insurance).*?(\d{1,2}\/\d{1,2}\/\d{4})/gi;
+         const highlightedParagraph = trimmed.replace(compliancePattern, '<strong>$1 renewal is due on $2</strong>');
+
+         return `<p>${highlightedParagraph}</p>`;
+       });
+
+       // Join with proper spacing
+       let result = htmlParagraphs.join('<br><br>');
+
+       // Add professional closing if not present
+       if (!result.toLowerCase().includes('regards') && !result.toLowerCase().includes('yours')) {
+         result += '<br><br><p>Kind regards,<br>Property Management Team</p>';
+       }
+
+       // No longer adding suggested next actions - removed as per client request
+
+       return result;
+     }
+
+     // Show toast notification to user
+     function showToastNotification(message) {
+       try {
+         // Create a simple visual notification
+         const notification = document.createElement('div');
+         notification.style.cssText = `
+           position: fixed;
+           top: 20px;
+           right: 20px;
+           background: #4CAF50;
+           color: white;
+           padding: 12px 20px;
+           border-radius: 4px;
+           font-family: sans-serif;
+           font-size: 14px;
+           z-index: 10000;
+           box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+           max-width: 300px;
+         `;
+         notification.textContent = message;
+         
+         document.body.appendChild(notification);
+         
+         // Remove notification after 3 seconds
+         setTimeout(() => {
+           if (notification.parentNode) {
+             notification.parentNode.removeChild(notification);
+           }
+         }, 3000);
+         
+         console.log('🔔 Toast notification:', message);
+       } catch (error) {
+         console.warn('Could not show toast notification:', error);
+       }
+     }
+
+     // Initialize Office.js and register function
+     Office.onReady(() => {
+       if (Office.actions && Office.actions.associate) {
+         Office.actions.associate("generateBlocIQReply", generateBlocIQReply);
+       }
+       console.log("✅ BlocIQ reply function registered");
+     });
+
+    // Global function registration for legacy support
+    if (typeof window !== 'undefined') {
+      window.generateBlocIQReply = generateBlocIQReply;
+    }
+  </script>
+</body>
+</html>

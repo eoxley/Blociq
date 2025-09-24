@@ -68,7 +68,6 @@ export default function CommunicationsLog({
           building_id,
           sent_by,
           building_name,
-          unit_number,
           status,
           metadata
         `)
@@ -92,9 +91,11 @@ export default function CommunicationsLog({
       if (error) {
         console.error('Error fetching communications:', error)
 
-        // If it's a foreign key relationship error, we can still show an empty state gracefully
-        if (error.code === 'PGRST200' || error.message?.includes('relationship') || error.message?.includes('foreign key')) {
-          console.log('Communications log table schema mismatch - displaying empty state')
+        // If it's a column error, table doesn't exist, or foreign key relationship error, show empty state gracefully
+        if (error.code === 'PGRST200' || error.code === 'PGRST116' || error.code === '42703' ||
+            error.message?.includes('relationship') || error.message?.includes('foreign key') ||
+            error.message?.includes('does not exist')) {
+          console.log('Communications log table schema mismatch or missing - displaying empty state')
           setCommunications([])
           setLoading(false)
           return
