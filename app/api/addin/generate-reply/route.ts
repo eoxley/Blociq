@@ -1,8 +1,9 @@
 // app/api/addin/generate-reply/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { withOutlookSubscription } from '@/lib/outlook-subscription-middleware';
 
-export async function POST(request: NextRequest) {
+async function handleGenerateReply(request: NextRequest) {
     try {
         const body = await request.json();
         const { originalSubject, originalSender, originalBody, context, senderEmail, subject, bodyPreview, conversationId } = body;
@@ -186,4 +187,11 @@ export async function OPTIONS(request: NextRequest) {
         },
     });
 }
+
+// Export the wrapped handler with subscription middleware
+export const POST = withOutlookSubscription(handleGenerateReply, {
+    requestType: 'generate_reply',
+    tokensRequired: 3, // Reply generation is medium cost
+    includeBuildings: false
+});
 

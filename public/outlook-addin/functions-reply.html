@@ -16,6 +16,50 @@
       const userEmail = Office.context.mailbox.userProfile.emailAddress || "";
       console.log("BlocIQ Reply triggered for user:", userEmail);
 
+      // Check subscription first
+      checkSubscription(userEmail)
+        .then(subscription => {
+          if (!subscription.hasAccess) {
+            handleSubscriptionError(subscription, event);
+            return;
+          }
+
+          // Proceed with reply generation
+          generateReplyWithSubscription(event, userEmail, subscription);
+        })
+        .catch(error => {
+          console.error("Subscription check failed:", error);
+          showToastNotification("❌ Unable to verify subscription. Please try again.");
+          event.completed();
+        });
+    }
+
+    async function checkSubscription(userEmail) {
+      try {
+        const response = await fetch(`https://www.blociq.co.uk/api/outlook-subscription?email=${encodeURIComponent(userEmail)}`);
+        const data = await response.json();
+        return data.subscription || { hasAccess: false, isActive: false, usageRemaining: 0 };
+      } catch (error) {
+        console.error("Error checking subscription:", error);
+        return { hasAccess: false, isActive: false, usageRemaining: 0 };
+      }
+    }
+
+    function handleSubscriptionError(subscription, event) {
+      if (!subscription.isActive) {
+        showToastNotification("❌ BlocIQ Outlook subscription required. Start your 30-day free trial at blociq.co.uk");
+        // Optional: Open subscription page
+        window.open('https://www.blociq.co.uk/outlook-subscription', '_blank');
+      } else {
+        showToastNotification(`❌ Monthly usage limit exceeded. Remaining: ${subscription.usageRemaining}. Contact support for higher limits.`);
+        // Optional: Open subscription page for contact info
+        window.open('https://www.blociq.co.uk/outlook-subscription', '_blank');
+      }
+      event.completed();
+    }
+
+    function generateReplyWithSubscription(event, userEmail, subscription) {
+
       // Extract email context for better AI responses
       Promise.all([
         new Promise(resolve => {
@@ -48,7 +92,8 @@
            method: "POST",
            headers: {
              "Content-Type": "application/json",
-             "X-User-Email": userEmail
+             "X-User-Email": userEmail,
+             "X-Outlook-Addin": "true"
            },
            body: JSON.stringify({
              question: contextualQuestion,
