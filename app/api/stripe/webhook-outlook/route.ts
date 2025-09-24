@@ -3,8 +3,16 @@ import Stripe from 'stripe'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 
 export async function POST(request: NextRequest) {
+  // Check if Stripe key is available
+  if (!process.env.STRIPE_SECRET_KEY) {
+    console.error('STRIPE_SECRET_KEY environment variable not set')
+    return NextResponse.json({
+      error: 'Stripe configuration error'
+    }, { status: 500 })
+  }
+
   // Initialize Stripe and services
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
     apiVersion: '2024-06-20',
   })
 

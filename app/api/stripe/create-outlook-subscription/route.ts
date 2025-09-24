@@ -4,8 +4,16 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 
 export async function POST(request: NextRequest) {
   try {
+    // Check if Stripe key is available
+    if (!process.env.STRIPE_SECRET_KEY) {
+      console.error('STRIPE_SECRET_KEY environment variable not set')
+      return NextResponse.json({
+        error: 'Stripe configuration error. Please contact support.'
+      }, { status: 500 })
+    }
+
     // Initialize Stripe
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
       apiVersion: '2024-06-20',
     })
 
@@ -81,8 +89,16 @@ export async function POST(request: NextRequest) {
 // Handle successful subscription creation
 export async function GET(request: NextRequest) {
   try {
+    // Check if Stripe key is available
+    if (!process.env.STRIPE_SECRET_KEY) {
+      console.error('STRIPE_SECRET_KEY environment variable not set')
+      return NextResponse.json({
+        error: 'Stripe configuration error. Please contact support.'
+      }, { status: 500 })
+    }
+
     // Initialize Stripe
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
       apiVersion: '2024-06-20',
     })
 
