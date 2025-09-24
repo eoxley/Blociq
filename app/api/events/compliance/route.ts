@@ -101,9 +101,20 @@ export async function GET(request: NextRequest) {
 
     if (complianceError) {
       console.error('Error fetching compliance assets:', complianceError);
-      return NextResponse.json({ 
+
+      // If table doesn't exist, return empty response instead of error
+      if (complianceError.code === 'PGRST116') {
+        console.log('Compliance assets table not found, returning empty events');
+        return NextResponse.json({
+          success: true,
+          data: []
+        });
+      }
+
+      return NextResponse.json({
         success: false,
-        error: 'Failed to fetch compliance assets'
+        error: 'Failed to fetch compliance assets',
+        details: complianceError.message
       }, { status: 500 });
     }
 
