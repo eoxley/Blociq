@@ -2,17 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
-})
-
-const serviceSupabase = createServiceClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
-
 export async function POST(request: NextRequest) {
   try {
+    // Initialize Stripe
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+      apiVersion: '2024-06-20',
+    })
+
     const { email, priceId, successUrl, cancelUrl } = await request.json()
 
     if (!email || !priceId) {
@@ -85,6 +81,17 @@ export async function POST(request: NextRequest) {
 // Handle successful subscription creation
 export async function GET(request: NextRequest) {
   try {
+    // Initialize Stripe
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+      apiVersion: '2024-06-20',
+    })
+
+    // Initialize Supabase
+    const serviceSupabase = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
     const { searchParams } = new URL(request.url)
     const sessionId = searchParams.get('session_id')
 
