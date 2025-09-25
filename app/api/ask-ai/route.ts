@@ -1,4 +1,4 @@
-// ✅ UNIFIED AI ENDPOINT [2025-01-15] - COMPLETE SYSTEM
+// 🚀 UNIFIED AI ENDPOINT WITH PHASE 3 INTELLIGENCE [2025-01-15] - ADVANCED SYSTEM
 // - Single endpoint for ALL AI functionality
 // - Comprehensive building and document context
 // - Public access support
@@ -17,6 +17,23 @@ import { logBuildingQuery, detectQueryContextType } from '../../../lib/ai/buildi
 import { buildPrompt } from '../../../lib/buildPrompt';
 import { insertAiLog } from '../../../lib/supabase/ai_logs';
 import { fetchBuildingLeaseContext, isLeaseRelatedQuery } from '../../../lib/ai/leaseContextFormatter';
+import {
+  getTemplateVariations,
+  analyzeSenderProfile,
+  getAdaptedTone,
+  validateLegalCompliance,
+  detectLanguagePreference,
+  analyzeHistoricalPatterns,
+  generateIntelligentFollowUp,
+  buildEnhancedSystemMessage,
+  type TemplateVariation,
+  type SenderProfile,
+  type AdaptedTone,
+  type LegalCompliance,
+  type LanguagePreference,
+  type HistoricalPatterns,
+  type IntelligentFollowUp
+} from '../../../lib/ai/phase3-intelligence';
 
 export const runtime = "nodejs";
 
@@ -1883,19 +1900,93 @@ ${chunk.content.substring(0, 400)}...`
     // Build unified prompt with all context
     const finalPrompt = fullPrompt;
 
-    console.log('📝 Prompt built, calling OpenAI...');
+    console.log('📝 Prompt built, initializing Phase 3 intelligence...');
 
-    // Call OpenAI
+    // 🚀 PHASE 3: ADVANCED AI CONTEXT ENHANCEMENT
+    console.log('🤖 Phase 3: Advanced contextual processing started');
+
+    // Detect primary issue and context from message
+    const messageContent = `${message} ${fullPrompt}`.toLowerCase();
+    let primaryIssue = 'general';
+    let urgencyLevel = 'medium';
+    let sentiment = 'neutral';
+
+    // Issue detection
+    if (messageContent.includes('leak') || messageContent.includes('water') || messageContent.includes('dripping')) {
+      primaryIssue = 'leak';
+    } else if (messageContent.includes('service charge') || messageContent.includes('billing') || messageContent.includes('invoice')) {
+      primaryIssue = 'service_charge';
+    } else if (messageContent.includes('noise') || messageContent.includes('loud') || messageContent.includes('disturb')) {
+      primaryIssue = 'noise';
+    } else if (messageContent.includes('safety') || messageContent.includes('fire') || messageContent.includes('emergency')) {
+      primaryIssue = 'safety';
+    } else if (messageContent.includes('repair') || messageContent.includes('maintenance') || messageContent.includes('broken')) {
+      primaryIssue = 'maintenance';
+    } else if (messageContent.includes('compliance') || messageContent.includes('regulation') || messageContent.includes('certificate')) {
+      primaryIssue = 'compliance';
+    }
+
+    // Urgency detection
+    if (messageContent.includes('urgent') || messageContent.includes('emergency') || messageContent.includes('immediate')) {
+      urgencyLevel = 'high';
+    } else if (messageContent.includes('asap') || messageContent.includes('critical') || messageContent.includes('serious')) {
+      urgencyLevel = 'critical';
+    }
+
+    // Sentiment detection
+    if (messageContent.includes('angry') || messageContent.includes('frustrated') || messageContent.includes('unacceptable')) {
+      sentiment = 'negative';
+    } else if (messageContent.includes('happy') || messageContent.includes('thank') || messageContent.includes('pleased')) {
+      sentiment = 'positive';
+    }
+
+    // Dynamic Template System with Contextual Variations
+    const templateVariations = getTemplateVariations(primaryIssue, urgencyLevel, sentiment);
+
+    // Smart Tone Adaptation Based on Sender Profile
+    const senderProfile = analyzeSenderProfile(null, message, contextWithBuilding);
+    const adaptedTone = getAdaptedTone(senderProfile, primaryIssue, urgencyLevel);
+
+    // Legal Compliance Validation and Risk Assessment
+    const legalCompliance = await validateLegalCompliance(primaryIssue, contextWithBuilding);
+
+    // Multi-language Support Detection
+    const languagePreference = detectLanguagePreference(message);
+
+    // Advanced Learning System - Historical Pattern Analysis
+    const userEmail = user?.email || 'anonymous';
+    const historicalPatterns = await analyzeHistoricalPatterns(userEmail, primaryIssue, contextWithBuilding?.building?.id);
+
+    console.log('✅ Phase 3 contextual analysis completed:', {
+      template_variation: templateVariations.primary_template,
+      sender_profile: senderProfile.profile_type,
+      adapted_tone: adaptedTone.tone_style,
+      legal_risk: legalCompliance.risk_level,
+      language: languagePreference.detected_language,
+      historical_insights: historicalPatterns.pattern_count
+    });
+
+    // Enhanced System Message with Phase 3 Intelligence
+    const enhancedSystemMessage = buildEnhancedSystemMessage(
+      templateVariations,
+      adaptedTone,
+      legalCompliance,
+      languagePreference,
+      historicalPatterns,
+      contextWithBuilding
+    );
+
+    // Call OpenAI with Phase 3 Enhanced Context
     let completion;
     try {
       completion = await openai.chat.completions.create({
-        model: 'gpt-4',
+        model: process.env.BLOCIQ_MODEL || 'gpt-4o',
+        temperature: adaptedTone.temperature || 0.3,
+        max_tokens: templateVariations.max_tokens || 1500,
         messages: [
-          { role: 'system', content: systemPrompt },
+          { role: 'system', content: enhancedSystemMessage },
           { role: 'user', content: finalPrompt }
-        ],
-        temperature: 0.3,
-        max_tokens: 1500,
+        ]
       });
     } catch (openaiError: any) {
       console.error('❌ OpenAI API error:', openaiError);
@@ -1927,6 +2018,17 @@ ${chunk.content.substring(0, 400)}...`
     // Process response based on context
     const processedResponse = AIContextHandler.processResponse(aiResponse, context);
     const displayContent = AIContextHandler.formatResponseForDisplay(processedResponse);
+
+    // 🚀 PHASE 3: Generate Intelligent Follow-up Scheduling
+    const intelligentFollowUp = generateIntelligentFollowUp(
+      primaryIssue,
+      urgencyLevel,
+      legalCompliance,
+      historicalPatterns,
+      contextWithBuilding
+    );
+
+    console.log('✅ Phase 3 intelligent follow-up generated:', intelligentFollowUp);
 
     // Log the AI interaction
     let logId = null;
@@ -1986,7 +2088,56 @@ ${chunk.content.substring(0, 400)}...`
         comprehensiveSearchUsed: !!comprehensiveContext,
         searchMetadata: comprehensiveMetadata
       },
-      metadata: AIContextHandler.getResponseMetadata(processedResponse)
+      metadata: AIContextHandler.getResponseMetadata(processedResponse),
+
+      // 🚀 PHASE 3: Advanced Contextual Intelligence Features
+      phase3_intelligence: {
+        template_system: {
+          selected_template: templateVariations.primary_template,
+          context_key: templateVariations.context_key,
+          structure_used: templateVariations.structure,
+          max_tokens: templateVariations.max_tokens
+        },
+        sender_profile: {
+          profile_type: senderProfile.profile_type,
+          communication_style: senderProfile.communication_style,
+          complexity_preference: senderProfile.complexity_preference,
+          authority_level: senderProfile.authority_level,
+          special_considerations: senderProfile.special_considerations
+        },
+        tone_adaptation: {
+          selected_tone: adaptedTone.tone_style,
+          temperature_used: adaptedTone.temperature,
+          formality_level: adaptedTone.formality_level,
+          technical_detail_level: adaptedTone.technical_detail,
+          empathy_level: adaptedTone.empathy_level
+        },
+        legal_compliance: {
+          risk_assessment: legalCompliance.risk_level,
+          applicable_regulations: legalCompliance.applicable_regulations,
+          mandatory_elements: legalCompliance.mandatory_clauses,
+          statutory_requirements: legalCompliance.statutory_requirements
+        },
+        language_intelligence: {
+          detected_language: languagePreference.detected_language,
+          region_variant: languagePreference.region_variant,
+          complexity_level: languagePreference.complexity_level,
+          cultural_considerations: languagePreference.cultural_considerations
+        },
+        historical_analysis: {
+          pattern_count: historicalPatterns.pattern_count,
+          common_building_issues: historicalPatterns.common_issues,
+          building_insights: historicalPatterns.building_specific_insights,
+          recommended_adaptations: historicalPatterns.recommended_adaptations
+        },
+        intelligent_scheduling: {
+          follow_up_strategy: intelligentFollowUp.strategy,
+          escalation_timeline: intelligentFollowUp.escalation_timeline,
+          monitoring_points: intelligentFollowUp.monitoring_points,
+          success_criteria: intelligentFollowUp.success_criteria,
+          risk_mitigation: intelligentFollowUp.risk_mitigation
+        }
+      }
     });
 
   } catch (error) {
