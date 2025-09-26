@@ -13,8 +13,8 @@
   <DisplayName DefaultValue="BlocIQ Inbox Triage"/>
   <Description DefaultValue="AI-powered inbox triage that generates draft replies for all emails"/>
 
-  <IconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-32.png"/>
-  <HighResolutionIconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-80.png"/>
+  <IconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-64.png"/>
+  <HighResolutionIconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-128.png"/>
   <SupportUrl DefaultValue="https://www.blociq.co.uk"/>
 
   <AppDomains>
@@ -91,8 +91,8 @@
       <Resources>
         <bt:Images>
           <bt:Image id="icon16" DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-16.png"/>
-          <bt:Image id="icon32" DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-32.png"/>
-          <bt:Image id="icon80" DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-80.png"/>
+          <bt:Image id="icon32" DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-64.png"/>
+          <bt:Image id="icon80" DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-128.png"/>
         </bt:Images>
 
         <bt:Urls>
