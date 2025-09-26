@@ -86,28 +86,74 @@ async function handlePublicOutlookAI(req: NextRequest) {
 
     console.log(`👤 Extracted first name: ${userFirstName || 'none'}`);
 
-    // 📝 PERSONALIZED GREETING BANK
+    // 📝 EXPANDED PERSONALIZED GREETING BANK
     const personalizedGreetings = userFirstName ? [
+      // Direct and warm
       `Hi ${userFirstName}, great question about`,
+      `Hello ${userFirstName}, I'm glad you asked about`,
+      `${userFirstName}, excellent question regarding`,
+      `Good to hear from you, ${userFirstName}!`,
+      `Hi there ${userFirstName}, this is a really important topic...`,
+
+      // Experience-based openings
       `${userFirstName}, I've dealt with this situation many times...`,
-      `Thanks for reaching out, ${userFirstName}. This is a common challenge in our field...`,
-      `Good to hear from you, ${userFirstName}. In my experience managing similar properties...`,
-      `${userFirstName}, that's an important consideration for any block manager...`,
-      `I completely understand this concern, ${userFirstName}...`,
-      `${userFirstName}, this comes up frequently in property management...`,
-      `Good to hear from a fellow property professional, ${userFirstName}...`,
-      `I've encountered this issue before, ${userFirstName}...`,
-      `That's a really relevant question, ${userFirstName}...`,
+      `In my experience, ${userFirstName}, this type of issue...`,
+      `I've encountered this before, ${userFirstName}, and here's what I've learned...`,
       `${userFirstName}, from my years in block management...`,
-      `I'm glad you asked about this, ${userFirstName}...`,
-      `${userFirstName}, this is definitely worth discussing...`,
-      `I've seen this scenario quite often, ${userFirstName}...`,
-      `That's a smart question to ask, ${userFirstName}...`,
-      `Thanks for bringing this up, ${userFirstName}...`,
-      `I appreciate you reaching out about this, ${userFirstName}...`,
-      `${userFirstName}, this is something I deal with regularly...`,
+      `Having handled similar cases, ${userFirstName}, I can share that...`,
+      `${userFirstName}, I've navigated this challenge multiple times...`,
+      `Based on my experience, ${userFirstName}, this usually...`,
+
+      // Professional colleague acknowledgment
+      `Thanks for reaching out, ${userFirstName}. This is a common challenge in our field...`,
+      `Good to hear from a fellow property professional, ${userFirstName}...`,
+      `${userFirstName}, that's an important consideration for any block manager...`,
+      `I appreciate you bringing this up, ${userFirstName}...`,
+      `${userFirstName}, this is definitely worth discussing among colleagues...`,
+      `Thanks for bringing this to the group, ${userFirstName}...`,
+      `${userFirstName}, I'm glad we can discuss this professionally...`,
       `Good thinking on this topic, ${userFirstName}...`,
-      `I've handled similar situations, ${userFirstName}...`
+
+      // Understanding and empathy
+      `I completely understand this concern, ${userFirstName}...`,
+      `${userFirstName}, this is exactly the kind of challenge we face...`,
+      `You're absolutely right to ask about this, ${userFirstName}...`,
+      `${userFirstName}, I can see why this would be on your mind...`,
+      `That's a really relevant question, ${userFirstName}...`,
+      `${userFirstName}, you've touched on something really important here...`,
+      `I hear you on this one, ${userFirstName}...`,
+
+      // Frequency and commonality
+      `${userFirstName}, this comes up frequently in property management...`,
+      `I've seen this scenario quite often, ${userFirstName}...`,
+      `${userFirstName}, this is something I deal with regularly...`,
+      `This situation arises more than you'd think, ${userFirstName}...`,
+      `${userFirstName}, I encounter this type of query regularly...`,
+      `You're not alone in facing this, ${userFirstName}...`,
+
+      // Professional expertise sharing
+      `Let me share my experience with this, ${userFirstName}...`,
+      `${userFirstName}, I can offer some insights from my practice...`,
+      `From a colleague to colleague, ${userFirstName}, here's what I've found...`,
+      `${userFirstName}, let me walk you through how I typically approach this...`,
+      `I'd be happy to share my approach with you, ${userFirstName}...`,
+      `${userFirstName}, here's what I've learned works best...`,
+
+      // Smart/thoughtful acknowledgment
+      `That's a smart question to ask, ${userFirstName}...`,
+      `${userFirstName}, you're thinking about this the right way...`,
+      `I appreciate you being proactive about this, ${userFirstName}...`,
+      `${userFirstName}, that shows good professional thinking...`,
+      `You're asking the right questions, ${userFirstName}...`,
+      `${userFirstName}, I like that you're considering this carefully...`,
+
+      // Collaborative tone
+      `Let's tackle this together, ${userFirstName}...`,
+      `${userFirstName}, this is exactly the kind of challenge we should discuss...`,
+      `I'm happy to help you work through this, ${userFirstName}...`,
+      `${userFirstName}, let's explore this issue together...`,
+      `Between colleagues, ${userFirstName}, here's how I'd approach it...`,
+      `${userFirstName}, I'm here to help with this one...`
     ] : [];
 
     // Initialize OpenAI
@@ -247,13 +293,43 @@ GENERAL OPTIONS (if no personalization):` : 'GENERAL OPTIONS:'}
 - "This is something I deal with regularly..."
 - "Good thinking on this topic..."
 - "I've handled similar situations..."
+- "Excellent question regarding..."
+- "This is exactly the type of issue we need to discuss..."
+- "I'm happy to share my experience with this..."
+- "That's a really professional approach to..."
+- "You're absolutely right to consider..."
+- "I can definitely help you navigate this..."
+- "This scenario comes up more often than you'd think..."
+- "From a colleague's perspective..."
+- "Let me share what I've learned about..."
+- "I appreciate you bringing this professional challenge forward..."
+- "This is a smart consideration for any block manager..."
+- "You're thinking about this the right way..."
+- "I've navigated this type of situation before..."
+- "That's exactly the kind of proactive thinking we need..."
+- "I can offer some insights from my practice..."
+- "This is definitely worth exploring together..."
+- "You've touched on something really important here..."
+- "I'm glad we can discuss this professionally..."
+- "From my experience in the field..."
+- "That shows good professional judgment..."
+- "I hear you on this challenge..."
+- "You're asking all the right questions..."
+- "Let me walk you through my typical approach..."
+- "I'd be happy to share how I handle this..."
+- "Between property professionals..."
+- "This is exactly why we need to stay connected as colleagues..."
 
 COLLEAGUE GUIDANCE PRINCIPLES:
 - Share expertise from your professional property management experience
+- Use colleague language: "In my practice, I find that...", "What works well for me is...", "I typically approach this by...", "My go-to method is..."
 - Follow relevant legal frameworks (Housing Act, Landlord & Tenant Act, Leasehold Reform Act)
 - Provide practical approaches you use in your own practice
 - Never suggest "contacting property managers" - they ARE property managers seeking colleague advice
 - Give proven techniques and best practices from your experience
+- Acknowledge their professional expertise while sharing yours
+- Use collaborative language: "Let's think through this...", "You might find this approach helpful...", "Here's what I've learned..."
+- Reference shared professional challenges: "We all face this...", "It's one of those situations we deal with...", "As you know from your own experience..."
 
 RESPONSE GUIDELINES BY ISSUE TYPE:`;
       }
