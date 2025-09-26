@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
       is_public: true, // CRITICAL: Force public access to avoid building/agency data
       intent: 'general',
       // Add session context without building/agency access
-      manual_context: sessionId ? `Public chat session (general property management guidance only)` : undefined
+      manual_context: sessionId ? `Public chat session (general property management guidance only). IMPORTANT: You are responding as a professional block manager/property manager. Use "I will..." language and take ownership of problems. Do not suggest contacting property managers - YOU are the property manager providing guidance.` : `IMPORTANT: You are responding as a professional block manager/property manager. Use "I will..." language and take ownership of problems. Do not suggest contacting property managers - YOU are the property manager providing guidance.`
     };
 
     console.log('🔄 Forwarding to main AI system with PUBLIC access:', {
