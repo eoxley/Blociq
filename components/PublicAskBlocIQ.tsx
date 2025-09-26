@@ -261,8 +261,8 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
   if (!isOpen) return null;
 
   return (
-    <div 
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+    <div
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 md:p-6"
       onClick={(e) => {
         // Close modal when clicking backdrop
         if (e.target === e.currentTarget) {
@@ -270,8 +270,8 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
         }
       }}
     >
-      <div 
-        className="bg-white rounded-xl shadow-2xl w-full max-w-4xl lg:max-w-5xl xl:max-w-6xl h-[90vh] lg:h-[85vh] flex flex-col overflow-hidden animate-in fade-in-0 zoom-in-95 duration-300"
+      <div
+        className="modal-container bg-white rounded-xl shadow-2xl w-full max-w-4xl lg:max-w-5xl xl:max-w-6xl h-[85vh] max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in-0 zoom-in-95 duration-300"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header with Enhanced Close Button */}
@@ -300,9 +300,9 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
         <div className="flex-1 flex flex-col">
           {!hasSubmittedEmail ? (
             /* Email Capture Form - Enhanced Layout for Larger Modal */
-            <div className="flex-1 overflow-y-auto scrollbar-visible scrollbar-thumb-blue-400 hover:scrollbar-thumb-blue-500 scrollbar-track-gray-100 relative scroll-smooth">
+            <div className="flex-1 overflow-y-auto scrollbar-visible relative scroll-smooth min-h-0">
               {/* Scroll indicator */}
-              <div className="absolute top-2 right-4 z-10 bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-xs font-medium shadow-sm animate-pulse">
+              <div className="absolute top-2 right-6 z-20 bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-xs font-medium shadow-sm animate-pulse pointer-events-none">
                 Scroll for more info ↕️
               </div>
               <div className="p-8 lg:p-12 max-w-3xl mx-auto">
@@ -393,10 +393,10 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
             /* Enhanced Chat Interface with Better Scrolling */
             <>
               {/* Chat Messages Area with Enhanced Scrolling and Scroll Indicator */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-visible scrollbar-thumb-blue-400 hover:scrollbar-thumb-blue-500 scrollbar-track-gray-100 scrollbar-corner-gray-100 relative">
+              <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-visible relative min-h-0">
                 {/* Scroll indicator when messages overflow */}
                 {messages.length > 2 && (
-                  <div className="absolute top-2 right-4 z-10 bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-xs font-medium shadow-sm animate-pulse">
+                  <div className="absolute top-2 right-6 z-20 bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-xs font-medium shadow-sm animate-pulse pointer-events-none">
                     Scroll for more messages ↕️
                   </div>
                 )}
@@ -483,87 +483,104 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
         .scrollbar-visible {
           scrollbar-width: auto;
           scrollbar-color: #60a5fa #f3f4f6;
-          /* Force scrollbar to always be visible */
-          overflow-y: scroll !important;
+          overflow-y: auto;
+          position: relative;
+          z-index: 1;
         }
-        
+
         .scrollbar-visible::-webkit-scrollbar {
-          width: 16px;
-          /* Always show scrollbar */
-          display: block !important;
+          width: 14px;
+          display: block;
+          z-index: 100;
         }
-        
+
         .scrollbar-visible::-webkit-scrollbar-track {
-          background: #f3f4f6;
-          border-radius: 8px;
-          border: 2px solid #e5e7eb;
-          margin: 4px;
+          background: #f9fafb;
+          border-radius: 6px;
+          border: 1px solid #e5e7eb;
+          margin: 2px;
         }
-        
+
         .scrollbar-visible::-webkit-scrollbar-thumb {
           background: linear-gradient(180deg, #60a5fa 0%, #3b82f6 100%);
-          border-radius: 8px;
-          border: 2px solid #f3f4f6;
-          box-shadow: inset 0 1px 0 rgba(255,255,255,0.5);
-          /* Ensure thumb is always visible */
-          min-height: 40px;
+          border-radius: 6px;
+          border: 2px solid #f9fafb;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          min-height: 30px;
         }
-        
+
         .scrollbar-visible::-webkit-scrollbar-thumb:hover {
           background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
-          border-color: #e5e7eb;
+          border-color: #f3f4f6;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
         }
-        
+
         .scrollbar-visible::-webkit-scrollbar-thumb:active {
           background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
         }
-        
+
         .scrollbar-visible::-webkit-scrollbar-corner {
-          background: #f3f4f6;
+          background: #f9fafb;
         }
-        
+
+        /* Ensure scrollbar is always above content */
+        .scrollbar-visible::-webkit-scrollbar {
+          z-index: 999 !important;
+        }
+
         /* Smooth scrolling */
         .scrollbar-visible {
           scroll-behavior: smooth;
         }
-        
-        /* Focus styles for accessibility */
-        .scrollbar-visible:focus-within {
-          scrollbar-color: #2563eb #f3f4f6;
-        }
-        
-        .scrollbar-visible:focus-within::-webkit-scrollbar-thumb {
-          background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
-        }
-        
-        /* Force minimum content height to ensure scrollbar appears */
+
+        /* Ensure proper layout for flex containers */
         .scrollbar-visible {
-          min-height: 200px;
+          min-height: 0;
+          flex-shrink: 1;
         }
-        
-        /* Ensure text fits and wraps properly */
+
+        /* Text wrapping */
         .break-words {
           word-wrap: break-word;
           word-break: break-word;
           hyphens: auto;
+          overflow-wrap: break-word;
         }
-        
+
         /* Center placeholder text */
         .placeholder\\:text-center::placeholder {
           text-align: center;
         }
-        
-        /* Responsive text sizing */
-        @media (max-width: 640px) {
-          .text-responsive {
-            font-size: 0.875rem;
-            line-height: 1.25rem;
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+          .scrollbar-visible::-webkit-scrollbar {
+            width: 12px;
+          }
+
+          .scrollbar-visible {
+            scrollbar-width: thin;
           }
         }
-        
+
         /* Force scrollbar visibility on all browsers */
         .scrollbar-visible {
-          -ms-overflow-style: scrollbar;
+          -ms-overflow-style: auto;
+        }
+
+        /* Ensure modal stays within viewport */
+        @media (max-height: 600px) {
+          .modal-container {
+            height: 95vh !important;
+            max-height: 95vh !important;
+          }
+        }
+
+        @media (max-height: 500px) {
+          .modal-container {
+            height: 98vh !important;
+            max-height: 98vh !important;
+          }
         }
       `}</style>
     </div>
