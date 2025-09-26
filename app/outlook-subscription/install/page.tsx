@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Download,
   CheckCircle,
@@ -15,7 +17,10 @@ import {
   FileText,
   MessageSquare,
   Zap,
-  ArrowRight
+  ArrowRight,
+  Loader2,
+  Lock,
+  XCircle
 } from 'lucide-react';
 
 const MANIFEST_FILES = [
@@ -59,6 +64,11 @@ const MANIFEST_FILES = [
 
 export default function OutlookInstallPage() {
   const [downloadedManifests, setDownloadedManifests] = useState<string[]>([]);
+  const [paymentVerified, setPaymentVerified] = useState<boolean | null>(null);
+  const [email, setEmail] = useState('');
+  const [verifying, setVerifying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [subscriptionDetails, setSubscriptionDetails] = useState<any>(null);
 
   const downloadManifest = (manifestId: string, filename: string) => {
     const manifestUrl = `/outlook-addin/${filename}`;
@@ -80,6 +90,149 @@ export default function OutlookInstallPage() {
     });
   };
 
+  const verifyPayment = async () => {
+    if (!email) {
+      setError('Please enter your email address');
+      return;
+    }
+
+    if (!email.includes('@')) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
+    setVerifying(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/stripe/verify-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.hasPaid) {
+        console.log('✅ Payment verified for:', email);
+        setPaymentVerified(true);
+        setSubscriptionDetails(result.subscription || result.payment);
+      } else {
+        console.log('❌ Payment not found for:', email);
+        setPaymentVerified(false);
+        setError(result.error || 'No active subscription found for this email address');
+      }
+    } catch (error) {
+      console.error('Payment verification error:', error);
+      setError('Failed to verify payment. Please try again or contact support.');
+      setPaymentVerified(false);
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  // Show payment verification form if not verified yet
+  if (paymentVerified === null || paymentVerified === false) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-orange-50">
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-md mx-auto">
+            {/* Header */}
+            <div className="text-center mb-8">
+              <div className="flex justify-center items-center mb-4">
+                <Lock className="h-12 w-12 text-blue-600 mr-3" />
+                <h1 className="text-3xl font-bold text-gray-900">
+                  Verify Your Payment
+                </h1>
+              </div>
+              <p className="text-lg text-gray-600">
+                Please verify your subscription to download the BlocIQ Outlook add-ins
+              </p>
+            </div>
+
+            {/* Verification Form */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <CheckCircle className="mr-2 h-5 w-5 text-green-600" />
+                  Payment Verification Required
+                </CardTitle>
+                <CardDescription>
+                  Enter the email address you used for your BlocIQ Outlook AI subscription
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="verify-email">Email Address</Label>
+                  <Input
+                    id="verify-email"
+                    type="email"
+                    placeholder="your.email@company.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={verifying}
+                  />
+                </div>
+
+                {error && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                    <div className="flex items-start">
+                      <XCircle className="h-5 w-5 text-red-500 mr-2 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-red-700">{error}</p>
+                    </div>
+                  </div>
+                )}
+
+                <Button
+                  onClick={verifyPayment}
+                  className="w-full"
+                  disabled={verifying || !email}
+                >
+                  {verifying ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Verifying Payment...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      Verify My Subscription
+                    </>
+                  )}
+                </Button>
+
+                <div className="text-center pt-4 border-t">
+                  <p className="text-sm text-gray-600 mb-3">
+                    Don't have a subscription yet?
+                  </p>
+                  <Button variant="outline" asChild>
+                    <a href="/outlook-subscription">
+                      Start Your Free Trial
+                    </a>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Help Section */}
+            <div className="mt-6 text-center">
+              <p className="text-sm text-gray-500 mb-2">
+                Having trouble verifying your payment?
+              </p>
+              <Button variant="link" asChild className="text-sm">
+                <a href="mailto:support@blociq.co.uk">
+                  Contact Support
+                </a>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50">
       <div className="container mx-auto px-4 py-8">
@@ -88,13 +241,47 @@ export default function OutlookInstallPage() {
           <div className="flex justify-center items-center mb-4">
             <CheckCircle className="h-12 w-12 text-green-600 mr-3" />
             <h1 className="text-4xl font-bold text-gray-900">
-              Installation Instructions
+              Payment Verified! ✅
             </h1>
           </div>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Your BlocIQ Outlook AI subscription is active! Download all three public add-ins to start getting AI-powered property management assistance with general UK guidance.
+            Your BlocIQ Outlook AI subscription is active for <strong>{email}</strong>. Download all three public add-ins below.
           </p>
         </div>
+
+        {/* Subscription Details */}
+        {subscriptionDetails && (
+          <Card className="mb-8 max-w-lg mx-auto border-green-200 bg-green-50">
+            <CardHeader>
+              <CardTitle className="text-green-800 flex items-center">
+                <CheckCircle className="mr-2 h-5 w-5" />
+                Subscription Active
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-green-700">Email:</span>
+                  <span className="font-medium">{email}</span>
+                </div>
+                {subscriptionDetails.status && (
+                  <div className="flex justify-between">
+                    <span className="text-green-700">Status:</span>
+                    <span className="font-medium capitalize">{subscriptionDetails.status}</span>
+                  </div>
+                )}
+                {subscriptionDetails.current_period_end && (
+                  <div className="flex justify-between">
+                    <span className="text-green-700">Next billing:</span>
+                    <span className="font-medium">
+                      {new Date(subscriptionDetails.current_period_end * 1000).toLocaleDateString()}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Quick Download Section */}
         <Card className="mb-8 border-green-200 bg-green-50">
