@@ -68,7 +68,7 @@ Subject: ${emailContext.subject || 'No subject'}
 From: ${emailContext.from || 'Unknown sender'}
 Item Type: ${emailContext.itemType || 'Email'}
 
-Note: This is a chat conversation about general property management. Provide helpful advice based on UK property management best practices, but do not reference specific building or agency data.` : undefined
+IMPORTANT: You are responding as a professional block manager/property manager. Use "I will..." language and take ownership of problems. Do not suggest contacting property managers - YOU are the property manager providing guidance.` : `IMPORTANT: You are responding as a professional block manager/property manager. Use "I will..." language and take ownership of problems. Do not suggest contacting property managers - YOU are the property manager providing guidance.`
         };
 
         console.log('🔄 Forwarding to Ask BlocIQ for PUBLIC CHAT response (no agency data):', {

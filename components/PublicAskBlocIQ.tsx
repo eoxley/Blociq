@@ -29,6 +29,7 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
   const [messages, setMessages] = useState<Message[]>([]);
   const [question, setQuestion] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('BlocIQ is thinking...');
   const [email, setEmail] = useState('');
   const [hasSubmittedEmail, setHasSubmittedEmail] = useState(false);
   const [isSubmittingEmail, setIsSubmittingEmail] = useState(false);
@@ -129,6 +130,35 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
     setMessages(prev => [...prev, userMessage]);
     setLoading(true);
     setQuestion('');
+
+    // Set progressive loading messages for long requests
+    const questionLength = question.trim().length;
+    if (questionLength > 500) {
+      setLoadingMessage('Processing large request...');
+    } else if (questionLength > 200) {
+      setLoadingMessage('Analyzing your question...');
+    } else {
+      setLoadingMessage('BlocIQ is thinking...');
+    }
+
+    // Update loading message progressively for very long requests
+    let progressTimer: NodeJS.Timeout | null = null;
+    if (questionLength > 500) {
+      let step = 0;
+      const messages = [
+        'Processing large request...',
+        'Analyzing multiple questions...',
+        'Searching knowledge base...',
+        'Preparing comprehensive response...',
+        'Almost ready...'
+      ];
+      progressTimer = setInterval(() => {
+        step++;
+        if (step < messages.length) {
+          setLoadingMessage(messages[step]);
+        }
+      }, 8000); // Update every 8 seconds
+    }
     
     try {
       // Log user message
@@ -142,7 +172,10 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
         }),
       });
 
-      // Get AI response
+      // Get AI response with extended timeout for large requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+
       const response = await fetch('/api/ask-ai-public', {
         method: 'POST',
         headers: {
@@ -153,7 +186,10 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
           is_public: true,
           sessionId
         }),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error('Failed to get AI response');
@@ -189,18 +225,36 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
       }
     } catch (error) {
       console.error('Error asking AI:', error);
-      toast.error('Sorry, I encountered an error. Please try again.');
-      
+
+      let errorMessage = "I'm having trouble connecting right now. Please try again in a moment.";
+      let toastMessage = 'Sorry, I encountered an error. Please try again.';
+
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          errorMessage = "Your request took longer than expected and was cancelled. For large questions with many parts, try breaking them into smaller chunks.";
+          toastMessage = 'Request timed out. Try breaking large questions into smaller parts.';
+        } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+          errorMessage = "Connection issue detected. Please check your internet connection and try again.";
+          toastMessage = 'Connection problem. Please check your internet and try again.';
+        }
+      }
+
+      toast.error(toastMessage);
+
       // Add error message to chat
-      const errorMessage: Message = {
+      const errorMessageObj: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: "I'm having trouble connecting right now. Please try again in a moment.",
+        content: errorMessage,
         timestamp: new Date()
       };
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages(prev => [...prev, errorMessageObj]);
     } finally {
       setLoading(false);
+      setLoadingMessage('BlocIQ is thinking...');
+      if (progressTimer) {
+        clearInterval(progressTimer);
+      }
     }
   };
 
@@ -310,6 +364,9 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
                       <li>• Service charge calculations and explanations</li>
                       <li>• Section 20 notices and consultation processes</li>
                     </ul>
+                    <p className="text-xs text-blue-600 mt-4 text-center italic">
+                      💭 Tip: For large requests with many questions, responses may take 15-30 seconds to process.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -375,7 +432,7 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
                           <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
                           <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                         </div>
-                        <span className="text-base text-gray-600">BlocIQ is thinking...</span>
+                        <span className="text-base text-gray-600">{loadingMessage}</span>
                       </div>
                     </div>
                   </div>
