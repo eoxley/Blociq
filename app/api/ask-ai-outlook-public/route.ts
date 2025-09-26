@@ -104,7 +104,31 @@ async function handlePublicOutlookAI(req: NextRequest) {
     }
 
     // Build intelligent system prompt based on issue type and urgency
-    let systemPrompt = `You are a professional UK property management AI assistant providing PUBLIC guidance without access to specific building or leaseholder data.
+    let systemPrompt;
+
+    if (requestType === 'chat') {
+      systemPrompt = `You are a helpful UK property management AI assistant providing friendly, conversational guidance without access to specific building or leaseholder data.
+
+CHAT MODE - CONVERSATIONAL RESPONSES:
+- Respond naturally and conversationally, like a knowledgeable friend
+- Be warm, approachable, and helpful
+- Provide practical UK property management guidance
+- Keep responses concise but informative
+- Don't format as emails - just direct, helpful answers
+
+PRIMARY ISSUE: ${primaryIssue}
+URGENCY LEVEL: ${urgencyLevel}
+
+CORE PRINCIPLES:
+- Provide general UK property management guidance based on industry best practices
+- Follow relevant legal frameworks (Housing Act, Landlord & Tenant Act, Leasehold Reform Act)
+- Be empathetic and solution-focused
+- Guide users to contact their property manager for building-specific matters
+- Give practical next steps where appropriate
+
+RESPONSE GUIDELINES BY ISSUE TYPE:`;
+    } else {
+      systemPrompt = `You are a professional UK property management AI assistant providing PUBLIC guidance without access to specific building or leaseholder data.
 
 PRIMARY ISSUE: ${primaryIssue}
 URGENCY LEVEL: ${urgencyLevel}
@@ -118,6 +142,7 @@ CORE PRINCIPLES:
 - Include relevant next steps and timeframes where appropriate
 
 RESPONSE GUIDELINES BY ISSUE TYPE:`;
+    }
 
     // Add specific guidance based on issue type
     if (primaryIssue === 'leak') {
@@ -166,10 +191,27 @@ IMPORTANT LIMITATIONS:
 - Provide general guidance that applies to UK leasehold properties
 - Include disclaimers about seeking specific legal or professional advice when appropriate
 
-Generate a helpful, professional response that addresses their concern while being clear about your limitations.`;
+${requestType === 'chat' ?
+  'Generate a helpful, conversational response that addresses their question naturally.' :
+  'Generate a helpful, professional response that addresses their concern while being clear about your limitations.'
+}`;
 
-    // Create the main prompt
-    const prompt = `${systemPrompt}
+    // Create the main prompt based on request type
+    let prompt;
+    if (requestType === 'chat') {
+      // For chat requests, provide conversational responses
+      prompt = `${systemPrompt}
+
+CHAT CONVERSATION MODE:
+You are responding in a chat interface, NOT generating an email. Respond conversationally and directly to the user's question.
+
+USER QUESTION: ${emailSubject}
+${emailBody ? `CONTEXT: ${emailBody}` : ''}
+
+Provide a helpful, conversational response (not an email format):`;
+    } else {
+      // For email reply requests, generate formal email responses
+      prompt = `${systemPrompt}
 
 EMAIL TO RESPOND TO:
 Subject: ${emailSubject}
@@ -178,6 +220,7 @@ From: ${senderName} (${senderEmail})
 ${emailBody}
 
 Generate a professional email reply:`;
+    }
 
     console.log('🤖 Generating intelligent AI response...');
 
