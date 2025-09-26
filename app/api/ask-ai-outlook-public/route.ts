@@ -203,23 +203,33 @@ RESPONSE GUIDELINES BY ISSUE TYPE:`;
       }
     } else {
       if (primaryIssue === 'building_specific_upgrade') {
-        systemPrompt = `🏢 BUILDING-SPECIFIC EMAIL REPLY: Generate professional response with placeholders for missing building data.
+        systemPrompt = `🏢 BUILDING-SPECIFIC EMAIL REPLY: Generate professional response using industry knowledge with placeholders for missing building data.
 
 EMAIL REPLY FOR BUILDING-SPECIFIC QUERIES:
-- Generate a helpful, professional email reply
+- Generate a helpful, professional email reply using BlocIQ industry knowledge and building documents
 - Use placeholders like [Building Name], [Leaseholder Name], [Specific Details] for missing information
-- Provide actionable next steps while acknowledging data limitations
+- Provide contextually accurate information based on UK property management best practices
+- Include actionable next steps and realistic timelines
+- Reference relevant regulations and compliance requirements where applicable
 - Maintain professional property management tone
-- Include timeline expectations where appropriate
 
 PLACEHOLDERS TO USE:
 - [Building Name] for property references
 - [Leaseholder/Resident Name] for specific individuals
-- [Specific Details] for unit numbers, service charges, etc.
+- [Flat/Unit Number] for specific unit references
 - [Property Management Company] for management references
 - [Relevant Documentation] for specific documents/records
+- [Date/Timeline] for specific scheduling
+- [Contact Details] for missing contact information
 
-Generate a professional email response that addresses their query with placeholders where building-specific data would be needed.`;
+APPROACH:
+1. Use the BlocIQ industry knowledge to provide accurate, contextual guidance
+2. Address the specific query with professional expertise
+3. Use placeholders only where building-specific data is required
+4. Provide helpful next steps and relevant regulatory information
+5. Include appropriate disclaimers about verification of specific details
+
+Generate a knowledgeable, professional email response that leverages BlocIQ's industry expertise while using placeholders for missing building-specific data.`;
       } else {
         systemPrompt = `You are a professional UK property management assistant generating concise, actionable email replies.
 

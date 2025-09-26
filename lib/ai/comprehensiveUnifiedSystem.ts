@@ -595,41 +595,104 @@ export class IndustryKnowledgeRetriever {
    */
   static async searchIndustryKnowledge(query: string, limit: number = 10): Promise<string[]> {
     try {
-      console.log('🔍 Searching industry knowledge for:', query);
+      console.log('🔍 Searching industry knowledge from Storage for:', query);
 
-      const { data: chunks, error } = await supabase
-        .from('industry_knowledge_chunks')
-        .select(`
-          chunk_text,
-          industry_knowledge_documents!inner(
-            title,
-            category,
-            subcategory
-          )
-        `)
-        .ilike('chunk_text', `%${query}%`)
-        .limit(limit)
-        .order('created_at', { ascending: false });
+      // Extract multiple search terms for broader matching
+      const searchTerms = query
+        .toLowerCase()
+        .replace(/[^\w\s]/g, '') // Remove punctuation
+        .split(/\s+/)
+        .filter(term => term.length > 2)
+        .slice(0, 6); // Use top 6 key terms
 
-      if (error) {
-        console.warn('Industry knowledge search error:', error);
-        return [];
+      console.log('🔍 Search terms:', searchTerms);
+
+      // Search building_documents table with OCR content for industry knowledge
+      let chunks: string[] = [];
+
+      if (searchTerms.length > 0) {
+        const searchConditions = searchTerms
+          .map(term => `ocr_text.ilike.%${term}%`)
+          .join(',');
+
+        const { data: results, error } = await supabase
+          .from('building_documents')
+          .select('name, ocr_text, category, type')
+          .or(searchConditions)
+          .not('ocr_text', 'is', null)
+          .limit(limit)
+          .order('uploaded_at', { ascending: false });
+
+        if (error) {
+          console.warn('Industry knowledge search error:', error);
+          return [];
+        }
+
+        if (results && results.length > 0) {
+          console.log(`✅ Found ${results.length} industry documents with relevant content`);
+
+          chunks = results.map(doc => {
+            // Extract relevant portions of the OCR text that contain our search terms
+            const text = doc.ocr_text || '';
+            const sentences = text.split(/[.!?]+/);
+            const relevantSentences = sentences.filter(sentence =>
+              searchTerms.some(term =>
+                sentence.toLowerCase().includes(term)
+              )
+            ).slice(0, 3); // Get first 3 relevant sentences
+
+            if (relevantSentences.length > 0) {
+              return `Industry Knowledge (${doc.category || doc.type}): ${relevantSentences.join('. ')}`;
+            } else {
+              // Fallback to first 200 characters
+              return `Industry Knowledge (${doc.category || doc.type}): ${text.substring(0, 200)}...`;
+            }
+          }).filter(chunk => chunk.length > 50); // Only include substantial chunks
+
+        } else {
+          console.log('No industry knowledge found for query');
+        }
       }
 
-      if (!chunks || chunks.length === 0) {
-        console.log('No industry knowledge chunks found for query');
-        return [];
+      // Fallback: If no results, try broader category-based search
+      if (chunks.length === 0) {
+        const categorySearchTerms = ['leasehold', 'section', 'act', 'law', 'regulation', 'reform', 'management'];
+        const relevantCategory = categorySearchTerms.find(cat =>
+          query.toLowerCase().includes(cat)
+        );
+
+        if (relevantCategory) {
+          console.log('🔍 Trying category search for:', relevantCategory);
+          const { data: results2, error: error2 } = await supabase
+            .from('building_documents')
+            .select('name, ocr_text, category, type')
+            .ilike('ocr_text', `%${relevantCategory}%`)
+            .not('ocr_text', 'is', null)
+            .limit(limit)
+            .order('uploaded_at', { ascending: false });
+
+          if (results2 && results2.length > 0) {
+            console.log(`✅ Category search found ${results2.length} documents`);
+
+            chunks = results2.map(doc => {
+              const text = doc.ocr_text || '';
+              const sentences = text.split(/[.!?]+/);
+              const relevantSentences = sentences.filter(sentence =>
+                sentence.toLowerCase().includes(relevantCategory)
+              ).slice(0, 3);
+
+              if (relevantSentences.length > 0) {
+                return `Industry Knowledge (${doc.category || doc.type}): ${relevantSentences.join('. ')}`;
+              } else {
+                return `Industry Knowledge (${doc.category || doc.type}): ${text.substring(0, 200)}...`;
+              }
+            }).filter(chunk => chunk.length > 50);
+          }
+        }
       }
 
-      const relevantChunks = chunks
-        .filter(chunk => chunk.chunk_text && chunk.chunk_text.length > 50)
-        .map(chunk => {
-          const doc = chunk.industry_knowledge_documents;
-          return `Industry Knowledge (${doc.category}): ${chunk.chunk_text.trim()}`;
-        });
-
-      console.log(`✅ Found ${relevantChunks.length} industry knowledge chunks`);
-      return relevantChunks;
+      console.log(`✅ Found ${chunks.length} industry knowledge chunks`);
+      return chunks;
 
     } catch (error) {
       console.error('Error searching industry knowledge:', error);
