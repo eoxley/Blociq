@@ -1,0 +1,28 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Run AI synchronization check only for AI-related files
+echo "🤖 Checking AI synchronization rules..."
+
+# Get list of changed files that are AI-related
+AI_FILES=$(git diff --cached --name-only | grep -E "(ask-ai|generate-reply|chat|triage)" | grep "app/api" || true)
+
+if [ -n "$AI_FILES" ]; then
+  echo "📁 AI files changed, enforcing synchronization rules:"
+  echo "$AI_FILES"
+
+  # Run the AI sync enforcement script
+  node scripts/enforce-ai-sync.js
+
+  if [ $? -ne 0 ]; then
+    echo ""
+    echo "🚨 AI SYNCHRONIZATION CHECK FAILED"
+    echo "Please ensure all AI endpoints are synchronized before committing."
+    echo "See AI_SYNCHRONIZATION_RULES.md for details."
+    exit 1
+  fi
+
+  echo "✅ AI synchronization check passed"
+else
+  echo "ℹ️ No AI files changed, skipping synchronization check"
+fi

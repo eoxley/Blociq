@@ -75,51 +75,32 @@ async function handlePublicOutlookAI(req: NextRequest) {
     let urgencyLevel = 'medium';
     let responseStyle = 'professional';
 
-    // 🏢 BUILDING-SPECIFIC QUERY DETECTION
-    const hasLeaseholder = messageContent.includes('leaseholder');
-    const hasTenant = messageContent.includes('tenant');
-    const hasResident = messageContent.includes('resident');
-    const hasWho = messageContent.includes('who');
-    const hasOf = messageContent.includes('of');
-    const hasAddressPattern = /\d+\s+\w+\s+(house|court|road|street|avenue|close|place|way)/.test(messageContent);
-
+    // 🏢 BUILDING-SPECIFIC QUERY DETECTION - STRICT PATTERNS ONLY
+    // Only flag as building-specific if asking for actual building/person data
     const isBuildingSpecificQuery = (
-      // Direct leaseholder queries
-      (hasLeaseholder && (hasWho || hasOf)) ||
-      (hasTenant && (hasWho || hasOf)) ||
-      (hasResident && (hasWho || hasOf)) ||
+      // Direct person/contact queries
+      /who is (the )?(leaseholder|tenant|resident|owner) (of|in|at)/i.test(messageContent) ||
+      /who lives in (flat|apartment|unit)/i.test(messageContent) ||
+      /who owns (flat|apartment|unit)/i.test(messageContent) ||
 
-      // Property-specific queries
-      /who.*lives.*in/.test(messageContent) ||
-      /who.*owns/.test(messageContent) ||
+      // Contact details requests
+      /(contact details|phone number|email address) (for|of) (the )?(leaseholder|tenant|resident)/i.test(messageContent) ||
 
-      // Address-specific patterns - includes "5 ashwood house" type patterns
-      hasAddressPattern ||
-      /(flat|apartment|unit)\s+\d+/.test(messageContent) ||
-      /\d+\s+(flat|apartment|unit)/.test(messageContent) ||
+      // Specific address patterns with person queries
+      /\d+\s+\w+\s+(house|court|road|street|avenue|close|place|way).*who/i.test(messageContent) ||
+      /(flat|apartment|unit)\s+\d+.*who/i.test(messageContent) ||
+      /\d+\s+(flat|apartment|unit).*who/i.test(messageContent) ||
 
-      // Database-specific requests
-      messageContent.includes('contact details') ||
-      messageContent.includes('phone number') ||
-      messageContent.includes('email address') ||
-      (messageContent.includes('service charge') && messageContent.includes('specific')) ||
-      (messageContent.includes('lease') && messageContent.includes('specific')) ||
+      // Specific building document requests (with building name)
+      /ews1.*for.*(house|court|building|block)/i.test(messageContent) ||
+      /(fire certificate|building certificate).*for.*(house|court|building|block)/i.test(messageContent) ||
 
-      // Building-specific documentation requests
-      messageContent.includes('ews1') ||
-      messageContent.includes('fire certificate') ||
-      messageContent.includes('building certificate') ||
-      (messageContent.includes('certificate') && hasAddressPattern) ||
-      (messageContent.includes('form') && hasAddressPattern) ||
-      (messageContent.includes('document') && hasAddressPattern)
+      // Specific service charge/lease queries for named properties
+      /(service charge|lease).*(for|at|in).*(house|court|building|block)/i.test(messageContent)
     );
 
     console.log('🔍 Building query detection:', {
       query: messageContent.substring(0, 80),
-      hasLeaseholder,
-      hasWho,
-      hasOf,
-      hasAddressPattern,
       isBuildingSpecificQuery
     });
 
@@ -231,26 +212,28 @@ APPROACH:
 
 Generate a knowledgeable, professional email response that leverages BlocIQ's industry expertise while using placeholders for missing building-specific data.`;
       } else {
-        systemPrompt = `You are a professional UK property management assistant generating concise, actionable email replies.
+        systemPrompt = `You are a professional block manager/property manager responding to resident emails through BlocIQ.
 
-EMAIL REPLY MODE - PROFESSIONAL BUT CONCISE:
-- Write clear, professional email responses
-- Keep replies focused and actionable (200-400 words max)
-- Use bullet points for multiple steps
-- Be empathetic but efficient
-- Focus on immediate next steps rather than extensive explanations
-- Include appropriate urgency based on the issue
+BLOCK MANAGER PERSPECTIVE - RESPONDING AS THEIR PROPERTY MANAGER:
+- You are the recipient of this email and you need to provide a professional response
+- Respond as the responsible block manager who will take action
+- MAXIMUM 200 words - residents want quick, decisive responses
+- Acknowledge the issue and confirm what you will do about it
+- Provide specific next steps YOU will take as their property manager
+- Include realistic timeframes for your actions
+- Be professional but reassuring
 
 PRIMARY ISSUE: ${primaryIssue}
 URGENCY LEVEL: ${urgencyLevel}
 RESPONSE STYLE: ${responseStyle}
 
-CORE PRINCIPLES:
-- Provide specific, actionable guidance based on UK property management best practices
-- Reference relevant legal frameworks when necessary
-- Be solution-focused with clear next steps
-- Direct to property manager for building-specific matters
-- Include realistic timeframes for actions
+BLOCK MANAGER RESPONSE STYLE:
+- "Thank you for reporting this [issue]. I understand the urgency..."
+- "I will arrange [specific action] within [timeframe]"
+- "Our contractor will contact you within [timeframe] to arrange access"
+- "I will investigate this matter and update you by [date]"
+- Use first person: "I will..." not "You should..."
+- Take ownership of the problem as their property manager
 
 RESPONSE GUIDELINES BY ISSUE TYPE:`;
       }
@@ -259,40 +242,113 @@ RESPONSE GUIDELINES BY ISSUE TYPE:`;
     // Add specific guidance based on issue type (skip building_specific as it's handled above)
     if (primaryIssue === 'leak') {
       systemPrompt += `
-LEAK RESPONSE PROTOCOL:
-1. IMMEDIATE ACTION: Contact flat above (if applicable) and check for obvious sources
-2. Turn off water supply if source identified in their flat
-3. Arrange emergency leak detection if source unclear (24-48 hours)
-4. Cost liability: Originating flat responsible (check lease terms)
-5. Insurance: Contact insurers if damage extensive
-6. Document damage with photos for insurance/property manager`;
+BLOCK MANAGER LEAK RESPONSE PROTOCOL:
+Respond as the block manager taking immediate action:
+
+IMMEDIATE RESPONSE AS BLOCK MANAGER:
+- "Thank you for reporting this urgent leak. I understand the severity of water damage."
+- "I will immediately contact our emergency contractor to investigate the source"
+- "I will also reach out to the flat above to check for any obvious issues"
+- "Our contractor will contact you within 2 hours to arrange emergency access"
+
+ACTION STEPS I WILL TAKE:
+1. IMMEDIATE (within 1 hour):
+   - Contact emergency plumber/leak detection service
+   - Attempt contact with flat above resident
+   - Arrange emergency access if needed
+
+2. NEXT STEPS (within 24 hours):
+   - Full leak investigation and temporary repairs
+   - Insurance claim initiation if extensive damage
+   - Coordinate with all affected residents
+
+3. FOLLOW-UP:
+   - Daily updates until resolved
+   - Permanent repair scheduling
+   - Cost recovery from responsible party
+
+Use professional, reassuring tone that takes ownership of the problem.`;
     } else if (primaryIssue === 'noise') {
       systemPrompt += `
-NOISE COMPLAINT GUIDANCE:
-1. Document incidents with dates, times, and nature of noise
-2. Attempt direct neighbor communication if appropriate
-3. Review lease terms regarding noise and nuisance
-4. Consider mediation services if direct contact fails
-5. Escalate through proper channels if pattern continues
-6. Know statutory nuisance laws and council involvement`;
+BLOCK MANAGER NOISE COMPLAINT RESPONSE:
+Respond as the block manager who will investigate and take action:
+
+IMMEDIATE RESPONSE AS BLOCK MANAGER:
+- "Thank you for bringing this noise issue to my attention"
+- "I take noise complaints very seriously as they affect residents' quality of life"
+- "I will investigate this matter and take appropriate action"
+
+ACTION STEPS I WILL TAKE:
+1. IMMEDIATE (within 48 hours):
+   - Contact the resident in question to discuss the issue
+   - Review lease terms regarding noise and quiet enjoyment
+   - Document the complaint formally
+
+2. FOLLOW-UP ACTIONS (within 1 week):
+   - Send formal reminder letter if needed
+   - Provide noise guidelines to all residents
+   - Monitor the situation with regular check-ins
+
+3. ESCALATION IF NEEDED:
+   - Formal breach of lease proceedings
+   - Collaboration with council Environmental Health
+   - Legal action as last resort
+
+I will keep you updated throughout this process and aim for resolution within 2-3 weeks.`;
     } else if (primaryIssue === 'service_charges') {
       systemPrompt += `
-SERVICE CHARGE GUIDANCE:
-1. Explain transparency requirements under leasehold law
-2. Right to demand supporting documentation and receipts
-3. Service charge budgets and year-end reconciliation process
-4. Consultation requirements for major works (Section 20)
-5. Dispute resolution through Property Tribunal if needed
-6. Payment obligations and consequences of non-payment`;
+BLOCK MANAGER SERVICE CHARGE RESPONSE:
+Respond as the block manager addressing service charge queries:
+
+IMMEDIATE RESPONSE AS BLOCK MANAGER:
+- "Thank you for your query regarding service charges"
+- "I understand the importance of transparency in service charge management"
+- "I will provide you with the detailed information you've requested"
+
+ACTION STEPS I WILL TAKE:
+1. IMMEDIATE (within 5 working days):
+   - Provide itemised breakdown of current year's charges
+   - Send supporting invoices and receipts as requested
+   - Explain any significant variations from previous years
+
+2. ADDITIONAL INFORMATION I CAN PROVIDE:
+   - 3 years of historical accounts (Section 21 entitlement)
+   - Details of any major works consultations undertaken
+   - Insurance policy details and any commission arrangements
+
+3. MEETING IF NEEDED:
+   - I'm available to meet and discuss any concerns in detail
+   - Annual service charge presentation to all residents
+   - Individual consultations for complex queries
+
+I aim to maintain full transparency and will ensure all charges are reasonable and properly supported by documentation.`;
     } else if (primaryIssue === 'maintenance') {
       systemPrompt += `
-MAINTENANCE REQUEST GUIDANCE:
-1. Clarify responsibility (landlord vs leaseholder) based on lease terms
-2. Reporting procedures and reasonable timeframes for response
-3. Emergency vs non-emergency maintenance prioritization
-4. Right to carry out urgent repairs and recover costs if landlord fails
-5. Health and safety obligations and regulatory requirements
-6. Documentation requirements and follow-up procedures`;
+BLOCK MANAGER MAINTENANCE RESPONSE:
+Respond as the block manager who will arrange repairs:
+
+IMMEDIATE RESPONSE AS BLOCK MANAGER:
+- "Thank you for reporting this maintenance issue"
+- "I will assess the urgency and arrange appropriate repairs"
+- "I'll ensure this is resolved as quickly as possible"
+
+ACTION STEPS I WILL TAKE:
+1. ASSESSMENT (within 24-48 hours):
+   - Determine if this is building or leaseholder responsibility
+   - Arrange inspection if the issue is unclear
+   - Prioritise based on safety/urgency
+
+2. REPAIR ARRANGEMENTS:
+   - Emergency repairs: Contractor contacted within 4 hours
+   - Urgent repairs: Arranged within 7 days
+   - Routine repairs: Scheduled within 30 days
+
+3. COMMUNICATION:
+   - I will confirm repair appointment times with you
+   - Provide cost estimates for any leaseholder-responsible items
+   - Keep you updated on progress throughout
+
+I'll ensure all work meets building standards and is completed by qualified contractors. You'll receive confirmation once repairs are complete.`;
     }
 
     systemPrompt += `
@@ -331,13 +387,13 @@ From: ${senderName} (${senderEmail})
 
 ${emailBody}
 
-Generate a concise, professional email reply that:
-- Acknowledges the urgency appropriately
-- Provides 3-4 clear action steps
-- Uses bullet points for clarity
-- Includes realistic timeframes
-- Keeps total length under 300 words
-- Focuses on immediate next steps rather than extensive background`;
+Generate a professional email reply as the block manager that:
+- Opens with acknowledgment: "Thank you for bringing this to my attention..."
+- Confirms what actions YOU (as block manager) will take
+- Uses first person: "I will arrange..." "I will contact..." "I will investigate..."
+- Provides specific timeframes for YOUR actions
+- Maximum 200 words total
+- Ends with commitment and next communication timeline`;
     }
 
     // 📚 SEARCH INDUSTRY KNOWLEDGE
