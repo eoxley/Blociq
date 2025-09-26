@@ -6,15 +6,15 @@
   xmlns:mailappor="http://schemas.microsoft.com/office/mailappversionoverrides/1.1"
   xsi:type="MailApp">
 
-  <Id>a1b2c3d4-5e6f-7g8h-9i0j-k1l2m3n4o5p6</Id>
+  <Id>a1b2c3d4-5e6f-4c1a-9f6e-2d8c4b7a1e3f</Id>
   <Version>1.0.0.0</Version>
   <ProviderName>BlocIQ Ltd</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="BlocIQ Public Reply Generator"/>
   <Description DefaultValue="Generate AI-powered property management replies - Public Version (No Building Data)"/>
 
-  <IconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-32.png"/>
-  <HighResolutionIconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-80.png"/>
+  <IconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-64.png"/>
+  <HighResolutionIconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-128.png"/>
   <SupportUrl DefaultValue="https://www.blociq.co.uk"/>
 
   <AppDomains>
@@ -84,8 +84,8 @@
     <Resources>
       <bt:Images>
         <bt:Image id="icon16" DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-16.png"/>
-        <bt:Image id="icon32" DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-32.png"/>
-        <bt:Image id="icon80" DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-80.png"/>
+        <bt:Image id="icon32" DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-64.png"/>
+        <bt:Image id="icon80" DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-128.png"/>
       </bt:Images>
 
       <bt:Urls>
