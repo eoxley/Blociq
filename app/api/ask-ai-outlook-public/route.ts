@@ -86,74 +86,57 @@ async function handlePublicOutlookAI(req: NextRequest) {
 
     console.log(`👤 Extracted first name: ${userFirstName || 'none'}`);
 
-    // 📝 EXPANDED PERSONALIZED GREETING BANK
+    // 📝 NATURAL PERSONALIZED GREETING BANK - 5 CATEGORIES
+    // CRITICAL: Avoid repetitive "Hi [name], great question..." patterns
     const personalizedGreetings = userFirstName ? [
-      // Direct and warm
-      `Hi ${userFirstName}, great question about`,
-      `Hello ${userFirstName}, I'm glad you asked about`,
-      `${userFirstName}, excellent question regarding`,
-      `Good to hear from you, ${userFirstName}!`,
-      `Hi there ${userFirstName}, this is a really important topic...`,
 
-      // Experience-based openings
-      `${userFirstName}, I've dealt with this situation many times...`,
-      `In my experience, ${userFirstName}, this type of issue...`,
-      `I've encountered this before, ${userFirstName}, and here's what I've learned...`,
-      `${userFirstName}, from my years in block management...`,
-      `Having handled similar cases, ${userFirstName}, I can share that...`,
-      `${userFirstName}, I've navigated this challenge multiple times...`,
-      `Based on my experience, ${userFirstName}, this usually...`,
+      // 1. DIRECT & PROFESSIONAL (personalized)
+      `${userFirstName}, in a lease context, this refers to...`,
+      `${userFirstName}, the key requirement here is...`,
+      `${userFirstName}, this relates to...`,
+      `${userFirstName}, in practice, this means...`,
+      `${userFirstName}, the process involves...`,
+      `${userFirstName}, your obligations include...`,
+      `${userFirstName}, the timeline for this is...`,
+      `${userFirstName}, the relevant legislation states...`,
 
-      // Professional colleague acknowledgment
-      `Thanks for reaching out, ${userFirstName}. This is a common challenge in our field...`,
-      `Good to hear from a fellow property professional, ${userFirstName}...`,
-      `${userFirstName}, that's an important consideration for any block manager...`,
-      `I appreciate you bringing this up, ${userFirstName}...`,
-      `${userFirstName}, this is definitely worth discussing among colleagues...`,
-      `Thanks for bringing this to the group, ${userFirstName}...`,
-      `${userFirstName}, I'm glad we can discuss this professionally...`,
-      `Good thinking on this topic, ${userFirstName}...`,
+      // 2. CONVERSATIONAL (personalized)
+      `${userFirstName}, this comes up a lot in block management — here's how it works.`,
+      `${userFirstName}, I see this regularly in my practice.`,
+      `${userFirstName}, it's one of those things that catches people out.`,
+      `Between colleagues, ${userFirstName}, this is how I handle it...`,
+      `${userFirstName}, in my day-to-day work, I find...`,
+      `${userFirstName}, what works well in practice is...`,
+      `${userFirstName}, I typically approach this by...`,
+      `${userFirstName}, from experience, the best method is...`,
 
-      // Understanding and empathy
-      `I completely understand this concern, ${userFirstName}...`,
-      `${userFirstName}, this is exactly the kind of challenge we face...`,
-      `You're absolutely right to ask about this, ${userFirstName}...`,
-      `${userFirstName}, I can see why this would be on your mind...`,
-      `That's a really relevant question, ${userFirstName}...`,
-      `${userFirstName}, you've touched on something really important here...`,
-      `I hear you on this one, ${userFirstName}...`,
+      // 3. EMPATHETIC (personalized)
+      `${userFirstName}, I completely understand why this is concerning.`,
+      `${userFirstName}, you're right to be cautious about this.`,
+      `${userFirstName}, it's frustrating when this happens, but there are clear steps to follow.`,
+      `${userFirstName}, I know this can feel overwhelming, but it's manageable.`,
+      `${userFirstName}, you're absolutely right to question this.`,
+      `${userFirstName}, this catches many people off guard.`,
+      `${userFirstName}, I hear this concern frequently from colleagues.`,
 
-      // Frequency and commonality
-      `${userFirstName}, this comes up frequently in property management...`,
-      `I've seen this scenario quite often, ${userFirstName}...`,
-      `${userFirstName}, this is something I deal with regularly...`,
-      `This situation arises more than you'd think, ${userFirstName}...`,
-      `${userFirstName}, I encounter this type of query regularly...`,
-      `You're not alone in facing this, ${userFirstName}...`,
+      // 4. CONTEXTUAL HOOK (personalized)
+      `${userFirstName}, this matters because if you miss it, you may lose the right to recover costs.`,
+      `${userFirstName}, the timing is crucial here because...`,
+      `${userFirstName}, this impacts your budget planning because...`,
+      `${userFirstName}, the legal implications are...`,
+      `${userFirstName}, this affects leaseholder relationships when...`,
+      `${userFirstName}, this becomes important during...`,
+      `${userFirstName}, the practical impact is...`,
 
-      // Professional expertise sharing
-      `Let me share my experience with this, ${userFirstName}...`,
-      `${userFirstName}, I can offer some insights from my practice...`,
-      `From a colleague to colleague, ${userFirstName}, here's what I've found...`,
-      `${userFirstName}, let me walk you through how I typically approach this...`,
-      `I'd be happy to share my approach with you, ${userFirstName}...`,
-      `${userFirstName}, here's what I've learned works best...`,
-
-      // Smart/thoughtful acknowledgment
-      `That's a smart question to ask, ${userFirstName}...`,
-      `${userFirstName}, you're thinking about this the right way...`,
-      `I appreciate you being proactive about this, ${userFirstName}...`,
-      `${userFirstName}, that shows good professional thinking...`,
-      `You're asking the right questions, ${userFirstName}...`,
-      `${userFirstName}, I like that you're considering this carefully...`,
-
-      // Collaborative tone
-      `Let's tackle this together, ${userFirstName}...`,
-      `${userFirstName}, this is exactly the kind of challenge we should discuss...`,
-      `I'm happy to help you work through this, ${userFirstName}...`,
-      `${userFirstName}, let's explore this issue together...`,
-      `Between colleagues, ${userFirstName}, here's how I'd approach it...`,
-      `${userFirstName}, I'm here to help with this one...`
+      // 5. PLAIN-ENGLISH FIRST (personalized)
+      `${userFirstName}, in simple terms, this means...`,
+      `${userFirstName}, to put it plainly...`,
+      `${userFirstName}, breaking it down, this is...`,
+      `${userFirstName}, the straightforward explanation is...`,
+      `${userFirstName}, simply put...`,
+      `${userFirstName}, in everyday language...`,
+      `${userFirstName}, the basic principle is...`,
+      `${userFirstName}, at its core, this means...`
     ] : [];
 
     // Initialize OpenAI
