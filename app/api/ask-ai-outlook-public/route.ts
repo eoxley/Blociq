@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { createServiceClient } from '@/lib/supabase/server';
 
 // CORS headers for Outlook Add-in compatibility
 const CORS_HEADERS = {
@@ -68,6 +69,7 @@ async function handlePublicOutlookAI(req: NextRequest) {
     console.log('🤖 Analyzing email content for intelligent response...');
 
     const messageContent = `${emailSubject} ${emailBody}`.toLowerCase();
+    const fullQuery = `${emailSubject} ${emailBody}`.trim();
     let primaryIssue = 'general';
     let urgencyLevel = 'medium';
     let responseStyle = 'professional';
@@ -222,6 +224,21 @@ ${emailBody}
 Generate a professional email reply:`;
     }
 
+    // 📚 SEARCH INDUSTRY KNOWLEDGE
+    console.log('📚 Searching BlocIQ industry knowledge base...');
+    const industryKnowledge = await searchIndustryKnowledge(fullQuery);
+
+    // Add industry knowledge to system prompt if found
+    if (industryKnowledge.length > 0) {
+      systemPrompt += `
+
+RELEVANT INDUSTRY KNOWLEDGE:
+${industryKnowledge.slice(0, 5).join('\n\n')}
+
+Use this BlocIQ industry knowledge to provide more accurate and specific guidance where relevant.`;
+      console.log(`✅ Enhanced response with ${industryKnowledge.length} industry knowledge chunks`);
+    }
+
     console.log('🤖 Generating intelligent AI response...');
 
     // Generate AI response with appropriate temperature based on urgency
@@ -266,6 +283,7 @@ Generate a professional email reply:`;
           'No building-specific information',
           'General UK property management guidance only'
         ],
+        industryKnowledgeUsed: industryKnowledge.length,
         tokens: completion.usage?.total_tokens || 0,
         processingTime: Date.now()
       }
@@ -278,6 +296,61 @@ Generate a professional email reply:`;
       error: 'Failed to process request',
       details: error instanceof Error ? error.message : String(error)
     }, 500);
+  }
+}
+
+// Search industry knowledge function
+async function searchIndustryKnowledge(query: string, limit: number = 8): Promise<string[]> {
+  try {
+    console.log('🔍 Searching industry knowledge for:', query.substring(0, 50));
+
+    const supabase = createServiceClient();
+
+    // Extract key terms from the query for better matching
+    const keyTerms = query
+      .toLowerCase()
+      .split(/\s+/)
+      .filter(term => term.length > 3)
+      .slice(0, 5) // Use top 5 key terms
+      .join('|');
+
+    const { data: chunks, error } = await supabase
+      .from('industry_knowledge_chunks')
+      .select(`
+        chunk_text,
+        industry_knowledge_documents!inner(
+          title,
+          category,
+          subcategory
+        )
+      `)
+      .or(`chunk_text.ilike.%${query.split(' ')[0]}%,chunk_text.ilike.%${query.split(' ').slice(-1)[0]}%`)
+      .limit(limit)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.warn('Industry knowledge search error:', error);
+      return [];
+    }
+
+    if (!chunks || chunks.length === 0) {
+      console.log('No industry knowledge chunks found for query');
+      return [];
+    }
+
+    const relevantChunks = chunks
+      .filter(chunk => chunk.chunk_text && chunk.chunk_text.length > 50)
+      .map(chunk => {
+        const doc = chunk.industry_knowledge_documents;
+        return `**${doc.category} Knowledge**: ${chunk.chunk_text.trim()}`;
+      });
+
+    console.log(`✅ Found ${relevantChunks.length} industry knowledge chunks`);
+    return relevantChunks;
+
+  } catch (error) {
+    console.error('Error searching industry knowledge:', error);
+    return [];
   }
 }
 
