@@ -115,6 +115,7 @@ async function handlePublicOutlookAI(req: NextRequest) {
       isBuildingSpecificQuery
     });
 
+
     // Advanced issue detection for UK property management (but don't override building-specific queries)
     if (messageContent.includes('leak') || messageContent.includes('water') || messageContent.includes('dripping') || messageContent.includes('flooding')) {
       primaryIssue = 'leak';
@@ -144,6 +145,12 @@ async function handlePublicOutlookAI(req: NextRequest) {
       urgencyLevel = 'high';
     } else if (messageContent.includes('asap') || messageContent.includes('critical') || messageContent.includes('serious')) {
       urgencyLevel = 'critical';
+    }
+
+    // 🏢 Final check: Override with building-specific if detected (takes priority)
+    if (isBuildingSpecificQuery) {
+      primaryIssue = 'building_specific_upgrade';
+      console.log('🏢 ✅ FINAL: Setting primaryIssue to building_specific_upgrade');
     }
 
     // Build intelligent system prompt based on issue type and urgency
@@ -397,7 +404,7 @@ Use this BlocIQ industry knowledge to provide more accurate and specific guidanc
 // Search industry knowledge function
 async function searchIndustryKnowledge(query: string, limit: number = 8): Promise<string[]> {
   try {
-    console.log('🔍 Searching industry knowledge for:', query.substring(0, 50));
+    console.log('🔍 Searching industry knowledge from Storage for:', query.substring(0, 50));
 
     const supabase = createServiceClient();
 
@@ -411,32 +418,43 @@ async function searchIndustryKnowledge(query: string, limit: number = 8): Promis
 
     console.log('🔍 Search terms:', searchTerms);
 
-    // Try multiple search strategies
-    let chunks = [];
+    // Strategy 1: Search building_documents table with OCR content for industry knowledge
+    let chunks: string[] = [];
 
-    // Strategy 1: Search for any of the key terms
     if (searchTerms.length > 0) {
       const searchConditions = searchTerms
-        .map(term => `chunk_text.ilike.%${term}%`)
+        .map(term => `ocr_text.ilike.%${term}%`)
         .join(',');
 
       const { data: results1, error: error1 } = await supabase
-        .from('industry_knowledge_chunks')
-        .select(`
-          chunk_text,
-          industry_knowledge_documents!inner(
-            title,
-            category,
-            subcategory
-          )
-        `)
+        .from('building_documents')
+        .select('name, ocr_text, category, type')
         .or(searchConditions)
+        .not('ocr_text', 'is', null)
         .limit(limit)
-        .order('created_at', { ascending: false });
+        .order('uploaded_at', { ascending: false });
 
       if (results1 && results1.length > 0) {
-        chunks = results1;
-        console.log(`✅ Strategy 1 found ${results1.length} chunks`);
+        console.log(`✅ Found ${results1.length} industry documents with relevant content`);
+
+        chunks = results1.map(doc => {
+          // Extract relevant portions of the OCR text that contain our search terms
+          const text = doc.ocr_text || '';
+          const sentences = text.split(/[.!?]+/);
+          const relevantSentences = sentences.filter(sentence =>
+            searchTerms.some(term =>
+              sentence.toLowerCase().includes(term)
+            )
+          ).slice(0, 3); // Get first 3 relevant sentences
+
+          if (relevantSentences.length > 0) {
+            return `From ${doc.name} (${doc.category || doc.type}): ${relevantSentences.join('. ')}`;
+          } else {
+            // Fallback to first 200 characters
+            return `From ${doc.name} (${doc.category || doc.type}): ${text.substring(0, 200)}...`;
+          }
+        }).filter(chunk => chunk.length > 50); // Only include substantial chunks
+
       } else if (error1) {
         console.warn('Strategy 1 search error:', error1);
       }
@@ -452,22 +470,30 @@ async function searchIndustryKnowledge(query: string, limit: number = 8): Promis
       if (relevantCategory) {
         console.log('🔍 Trying category search for:', relevantCategory);
         const { data: results2, error: error2 } = await supabase
-          .from('industry_knowledge_chunks')
-          .select(`
-            chunk_text,
-            industry_knowledge_documents!inner(
-              title,
-              category,
-              subcategory
-            )
-          `)
-          .ilike('chunk_text', `%${relevantCategory}%`)
+          .from('building_documents')
+          .select('name, ocr_text, category, type')
+          .ilike('ocr_text', `%${relevantCategory}%`)
+          .not('ocr_text', 'is', null)
           .limit(limit)
-          .order('created_at', { ascending: false });
+          .order('uploaded_at', { ascending: false });
 
         if (results2 && results2.length > 0) {
-          chunks = results2;
-          console.log(`✅ Strategy 2 found ${results2.length} chunks`);
+          console.log(`✅ Strategy 2 found ${results2.length} category-based documents`);
+
+          chunks = results2.map(doc => {
+            const text = doc.ocr_text || '';
+            const sentences = text.split(/[.!?]+/);
+            const relevantSentences = sentences.filter(sentence =>
+              sentence.toLowerCase().includes(relevantCategory)
+            ).slice(0, 3);
+
+            if (relevantSentences.length > 0) {
+              return `From ${doc.name} (${doc.category || doc.type}): ${relevantSentences.join('. ')}`;
+            } else {
+              return `From ${doc.name} (${doc.category || doc.type}): ${text.substring(0, 200)}...`;
+            }
+          }).filter(chunk => chunk.length > 50);
+
         } else if (error2) {
           console.warn('Strategy 2 search error:', error2);
         }
