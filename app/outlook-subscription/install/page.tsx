@@ -347,21 +347,75 @@ export default function OutlookInstallPage() {
         {/* Installation Instructions */}
         <Card className="mb-8">
           <CardHeader>
-            <CardTitle>Installation Instructions - Outlook Desktop Only</CardTitle>
+            <CardTitle>Installation Methods</CardTitle>
             <CardDescription>
-              BlocIQ add-ins work best with Outlook Desktop application. Web and mobile have limited functionality.
+              Choose between organization-wide deployment (recommended for companies) or individual installation.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {/* Compatibility Notice */}
+            {/* Admin Deployment - Recommended */}
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+              <div className="flex items-start">
+                <Badge className="bg-green-600 text-white mr-3 mt-1">RECOMMENDED</Badge>
+                <div className="flex-1">
+                  <h4 className="font-semibold text-green-800 mb-2">Option 1: Microsoft 365 Admin Center (Organization-wide)</h4>
+                  <p className="text-green-700 text-sm mb-3">
+                    If you're a company admin, deploy BlocIQ add-ins for all users in your organization through the Microsoft 365 admin center.
+                  </p>
+                  <div className="space-y-3">
+                    <div className="bg-white border border-green-200 rounded p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-green-800">1. Access Admin Center</span>
+                        <Button size="sm" asChild variant="outline" className="border-green-300 text-green-700 hover:bg-green-100">
+                          <a
+                            href="https://admin.microsoft.com/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center"
+                          >
+                            <ExternalLink className="mr-1 h-3 w-3" />
+                            Open Admin Center
+                          </a>
+                        </Button>
+                      </div>
+                      <p className="text-xs text-green-600">
+                        Navigate to Microsoft 365 Admin Center (admin.microsoft.com)
+                      </p>
+                    </div>
+
+                    <div className="bg-white border border-green-200 rounded p-3">
+                      <p className="text-sm font-medium text-green-800 mb-1">2. Navigate to Add-ins</p>
+                      <p className="text-xs text-green-600">
+                        Go to Settings → Integrated apps → Get apps → Upload custom apps
+                      </p>
+                    </div>
+
+                    <div className="bg-white border border-green-200 rounded p-3">
+                      <p className="text-sm font-medium text-green-800 mb-1">3. Upload BlocIQ Manifests</p>
+                      <p className="text-xs text-green-600">
+                        Upload all three downloaded manifest files and deploy to your organization
+                      </p>
+                    </div>
+
+                    <div className="bg-white border border-green-200 rounded p-3">
+                      <p className="text-sm font-medium text-green-800 mb-1">4. Set Permissions</p>
+                      <p className="text-xs text-green-600">
+                        Choose "Everyone" or specific groups to give access to BlocIQ AI features
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Individual Installation */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
               <div className="flex items-start">
                 <Monitor className="h-5 w-5 text-blue-600 mr-2 mt-0.5" />
                 <div>
-                  <h4 className="font-semibold text-blue-800">Recommended: Outlook Desktop</h4>
-                  <p className="text-blue-700 text-sm mt-1">
-                    For the best experience with BlocIQ AI add-ins, use the Outlook Desktop application.
-                    Web and mobile versions have limited add-in support and may not display all features properly.
+                  <h4 className="font-semibold text-blue-800 mb-2">Option 2: Individual Installation (Outlook Desktop)</h4>
+                  <p className="text-blue-700 text-sm mt-1 mb-3">
+                    For individual users or when admin deployment isn't available. Best with Outlook Desktop application.
                   </p>
                 </div>
               </div>
@@ -524,6 +578,30 @@ export default function OutlookInstallPage() {
           </CardContent>
         </Card>
 
+        {/* AppSource Notice */}
+        <Card className="mb-8 bg-purple-50 border-purple-200">
+          <CardHeader>
+            <CardTitle className="text-purple-800">Future: Microsoft AppSource</CardTitle>
+            <CardDescription className="text-purple-700">
+              We're working to get BlocIQ approved on Microsoft AppSource for easier installation
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-start">
+              <Globe className="h-5 w-5 text-purple-600 mr-2 mt-0.5" />
+              <div>
+                <p className="text-sm text-purple-700 mb-3">
+                  Once approved, you'll be able to install BlocIQ add-ins directly from the Microsoft AppSource
+                  without needing to download manifest files. We'll notify subscribers when this is available.
+                </p>
+                <Badge variant="outline" className="border-purple-300 text-purple-700">
+                  Coming Soon
+                </Badge>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Support */}
         <Card>
           <CardHeader>
@@ -533,7 +611,7 @@ export default function OutlookInstallPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid md:grid-cols-3 gap-4">
               <Button variant="outline" asChild>
                 <a href="mailto:support@blociq.co.uk">
                   <MessageSquare className="mr-2 h-4 w-4" />
@@ -542,12 +620,22 @@ export default function OutlookInstallPage() {
               </Button>
               <Button variant="outline" asChild>
                 <a
-                  href="https://docs.microsoft.com/en-us/office/dev/add-ins/outlook/sideload-outlook-add-ins-for-testing"
+                  href="https://admin.microsoft.com/"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
                   <ExternalLink className="mr-2 h-4 w-4" />
-                  Microsoft's Guide
+                  Microsoft 365 Admin
+                </a>
+              </Button>
+              <Button variant="outline" asChild>
+                <a
+                  href="https://docs.microsoft.com/en-us/office/dev/add-ins/outlook/sideload-outlook-add-ins-for-testing"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <FileText className="mr-2 h-4 w-4" />
+                  Installation Guide
                 </a>
               </Button>
             </div>
