@@ -50,10 +50,11 @@ async function handlePublicOutlookAI(req: NextRequest) {
       tone = 'professional'
     } = body;
 
-    if (!emailBody?.trim()) {
+    // For chat mode, allow empty email body (use subject as the question)
+    if (!emailBody?.trim() && !emailSubject?.trim()) {
       return createResponse({
         success: false,
-        error: 'Email body is required'
+        error: 'Either email subject or body is required'
       }, 400);
     }
 
@@ -74,7 +75,47 @@ async function handlePublicOutlookAI(req: NextRequest) {
     let urgencyLevel = 'medium';
     let responseStyle = 'professional';
 
-    // Advanced issue detection for UK property management
+    // 🏢 BUILDING-SPECIFIC QUERY DETECTION
+    const hasLeaseholder = messageContent.includes('leaseholder');
+    const hasTenant = messageContent.includes('tenant');
+    const hasResident = messageContent.includes('resident');
+    const hasWho = messageContent.includes('who');
+    const hasOf = messageContent.includes('of');
+    const hasAddressPattern = /\d+\s+\w+\s+(house|court|road|street|avenue|close|place|way)/.test(messageContent);
+
+    const isBuildingSpecificQuery = (
+      // Direct leaseholder queries
+      (hasLeaseholder && (hasWho || hasOf)) ||
+      (hasTenant && (hasWho || hasOf)) ||
+      (hasResident && (hasWho || hasOf)) ||
+
+      // Property-specific queries
+      /who.*lives.*in/.test(messageContent) ||
+      /who.*owns/.test(messageContent) ||
+
+      // Address-specific patterns - includes "5 ashwood house" type patterns
+      hasAddressPattern ||
+      /(flat|apartment|unit)\s+\d+/.test(messageContent) ||
+      /\d+\s+(flat|apartment|unit)/.test(messageContent) ||
+
+      // Database-specific requests
+      messageContent.includes('contact details') ||
+      messageContent.includes('phone number') ||
+      messageContent.includes('email address') ||
+      (messageContent.includes('service charge') && messageContent.includes('specific')) ||
+      (messageContent.includes('lease') && messageContent.includes('specific'))
+    );
+
+    console.log('🔍 Building query detection:', {
+      query: messageContent.substring(0, 80),
+      hasLeaseholder,
+      hasWho,
+      hasOf,
+      hasAddressPattern,
+      isBuildingSpecificQuery
+    });
+
+    // Advanced issue detection for UK property management (but don't override building-specific queries)
     if (messageContent.includes('leak') || messageContent.includes('water') || messageContent.includes('dripping') || messageContent.includes('flooding')) {
       primaryIssue = 'leak';
       responseStyle = 'urgent_professional';
@@ -109,7 +150,22 @@ async function handlePublicOutlookAI(req: NextRequest) {
     let systemPrompt;
 
     if (requestType === 'chat') {
-      systemPrompt = `You are a helpful UK property management AI assistant providing friendly, conversational guidance without access to specific building or leaseholder data.
+      if (primaryIssue === 'building_specific_upgrade') {
+        systemPrompt = `🚨 CRITICAL: This query asks for specific building/leaseholder data.
+
+You MUST respond EXACTLY with:
+
+"I'm sorry, but your account doesn't have building data linked to BlocIQ, so I cannot help you with specific property information like leaseholder details, unit-specific records, or building documents.
+
+To access your building's data, leaseholder information, maintenance records, and documents, consider upgrading to Pro BlocIQ which provides full access to your buildings, leaseholders, and property management documents.
+
+For immediate assistance with specific property queries, please contact your property manager directly.
+
+Is there anything else about general UK property management that I can help you with?"
+
+Do NOT suggest Land Registry or alternative methods. Use this exact response.`;
+      } else {
+        systemPrompt = `You are a helpful UK property management AI assistant providing friendly, conversational guidance without access to specific building or leaseholder data.
 
 CHAT MODE - CONVERSATIONAL RESPONSES:
 - Respond naturally and conversationally, like a knowledgeable friend
@@ -129,8 +185,28 @@ CORE PRINCIPLES:
 - Give practical next steps where appropriate
 
 RESPONSE GUIDELINES BY ISSUE TYPE:`;
+      }
     } else {
-      systemPrompt = `You are a professional UK property management assistant generating concise, actionable email replies.
+      if (primaryIssue === 'building_specific_upgrade') {
+        systemPrompt = `🚨 CRITICAL: This query asks for specific building/leaseholder data.
+
+You MUST respond EXACTLY with:
+
+"Dear [Name],
+
+I'm sorry, but your account doesn't have building data linked to BlocIQ, so I cannot help you with specific property information like leaseholder details, unit-specific records, or building documents.
+
+To access your building's data, leaseholder information, maintenance records, and documents, consider upgrading to Pro BlocIQ which provides full access to your buildings, leaseholders, and property management documents.
+
+For immediate assistance with specific property queries, please contact your property manager directly.
+
+Is there anything else about general UK property management that I can help you with?
+
+Best regards"
+
+Do NOT suggest Land Registry or alternative methods. Use this exact response.`;
+      } else {
+        systemPrompt = `You are a professional UK property management assistant generating concise, actionable email replies.
 
 EMAIL REPLY MODE - PROFESSIONAL BUT CONCISE:
 - Write clear, professional email responses
@@ -152,9 +228,10 @@ CORE PRINCIPLES:
 - Include realistic timeframes for actions
 
 RESPONSE GUIDELINES BY ISSUE TYPE:`;
+      }
     }
 
-    // Add specific guidance based on issue type
+    // Add specific guidance based on issue type (skip building_specific as it's handled above)
     if (primaryIssue === 'leak') {
       systemPrompt += `
 LEAK RESPONSE PROTOCOL:
@@ -324,46 +401,117 @@ async function searchIndustryKnowledge(query: string, limit: number = 8): Promis
 
     const supabase = createServiceClient();
 
-    // Extract key terms from the query for better matching
-    const keyTerms = query
+    // Extract multiple search terms for broader matching
+    const searchTerms = query
       .toLowerCase()
+      .replace(/[^\w\s]/g, '') // Remove punctuation
       .split(/\s+/)
-      .filter(term => term.length > 3)
-      .slice(0, 5) // Use top 5 key terms
-      .join('|');
+      .filter(term => term.length > 2)
+      .slice(0, 6); // Use top 6 key terms
 
-    const { data: chunks, error } = await supabase
-      .from('industry_knowledge_chunks')
-      .select(`
-        chunk_text,
-        industry_knowledge_documents!inner(
-          title,
-          category,
-          subcategory
-        )
-      `)
-      .or(`chunk_text.ilike.%${query.split(' ')[0]}%,chunk_text.ilike.%${query.split(' ').slice(-1)[0]}%`)
-      .limit(limit)
-      .order('created_at', { ascending: false });
+    console.log('🔍 Search terms:', searchTerms);
 
-    if (error) {
-      console.warn('Industry knowledge search error:', error);
-      return [];
+    // Try multiple search strategies
+    let chunks = [];
+
+    // Strategy 1: Search for any of the key terms
+    if (searchTerms.length > 0) {
+      const searchConditions = searchTerms
+        .map(term => `chunk_text.ilike.%${term}%`)
+        .join(',');
+
+      const { data: results1, error: error1 } = await supabase
+        .from('industry_knowledge_chunks')
+        .select(`
+          chunk_text,
+          industry_knowledge_documents!inner(
+            title,
+            category,
+            subcategory
+          )
+        `)
+        .or(searchConditions)
+        .limit(limit)
+        .order('created_at', { ascending: false });
+
+      if (results1 && results1.length > 0) {
+        chunks = results1;
+        console.log(`✅ Strategy 1 found ${results1.length} chunks`);
+      } else if (error1) {
+        console.warn('Strategy 1 search error:', error1);
+      }
+    }
+
+    // Strategy 2: If no results, try broader category-based search
+    if (chunks.length === 0) {
+      const categorySearchTerms = ['leasehold', 'section', 'act', 'law', 'regulation', 'reform', 'management'];
+      const relevantCategory = categorySearchTerms.find(cat =>
+        query.toLowerCase().includes(cat)
+      );
+
+      if (relevantCategory) {
+        console.log('🔍 Trying category search for:', relevantCategory);
+        const { data: results2, error: error2 } = await supabase
+          .from('industry_knowledge_chunks')
+          .select(`
+            chunk_text,
+            industry_knowledge_documents!inner(
+              title,
+              category,
+              subcategory
+            )
+          `)
+          .ilike('chunk_text', `%${relevantCategory}%`)
+          .limit(limit)
+          .order('created_at', { ascending: false });
+
+        if (results2 && results2.length > 0) {
+          chunks = results2;
+          console.log(`✅ Strategy 2 found ${results2.length} chunks`);
+        } else if (error2) {
+          console.warn('Strategy 2 search error:', error2);
+        }
+      }
+    }
+
+    // Strategy 3: If still no results, get some general property management content
+    if (chunks.length === 0) {
+      console.log('🔍 Trying general property management search');
+      const { data: results3, error: error3 } = await supabase
+        .from('industry_knowledge_chunks')
+        .select(`
+          chunk_text,
+          industry_knowledge_documents!inner(
+            title,
+            category,
+            subcategory
+          )
+        `)
+        .limit(4)
+        .order('created_at', { ascending: false });
+
+      if (results3 && results3.length > 0) {
+        chunks = results3;
+        console.log(`✅ Strategy 3 found ${results3.length} general chunks`);
+      } else if (error3) {
+        console.warn('Strategy 3 search error:', error3);
+      }
     }
 
     if (!chunks || chunks.length === 0) {
-      console.log('No industry knowledge chunks found for query');
+      console.log('❌ No industry knowledge chunks found after all strategies');
       return [];
     }
 
     const relevantChunks = chunks
-      .filter(chunk => chunk.chunk_text && chunk.chunk_text.length > 50)
+      .filter(chunk => chunk.chunk_text && chunk.chunk_text.length > 20)
       .map(chunk => {
         const doc = chunk.industry_knowledge_documents;
         return `**${doc.category} Knowledge**: ${chunk.chunk_text.trim()}`;
-      });
+      })
+      .slice(0, limit);
 
-    console.log(`✅ Found ${relevantChunks.length} industry knowledge chunks`);
+    console.log(`✅ Final result: ${relevantChunks.length} industry knowledge chunks`);
     return relevantChunks;
 
   } catch (error) {
