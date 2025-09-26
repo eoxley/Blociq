@@ -61,6 +61,55 @@ async function handlePublicOutlookAI(req: NextRequest) {
     const userEmailToUse = userEmail || req.headers.get('x-user-email') || 'anonymous@public.com';
     console.log(`📧 Processing ${requestType} for: ${userEmailToUse}`);
 
+    // 👤 EXTRACT FIRST NAME FOR PERSONALIZATION
+    let userFirstName = '';
+    try {
+      if (userEmailToUse && userEmailToUse !== 'anonymous@public.com') {
+        // Try to extract first name from email prefix (common pattern: firstname.lastname@domain.com)
+        const emailPrefix = userEmailToUse.split('@')[0];
+        const nameParts = emailPrefix.split(/[._-]/);
+
+        if (nameParts.length > 0) {
+          // Capitalize first letter of first name part
+          userFirstName = nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1).toLowerCase();
+
+          // Validate it looks like a name (not numbers or too short)
+          if (userFirstName.length < 2 || /^\d+$/.test(userFirstName)) {
+            userFirstName = '';
+          }
+        }
+      }
+    } catch (error) {
+      console.log('Could not extract first name from email');
+      userFirstName = '';
+    }
+
+    console.log(`👤 Extracted first name: ${userFirstName || 'none'}`);
+
+    // 📝 PERSONALIZED GREETING BANK
+    const personalizedGreetings = userFirstName ? [
+      `Hi ${userFirstName}, great question about`,
+      `${userFirstName}, I've dealt with this situation many times...`,
+      `Thanks for reaching out, ${userFirstName}. This is a common challenge in our field...`,
+      `Good to hear from you, ${userFirstName}. In my experience managing similar properties...`,
+      `${userFirstName}, that's an important consideration for any block manager...`,
+      `I completely understand this concern, ${userFirstName}...`,
+      `${userFirstName}, this comes up frequently in property management...`,
+      `Good to hear from a fellow property professional, ${userFirstName}...`,
+      `I've encountered this issue before, ${userFirstName}...`,
+      `That's a really relevant question, ${userFirstName}...`,
+      `${userFirstName}, from my years in block management...`,
+      `I'm glad you asked about this, ${userFirstName}...`,
+      `${userFirstName}, this is definitely worth discussing...`,
+      `I've seen this scenario quite often, ${userFirstName}...`,
+      `That's a smart question to ask, ${userFirstName}...`,
+      `Thanks for bringing this up, ${userFirstName}...`,
+      `I appreciate you reaching out about this, ${userFirstName}...`,
+      `${userFirstName}, this is something I deal with regularly...`,
+      `Good thinking on this topic, ${userFirstName}...`,
+      `I've handled similar situations, ${userFirstName}...`
+    ] : [];
+
     // Initialize OpenAI
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY!,
@@ -161,25 +210,50 @@ Is there anything else about general UK property management that I can help you 
 
 Do NOT suggest Land Registry or alternative methods. Use this exact response.`;
       } else {
-        systemPrompt = `You are a professional block manager using BlocIQ to provide conversational guidance to property management colleagues and residents.
+        systemPrompt = `You are a senior block manager and property management expert responding to queries from fellow property management professionals through BlocIQ. The user asking questions is ALSO a block manager seeking professional advice and guidance from a colleague.
 
-CHAT MODE - BLOCK MANAGER RESPONSES:
-- Respond as their professional block manager with first-person ownership language
-- Use varied professional greetings: "Good to hear from you", "Thanks for reaching out", "I understand your query", "That's a great question", "I can help with this", or start directly with the answer
-- NEVER use "Hey there!" - vary your openings
-- Provide practical UK property management guidance from your expertise
-- Keep responses concise but informative
-- Use "I will...", "As your block manager, I recommend...", "In my experience..."
+CHAT MODE - COLLEAGUE-TO-COLLEAGUE RESPONSES:
+- Respond as an experienced property management colleague sharing expertise
+- Use language like "In my experience...", "I typically handle this by...", "What I've found works well is...", "I'd recommend..."
+- Share practical insights and proven approaches from your professional experience
+- Acknowledge their professional expertise while offering guidance
 
 PRIMARY ISSUE: ${primaryIssue}
 URGENCY LEVEL: ${urgencyLevel}
 
-BLOCK MANAGER PRINCIPLES:
-- Provide guidance based on your professional property management experience
+VARIED PROFESSIONAL OPENINGS (select different ones):
+${personalizedGreetings.length > 0 ? `
+PERSONALIZED OPTIONS (use these when available):
+${personalizedGreetings.map(greeting => `- "${greeting}"`).join('\n')}
+
+GENERAL OPTIONS (if no personalization):` : 'GENERAL OPTIONS:'}
+- "Great question about [topic]..."
+- "I've dealt with this situation many times..."
+- "This is a common challenge in our field..."
+- "In my experience managing similar properties..."
+- "That's an important consideration for any block manager..."
+- "I completely understand this concern..."
+- "This comes up frequently in property management..."
+- "Good to hear from a fellow property professional..."
+- "I've encountered this issue before..."
+- "That's a really relevant question..."
+- "From my years in block management..."
+- "I'm glad you asked about this..."
+- "This is definitely worth discussing..."
+- "I've seen this scenario quite often..."
+- "That's a smart question to ask..."
+- "Thanks for bringing this up..."
+- "I appreciate you reaching out about this..."
+- "This is something I deal with regularly..."
+- "Good thinking on this topic..."
+- "I've handled similar situations..."
+
+COLLEAGUE GUIDANCE PRINCIPLES:
+- Share expertise from your professional property management experience
 - Follow relevant legal frameworks (Housing Act, Landlord & Tenant Act, Leasehold Reform Act)
-- Take ownership and provide specific actions you would take
-- Never suggest contacting property managers - YOU are the property manager
-- Give practical next steps based on your expertise
+- Provide practical approaches you use in your own practice
+- Never suggest "contacting property managers" - they ARE property managers seeking colleague advice
+- Give proven techniques and best practices from your experience
 
 RESPONSE GUIDELINES BY ISSUE TYPE:`;
       }
