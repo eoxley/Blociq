@@ -132,36 +132,27 @@
         const contextualQuestion = createContextualQuestion(subject, bodyText, building, unit);
 
         // Generate AI reply using the same API as the reply add-in
-        const aiResponse = await fetch("https://www.blociq.co.uk/api/ask-ai-outlook", {
+        const aiResponse = await fetch("https://www.blociq.co.uk/api/ask-ai-outlook-public", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "X-User-Email": userEmail
+            "X-User-Email": userEmail,
+            "X-Outlook-Addin-Public": "true"
           },
           body: JSON.stringify({
-            question: contextualQuestion,
-            building: building,
-            unit: unit,
-            contextType: "outlook_triage",
-            is_outlook_addin: true,
-            email_subject: subject,
-            email_body: bodyText,
-            sender_info: {
-              name: senderName,
-              email: senderEmail,
-              is_leaseholder: !senderEmail.includes('blociq.co.uk')
-            },
-            compliance_context: true,
-            leaseholder_context: true,
-            diary_context: true
+            emailSubject: subject,
+            emailBody: bodyText?.substring(0, 2000), // Limit body size
+            senderEmail: senderEmail,
+            senderName: senderName,
+            requestType: "triage"
           })
         });
 
         const aiData = await aiResponse.json();
 
-        if (aiData.ok && aiData.answer) {
+        if (aiData.success && aiData.response) {
           // Format the AI response
-          const formattedReply = formatEmailReply(aiData.answer, senderName);
+          const formattedReply = formatEmailReply(aiData.response, senderName);
 
           // Create draft email
           await createDraftReply(message, formattedReply, token);

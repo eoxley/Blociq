@@ -21,38 +21,38 @@ import {
 const MANIFEST_FILES = [
   {
     id: 'ask-ai',
-    name: 'BlocIQ Ask AI',
-    description: 'Get instant answers to property management questions directly in Outlook',
+    name: 'BlocIQ Public Ask AI',
+    description: 'Get property management guidance directly in Outlook chat sidebar',
     filename: 'manifest.xml',
     features: [
-      'AI-powered property management assistance',
-      'Instant answers to compliance questions',
-      'Building and lease context awareness',
-      'Works in any Outlook folder'
+      'AI-powered property management guidance',
+      'Chat interface in Outlook sidebar',
+      'General UK property management knowledge',
+      'No building-specific data access'
     ]
   },
   {
     id: 'reply',
-    name: 'BlocIQ Smart Reply',
-    description: 'Generate professional email responses with AI assistance',
-    filename: 'outlook-manifest-reply.xml',
+    name: 'BlocIQ Public Reply Generator',
+    description: 'Generate professional property management email responses with general UK guidance',
+    filename: 'outlook-manifest-reply-public.xml',
     features: [
       'AI-generated professional replies',
-      'Context-aware responses',
-      'Property management compliance built-in',
-      'Works with any email thread'
+      'General UK property management guidance',
+      'Professional email formatting',
+      'No building-specific data access'
     ]
   },
   {
     id: 'triage',
-    name: 'BlocIQ Inbox Triage',
+    name: 'BlocIQ Public Inbox Triage',
     description: 'Automatically process and create draft replies for multiple emails',
     filename: 'outlook-manifest-triage.xml',
     features: [
       'Batch process up to 20 emails',
       'Auto-generate draft replies',
-      'Smart email categorization',
-      'Bulk email management'
+      'General UK property management guidance',
+      'No building-specific data access'
     ]
   }
 ];
@@ -92,7 +92,7 @@ export default function OutlookInstallPage() {
             </h1>
           </div>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Your BlocIQ Outlook AI subscription is active! Follow these steps to install the three AI add-ins and start transforming your email workflow.
+            Your BlocIQ Outlook AI subscription is active! Download all three public add-ins to start getting AI-powered property management assistance with general UK guidance.
           </p>
         </div>
 
@@ -104,7 +104,7 @@ export default function OutlookInstallPage() {
               Quick Start: Download All Manifests
             </CardTitle>
             <CardDescription className="text-green-700">
-              Download all three manifest files at once, then follow the installation steps below.
+              Download all three BlocIQ Public add-in manifest files and follow the installation steps below.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -114,7 +114,7 @@ export default function OutlookInstallPage() {
               size="lg"
             >
               <Download className="mr-2 h-4 w-4" />
-              Download All 3 Manifests
+              Download All 3 Public Add-ins
             </Button>
             <span className="text-sm text-green-600">
               Files will be saved to your Downloads folder
@@ -206,7 +206,7 @@ export default function OutlookInstallPage() {
                 {
                   step: 5,
                   title: "Install All Three Add-ins",
-                  content: "Install each manifest file one by one: Ask AI, Smart Reply, and Inbox Triage. Click 'Install' for each one."
+                  content: "Install each manifest file one by one: Ask AI, Reply Generator, and Inbox Triage. Click 'Install' for each one."
                 },
                 {
                   step: 6,
@@ -245,9 +245,9 @@ export default function OutlookInstallPage() {
         {/* Usage Guide */}
         <Card className="mb-8">
           <CardHeader>
-            <CardTitle>How to Use Your BlocIQ AI Add-ins</CardTitle>
+            <CardTitle>How to Use Your BlocIQ Public Add-ins</CardTitle>
             <CardDescription>
-              Once installed, here's how to make the most of your AI-powered email assistant
+              Once installed, here's how to make the most of your AI-powered property management assistants
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -256,9 +256,9 @@ export default function OutlookInstallPage() {
                 <div className="bg-blue-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
                   <MessageSquare className="h-8 w-8 text-blue-600" />
                 </div>
-                <h3 className="font-semibold mb-2">Ask BlocIQ</h3>
+                <h3 className="font-semibold mb-2">Ask AI</h3>
                 <p className="text-sm text-gray-600 mb-3">
-                  Get instant answers to property management questions
+                  Get general property management guidance via chat sidebar
                 </p>
                 <Badge variant="outline" className="text-xs">Click in any email</Badge>
               </div>
@@ -267,11 +267,11 @@ export default function OutlookInstallPage() {
                 <div className="bg-green-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
                   <ArrowRight className="h-8 w-8 text-green-600" />
                 </div>
-                <h3 className="font-semibold mb-2">Smart Reply</h3>
+                <h3 className="font-semibold mb-2">Reply Generator</h3>
                 <p className="text-sm text-gray-600 mb-3">
-                  Generate professional responses to any email
+                  Create professional property management email responses
                 </p>
-                <Badge variant="outline" className="text-xs">Click when reading emails</Badge>
+                <Badge variant="outline" className="text-xs">Click when composing/replying</Badge>
               </div>
 
               <div className="text-center">

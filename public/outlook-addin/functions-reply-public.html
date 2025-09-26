@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>BlocIQ Public Reply Functions</title>
+  <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+</head>
+<body>
+  <h3 style="font-family: sans-serif; color: #444;">BlocIQ Public Reply Functions Loaded ✅</h3>
+  <p style="font-family: sans-serif; color: #666; font-size: 12px;">
+    This is the public version without BlocIQ database access.
+  </p>
+
+  <script>
+    function generateBlocIQReply(event) {
+      const userEmail = Office.context.mailbox.userProfile.emailAddress || "";
+      console.log("BlocIQ Public Reply triggered for user:", userEmail);
+
+      // Public version - no subscription required, no database access
+      generatePublicReply(event, userEmail);
+    }
+
+    function generatePublicReply(event, userEmail) {
+      // Extract email context for better AI responses
+      Promise.all([
+        new Promise(resolve => {
+          Office.context.mailbox.item.subject.getAsync((result) => {
+            resolve(result.status === Office.AsyncResultStatus.Succeeded ? result.value : "");
+          });
+        }),
+        new Promise(resolve => {
+          Office.context.mailbox.item.body.getAsync(Office.CoercionType.Text, (result) => {
+            resolve(result.status === Office.AsyncResultStatus.Succeeded ? result.value : "");
+          });
+        })
+      ])
+       .then(([subject, body]) => {
+         console.log("Email context extracted:", { subject: subject?.substring(0, 50) });
+
+         // Extract sender information
+         const senderInfo = getSenderInfo();
+
+         return fetch("https://www.blociq.co.uk/api/ask-ai-outlook-public", {
+           method: "POST",
+           headers: {
+             "Content-Type": "application/json",
+             "X-User-Email": userEmail,
+             "X-Outlook-Addin-Public": "true"
+           },
+           body: JSON.stringify({
+             emailSubject: subject,
+             emailBody: body?.substring(0, 2000), // Limit body size
+             senderEmail: senderInfo?.email || userEmail,
+             senderName: senderInfo?.name || "User",
+             requestType: "reply"
+           })
+         });
+       })
+      .then(res => res.json())
+       .then(data => {
+         if (data.success && data.response) {
+           // Format the AI response with proper email formatting
+           const formattedReply = formatEmailReply(data.response);
+
+           Office.context.mailbox.item.body.setSelectedDataAsync(
+             formattedReply,
+             { coercionType: Office.CoercionType.Html },
+             (result) => {
+               if (result.status === Office.AsyncResultStatus.Succeeded) {
+                 showToastNotification("✅ BlocIQ Public AI reply generated successfully!");
+                 console.log("✅ BlocIQ public reply inserted successfully");
+               } else {
+                 console.error("❌ Failed to insert BlocIQ reply:", result.error);
+                 showToastNotification("❌ Failed to insert reply. Please try again.");
+               }
+               event.completed();
+             }
+           );
+         } else {
+           console.error("BlocIQ public reply failed:", data.error);
+           showToastNotification("❌ Failed to generate AI reply. Please try again.");
+           event.completed();
+         }
+       })
+      .catch(err => {
+        console.error("BlocIQ Public API call failed:", err);
+        showToastNotification("❌ Network error. Please check your connection and try again.");
+        event.completed();
+      });
+    }
+
+    // Extract sender information
+    function getSenderInfo() {
+      try {
+        const item = Office.context.mailbox.item;
+        if (!item || !item.from) return null;
+
+        return {
+          name: item.from.displayName || 'Unknown Sender',
+          email: item.from.emailAddress || 'unknown@example.com'
+        };
+      } catch (error) {
+        console.warn('Could not extract sender info:', error);
+        return null;
+      }
+    }
+
+    // Format AI response with proper email formatting
+    function formatEmailReply(aiResponse) {
+      if (!aiResponse) return "";
+
+      let formatted = aiResponse.trim();
+
+      // Handle placeholders for personalization
+      const senderInfo = getSenderInfo();
+      if (senderInfo && senderInfo.name) {
+        formatted = formatted.replace(/\[Recipient's Name\]/g, senderInfo.name);
+        formatted = formatted.replace(/\[Recipient Name\]/g, senderInfo.name);
+        formatted = formatted.replace(/\[Name\]/g, senderInfo.name);
+      }
+
+      // Add placeholder for user name if not resolvable
+      formatted = formatted.replace(/\[Your Name\]/g, '[Your Name]');
+      formatted = formatted.replace(/\[Your Position\]/g, '[Your Position]');
+      formatted = formatted.replace(/\[Company Signature\]/g, '[Company Signature]');
+
+      // Convert to HTML with proper spacing
+      const paragraphs = formatted.split('\n\n').filter(p => p.trim());
+
+      const htmlParagraphs = paragraphs.map(paragraph => {
+        const trimmed = paragraph.trim();
+        if (!trimmed) return '';
+
+        // Handle lists (bullets or numbered)
+        if (trimmed.includes('\n- ') || trimmed.includes('\n• ') || /\n\d+\./.test(trimmed)) {
+          const lines = trimmed.split('\n');
+          const firstLine = lines[0];
+          const listItems = lines.slice(1).map(line => {
+            if (line.startsWith('- ') || line.startsWith('• ')) {
+              return `<li>${line.substring(2)}</li>`;
+            } else if (/^\d+\.\s/.test(line)) {
+              return `<li>${line.replace(/^\d+\.\s/, '')}</li>`;
+            }
+            return line;
+          }).join('');
+
+          const listType = /^\d+\./.test(lines[1]) ? 'ol' : 'ul';
+          return `<p>${firstLine}</p><${listType}>${listItems}</${listType}>`;
+        }
+
+        return `<p>${trimmed}</p>`;
+      });
+
+      // Join with proper spacing
+      let result = htmlParagraphs.join('<br><br>');
+
+      // Add professional closing if not present
+      if (!result.toLowerCase().includes('regards') && !result.toLowerCase().includes('yours')) {
+        result += '<br><br><p>Kind regards,<br>Property Management Team</p>';
+      }
+
+      return result;
+    }
+
+    // Show toast notification to user
+    function showToastNotification(message) {
+      try {
+        // Create a simple visual notification
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: #4CAF50;
+          color: white;
+          padding: 12px 20px;
+          border-radius: 4px;
+          font-family: sans-serif;
+          font-size: 14px;
+          z-index: 10000;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+          max-width: 300px;
+        `;
+        notification.textContent = message;
+
+        document.body.appendChild(notification);
+
+        // Remove notification after 3 seconds
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+          }
+        }, 3000);
+
+        console.log('🔔 Toast notification:', message);
+      } catch (error) {
+        console.warn('Could not show toast notification:', error);
+      }
+    }
+
+    // Initialize Office.js and register function
+    Office.onReady(() => {
+      if (Office.actions && Office.actions.associate) {
+        Office.actions.associate("generateBlocIQReply", generateBlocIQReply);
+      }
+      console.log("✅ BlocIQ public reply function registered");
+    });
+
+   // Global function registration for legacy support
+   if (typeof window !== 'undefined') {
+     window.generateBlocIQReply = generateBlocIQReply;
+   }
+  </script>
+</body>
+</html>

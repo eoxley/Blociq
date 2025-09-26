@@ -98,18 +98,22 @@ async function callAskBlocIQ(prompt, emailContext) {
     console.log('🔍 Calling BlocIQ API with prompt:', prompt);
 
     const requestBody = {
-      message: prompt,
-      emailContext: emailContext,
-      source: 'outlook_addin'
+      emailSubject: prompt, // Using the message as subject for chat
+      emailBody: emailContext ? JSON.stringify(emailContext) : "",
+      senderEmail: getEmailAddress(),
+      senderName: "Chat User",
+      requestType: "chat"
     };
 
     console.log('📤 Request body:', requestBody);
 
     // Call the unified Ask BlocIQ endpoint
-    const response = await fetch('https://www.blociq.co.uk/api/addin/chat', {
+    const response = await fetch('https://www.blociq.co.uk/api/ask-ai-outlook-public', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-User-Email': getEmailAddress(),
+        'X-Outlook-Addin-Public': 'true'
       },
       body: JSON.stringify(requestBody),
     });
@@ -223,4 +227,14 @@ function adjustTextareaHeight() {
 
   inputField.style.height = 'auto';
   inputField.style.height = Math.min(inputField.scrollHeight, 120) + 'px';
+}
+
+// Get user email address
+function getEmailAddress() {
+  try {
+    return Office.context.mailbox.userProfile.emailAddress || 'unknown@example.com';
+  } catch (error) {
+    console.warn('Could not get user email:', error);
+    return 'unknown@example.com';
+  }
 }

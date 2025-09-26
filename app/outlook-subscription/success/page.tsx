@@ -97,13 +97,23 @@ export default function SubscriptionSuccessPage() {
   };
 
   const downloadManifest = () => {
-    const manifestUrl = '/outlook-addin/manifest.xml';
-    const link = document.createElement('a');
-    link.href = manifestUrl;
-    link.download = 'blociq-outlook-manifest.xml';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Download all three public manifests
+    const manifests = [
+      { url: '/outlook-addin/manifest.xml', name: 'blociq-ask-ai-manifest.xml' },
+      { url: '/outlook-addin/outlook-manifest-reply-public.xml', name: 'blociq-reply-manifest.xml' },
+      { url: '/outlook-addin/outlook-manifest-triage.xml', name: 'blociq-triage-manifest.xml' }
+    ];
+
+    manifests.forEach((manifest, index) => {
+      setTimeout(() => {
+        const link = document.createElement('a');
+        link.href = manifest.url;
+        link.download = manifest.name;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }, index * 100);
+    });
   };
 
   if (loading) {
@@ -240,11 +250,11 @@ export default function SubscriptionSuccessPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-gray-600 mb-4">
-                  Download and install the BlocIQ manifest file to add AI functionality to your Outlook.
+                  Download and install all three BlocIQ Public AI manifest files to add general property management guidance to your Outlook.
                 </p>
                 <Button onClick={downloadManifest} className="mr-4">
                   <Download className="mr-2 h-4 w-4" />
-                  Download Manifest File
+                  Download All 3 Manifest Files
                 </Button>
               </CardContent>
             </Card>
@@ -286,9 +296,10 @@ export default function SubscriptionSuccessPage() {
                   Once installed, you'll see BlocIQ buttons in your Outlook interface:
                 </p>
                 <ul className="list-disc list-inside space-y-2 text-gray-700">
-                  <li><strong>Ask BlocIQ:</strong> Get AI assistance with property management questions</li>
-                  <li><strong>Generate Reply:</strong> Create professional responses to emails</li>
-                  <li><strong>Triage Inbox:</strong> Process multiple emails with AI-generated drafts</li>
+                  <li><strong>Ask AI:</strong> Get property management guidance via chat sidebar</li>
+                  <li><strong>Generate Reply:</strong> Create professional responses to property management emails</li>
+                  <li><strong>Inbox Triage:</strong> Process multiple emails and create drafts automatically</li>
+                  <li><strong>General Guidance:</strong> UK property management best practices (no building-specific data)</li>
                 </ul>
               </CardContent>
             </Card>

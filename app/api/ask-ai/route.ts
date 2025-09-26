@@ -2030,20 +2030,20 @@ ${chunk.content.substring(0, 400)}...`
 
     console.log('✅ Phase 3 intelligent follow-up generated:', intelligentFollowUp);
 
-    // Log the AI interaction
+    // Log the AI interaction (including public/anonymous usage)
     let logId = null;
-    if (user?.id) {
-      logId = await insertAiLog({
-        question: prompt,
-        response: displayContent,
-        user_id: user.id,
-        context_type: contextType,
-        building_id: building_id || undefined,
-        document_ids: documentIds,
-        leaseholder_id: leaseholderId || undefined,
-        email_thread_id: emailThreadId || undefined,
-      });
-    }
+    const userId = user?.id || 'anonymous';
+
+    logId = await insertAiLog({
+      question: prompt,
+      response: displayContent,
+      user_id: userId,
+      context_type: contextType,
+      building_id: building_id || undefined,
+      document_ids: documentIds,
+      leaseholder_id: leaseholderId || undefined,
+      email_thread_id: emailThreadId || undefined,
+    });
 
     console.log('📝 AI interaction logged with ID:', logId);
 

@@ -1,15 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import {
-  getTemplateVariations,
-  analyzeSenderProfile,
-  getAdaptedTone,
-  validateLegalCompliance,
-  detectLanguagePreference,
-  analyzeHistoricalPatterns,
-  generateIntelligentFollowUp,
-  buildEnhancedSystemMessage
-} from '../../../lib/ai/phase3-intelligence';
 
 // CORS headers for Outlook Add-in compatibility
 const CORS_HEADERS = {
@@ -41,8 +31,8 @@ export async function OPTIONS(req: NextRequest) {
 /**
  * PUBLIC OUTLOOK AI
  *
- * Advanced AI with Phase 3 intelligence but NO access to BlocIQ database.
- * Provides sophisticated email reply generation without building/agency data.
+ * Streamlined AI with intelligent email reply generation but NO access to BlocIQ database.
+ * Provides sophisticated property management guidance without building/agency data.
  */
 async function handlePublicOutlookAI(req: NextRequest) {
   try {
@@ -74,118 +64,124 @@ async function handlePublicOutlookAI(req: NextRequest) {
       apiKey: process.env.OPENAI_API_KEY!,
     });
 
-    // 🚀 PHASE 3: ADVANCED AI CONTEXT ENHANCEMENT
-    console.log('🤖 Phase 3: Public Outlook AI contextual processing started');
+    // 🤖 INTELLIGENT ISSUE DETECTION
+    console.log('🤖 Analyzing email content for intelligent response...');
 
-    // Build message content for analysis
     const messageContent = `${emailSubject} ${emailBody}`.toLowerCase();
     let primaryIssue = 'general';
     let urgencyLevel = 'medium';
-    let sentiment = 'neutral';
+    let responseStyle = 'professional';
 
-    // Issue detection with extensive UK property management categories
+    // Advanced issue detection for UK property management
     if (messageContent.includes('leak') || messageContent.includes('water') || messageContent.includes('dripping') || messageContent.includes('flooding')) {
       primaryIssue = 'leak';
+      responseStyle = 'urgent_professional';
     } else if (messageContent.includes('noise') || messageContent.includes('loud') || messageContent.includes('music') || messageContent.includes('party')) {
       primaryIssue = 'noise';
+      responseStyle = 'diplomatic_firm';
     } else if (messageContent.includes('repair') || messageContent.includes('maintenance') || messageContent.includes('broken') || messageContent.includes('fix')) {
       primaryIssue = 'maintenance';
+      responseStyle = 'solution_focused';
     } else if (messageContent.includes('service charge') || messageContent.includes('ground rent') || messageContent.includes('payment') || messageContent.includes('bill')) {
       primaryIssue = 'service_charges';
+      responseStyle = 'explanatory_professional';
     } else if (messageContent.includes('parking') || messageContent.includes('car') || messageContent.includes('vehicle') || messageContent.includes('space')) {
       primaryIssue = 'parking';
+      responseStyle = 'policy_focused';
     } else if (messageContent.includes('safety') || messageContent.includes('security') || messageContent.includes('dangerous') || messageContent.includes('risk')) {
       primaryIssue = 'safety';
+      responseStyle = 'urgent_supportive';
     } else if (messageContent.includes('complaint') || messageContent.includes('dissatisfied') || messageContent.includes('unhappy') || messageContent.includes('problem')) {
       primaryIssue = 'complaint';
+      responseStyle = 'empathetic_solution_focused';
     }
 
-    // Urgency detection
+    // Urgency and sentiment detection
     if (messageContent.includes('urgent') || messageContent.includes('emergency') || messageContent.includes('immediate')) {
       urgencyLevel = 'high';
     } else if (messageContent.includes('asap') || messageContent.includes('critical') || messageContent.includes('serious')) {
       urgencyLevel = 'critical';
     }
 
-    // Sentiment detection
-    if (messageContent.includes('angry') || messageContent.includes('frustrated') || messageContent.includes('unacceptable')) {
-      sentiment = 'negative';
-    } else if (messageContent.includes('happy') || messageContent.includes('thank') || messageContent.includes('pleased')) {
-      sentiment = 'positive';
+    // Build intelligent system prompt based on issue type and urgency
+    let systemPrompt = `You are a professional UK property management AI assistant providing PUBLIC guidance without access to specific building or leaseholder data.
+
+PRIMARY ISSUE: ${primaryIssue}
+URGENCY LEVEL: ${urgencyLevel}
+RESPONSE STYLE: ${responseStyle}
+
+CORE PRINCIPLES:
+- Provide general UK property management guidance based on industry best practices
+- Follow relevant legal frameworks (Housing Act, Landlord & Tenant Act, Leasehold Reform Act)
+- Be empathetic, professional, and solution-focused
+- Guide users to contact their property manager for specific building matters
+- Include relevant next steps and timeframes where appropriate
+
+RESPONSE GUIDELINES BY ISSUE TYPE:`;
+
+    // Add specific guidance based on issue type
+    if (primaryIssue === 'leak') {
+      systemPrompt += `
+LEAK RESPONSE PROTOCOL:
+1. Immediate flat-to-flat contact if leak source is unclear
+2. Check for stop taps, appliances, or obvious sources
+3. If unresolved, arrange professional leak detection for both flats
+4. Cost responsibility depends on leak source (demised vs communal)
+5. Consider insurance claims if costs exceed policy excess
+6. Provide emergency contact information for severe cases`;
+    } else if (primaryIssue === 'noise') {
+      systemPrompt += `
+NOISE COMPLAINT GUIDANCE:
+1. Document incidents with dates, times, and nature of noise
+2. Attempt direct neighbor communication if appropriate
+3. Review lease terms regarding noise and nuisance
+4. Consider mediation services if direct contact fails
+5. Escalate through proper channels if pattern continues
+6. Know statutory nuisance laws and council involvement`;
+    } else if (primaryIssue === 'service_charges') {
+      systemPrompt += `
+SERVICE CHARGE GUIDANCE:
+1. Explain transparency requirements under leasehold law
+2. Right to demand supporting documentation and receipts
+3. Service charge budgets and year-end reconciliation process
+4. Consultation requirements for major works (Section 20)
+5. Dispute resolution through Property Tribunal if needed
+6. Payment obligations and consequences of non-payment`;
+    } else if (primaryIssue === 'maintenance') {
+      systemPrompt += `
+MAINTENANCE REQUEST GUIDANCE:
+1. Clarify responsibility (landlord vs leaseholder) based on lease terms
+2. Reporting procedures and reasonable timeframes for response
+3. Emergency vs non-emergency maintenance prioritization
+4. Right to carry out urgent repairs and recover costs if landlord fails
+5. Health and safety obligations and regulatory requirements
+6. Documentation requirements and follow-up procedures`;
     }
 
-    // 🚀 PHASE 3: Apply Advanced Intelligence
-    const templateVariations = getTemplateVariations(primaryIssue, urgencyLevel, sentiment);
+    systemPrompt += `
 
-    // Build mock sender profile for tone adaptation (no database access)
-    const mockSenderProfile = {
-      communicationStyle: sentiment === 'negative' ? 'direct' : 'formal',
-      urgencyPattern: urgencyLevel,
-      responseHistory: [],
-      preferredChannels: ['email'],
-      issueTypes: [primaryIssue],
-      escalationTendency: sentiment === 'negative' ? 'high' : 'low'
-    };
+IMPORTANT LIMITATIONS:
+- You do NOT have access to specific building data, lease terms, or leaseholder records
+- For building-specific information, direct users to contact their property manager
+- Provide general guidance that applies to UK leasehold properties
+- Include disclaimers about seeking specific legal or professional advice when appropriate
 
-    const adaptedTone = getAdaptedTone(mockSenderProfile, primaryIssue, urgencyLevel);
+Generate a helpful, professional response that addresses their concern while being clear about your limitations.`;
 
-    // Legal compliance validation (public version - no building-specific data)
-    const legalCompliance = await validateLegalCompliance(primaryIssue, null);
-
-    // Language detection
-    const languagePreference = detectLanguagePreference(emailBody);
-
-    // Mock historical patterns (no database access)
-    const historicalPatterns = {
-      commonIssues: [primaryIssue],
-      responsePatterns: [],
-      escalationHistory: [],
-      preferredSolutions: [],
-      timePatterns: [],
-      seasonalTrends: []
-    };
-
-    // Build enhanced system message with Phase 3 intelligence
-    const enhancedSystemMessage = buildEnhancedSystemMessage(
-      templateVariations,
-      adaptedTone,
-      legalCompliance,
-      languagePreference,
-      historicalPatterns,
-      primaryIssue,
-      urgencyLevel,
-      sentiment
-    );
-
-    // Create comprehensive prompt with Phase 3 enhancements
-    const prompt = `${enhancedSystemMessage}
-
-CONTEXT:
-- Email Subject: ${emailSubject}
-- Sender: ${senderName} (${senderEmail})
-- Primary Issue: ${primaryIssue}
-- Urgency Level: ${urgencyLevel}
-- Sentiment: ${sentiment}
-- Tone Preference: ${adaptedTone.primary_tone}
+    // Create the main prompt
+    const prompt = `${systemPrompt}
 
 EMAIL TO RESPOND TO:
+Subject: ${emailSubject}
+From: ${senderName} (${senderEmail})
+
 ${emailBody}
 
-IMPORTANT - PUBLIC VERSION GUIDELINES:
-- You are a PUBLIC property management AI assistant
-- You do NOT have access to specific building data, leaseholder records, or internal systems
-- Provide general UK property management guidance based on industry best practices
-- Use professional, helpful language appropriate for property management
-- Include relevant legal frameworks and regulations when applicable
-- Suggest appropriate next steps that don't require specific building data
-- Be empathetic and solution-focused
-- If specific building information is needed, guide them to contact their property manager directly
+Generate a professional email reply:`;
 
-Generate a professional, helpful reply that follows UK property management best practices:`;
+    console.log('🤖 Generating intelligent AI response...');
 
-    console.log('🤖 Generating AI response with Phase 3 intelligence...');
-
-    // Generate AI response with dynamic temperature based on urgency
+    // Generate AI response with appropriate temperature based on urgency
     const temperature = urgencyLevel === 'critical' ? 0.3 : urgencyLevel === 'high' ? 0.5 : 0.7;
 
     const completion = await openai.chat.completions.create({
@@ -196,7 +192,7 @@ Generate a professional, helpful reply that follows UK property management best 
           content: prompt
         }
       ],
-      max_tokens: templateVariations.max_tokens || 1200,
+      max_tokens: urgencyLevel === 'critical' ? 1400 : urgencyLevel === 'high' ? 1200 : 1000,
       temperature: temperature,
     });
 
@@ -206,34 +202,27 @@ Generate a professional, helpful reply that follows UK property management best 
       throw new Error('No response generated from AI');
     }
 
-    // Generate intelligent follow-up suggestions
-    const followUpSuggestions = generateIntelligentFollowUp(
-      primaryIssue,
-      urgencyLevel,
-      sentiment,
-      null, // No building context in public version
-      aiResponse
-    );
-
     console.log('✅ Public Outlook AI: Response generated successfully');
 
-    // Return response with Phase 3 metadata
+    // Return response with metadata
     return createResponse({
       success: true,
       response: aiResponse,
       metadata: {
         version: 'public-v1.0',
-        source: 'Public Outlook AI with Phase 3 Intelligence',
+        source: 'Public Outlook AI - Streamlined Intelligence',
         processing: {
           primaryIssue,
           urgencyLevel,
-          sentiment,
-          toneAdaptation: adaptedTone.primary_tone,
-          templateUsed: templateVariations.primary_template,
-          languageDetected: languagePreference.primary,
-          legalComplianceChecked: true
+          responseStyle,
+          temperatureUsed: temperature,
+          maxTokens: urgencyLevel === 'critical' ? 1400 : urgencyLevel === 'high' ? 1200 : 1000
         },
-        followUpSuggestions,
+        limitations: [
+          'No access to BlocIQ database',
+          'No building-specific information',
+          'General UK property management guidance only'
+        ],
         tokens: completion.usage?.total_tokens || 0,
         processingTime: Date.now()
       }
