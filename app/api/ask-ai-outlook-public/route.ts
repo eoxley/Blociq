@@ -130,18 +130,26 @@ CORE PRINCIPLES:
 
 RESPONSE GUIDELINES BY ISSUE TYPE:`;
     } else {
-      systemPrompt = `You are a professional UK property management AI assistant providing PUBLIC guidance without access to specific building or leaseholder data.
+      systemPrompt = `You are a professional UK property management assistant generating concise, actionable email replies.
+
+EMAIL REPLY MODE - PROFESSIONAL BUT CONCISE:
+- Write clear, professional email responses
+- Keep replies focused and actionable (200-400 words max)
+- Use bullet points for multiple steps
+- Be empathetic but efficient
+- Focus on immediate next steps rather than extensive explanations
+- Include appropriate urgency based on the issue
 
 PRIMARY ISSUE: ${primaryIssue}
 URGENCY LEVEL: ${urgencyLevel}
 RESPONSE STYLE: ${responseStyle}
 
 CORE PRINCIPLES:
-- Provide general UK property management guidance based on industry best practices
-- Follow relevant legal frameworks (Housing Act, Landlord & Tenant Act, Leasehold Reform Act)
-- Be empathetic, professional, and solution-focused
-- Guide users to contact their property manager for specific building matters
-- Include relevant next steps and timeframes where appropriate
+- Provide specific, actionable guidance based on UK property management best practices
+- Reference relevant legal frameworks when necessary
+- Be solution-focused with clear next steps
+- Direct to property manager for building-specific matters
+- Include realistic timeframes for actions
 
 RESPONSE GUIDELINES BY ISSUE TYPE:`;
     }
@@ -150,12 +158,12 @@ RESPONSE GUIDELINES BY ISSUE TYPE:`;
     if (primaryIssue === 'leak') {
       systemPrompt += `
 LEAK RESPONSE PROTOCOL:
-1. Immediate flat-to-flat contact if leak source is unclear
-2. Check for stop taps, appliances, or obvious sources
-3. If unresolved, arrange professional leak detection for both flats
-4. Cost responsibility depends on leak source (demised vs communal)
-5. Consider insurance claims if costs exceed policy excess
-6. Provide emergency contact information for severe cases`;
+1. IMMEDIATE ACTION: Contact flat above (if applicable) and check for obvious sources
+2. Turn off water supply if source identified in their flat
+3. Arrange emergency leak detection if source unclear (24-48 hours)
+4. Cost liability: Originating flat responsible (check lease terms)
+5. Insurance: Contact insurers if damage extensive
+6. Document damage with photos for insurance/property manager`;
     } else if (primaryIssue === 'noise') {
       systemPrompt += `
 NOISE COMPLAINT GUIDANCE:
@@ -221,7 +229,13 @@ From: ${senderName} (${senderEmail})
 
 ${emailBody}
 
-Generate a professional email reply:`;
+Generate a concise, professional email reply that:
+- Acknowledges the urgency appropriately
+- Provides 3-4 clear action steps
+- Uses bullet points for clarity
+- Includes realistic timeframes
+- Keeps total length under 300 words
+- Focuses on immediate next steps rather than extensive background`;
     }
 
     // 📚 SEARCH INDUSTRY KNOWLEDGE
@@ -252,7 +266,9 @@ Use this BlocIQ industry knowledge to provide more accurate and specific guidanc
           content: prompt
         }
       ],
-      max_tokens: urgencyLevel === 'critical' ? 1400 : urgencyLevel === 'high' ? 1200 : 1000,
+      max_tokens: requestType === 'chat' ?
+        (urgencyLevel === 'critical' ? 600 : urgencyLevel === 'high' ? 500 : 400) :
+        (urgencyLevel === 'critical' ? 800 : urgencyLevel === 'high' ? 700 : 600),
       temperature: temperature,
     });
 
@@ -276,7 +292,9 @@ Use this BlocIQ industry knowledge to provide more accurate and specific guidanc
           urgencyLevel,
           responseStyle,
           temperatureUsed: temperature,
-          maxTokens: urgencyLevel === 'critical' ? 1400 : urgencyLevel === 'high' ? 1200 : 1000
+          maxTokens: requestType === 'chat' ?
+            (urgencyLevel === 'critical' ? 600 : urgencyLevel === 'high' ? 500 : 400) :
+            (urgencyLevel === 'critical' ? 800 : urgencyLevel === 'high' ? 700 : 600)
         },
         limitations: [
           'No access to BlocIQ database',
