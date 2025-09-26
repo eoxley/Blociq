@@ -15,7 +15,7 @@ import {
   CheckCircle,
   Clock,
   BarChart3,
-  Refresh
+  RefreshCw
 } from 'lucide-react';
 
 interface SubscriptionMetrics {
@@ -97,7 +97,7 @@ export default function OutlookMonitoringPage() {
             Last updated: {lastRefresh.toLocaleTimeString()}
           </span>
           <Button onClick={fetchMetrics} disabled={loading} size="sm">
-            <Refresh className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
         </div>
