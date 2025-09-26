@@ -103,7 +103,15 @@ async function handlePublicOutlookAI(req: NextRequest) {
       messageContent.includes('phone number') ||
       messageContent.includes('email address') ||
       (messageContent.includes('service charge') && messageContent.includes('specific')) ||
-      (messageContent.includes('lease') && messageContent.includes('specific'))
+      (messageContent.includes('lease') && messageContent.includes('specific')) ||
+
+      // Building-specific documentation requests
+      messageContent.includes('ews1') ||
+      messageContent.includes('fire certificate') ||
+      messageContent.includes('building certificate') ||
+      (messageContent.includes('certificate') && hasAddressPattern) ||
+      (messageContent.includes('form') && hasAddressPattern) ||
+      (messageContent.includes('document') && hasAddressPattern)
     );
 
     console.log('🔍 Building query detection:', {
@@ -195,23 +203,23 @@ RESPONSE GUIDELINES BY ISSUE TYPE:`;
       }
     } else {
       if (primaryIssue === 'building_specific_upgrade') {
-        systemPrompt = `🚨 CRITICAL: This query asks for specific building/leaseholder data.
+        systemPrompt = `🏢 BUILDING-SPECIFIC EMAIL REPLY: Generate professional response with placeholders for missing building data.
 
-You MUST respond EXACTLY with:
+EMAIL REPLY FOR BUILDING-SPECIFIC QUERIES:
+- Generate a helpful, professional email reply
+- Use placeholders like [Building Name], [Leaseholder Name], [Specific Details] for missing information
+- Provide actionable next steps while acknowledging data limitations
+- Maintain professional property management tone
+- Include timeline expectations where appropriate
 
-"Dear [Name],
+PLACEHOLDERS TO USE:
+- [Building Name] for property references
+- [Leaseholder/Resident Name] for specific individuals
+- [Specific Details] for unit numbers, service charges, etc.
+- [Property Management Company] for management references
+- [Relevant Documentation] for specific documents/records
 
-I'm sorry, but your account doesn't have building data linked to BlocIQ, so I cannot help you with specific property information like leaseholder details, unit-specific records, or building documents.
-
-To access your building's data, leaseholder information, maintenance records, and documents, consider upgrading to Pro BlocIQ which provides full access to your buildings, leaseholders, and property management documents.
-
-For immediate assistance with specific property queries, please contact your property manager directly.
-
-Is there anything else about general UK property management that I can help you with?
-
-Best regards"
-
-Do NOT suggest Land Registry or alternative methods. Use this exact response.`;
+Generate a professional email response that addresses their query with placeholders where building-specific data would be needed.`;
       } else {
         systemPrompt = `You are a professional UK property management assistant generating concise, actionable email replies.
 
