@@ -50,7 +50,7 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
     }
   }, [isOpen, hasSubmittedEmail]);
 
-  // Handle ESC key to close modal
+  // Handle ESC key to close modal and prevent body scroll
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
@@ -59,8 +59,21 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
     };
 
     if (isOpen) {
+      // Prevent background scrolling when modal is open
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      document.body.classList.add('modal-open');
       document.addEventListener('keydown', handleEscape);
-      return () => document.removeEventListener('keydown', handleEscape);
+
+      return () => {
+        // Restore background scrolling when modal closes
+        document.body.style.overflow = 'unset';
+        document.body.style.position = 'unset';
+        document.body.style.width = 'unset';
+        document.body.classList.remove('modal-open');
+        document.removeEventListener('keydown', handleEscape);
+      };
     }
   }, [isOpen, onClose]);
 
@@ -269,10 +282,19 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
           onClose();
         }
       }}
+      onWheel={(e) => {
+        // Prevent scroll events from propagating to background
+        e.stopPropagation();
+      }}
+      onTouchMove={(e) => {
+        // Prevent touch scroll on mobile
+        e.stopPropagation();
+      }}
     >
       <div
-        className="modal-container bg-white rounded-xl shadow-2xl w-full max-w-4xl lg:max-w-5xl xl:max-w-6xl h-[85vh] max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in-0 zoom-in-95 duration-300"
+        className="modal-container bg-white rounded-xl shadow-2xl w-full max-w-4xl lg:max-w-5xl xl:max-w-6xl h-[80vh] max-h-[85vh] flex flex-col animate-in fade-in-0 zoom-in-95 duration-300"
         onClick={(e) => e.stopPropagation()}
+        style={{ maxHeight: 'calc(100vh - 2rem)' }}
       >
         {/* Header with Enhanced Close Button */}
         <div className="bg-gradient-to-r from-pink-500 via-teal-500 via-purple-500 to-blue-500 p-6 text-white relative">
@@ -297,10 +319,10 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-h-0">
           {!hasSubmittedEmail ? (
             /* Email Capture Form - Enhanced Layout for Larger Modal */
-            <div className="flex-1 overflow-y-auto scrollbar-visible relative scroll-smooth min-h-0">
+            <div className="flex-1 overflow-y-auto scrollbar-visible relative scroll-smooth min-h-0 max-h-full">
               {/* Scroll indicator */}
               <div className="absolute top-2 right-6 z-20 bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-xs font-medium shadow-sm animate-pulse pointer-events-none">
                 Scroll for more info ↕️
@@ -393,7 +415,7 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
             /* Enhanced Chat Interface with Better Scrolling */
             <>
               {/* Chat Messages Area with Enhanced Scrolling and Scroll Indicator */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-visible relative min-h-0">
+              <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-visible relative min-h-0 max-h-full">
                 {/* Scroll indicator when messages overflow */}
                 {messages.length > 2 && (
                   <div className="absolute top-2 right-6 z-20 bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-xs font-medium shadow-sm animate-pulse pointer-events-none">
@@ -569,18 +591,30 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
         }
 
         /* Ensure modal stays within viewport */
+        .modal-container {
+          max-height: calc(100vh - 2rem) !important;
+          contain: layout style paint;
+        }
+
         @media (max-height: 600px) {
           .modal-container {
-            height: 95vh !important;
-            max-height: 95vh !important;
+            height: 90vh !important;
+            max-height: calc(100vh - 1rem) !important;
           }
         }
 
         @media (max-height: 500px) {
           .modal-container {
-            height: 98vh !important;
-            max-height: 98vh !important;
+            height: 95vh !important;
+            max-height: calc(100vh - 0.5rem) !important;
           }
+        }
+
+        /* Prevent background scroll when modal is open */
+        body.modal-open {
+          overflow: hidden !important;
+          position: fixed !important;
+          width: 100% !important;
         }
       `}</style>
     </div>
