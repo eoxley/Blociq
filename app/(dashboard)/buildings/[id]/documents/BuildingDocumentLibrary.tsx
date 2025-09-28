@@ -19,7 +19,17 @@ import {
   Grid,
   List,
   Filter,
-  X
+  X,
+  Flame,
+  Zap,
+  Droplets,
+  HardHat,
+  Building2,
+  FileContract,
+  Home,
+  Folders,
+  Star,
+  Sparkles
 } from 'lucide-react'
 import { useSupabase } from '@/components/SupabaseProvider'
 import { toast } from 'sonner'
@@ -57,17 +67,61 @@ interface Folder {
 // Function to get folder configuration for a category
 const getFolderConfig = (category: string): Folder => {
   const configs: Record<string, Omit<Folder, 'id' | 'category' | 'document_count'>> = {
-    'General Documents': { name: 'General Documents', icon: <Folder className="h-5 w-5" />, color: 'text-gray-600' },
-    'Compliance - Fire Safety': { name: 'Fire Safety', icon: <AlertTriangle className="h-5 w-5" />, color: 'text-red-600' },
-    'Compliance - Electrical': { name: 'Electrical Safety', icon: <CheckCircle className="h-5 w-5" />, color: 'text-yellow-600' },
-    'Compliance - Gas Safety': { name: 'Gas Safety', icon: <CheckCircle className="h-5 w-5" />, color: 'text-blue-600' },
-    'Compliance - Legionella': { name: 'Legionella Control', icon: <CheckCircle className="h-5 w-5" />, color: 'text-cyan-600' },
-    'Compliance - Asbestos': { name: 'Asbestos Management', icon: <AlertTriangle className="h-5 w-5" />, color: 'text-orange-600' },
-    'Compliance - Lift Safety': { name: 'Lift Safety', icon: <CheckCircle className="h-5 w-5" />, color: 'text-purple-600' },
-    'Compliance - Insurance': { name: 'Insurance', icon: <Shield className="h-5 w-5" />, color: 'text-green-600' },
-    'Compliance - Other': { name: 'Other Compliance', icon: <CheckCircle className="h-5 w-5" />, color: 'text-gray-600' },
-    'Leases - Building Wide': { name: 'Building Wide Leases', icon: <FileText className="h-5 w-5" />, color: 'text-indigo-600' },
-    'Leases - Unit Specific': { name: 'Unit Specific Leases', icon: <FileText className="h-5 w-5" />, color: 'text-blue-600' },
+    'General Documents': {
+      name: 'General Documents',
+      icon: <Folders className="h-6 w-6" />,
+      color: 'text-[#4f46e5]'
+    },
+    'Compliance - Fire Safety': {
+      name: 'Fire Safety Compliance',
+      icon: <Flame className="h-6 w-6" />,
+      color: 'text-red-500'
+    },
+    'Compliance - Electrical': {
+      name: 'Electrical Safety',
+      icon: <Zap className="h-6 w-6" />,
+      color: 'text-yellow-500'
+    },
+    'Compliance - Gas Safety': {
+      name: 'Gas Safety',
+      icon: <Flame className="h-6 w-6" />,
+      color: 'text-blue-500'
+    },
+    'Compliance - Legionella': {
+      name: 'Legionella Control',
+      icon: <Droplets className="h-6 w-6" />,
+      color: 'text-cyan-500'
+    },
+    'Compliance - Asbestos': {
+      name: 'Asbestos Management',
+      icon: <HardHat className="h-6 w-6" />,
+      color: 'text-orange-500'
+    },
+    'Compliance - Lift Safety': {
+      name: 'Lift Safety',
+      icon: <Building2 className="h-6 w-6" />,
+      color: 'text-purple-500'
+    },
+    'Compliance - Insurance': {
+      name: 'Insurance Documents',
+      icon: <Shield className="h-6 w-6" />,
+      color: 'text-green-500'
+    },
+    'Compliance - Other': {
+      name: 'Other Compliance',
+      icon: <CheckCircle className="h-6 w-6" />,
+      color: 'text-gray-500'
+    },
+    'Leases - Building Wide': {
+      name: 'Building Wide Leases',
+      icon: <FileContract className="h-6 w-6" />,
+      color: 'text-[#a855f7]'
+    },
+    'Leases - Unit Specific': {
+      name: 'Unit Specific Leases',
+      icon: <Home className="h-6 w-6" />,
+      color: 'text-[#4f46e5]'
+    },
   };
 
   const config = configs[category];
@@ -358,22 +412,32 @@ export default function BuildingDocumentLibrary({ building }: { building: Buildi
   return (
     <div className="space-y-8">
       {/* Hero Banner */}
-      <section className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] py-16 mx-6 rounded-3xl">
+      <section className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] py-16 mx-6 rounded-3xl shadow-2xl">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center">
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
-              Document Library
-            </h1>
-            <p className="text-xl text-white/90 max-w-3xl mx-auto leading-relaxed">
+            <div className="flex items-center justify-center gap-4 mb-6">
+              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
+                <Folders className="h-8 w-8 text-white" />
+              </div>
+              <h1 className="text-4xl md:text-5xl font-bold text-white">
+                Document Library
+              </h1>
+            </div>
+            <p className="text-xl text-white/90 max-w-3xl mx-auto leading-relaxed mb-6">
               {building.name} - Upload, organize, and manage your building documents
             </p>
+            <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm px-6 py-3 rounded-full text-white/90">
+              <Star className="h-5 w-5" />
+              <span className="font-medium">Powered by BlocIQ</span>
+            </div>
           </div>
         </div>
 
-        {/* Decorative Elements */}
+        {/* Enhanced Decorative Elements */}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-          <div className="absolute top-10 left-10 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-10 right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+          <div className="absolute top-10 left-10 w-32 h-32 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-10 right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+          <div className="absolute top-1/2 left-1/4 w-20 h-20 bg-white/5 rounded-full blur-2xl"></div>
         </div>
       </section>
 
@@ -455,48 +519,74 @@ export default function BuildingDocumentLibrary({ building }: { building: Buildi
 
       {/* Modern Folders Grid */}
       {!selectedFolder && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
-          {folders.map(folder => (
-            <button
-              key={folder.id}
-              onClick={() => setSelectedFolder(folder.category)}
-              className="group p-6 bg-white rounded-2xl border border-gray-200 hover:border-[#4f46e5]/30 hover:shadow-xl transition-all duration-200 text-left transform hover:-translate-y-1"
-            >
-              <div className={`${folder.color} mb-4 p-3 bg-gray-50 rounded-xl group-hover:bg-gradient-to-br group-hover:from-[#4f46e5]/10 group-hover:to-[#a855f7]/10 transition-all duration-200`}>
-                {folder.icon}
-              </div>
-              <h3 className="font-bold text-gray-900 group-hover:text-[#4f46e5] transition-colors text-lg mb-2">
-                {folder.name}
-              </h3>
-              <p className="text-sm text-gray-500 font-medium">{folder.document_count} document{folder.document_count !== 1 ? 's' : ''}</p>
-            </button>
-          ))}
+        <div className="space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-[#4f46e5] to-[#a855f7] rounded-lg flex items-center justify-center">
+              <Sparkles className="h-5 w-5 text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900">Document Categories</h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {folders.map(folder => (
+              <button
+                key={folder.id}
+                onClick={() => setSelectedFolder(folder.category)}
+                className="group relative p-6 bg-white rounded-2xl border border-gray-200 hover:border-[#4f46e5]/30 hover:shadow-xl transition-all duration-300 text-left transform hover:-translate-y-1 overflow-hidden"
+              >
+                {/* Background gradient on hover */}
+                <div className="absolute inset-0 bg-gradient-to-br from-[#4f46e5]/5 to-[#a855f7]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
+                <div className="relative">
+                  <div className={`${folder.color} mb-4 p-4 bg-gray-50 rounded-xl group-hover:bg-white group-hover:shadow-lg transition-all duration-300 w-fit`}>
+                    {folder.icon}
+                  </div>
+                  <h3 className="font-bold text-gray-900 group-hover:text-[#4f46e5] transition-colors text-lg mb-2 leading-tight">
+                    {folder.name}
+                  </h3>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-gray-500 font-medium">
+                      {folder.document_count} document{folder.document_count !== 1 ? 's' : ''}
+                    </p>
+                    {folder.document_count > 0 && (
+                      <div className="w-6 h-6 bg-[#4f46e5] text-white rounded-full flex items-center justify-center text-xs font-bold">
+                        {folder.document_count}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
       {/* Modern Documents List */}
       {selectedFolder && (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
+          <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-[#4f46e5]/5 to-[#a855f7]/5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="p-3 bg-gradient-to-br from-[#4f46e5] to-[#a855f7] rounded-xl">
-                  {folders.find(f => f.category === selectedFolder)?.icon}
+                <div className="p-4 bg-gradient-to-br from-[#4f46e5] to-[#a855f7] rounded-xl shadow-lg">
+                  <div className="text-white">
+                    {folders.find(f => f.category === selectedFolder)?.icon}
+                  </div>
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900">
-                    {folders.find(f => f.category === selectedFolder)?.name} Documents
+                    {folders.find(f => f.category === selectedFolder)?.name}
                   </h2>
-                  <p className="text-gray-600 mt-1">
+                  <p className="text-gray-600 mt-1 text-lg">
                     {filteredDocuments.length} document{filteredDocuments.length !== 1 ? 's' : ''} found
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setSelectedFolder(null)}
-                className="p-3 hover:bg-gray-100 rounded-xl transition-colors"
+                className="p-3 hover:bg-white/80 rounded-xl transition-all duration-200 hover:shadow-md"
+                title="Back to categories"
               >
-                <X className="h-5 w-5 text-gray-500" />
+                <X className="h-6 w-6 text-gray-500" />
               </button>
             </div>
           </div>
@@ -512,31 +602,31 @@ export default function BuildingDocumentLibrary({ building }: { building: Buildi
           ) : (
             <div className="divide-y divide-gray-100">
               {filteredDocuments.map(doc => (
-                <div key={doc.id} className="p-6 hover:bg-gray-50 transition-colors group">
+                <div key={doc.id} className="p-6 hover:bg-gradient-to-r hover:from-[#4f46e5]/5 hover:to-[#a855f7]/5 transition-all duration-200 group border-l-4 border-transparent hover:border-[#4f46e5]">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-gradient-to-br from-[#4f46e5]/10 to-[#a855f7]/10 rounded-xl flex items-center justify-center">
-                        <FileText className="h-6 w-6 text-[#4f46e5]" />
+                    <div className="flex items-center gap-6">
+                      <div className="w-14 h-14 bg-gradient-to-br from-[#4f46e5]/10 to-[#a855f7]/10 rounded-xl flex items-center justify-center group-hover:shadow-lg transition-all duration-200 group-hover:from-[#4f46e5]/20 group-hover:to-[#a855f7]/20">
+                        <FileText className="h-7 w-7 text-[#4f46e5] group-hover:text-[#4f46e5] transition-colors" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="font-bold text-gray-900 text-lg mb-1 group-hover:text-[#4f46e5] transition-colors">
+                        <h3 className="font-bold text-gray-900 text-lg mb-2 group-hover:text-[#4f46e5] transition-colors">
                           {doc.name}
                         </h3>
                         <div className="flex items-center gap-6 text-sm text-gray-500">
-                          <span className="flex items-center gap-1">
-                            <span className="w-2 h-2 bg-gray-400 rounded-full"></span>
-                            {doc.type}
+                          <span className="flex items-center gap-2 bg-gray-100 px-3 py-1 rounded-full">
+                            <FileText className="h-3 w-3" />
+                            {doc.type.split('/')[1]?.toUpperCase() || 'FILE'}
                           </span>
-                          <span className="flex items-center gap-1">
-                            <span className="w-2 h-2 bg-gray-400 rounded-full"></span>
+                          <span className="flex items-center gap-2">
+                            <span className="w-2 h-2 bg-[#4f46e5] rounded-full"></span>
                             {formatFileSize(doc.file_size)}
                           </span>
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-4 w-4" />
+                          <span className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-[#4f46e5]" />
                             {formatDate(doc.uploaded_at)}
                           </span>
-                          <span className="flex items-center gap-1">
-                            <User className="h-4 w-4" />
+                          <span className="flex items-center gap-2">
+                            <User className="h-4 w-4 text-[#a855f7]" />
                             {doc.uploaded_by}
                           </span>
                         </div>
