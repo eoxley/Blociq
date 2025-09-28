@@ -1,20 +1,20 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { 
-  Building2, 
-  MapPin, 
-  Users, 
-  Shield, 
-  Key, 
-  Phone, 
-  Mail, 
-  FileText, 
-  Edit3, 
-  Save, 
-  X, 
-  Home, 
-  Wrench, 
+import {
+  Building2,
+  MapPin,
+  Users,
+  Shield,
+  Key,
+  Phone,
+  Mail,
+  FileText,
+  Edit3,
+  Save,
+  X,
+  Home,
+  Wrench,
   Calendar,
   Lock,
   User,
@@ -23,7 +23,10 @@ import {
   Clock,
   ChevronLeft,
   Settings,
-  Sparkles
+  Sparkles,
+  CreditCard,
+  Banknote,
+  RefreshCw
 } from 'lucide-react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
@@ -45,6 +48,18 @@ interface Building {
   is_hrb: boolean | null
   created_at: string
   updated_at: string
+  freeholder_name?: string | null
+  freeholder_address?: string | null
+  ground_rent_amount?: number | null
+  ground_rent_frequency?: string | null
+  service_charge_budget?: number | null
+  service_charge_frequency?: string | null
+  management_start_date?: string | null
+  lease_term_years?: number | null
+  ground_rent_review_pattern?: string | null
+  insurance_renewal_date?: string | null
+  reserve_fund_balance?: number | null
+  lease_data_source?: string | null
 }
 
 interface BuildingSetup {
@@ -109,6 +124,43 @@ export default function BuildingDetailClient({
   const [isSaving, setIsSaving] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [leaseholders, setLeaseholders] = useState<Record<string, Leaseholder>>({})
+  const [isSyncing, setIsSyncing] = useState(false)
+
+  // Sync building data with lease information
+  const syncWithLeases = async () => {
+    setIsSyncing(true)
+    try {
+      const response = await fetch('/api/buildings/update-from-lease', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ buildingId }),
+      })
+
+      const result = await response.json()
+
+      if (result.updated) {
+        // Refresh the page to show updated data
+        window.location.reload()
+      } else {
+        console.log('No updates needed:', result.message)
+      }
+    } catch (error) {
+      console.error('Failed to sync with leases:', error)
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
+  // Format currency display
+  const formatCurrency = (amount: number | null) => {
+    if (!amount) return null
+    return new Intl.NumberFormat('en-GB', {
+      style: 'currency',
+      currency: 'GBP'
+    }).format(amount)
+  }
 
   // Fetch leaseholder data for units
   useEffect(() => {
@@ -325,17 +377,30 @@ export default function BuildingDetailClient({
           {renderEditableField('name', building.name || '', 'Building Name')}
           {renderEditableField('address', building.address || '', 'Address:', 'Enter building address')}
           {renderEditableField('setup_structure_type', buildingSetup?.structure_type || '', 'Structure Type')}
-          {renderEditableField('setup_client_name', buildingSetup?.client_name || '', 'Freeholder/RMC')}
+          {renderEditableField('freeholder_name', building.freeholder_name || '', 'Freeholder/RMC')}
           <InfoRow label="Number of Units:" value={<span>{units?.length || 0}</span>} />
-          <InfoRow 
-            label="Status:" 
+          <InfoRow
+            label="Status:"
             value={
-              <span className={`px-2 py-1 rounded text-xs font-medium ${
-                building.is_hrb ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
-              }`}>
-                {building.is_hrb ? 'HRB' : 'Standard'}
-              </span>
-            } 
+              <div className="flex items-center gap-2">
+                <span className={`px-2 py-1 rounded text-xs font-medium ${
+                  building.is_hrb ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+                }`}>
+                  {building.is_hrb ? 'HRB' : 'Standard'}
+                </span>
+                {building.lease_data_source && (
+                  <button
+                    onClick={syncWithLeases}
+                    disabled={isSyncing}
+                    className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 transition-colors disabled:opacity-50"
+                    title="Sync with lease data"
+                  >
+                    <RefreshCw className={`h-3 w-3 ${isSyncing ? 'animate-spin' : ''}`} />
+                    Sync Leases
+                  </button>
+                )}
+              </div>
+            }
           />
         </div>
       </SectionCard>
@@ -357,6 +422,139 @@ export default function BuildingDetailClient({
           {renderEditableField('notes', building.notes || '', 'Fire Panel Code', 'Enter fire panel code')}
           {renderEditableField('setup_keys_location', buildingSetup?.keys_location || '', 'Keys Location', 'Enter keys location')}
           {renderEditableField('setup_emergency_access', buildingSetup?.emergency_access || '', 'Emergency Access', 'Enter emergency access details')}
+        </div>
+      </SectionCard>
+
+      {/* Financial Information Section */}
+      <SectionCard className="group">
+        <div className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] px-4 py-3 rounded-t-2xl">
+          <div className="flex items-center justify-between text-white">
+            <div className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              <h3 className="font-semibold">Financial Information</h3>
+            </div>
+            {building.lease_data_source && (
+              <span className="text-xs text-white/80 bg-white/20 px-2 py-1 rounded">
+                From Lease Analysis
+              </span>
+            )}
+          </div>
+          {/* Decorative elements */}
+          <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-full blur-xl"></div>
+          <div className="absolute bottom-0 left-4 w-8 h-8 bg-white/5 rounded-full blur-lg"></div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <InfoRow
+            label="Ground Rent:"
+            value={
+              building.ground_rent_amount ? (
+                <div>
+                  <span className="font-medium">{formatCurrency(building.ground_rent_amount)}</span>
+                  {building.ground_rent_frequency && (
+                    <span className="text-sm text-gray-600 ml-1">
+                      {building.ground_rent_frequency}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <EmptyValue label="Add Ground Rent" onClick={() => startEditing('ground_rent_amount', '')} />
+              )
+            }
+          />
+          <InfoRow
+            label="Service Charge Budget:"
+            value={
+              building.service_charge_budget ? (
+                <div>
+                  <span className="font-medium">{formatCurrency(building.service_charge_budget)}</span>
+                  {building.service_charge_frequency && (
+                    <span className="text-sm text-gray-600 ml-1">
+                      ({building.service_charge_frequency})
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <EmptyValue label="Add Service Charge" onClick={() => startEditing('service_charge_budget', '')} />
+              )
+            }
+          />
+          <InfoRow
+            label="Management Start:"
+            value={
+              building.management_start_date ? (
+                <span className="font-medium">
+                  {new Date(building.management_start_date).toLocaleDateString('en-GB')}
+                </span>
+              ) : (
+                <EmptyValue label="Add Start Date" onClick={() => startEditing('management_start_date', '')} />
+              )
+            }
+          />
+          <InfoRow
+            label="Insurance Renewal:"
+            value={
+              building.insurance_renewal_date ? (
+                <span className="font-medium">
+                  {new Date(building.insurance_renewal_date).toLocaleDateString('en-GB')}
+                </span>
+              ) : (
+                <EmptyValue label="Add Renewal Date" onClick={() => startEditing('insurance_renewal_date', '')} />
+              )
+            }
+          />
+          {building.ground_rent_review_pattern && (
+            <InfoRow
+              label="Ground Rent Review:"
+              value={<span className="font-medium">{building.ground_rent_review_pattern}</span>}
+            />
+          )}
+          {building.lease_term_years && (
+            <InfoRow
+              label="Lease Term:"
+              value={<span className="font-medium">{building.lease_term_years} years</span>}
+            />
+          )}
+        </div>
+
+        {/* Demand Dates Section */}
+        <div className="mt-6 pt-4 border-t border-gray-200">
+          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Demand Dates & Service Charge Year End
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <InfoRow
+              label="Service Charge Year End:"
+              value={
+                building.service_charge_frequency ? (
+                  <div>
+                    <span className="font-medium">
+                      {building.service_charge_frequency === 'quarterly' ? 'Quarterly demands' :
+                       building.service_charge_frequency === 'half-yearly' ? 'Half-yearly demands' :
+                       'Annual demand'}
+                    </span>
+                  </div>
+                ) : (
+                  <EmptyValue label="Set from lease" onClick={() => {}} />
+                )
+              }
+            />
+            <InfoRow
+              label="Ground Rent Demands:"
+              value={
+                building.ground_rent_frequency ? (
+                  <span className="font-medium">
+                    {building.ground_rent_frequency === 'quarterly' ? 'Quarterly' :
+                     building.ground_rent_frequency === 'half-yearly' ? 'Half-yearly' :
+                     'Annual'}
+                  </span>
+                ) : (
+                  <EmptyValue label="Set from lease" onClick={() => {}} />
+                )
+              }
+            />
+          </div>
         </div>
       </SectionCard>
 

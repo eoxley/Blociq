@@ -77,6 +77,40 @@ export async function POST(request: NextRequest) {
         assignment: 'Assignment requires landlord consent',
         alterations: 'No alterations without written consent',
         insurance: 'Leaseholder to insure contents, landlord insures building'
+      },
+      analysis_json: {
+        parties: {
+          freeholder: {
+            name: 'Ashwood Estates Limited',
+            address: '123 Property Lane, London SW1A 1AA'
+          },
+          leaseholder: 'Sample Leaseholder'
+        },
+        clauses: {
+          ground_rent: {
+            amount: 250,
+            frequency: 'yearly',
+            review_pattern: 'Every 25 years, doubling',
+            review_cycle: 'Doubling every 25 years'
+          },
+          service_charge: {
+            annual_budget: 12000,
+            payment_frequency: 'quarterly',
+            frequency: 'quarterly'
+          },
+          insurance: {
+            renewal_date: '2024-12-31',
+            landlord_responsibility: 'Building insurance',
+            tenant_responsibility: 'Contents insurance'
+          },
+          freeholder: 'Ashwood Estates Limited, 123 Property Lane, London SW1A 1AA'
+        },
+        summary: {
+          lease_term: 99,
+          term_years: 99,
+          lease_start_date: '2020-01-01',
+          commencement_date: '2020-01-01'
+        }
       }
     }
 
@@ -123,6 +157,26 @@ export async function POST(request: NextRequest) {
     if (documentError) {
       console.error('Document creation error:', documentError)
       // Don't fail the request if document creation fails
+    }
+
+    // Automatically sync building data with lease information
+    try {
+      const syncResponse = await fetch(`${request.url.split('/api')[0]}/api/buildings/update-from-lease`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          leaseId: leaseData.id,
+          buildingId: buildingId
+        }),
+      })
+
+      const syncResult = await syncResponse.json()
+      console.log('Building sync result:', syncResult.message)
+    } catch (syncError) {
+      console.error('Failed to sync building with lease data:', syncError)
+      // Don't fail the main request if sync fails
     }
 
     return NextResponse.json({
