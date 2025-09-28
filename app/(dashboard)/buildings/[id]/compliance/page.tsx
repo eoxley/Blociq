@@ -80,7 +80,7 @@ interface ComplianceSummary {
   compliant_count: number
   overdue_count: number
   upcoming_count: number
-  not_applied_count: number
+  actions_count: number
   compliance_percentage: number
 }
 
@@ -97,7 +97,7 @@ export default function BuildingCompliancePage() {
     compliant_count: 0,
     overdue_count: 0,
     upcoming_count: 0,
-    not_applied_count: 0,
+    actions_count: 0,
     compliance_percentage: 0
   })
   const [loading, setLoading] = useState(true)
@@ -150,7 +150,7 @@ export default function BuildingCompliancePage() {
       if (error) throw error
 
       setComplianceData(data || [])
-      calculateSummary(data || [])
+      await calculateSummary(data || [])
     } catch (err) {
       console.error('Error fetching compliance data:', err)
       setError(err instanceof Error ? err.message : 'Failed to fetch compliance data')
@@ -174,19 +174,34 @@ export default function BuildingCompliancePage() {
     }
   }
 
-  const calculateSummary = (data: BuildingComplianceAsset[]) => {
+  const calculateSummary = async (data: BuildingComplianceAsset[]) => {
     const total = data.length
     const compliant = data.filter(item => item.status === 'compliant').length
     const overdue = data.filter(item => item.status === 'overdue').length
     const upcoming = data.filter(item => item.status === 'upcoming').length
-    const notApplied = data.filter(item => item.status === 'not_applied').length
-    
+
+    // Fetch action items count from the database
+    let actionsCount = 0
+    try {
+      const { data: actions, error } = await supabase
+        .from('action_items')
+        .select('id', { count: 'exact' })
+        .eq('building_id', buildingId)
+        .eq('status', 'pending')
+
+      if (!error) {
+        actionsCount = actions?.length || 0
+      }
+    } catch (err) {
+      console.error('Error fetching actions count:', err)
+    }
+
     setSummary({
       total_assets: total,
       compliant_count: compliant,
       overdue_count: overdue,
       upcoming_count: upcoming,
-      not_applied_count: notApplied,
+      actions_count: actionsCount,
       compliance_percentage: total > 0 ? Math.round((compliant / total) * 100) : 0
     })
   }
@@ -307,17 +322,33 @@ export default function BuildingCompliancePage() {
     return colors[category] || 'bg-gray-100 text-gray-800 border-gray-200'
   }
 
+  // Get unique categories from actual data for dynamic filtering
+  const uniqueCategories = Array.from(new Set(
+    complianceData
+      .map(item => item.compliance_assets?.category)
+      .filter(category => category)
+  )).sort()
+
   const filteredComplianceData = complianceData.filter(item => {
-    const matchesSearch = !searchQuery || 
+    const matchesSearch = !searchQuery ||
       item.compliance_assets?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.compliance_assets?.description?.toLowerCase().includes(searchQuery.toLowerCase())
-    
-    const matchesCategory = filterCategory === 'all' || 
+
+    const matchesCategory = filterCategory === 'all' ||
       item.compliance_assets?.category === filterCategory
-    
-    const matchesStatus = filterStatus === 'all' || 
+
+    const matchesStatus = filterStatus === 'all' ||
       item.status === filterStatus
-    
+
+    // Debug logging (can be removed in production)
+    if (filterCategory !== 'all' && !matchesCategory) {
+      console.log('Filter mismatch:', {
+        expected: filterCategory,
+        actual: item.compliance_assets?.category,
+        itemName: item.compliance_assets?.name
+      })
+    }
+
     return matchesSearch && matchesCategory && matchesStatus
   })
 
@@ -373,181 +404,9 @@ export default function BuildingCompliancePage() {
                 <RefreshCw className="h-5 w-5" />
               </button>
               
+              {/* Action buttons section cleaned up - removed test and non-functional buttons */}
               <div className="flex gap-3">
-                <button
-                  onClick={async () => {
-                    try {
-                      const response = await fetch('/api/compliance/setup', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ buildingId })
-                      });
-                      const result = await response.json();
-                      if (result.success) {
-                        toast.success(`Setup complete! Created ${result.assetsCreated} assets`);
-                        fetchComplianceData();
-                      } else {
-                        toast.error('Setup failed: ' + result.error);
-                      }
-                    } catch (err) {
-                      toast.error('Setup failed');
-                    }
-                  }}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-green-600/90 backdrop-blur-sm text-white rounded-lg hover:bg-green-700 transition-all duration-200 text-sm"
-                >
-                  <Settings className="h-4 w-4" />
-                  Quick Setup
-                </button>
-
-                <button
-                  onClick={async () => {
-                    if (!confirm('Are you sure you want to delete ALL compliance analysis data for this building? This will remove all documents, analysis, and action items but keep the compliance assets for future use.')) {
-                      return
-                    }
-
-                    try {
-                      const response = await fetch('/api/compliance/delete-analysis', {
-                        method: 'DELETE',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          buildingId: buildingId,
-                          deleteType: 'analysis_only'
-                        })
-                      })
-
-                      const result = await response.json()
-
-                      if (response.ok) {
-                        toast.success(`All analysis cleared: ${result.message}`)
-                        fetchComplianceData()
-                      } else {
-                        throw new Error(result.error || 'Failed to clear analysis')
-                      }
-                    } catch (err) {
-                      toast.error('Failed to clear analysis: ' + err.message)
-                    }
-                  }}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-orange-600/90 backdrop-blur-sm text-white rounded-lg hover:bg-orange-700 transition-all duration-200 text-sm"
-                >
-                  <X className="h-4 w-4" />
-                  Clear All Analysis
-                </button>
-
-                <button
-                  onClick={async () => {
-                    try {
-                      const fireRiskData = {
-                        document_type: "Fire Risk Assessment",
-                        compliance_status: "Requires-Action",
-                        property_details: {
-                          address: "42 Ashwood Gardens, London, SW19 8JR",
-                          description: "Residential House (HMO)",
-                          client: "Ashwood Property Management Ltd"
-                        },
-                        inspection_details: {
-                          inspection_date: "2024-03-15",
-                          next_inspection_due: "2025-03-15",
-                          inspector: "Michael Thompson",
-                          company: "Fire Safety Consultants Ltd",
-                          certificate_number: "FRA-ASH-2024-003"
-                        },
-                        key_findings: [
-                          {
-                            priority: "High",
-                            urgency: "IMMEDIATE",
-                            description: "Smoke detector in hallway not functioning",
-                            location: "Ground Floor",
-                            action: "Replace faulty smoke detector immediately"
-                          },
-                          {
-                            priority: "Medium",
-                            urgency: "WITHIN 1 MONTH",
-                            description: "Emergency lighting unit requires battery replacement",
-                            location: "Stairwell",
-                            action: "Replace emergency lighting battery"
-                          },
-                          {
-                            priority: "Medium",
-                            urgency: "WITHIN 2 MONTHS",
-                            description: "Fire extinguisher requires annual service",
-                            location: "Kitchen",
-                            action: "Arrange professional service"
-                          },
-                          {
-                            priority: "Low",
-                            urgency: "WITHIN 3 MONTHS",
-                            description: "Fire door closer requires adjustment",
-                            location: "Bedroom 3",
-                            action: "Adjust door closer mechanism"
-                          }
-                        ],
-                        recommendations: [
-                          {
-                            description: "Replace faulty smoke detector in ground floor hallway",
-                            reason: "Faulty smoke detector poses immediate fire risk",
-                            timeframe: "Within 24 hours",
-                            reference: "Regulatory Reform (Fire Safety) Order 2005"
-                          },
-                          {
-                            description: "Replace emergency lighting battery in main stairwell",
-                            reason: "Non-functional emergency lighting poses risk in case of fire",
-                            timeframe: "Within 1 month",
-                            reference: "Regulatory Reform (Fire Safety) Order 2005"
-                          }
-                        ],
-                        risk_assessment: {
-                          overall_risk: "MEDIUM",
-                          immediate_hazards: ["Faulty smoke detector in ground floor hallway"]
-                        },
-                        regulatory_compliance: {
-                          meets_current_standards: false,
-                          relevant_regulations: "Regulatory Reform (Fire Safety) Order 2005"
-                        },
-                        expiry_date: "2025-03-15"
-                      };
-
-                      const response = await fetch('/api/compliance/create-from-analysis', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          buildingId: buildingId,
-                          analysisData: fireRiskData,
-                          documentJobId: 'test-fra-' + Date.now()
-                        })
-                      });
-
-                      const result = await response.json();
-                      if (result.success) {
-                        toast.success(`Fire Risk Assessment processed! Created ${result.actions_created} action items`);
-                        fetchComplianceData();
-                      } else {
-                        toast.error('Processing failed: ' + result.error);
-                      }
-                    } catch (err) {
-                      toast.error('Processing failed: ' + err.message);
-                    }
-                  }}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-red-600/90 backdrop-blur-sm text-white rounded-lg hover:bg-red-700 transition-all duration-200 text-sm"
-                >
-                  <Shield className="h-4 w-4" />
-                  Test Fire Assessment
-                </button>
-                
-                <button
-                  onClick={() => router.push('/documents/compliance')}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-white/20 backdrop-blur-sm text-white rounded-lg hover:bg-white/30 transition-all duration-200 border border-white/30"
-                >
-                  <Upload className="h-5 w-5" />
-                  Upload Document
-                </button>
-                
-                <button
-                  onClick={() => router.push(`/buildings/${buildingId}/compliance/setup`)}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-white/20 backdrop-blur-sm text-white rounded-lg hover:bg-white/30 transition-all duration-200 border border-white/30"
-                >
-                  <Plus className="h-5 w-5" />
-                  Set Up Compliance
-                </button>
+                {/* Keep only functional buttons if needed in future */}
               </div>
             </div>
           </div>
@@ -642,12 +501,12 @@ export default function BuildingCompliancePage() {
               <p className="text-3xl font-bold text-yellow-700">{summary.upcoming_count}</p>
             </div>
             
-            <div className="bg-gradient-to-br from-gray-50 to-slate-50 border border-gray-200 rounded-xl p-6 text-center">
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 text-center">
               <div className="flex items-center justify-center mb-3">
-                <AlertCircle className="h-8 w-8 text-gray-500" />
+                <TrendingUp className="h-8 w-8 text-blue-500" />
               </div>
-              <p className="text-sm font-medium text-gray-600 mb-1">Not Applied</p>
-              <p className="text-3xl font-bold text-gray-700">{summary.not_applied_count}</p>
+              <p className="text-sm font-medium text-blue-600 mb-1">Actions</p>
+              <p className="text-3xl font-bold text-blue-700">{summary.actions_count}</p>
             </div>
           </div>
 
@@ -706,13 +565,11 @@ export default function BuildingCompliancePage() {
                   className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="all">All Categories</option>
-                  <option value="Fire Safety">Fire Safety</option>
-                  <option value="Electrical Safety">Electrical Safety</option>
-                  <option value="Gas Safety">Gas Safety</option>
-                  <option value="Water Safety">Water Safety</option>
-                  <option value="Structural Safety">Structural Safety</option>
-                  <option value="Accessibility">Accessibility</option>
-                  <option value="Environmental">Environmental</option>
+                  {uniqueCategories.map(category => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -728,7 +585,6 @@ export default function BuildingCompliancePage() {
                   <option value="compliant">Compliant</option>
                   <option value="overdue">Overdue</option>
                   <option value="upcoming">Upcoming</option>
-                  <option value="not_applied">Not Applied</option>
                 </select>
               </div>
             </div>
