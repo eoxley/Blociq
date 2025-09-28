@@ -337,6 +337,7 @@ ${extractedText.substring(0, 60000)}
       .from('document_jobs')
       .update({
         summary_json: summary,
+        analysis_json: summary, // Store as both for compatibility
         updated_at: new Date().toISOString()
       })
       .eq('id', jobId);
@@ -351,6 +352,51 @@ ${extractedText.substring(0, 60000)}
       // Don't fail the whole request, just log the error
     } else {
       console.log('✅ Successfully updated document_jobs with analysis for job:', jobId);
+    }
+
+    // Check if this lease can be auto-linked to a building
+    // This happens when user provides a building context or if we can infer it
+    try {
+      // Get job details to check for building context
+      const { data: jobData, error: jobFetchError } = await serviceSupabase
+        .from('document_jobs')
+        .select('*')
+        .eq('id', jobId)
+        .single();
+
+      if (!jobFetchError && jobData) {
+        // Check if there's building context in metadata or if this is from lease mode
+        const buildingId = jobData.metadata?.building_id || jobData.building_id;
+
+        if (buildingId) {
+          console.log(`🔗 Auto-linking lease analysis to building: ${buildingId}`);
+
+          // Call our link API to save as building document and create lease entry
+          const linkResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/lease-lab/link-to-building`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`
+            },
+            body: JSON.stringify({
+              jobId: jobId,
+              buildingId: buildingId
+            })
+          });
+
+          if (linkResponse.ok) {
+            const linkResult = await linkResponse.json();
+            console.log('✅ Auto-linked lease to building:', linkResult.message);
+          } else {
+            console.warn('⚠️ Failed to auto-link lease to building:', await linkResponse.text());
+          }
+        } else {
+          console.log('ℹ️ No building context found - lease will need manual linking');
+        }
+      }
+    } catch (linkError) {
+      console.warn('⚠️ Error attempting to auto-link lease:', linkError);
+      // Don't fail the analysis if linking fails
     }
 
     return NextResponse.json({

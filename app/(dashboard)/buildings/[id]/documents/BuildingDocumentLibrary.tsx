@@ -164,11 +164,11 @@ export default function BuildingDocumentLibrary({ building }: { building: Buildi
 
   useEffect(() => {
     fetchDocuments()
-  }, [fetchDocuments])
+  }, [building.id, supabase])
 
   useEffect(() => {
     filterDocuments()
-  }, [filterDocuments])
+  }, [documents, searchTerm, selectedFolder])
 
   const fetchDocuments = useCallback(async () => {
     try {
