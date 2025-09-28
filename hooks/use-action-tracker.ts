@@ -274,29 +274,39 @@ export function useActionTracker(buildingId: string) {
     items,
     stats,
     showCompleted,
-    
+
     // Loading states
     isLoading,
     error,
     isCreating: createItemMutation.isPending,
     isUpdating: updateItemMutation.isPending,
     isDeleting: deleteItemMutation.isPending,
-    
+
     // Actions
-    createItem: createItemMutation.mutate,
-    updateItem: (id: string, updates: UpdateTrackerItem) => 
+    createItem: (newItem: CreateTrackerItem, options?: { onSuccess?: () => void }) => {
+      createItemMutation.mutate(newItem, {
+        onSuccess: () => {
+          options?.onSuccess?.();
+        },
+        onError: (error) => {
+          console.error('Failed to create action item:', error);
+          // Could add toast notification here if needed
+        }
+      });
+    },
+    updateItem: (id: string, updates: UpdateTrackerItem) =>
       updateItemMutation.mutate({ id, updates }),
     deleteItem: deleteItemMutation.mutate,
     toggleItemCompleted,
     toggleShowCompleted,
     refetch,
-    
+
     // Helpers
     isItemOverdue,
     isItemDueSoon,
     getPriorityColor,
     getSourceIcon,
-    
+
     // Mutation objects for error handling
     createItemError: createItemMutation.error,
     updateItemError: updateItemMutation.error,

@@ -126,7 +126,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 backdrop-blur-sm bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold text-gray-900">Add New Action Item</h3>
@@ -434,7 +434,9 @@ const TrackerItemRow: React.FC<TrackerItemRowProps> = ({
 // Main ActionTracker Component
 export default function ActionTracker({ buildingId }: ActionTrackerProps) {
   const [showAddDialog, setShowAddDialog] = useState(false);
-  
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
   const {
     items,
     stats,
@@ -451,15 +453,24 @@ export default function ActionTracker({ buildingId }: ActionTrackerProps) {
     isItemDueSoon,
     getPriorityColor,
     getSourceIcon,
+    createItemError,
   } = useActionTracker(buildingId);
 
   const handleCreateItem = (newItem: CreateTrackerItem) => {
     createItem(newItem, {
       onSuccess: () => {
         setShowAddDialog(false);
+        setShowError(false);
+        setErrorMessage('');
       }
     });
   };
+
+  // Show error messages from createItem failures
+  if (createItemError && !showError) {
+    setShowError(true);
+    setErrorMessage(createItemError.message || 'Failed to create action item');
+  }
 
   if (error) {
     return (
@@ -479,6 +490,20 @@ export default function ActionTracker({ buildingId }: ActionTrackerProps) {
 
   return (
     <>
+      {/* Error Notification */}
+      {showError && (
+        <div className="fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2">
+          <AlertTriangle className="h-5 w-5" />
+          <span>{errorMessage}</span>
+          <button
+            onClick={() => setShowError(false)}
+            className="text-white hover:text-red-200 ml-2"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       <SectionCard className="group backdrop-blur-sm bg-white/80">
         <div className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] px-4 py-3 rounded-t-2xl backdrop-blur-md bg-opacity-90">
           <div className="flex items-center justify-between text-white">
