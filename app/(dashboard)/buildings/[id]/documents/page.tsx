@@ -39,12 +39,12 @@ export default async function BuildingDocumentsPage({ params }: BuildingDocument
             <p className="text-gray-600 mb-4">We couldn't find the building you're looking for.</p>
             <p className="text-sm text-gray-500 mb-4">Building ID: {id}</p>
             <div className="space-x-4">
-              <button
-                onClick={() => window.location.reload()}
-                className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] text-white px-4 py-2 rounded-lg hover:opacity-90"
+              <a
+                href={`/buildings/${id}/documents`}
+                className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] text-white px-4 py-2 rounded-lg hover:opacity-90 inline-block"
               >
                 Try Again
-              </button>
+              </a>
               <a
                 href="/buildings"
                 className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:opacity-90 inline-block"
@@ -111,12 +111,12 @@ export default async function BuildingDocumentsPage({ params }: BuildingDocument
           <p className="text-gray-600 mb-4">An error occurred while loading the building details.</p>
           <p className="text-sm text-gray-500 mb-4">Building ID: {id}</p>
           <div className="space-x-4">
-            <button
-              onClick={() => window.location.reload()}
-              className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] text-white px-4 py-2 rounded-lg hover:opacity-90"
+            <a
+              href={`/buildings/${id}/documents`}
+              className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] text-white px-4 py-2 rounded-lg hover:opacity-90 inline-block"
             >
               Try Again
-            </button>
+            </a>
             <a
               href="/buildings"
               className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:opacity-90 inline-block"

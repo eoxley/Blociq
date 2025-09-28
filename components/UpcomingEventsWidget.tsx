@@ -94,13 +94,39 @@ export default function UpcomingEventsWidget({
             notes,
             priority,
             completed,
-            buildings(id, name, address)
+            building_id
           `)
           .not("due_date", "is", null)
           .eq("completed", false)
           .gte("due_date", new Date().toISOString().split('T')[0])
           .order("due_date", { ascending: true })
           .limit(10)
+          .then(async (response) => {
+            if (response.error) {
+              console.log('Action tracker table not available:', response.error.message);
+              return { data: [], error: null };
+            }
+
+            // If we have data, fetch building info separately to avoid join issues
+            if (response.data && response.data.length > 0) {
+              const buildingIds = [...new Set(response.data.map(item => item.building_id))];
+              const { data: buildingsData } = await supabase
+                .from("buildings")
+                .select("id, name, address")
+                .in("id", buildingIds);
+
+              // Map building info to action tracker items
+              const enhancedData = response.data.map(item => ({
+                ...item,
+                buildings: buildingsData?.find(b => b.id === item.building_id) || null
+              }));
+
+              return { data: enhancedData, error: null };
+            }
+
+            return response;
+          })
+          .catch(() => ({ data: [], error: null }))
       ]);
 
       // Safe destructuring with fallback
