@@ -23,6 +23,8 @@ import {
 } from 'lucide-react';
 import { useActionTracker, TrackerItem, CreateTrackerItem, UpdateTrackerItem } from '@/hooks/use-action-tracker';
 import SectionCard from '@/components/ui/SectionCard';
+import AISuggestionsPanel, { AISuggestion } from './AISuggestionsPanel';
+import ContractorSuggestionModal from './ContractorSuggestionModal';
 
 interface ActionTrackerProps {
   buildingId: string;
@@ -436,6 +438,8 @@ export default function ActionTracker({ buildingId }: ActionTrackerProps) {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showError, setShowError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [showContractorModal, setShowContractorModal] = useState(false);
+  const [selectedSuggestion, setSelectedSuggestion] = useState<AISuggestion | null>(null);
 
   const {
     items,
@@ -464,6 +468,35 @@ export default function ActionTracker({ buildingId }: ActionTrackerProps) {
         setErrorMessage('');
       }
     });
+  };
+
+  const handleAcceptSuggestion = (suggestion: AISuggestion) => {
+    // Convert AI suggestion to action item
+    const newItem: CreateTrackerItem = {
+      item_text: suggestion.text,
+      priority: suggestion.priority,
+      due_date: suggestion.suggestedDueDate || null,
+      notes: `AI Suggested: ${suggestion.reasoning}`,
+      source: suggestion.source.replace('AI_', '') as 'Manual' | 'Meeting' | 'Call' | 'Email'
+    };
+
+    // Create the action item
+    createItem(newItem, {
+      onSuccess: () => {
+        // If contractor suggested, show contractor options
+        if (suggestion.contractorSuggestion) {
+          setSelectedSuggestion(suggestion);
+          setShowContractorModal(true);
+        }
+      }
+    });
+  };
+
+  const handleCreateWorkOrder = (suggestion: AISuggestion, contractorInfo: any) => {
+    // This would integrate with contractor management
+    console.log('Creating work order for:', suggestion, contractorInfo);
+    setShowContractorModal(false);
+    setSelectedSuggestion(null);
   };
 
   // Show error messages from createItem failures
@@ -503,6 +536,12 @@ export default function ActionTracker({ buildingId }: ActionTrackerProps) {
           </button>
         </div>
       )}
+
+      {/* AI Suggestions Panel */}
+      <AISuggestionsPanel
+        buildingId={buildingId}
+        onAcceptSuggestion={handleAcceptSuggestion}
+      />
 
       <SectionCard className="group backdrop-blur-sm bg-white/80">
         <div className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] px-4 py-3 rounded-t-2xl backdrop-blur-md bg-opacity-90">
@@ -608,6 +647,17 @@ export default function ActionTracker({ buildingId }: ActionTrackerProps) {
         onClose={() => setShowAddDialog(false)}
         onSubmit={handleCreateItem}
         isCreating={isCreating}
+      />
+
+      {/* Contractor Suggestion Modal */}
+      <ContractorSuggestionModal
+        isOpen={showContractorModal}
+        suggestion={selectedSuggestion}
+        onClose={() => {
+          setShowContractorModal(false);
+          setSelectedSuggestion(null);
+        }}
+        onCreateWorkOrder={handleCreateWorkOrder}
       />
     </>
   );

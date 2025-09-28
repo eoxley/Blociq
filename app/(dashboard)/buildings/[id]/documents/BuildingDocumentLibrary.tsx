@@ -72,6 +72,21 @@ const getFolderConfig = (category: string): Folder => {
       icon: <Folders className="h-6 w-6" />,
       color: 'text-[#4f46e5]'
     },
+    'compliance': {
+      name: 'Compliance Documents',
+      icon: <Shield className="h-6 w-6" />,
+      color: 'text-green-500'
+    },
+    'leases': {
+      name: 'Lease Documents',
+      icon: <FileContract className="h-6 w-6" />,
+      color: 'text-[#a855f7]'
+    },
+    'other': {
+      name: 'Other Documents',
+      icon: <Folders className="h-6 w-6" />,
+      color: 'text-gray-500'
+    },
     'Compliance - Fire Safety': {
       name: 'Fire Safety Compliance',
       icon: <Flame className="h-6 w-6" />,
@@ -159,7 +174,7 @@ export default function BuildingDocumentLibrary({ building }: { building: Buildi
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [uploadCategory, setUploadCategory] = useState('General Documents')
+  const [uploadCategory, setUploadCategory] = useState('other')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -664,12 +679,14 @@ export default function BuildingDocumentLibrary({ building }: { building: Buildi
                   onChange={(e) => setUploadCategory(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
+                  <option value="other">Other Documents</option>
+                  <option value="leases">Lease Documents</option>
+                  <option value="compliance">Compliance Documents</option>
                   {folders.map(folder => (
                     <option key={folder.id} value={folder.category}>
                       {folder.name}
                     </option>
                   ))}
-                  <option value="General Documents">General Documents</option>
                 </select>
               </div>
               <div className="flex justify-end gap-3">

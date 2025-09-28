@@ -14,7 +14,14 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
-  Info
+  Info,
+  UserCheck,
+  CreditCard,
+  Clock,
+  FileText,
+  MapPin,
+  Scale,
+  Banknote
 } from 'lucide-react'
 import { useSupabase } from '@/components/SupabaseProvider'
 import { toast } from 'sonner'
@@ -31,6 +38,12 @@ interface BuildingLeaseSummary {
   total_leases: number
   analyzed_leases: number
   last_analysis_date: string
+  freeholder_info?: any
+  service_charge_info?: any
+  ground_rent_info?: any
+  demand_dates?: any
+  covenants?: any
+  building_restrictions?: any
 }
 
 interface BuildingLeaseSummaryProps {
@@ -41,7 +54,7 @@ interface BuildingLeaseSummaryProps {
 interface SummaryCard {
   title: string
   icon: React.ComponentType<{ className?: string }>
-  status: 'allowed' | 'restricted' | 'mixed' | 'unknown'
+  status: 'allowed' | 'restricted' | 'mixed' | 'unknown' | 'info'
   summary: string
   details?: string[]
   leaseCount?: number
@@ -177,6 +190,12 @@ export default function BuildingLeaseSummary({ buildingId, buildingName }: Build
     const sublettingSummaries: any[] = []
     const alterationsSummaries: any[] = []
     const businessUseSummaries: any[] = []
+    const freeholderInfo: any[] = []
+    const serviceChargeInfo: any[] = []
+    const groundRentInfo: any[] = []
+    const demandDates: any[] = []
+    const covenants: any[] = []
+    const restrictions: any[] = []
 
     leases.forEach(lease => {
       if (lease.analysis_json) {
@@ -210,6 +229,37 @@ export default function BuildingLeaseSummary({ buildingId, buildingName }: Build
           if (clauses.business_use || clauses.permitted_use) {
             businessUseSummaries.push(clauses.business_use || clauses.permitted_use)
           }
+
+          // Building-wide information
+          // Freeholder information
+          if (clauses.freeholder || clauses.landlord || analysis.parties?.freeholder || analysis.parties?.landlord) {
+            freeholderInfo.push(clauses.freeholder || clauses.landlord || analysis.parties?.freeholder || analysis.parties?.landlord)
+          }
+
+          // Service charge information
+          if (clauses.service_charge || clauses.service_charges) {
+            serviceChargeInfo.push(clauses.service_charge || clauses.service_charges)
+          }
+
+          // Ground rent information
+          if (clauses.ground_rent || clauses.rent) {
+            groundRentInfo.push(clauses.ground_rent || clauses.rent)
+          }
+
+          // Demand dates and payment terms
+          if (clauses.payment_terms || clauses.demand_dates) {
+            demandDates.push(clauses.payment_terms || clauses.demand_dates)
+          }
+
+          // Covenants
+          if (clauses.covenants || clauses.tenant_covenants || clauses.landlord_covenants) {
+            covenants.push(clauses.covenants || clauses.tenant_covenants || clauses.landlord_covenants)
+          }
+
+          // General restrictions
+          if (clauses.restrictions || clauses.use_restrictions) {
+            restrictions.push(clauses.restrictions || clauses.use_restrictions)
+          }
         }
       }
     })
@@ -223,6 +273,12 @@ export default function BuildingLeaseSummary({ buildingId, buildingName }: Build
       subletting_summary: createClauseSummary('Subletting', sublettingSummaries, totalLeases),
       alterations_summary: createClauseSummary('Alterations', alterationsSummaries, totalLeases),
       business_use_summary: createClauseSummary('Business Use', businessUseSummaries, totalLeases),
+      freeholder_info: createBuildingWideSummary('Freeholder Information', freeholderInfo),
+      service_charge_info: createBuildingWideSummary('Service Charge Structure', serviceChargeInfo),
+      ground_rent_info: createBuildingWideSummary('Ground Rent Details', groundRentInfo),
+      demand_dates: createBuildingWideSummary('Payment & Demand Dates', demandDates),
+      covenants: createBuildingWideSummary('Lease Covenants', covenants),
+      building_restrictions: createBuildingWideSummary('Building Restrictions', restrictions),
       discrepancies: {},
       total_leases: totalLeases,
       analyzed_leases: analyzedLeases,
@@ -285,6 +341,34 @@ export default function BuildingLeaseSummary({ buildingId, buildingName }: Build
     }
   }
 
+  const createBuildingWideSummary = (title: string, data: any[]) => {
+    if (data.length === 0) {
+      return {
+        summary: `No ${title.toLowerCase()} found in analyzed leases`,
+        details: [],
+        applicable_leases: 0
+      }
+    }
+
+    // Deduplicate and format the information
+    const uniqueEntries = new Set()
+    const details: string[] = []
+
+    data.forEach(item => {
+      const text = typeof item === 'string' ? item : JSON.stringify(item)
+      if (text && text.length > 0 && !uniqueEntries.has(text)) {
+        uniqueEntries.add(text)
+        details.push(text.length > 300 ? text.substring(0, 300) + '...' : text)
+      }
+    })
+
+    return {
+      summary: `${title} found in ${data.length} lease${data.length === 1 ? '' : 's'}`,
+      details: details.slice(0, 10), // Show up to 10 details for building-wide info
+      applicable_leases: data.length
+    }
+  }
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'allowed':
@@ -293,6 +377,8 @@ export default function BuildingLeaseSummary({ buildingId, buildingName }: Build
         return <XCircle className="h-5 w-5 text-red-600" />
       case 'mixed':
         return <AlertCircle className="h-5 w-5 text-yellow-600" />
+      case 'info':
+        return <Info className="h-5 w-5 text-blue-600" />
       default:
         return <Info className="h-5 w-5 text-gray-400" />
     }
@@ -306,6 +392,8 @@ export default function BuildingLeaseSummary({ buildingId, buildingName }: Build
         return 'bg-red-50 border-red-200'
       case 'mixed':
         return 'bg-yellow-50 border-yellow-200'
+      case 'info':
+        return 'bg-blue-50 border-blue-200'
       default:
         return 'bg-gray-50 border-gray-200'
     }
@@ -411,6 +499,90 @@ export default function BuildingLeaseSummary({ buildingId, buildingName }: Build
     })
   }
 
+  // Freeholder Information
+  if (summary.freeholder_info) {
+    const freeholder = summary.freeholder_info as any
+    summaryCards.push({
+      title: 'Freeholder Information',
+      icon: UserCheck,
+      status: 'info' as any,
+      summary: freeholder.summary || 'Freeholder details from lease analysis',
+      details: freeholder.details || [],
+      leaseCount: freeholder.applicable_leases,
+      totalLeases: summary.total_leases
+    })
+  }
+
+  // Service Charge Information
+  if (summary.service_charge_info) {
+    const serviceCharge = summary.service_charge_info as any
+    summaryCards.push({
+      title: 'Service Charge Structure',
+      icon: CreditCard,
+      status: 'info' as any,
+      summary: serviceCharge.summary || 'Service charge provisions across leases',
+      details: serviceCharge.details || [],
+      leaseCount: serviceCharge.applicable_leases,
+      totalLeases: summary.total_leases
+    })
+  }
+
+  // Ground Rent Information
+  if (summary.ground_rent_info) {
+    const groundRent = summary.ground_rent_info as any
+    summaryCards.push({
+      title: 'Ground Rent Details',
+      icon: Banknote,
+      status: 'info' as any,
+      summary: groundRent.summary || 'Ground rent provisions across leases',
+      details: groundRent.details || [],
+      leaseCount: groundRent.applicable_leases,
+      totalLeases: summary.total_leases
+    })
+  }
+
+  // Demand Dates & Payment Terms
+  if (summary.demand_dates) {
+    const demandDates = summary.demand_dates as any
+    summaryCards.push({
+      title: 'Payment & Demand Dates',
+      icon: Clock,
+      status: 'info' as any,
+      summary: demandDates.summary || 'Payment schedules and demand procedures',
+      details: demandDates.details || [],
+      leaseCount: demandDates.applicable_leases,
+      totalLeases: summary.total_leases
+    })
+  }
+
+  // Lease Covenants
+  if (summary.covenants) {
+    const covenants = summary.covenants as any
+    summaryCards.push({
+      title: 'Lease Covenants',
+      icon: Scale,
+      status: 'info' as any,
+      summary: covenants.summary || 'Tenant and landlord obligations',
+      details: covenants.details || [],
+      leaseCount: covenants.applicable_leases,
+      totalLeases: summary.total_leases
+    })
+  }
+
+  // Building Restrictions
+  if (summary.building_restrictions) {
+    const buildingRestrictions = summary.building_restrictions as any
+    summaryCards.push({
+      title: 'Building Restrictions',
+      icon: FileText,
+      status: 'info' as any,
+      summary: buildingRestrictions.summary || 'General building use restrictions',
+      details: buildingRestrictions.details || [],
+      leaseCount: buildingRestrictions.applicable_leases,
+      totalLeases: summary.total_leases
+    })
+  }
+
   // Add placeholder cards if no data
   if (summaryCards.length === 0) {
     const placeholders = [
@@ -418,7 +590,13 @@ export default function BuildingLeaseSummary({ buildingId, buildingName }: Build
       { title: 'Pet Policy', icon: PawPrint },
       { title: 'Subletting', icon: Home },
       { title: 'Alterations', icon: Wrench },
-      { title: 'Business Use', icon: Briefcase }
+      { title: 'Business Use', icon: Briefcase },
+      { title: 'Freeholder Information', icon: UserCheck },
+      { title: 'Service Charge Structure', icon: CreditCard },
+      { title: 'Ground Rent Details', icon: Banknote },
+      { title: 'Payment & Demand Dates', icon: Clock },
+      { title: 'Lease Covenants', icon: Scale },
+      { title: 'Building Restrictions', icon: FileText }
     ]
 
     placeholders.forEach(placeholder => {
@@ -457,7 +635,7 @@ export default function BuildingLeaseSummary({ buildingId, buildingName }: Build
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {summaryCards.map((card, index) => {
           const Icon = card.icon
           const isExpanded = expandedCard === card.title
