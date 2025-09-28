@@ -37,6 +37,7 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const progressTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Auto-scroll removed - let users control their own scrolling
   // useEffect(() => {
@@ -76,6 +77,16 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
       };
     }
   }, [isOpen, onClose]);
+
+  // Cleanup timer on unmount or modal close
+  useEffect(() => {
+    return () => {
+      if (progressTimerRef.current) {
+        clearInterval(progressTimerRef.current);
+        progressTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -155,7 +166,6 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
     }
 
     // Update loading message progressively for very long requests
-    let progressTimer: NodeJS.Timeout | null = null;
     if (questionLength > 500) {
       let step = 0;
       const messages = [
@@ -165,7 +175,7 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
         'Preparing comprehensive response...',
         'Almost ready...'
       ];
-      progressTimer = setInterval(() => {
+      progressTimerRef.current = setInterval(() => {
         step++;
         if (step < messages.length) {
           setLoadingMessage(messages[step]);
@@ -265,8 +275,9 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
     } finally {
       setLoading(false);
       setLoadingMessage('BlocIQ is thinking...');
-      if (progressTimer) {
-        clearInterval(progressTimer);
+      if (progressTimerRef.current) {
+        clearInterval(progressTimerRef.current);
+        progressTimerRef.current = null;
       }
     }
   };
