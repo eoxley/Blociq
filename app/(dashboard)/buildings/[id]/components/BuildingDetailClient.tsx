@@ -126,11 +126,11 @@ export default function BuildingDetailClient({
   const [leaseholders, setLeaseholders] = useState<Record<string, Leaseholder>>({})
   const [isSyncing, setIsSyncing] = useState(false)
 
-  // Sync building data with lease information
-  const syncWithLeases = async () => {
+  // Sync building data from all sources (leases, compliance, major works)
+  const syncWithAllSources = async () => {
     setIsSyncing(true)
     try {
-      const response = await fetch('/api/buildings/update-from-lease', {
+      const response = await fetch('/api/buildings/sync-all', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -140,14 +140,21 @@ export default function BuildingDetailClient({
 
       const result = await response.json()
 
-      if (result.updated) {
-        // Refresh the page to show updated data
-        window.location.reload()
+      if (result.success) {
+        console.log('Sync result:', result.details)
+
+        // Show success message with details
+        if (result.details.totalActionsCreated > 0 || result.details.buildingUpdated) {
+          // Refresh the page to show updated data
+          window.location.reload()
+        } else {
+          console.log('No updates needed:', result.message)
+        }
       } else {
-        console.log('No updates needed:', result.message)
+        console.error('Sync failed:', result.error)
       }
     } catch (error) {
-      console.error('Failed to sync with leases:', error)
+      console.error('Failed to sync building data:', error)
     } finally {
       setIsSyncing(false)
     }
@@ -188,6 +195,37 @@ export default function BuildingDetailClient({
 
     fetchLeaseholders()
   }, [units])
+
+  // Auto-sync building data on page load if there are leases but no lease-derived data
+  useEffect(() => {
+    const autoSyncIfNeeded = async () => {
+      // Only auto-sync if building doesn't have lease-derived data yet
+      if (building.lease_data_source) {
+        return // Already has lease data
+      }
+
+      try {
+        // Check if building has any leases with analysis data
+        const { data: leases, error } = await supabase
+          .from('leases')
+          .select('id, analysis_json')
+          .eq('building_id', buildingId)
+          .not('analysis_json', 'is', null)
+          .limit(1)
+
+        if (!error && leases && leases.length > 0) {
+          console.log('Auto-syncing building data from all sources...')
+          await syncWithAllSources()
+        }
+      } catch (error) {
+        console.error('Error checking for lease data:', error)
+      }
+    }
+
+    // Run auto-sync after a brief delay to let page load
+    const timeoutId = setTimeout(autoSyncIfNeeded, 1000)
+    return () => clearTimeout(timeoutId)
+  }, [buildingId, building.lease_data_source])
 
   const showSuccessMessage = () => {
     setShowSuccess(true)
@@ -388,17 +426,15 @@ export default function BuildingDetailClient({
                 }`}>
                   {building.is_hrb ? 'HRB' : 'Standard'}
                 </span>
-                {building.lease_data_source && (
-                  <button
-                    onClick={syncWithLeases}
-                    disabled={isSyncing}
-                    className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 transition-colors disabled:opacity-50"
-                    title="Sync with lease data"
-                  >
-                    <RefreshCw className={`h-3 w-3 ${isSyncing ? 'animate-spin' : ''}`} />
-                    Sync Leases
-                  </button>
-                )}
+                <button
+                  onClick={syncWithAllSources}
+                  disabled={isSyncing}
+                  className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 transition-colors disabled:opacity-50"
+                  title="Sync with all sources (leases, compliance, major works)"
+                >
+                  <RefreshCw className={`h-3 w-3 ${isSyncing ? 'animate-spin' : ''}`} />
+                  {building.lease_data_source ? 'Re-sync All' : 'Sync All'}
+                </button>
               </div>
             }
           />

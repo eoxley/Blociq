@@ -6,6 +6,9 @@ import {
   prepareBuildingUpdate,
   shouldUpdateBuildingField
 } from '@/lib/lease-to-building-mapper'
+import {
+  createComplianceActionsFromLeases
+} from '@/lib/lease-compliance-generator'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -104,12 +107,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to update building' }, { status: 500 })
     }
 
+    // Generate compliance actions from lease analysis
+    let actionsResult = { created: 0, errors: [] as string[] };
+    try {
+      actionsResult = await createComplianceActionsFromLeases(
+        supabase,
+        buildingId,
+        currentBuilding.name || 'Building',
+        leases
+      );
+      console.log(`Created ${actionsResult.created} compliance actions from leases`);
+    } catch (error) {
+      console.error('Error creating compliance actions:', error);
+      actionsResult.errors.push(`Failed to create compliance actions: ${error}`);
+    }
+
     return NextResponse.json({
       message: 'Building updated with lease-derived data',
       updated: true,
       updatedFields: Object.keys(fieldsToUpdate).filter(f => f !== 'updated_at' && f !== 'lease_data_source'),
       skippedFields,
-      leaseCount: leases.length
+      leaseCount: leases.length,
+      complianceActions: {
+        created: actionsResult.created,
+        errors: actionsResult.errors
+      }
     })
 
   } catch (error) {
