@@ -26,7 +26,10 @@ type Event = {
   user_id?: string;
   created_at?: string;
   updated_at?: string;
-  event_type?: 'outlook' | 'manual';
+  event_type?: 'outlook' | 'manual' | 'action_tracker';
+  // Action tracker specific fields
+  action_tracker_id?: string;
+  building_info?: Building | null;
 };
 
 type AIMatch = {
@@ -81,26 +84,62 @@ export default function UpcomingEventsWidget({
           .select("*")
           .gte("start_time", new Date().toISOString())
           .order("start_time", { ascending: true })
+          .limit(10),
+        supabase
+          .from("building_action_tracker")
+          .select(`
+            id,
+            item_text,
+            due_date,
+            notes,
+            priority,
+            completed,
+            buildings(id, name, address)
+          `)
+          .not("due_date", "is", null)
+          .eq("completed", false)
+          .gte("due_date", new Date().toISOString().split('T')[0])
+          .order("due_date", { ascending: true })
           .limit(10)
       ]);
 
       // Safe destructuring with fallback
-      const [buildingsResponse, outlookEventsResponse, manualEventsResponse] = responses || [{}, {}, {}];
+      const [buildingsResponse, outlookEventsResponse, manualEventsResponse, actionTrackerResponse] = responses || [{}, {}, {}, {}];
 
       setBuildings(buildingsResponse.data || []);
-      
+
       // Combine and sort events
       const outlookEvents = (outlookEventsResponse.data || []).map(event => ({
         ...event,
         event_type: 'outlook' as const
       }));
+
       const manualEvents = (manualEventsResponse.data || []).map(event => ({
         ...event,
         event_type: 'manual' as const,
         subject: event.title // Map title to subject for consistency
       }));
-      
-      const allEvents = [...outlookEvents, ...manualEvents].sort((a, b) => 
+
+      // Transform action tracker items to event format
+      const actionTrackerEvents = (actionTrackerResponse.data || []).map(item => ({
+        id: `tracker-${item.id}`,
+        subject: item.item_text,
+        title: item.item_text,
+        description: item.notes,
+        start_time: `${item.due_date}T09:00:00.000Z`, // Set to 9 AM on due date
+        end_time: `${item.due_date}T10:00:00.000Z`,   // 1 hour duration
+        is_all_day: false,
+        event_type: 'action_tracker' as const,
+        priority: item.priority,
+        location: item.buildings?.name || null,
+        building_info: item.buildings || null,
+        action_tracker_id: item.id,
+        notes: item.notes,
+        organiser_name: null,
+        online_meeting: null
+      }));
+
+      const allEvents = [...outlookEvents, ...manualEvents, ...actionTrackerEvents].sort((a, b) =>
         new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
       );
       
@@ -139,9 +178,14 @@ export default function UpcomingEventsWidget({
 
 
   const matchBuilding = (event: Event): Building | null => {
+    // For action tracker events, use the building_info directly
+    if (event.event_type === 'action_tracker' && event.building_info) {
+      return event.building_info;
+    }
+
     if (!event.location) return null;
-    
-    return buildings.find(building => 
+
+    return buildings.find(building =>
       building.name.toLowerCase().includes(event.location!.toLowerCase()) ||
       event.location!.toLowerCase().includes(building.name.toLowerCase())
     ) || null;
@@ -333,6 +377,11 @@ export default function UpcomingEventsWidget({
                                 Manual
                               </BlocIQBadge>
                             )}
+                            {event.event_type === 'action_tracker' && (
+                              <BlocIQBadge variant="secondary" size="sm" className="bg-purple-100 text-purple-800">
+                                Action Item
+                              </BlocIQBadge>
+                            )}
                             {priority === 'high' && (
                               <BlocIQBadge variant="warning" size="sm" className="bg-red-100 text-red-800">
                                 Soon
@@ -412,6 +461,19 @@ export default function UpcomingEventsWidget({
                           <div className="flex items-center gap-2 text-sm text-[#4f46e5]">
                             <div className="w-2 h-2 bg-[#4f46e5] rounded-full"></div>
                             <span>🎥 Online meeting available</span>
+                          </div>
+                        )}
+
+                        {event.event_type === 'action_tracker' && (
+                          <div className="mt-3 p-2 bg-purple-50 rounded border border-purple-200">
+                            <div className="text-sm text-purple-800 font-medium">
+                              📋 Action Item Due Date
+                            </div>
+                            {event.notes && (
+                              <div className="text-sm text-purple-600 mt-1">
+                                {event.notes}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
