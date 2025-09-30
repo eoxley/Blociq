@@ -21,10 +21,10 @@ const navItems = [
   { label: "Compliance", icon: Shield, href: "/compliance", comingSoon: false, description: "Regulatory tracking", aiPowered: true },
   { label: "Communications", icon: Megaphone, href: "/communications", comingSoon: false, description: "Letter & email templates", aiPowered: false },
   { label: "Major Works", icon: Wrench, href: "/major-works", comingSoon: false, description: "Project management", aiPowered: false },
-  { label: "Finances", icon: PoundSterling, href: "#", comingSoon: true, description: "Financial tracking", aiPowered: false },
-  { label: "Contractors", icon: HardHat, href: "#", comingSoon: true, description: "Vendor management", aiPowered: false },
-  { label: "Work Orders", icon: ClipboardList, href: "#", comingSoon: true, description: "Maintenance requests", aiPowered: false },
-  { label: "Client Portal", icon: Monitor, href: "#", comingSoon: true, description: "Tenant access", aiPowered: false },
+  { label: "Finances", icon: PoundSterling, href: "/finances", comingSoon: false, description: "Financial tracking", aiPowered: false },
+  { label: "Contractors", icon: HardHat, href: "/contractors", comingSoon: false, description: "Vendor management", aiPowered: false },
+  { label: "Work Orders", icon: ClipboardList, href: "/work-orders", comingSoon: false, description: "Maintenance requests", aiPowered: false },
+  { label: "Client Portal", icon: Monitor, href: "/client-portal", comingSoon: false, description: "Leaseholder access", aiPowered: false },
 ];
 
 export default function DashboardSidebar() {
@@ -177,13 +177,6 @@ export default function DashboardSidebar() {
       </nav>
 
 
-
-      {/* Lease Processing Notifications - Only show in dashboard context */}
-      <div className="border-t border-border pt-4 mb-4">
-        <ClientOnly>
-          <LeaseNotificationBadge />
-        </ClientOnly>
-      </div>
 
       {/* Enhanced Logout Section */}
       <div className="border-t border-border pt-4">

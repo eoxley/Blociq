@@ -56,18 +56,6 @@ export default function AskBlocIQSection() {
           </div>
         </div>
 
-        <p className="text-white/80 mb-4 font-medium">Try asking:</p>
-        <div className="grid md:grid-cols-3 gap-4 text-white/80">
-          <div className="bg-white/10 rounded-lg p-3 backdrop-blur-sm">
-            <p className="text-sm">"What's our compliance status for Ashwood House?"</p>
-          </div>
-          <div className="bg-white/10 rounded-lg p-3 backdrop-blur-sm">
-            <p className="text-sm">"Show overdue invoices over £500."</p>
-          </div>
-          <div className="bg-white/10 rounded-lg p-3 backdrop-blur-sm">
-            <p className="text-sm">"Draft a Section 20 notice for a lift replacement."</p>
-          </div>
-        </div>
       </div>
 
       <AskBlocIQModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
