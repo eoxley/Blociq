@@ -71,10 +71,9 @@ async function importOnboardingData(filename) {
       const buildings = [];
       buildingsSheet.eachRow((row, rowNumber) => {
         if (rowNumber === 1) return; // Skip header
-        if (rowNumber <= 5) return; // Skip instruction rows
 
         const name = row.getCell(1).value;
-        if (!name || name === 'Example Court') return; // Skip empty or example
+        if (!name || String(name).toLowerCase().includes('example') || String(name).toLowerCase().includes('instruction')) return; // Skip empty or example
 
         buildings.push({
           agency_id: AGENCY_ID,
@@ -127,11 +126,10 @@ async function importOnboardingData(filename) {
       const units = [];
       unitsSheet.eachRow((row, rowNumber) => {
         if (rowNumber === 1) return; // Skip header
-        if (rowNumber <= 5) return; // Skip instruction rows
 
         const buildingName = row.getCell(1).value;
         const unitNumber = row.getCell(2).value;
-        if (!buildingName || !unitNumber || buildingName === 'Example Court') return;
+        if (!buildingName || !unitNumber || String(buildingName).toLowerCase().includes('example') || String(buildingName).toLowerCase().includes('instruction')) return;
 
         const buildingId = buildingMap.get(String(buildingName));
         if (!buildingId) {
@@ -192,11 +190,10 @@ async function importOnboardingData(filename) {
       const leaseholders = [];
       leaseholdersSheet.eachRow((row, rowNumber) => {
         if (rowNumber === 1) return; // Skip header
-        if (rowNumber <= 5) return; // Skip instruction rows
 
         const buildingName = row.getCell(1).value;
         const unitNumber = row.getCell(2).value;
-        if (!buildingName || !unitNumber || buildingName === 'Example Court') return;
+        if (!buildingName || !unitNumber || String(buildingName).toLowerCase().includes('example') || String(buildingName).toLowerCase().includes('instruction')) return;
 
         const unitId = unitMap.get(`${buildingName}:${unitNumber}`);
         if (!unitId) {
@@ -263,11 +260,10 @@ async function importOnboardingData(filename) {
       const leases = [];
       leasesSheet.eachRow((row, rowNumber) => {
         if (rowNumber === 1) return; // Skip header
-        if (rowNumber <= 5) return; // Skip instruction rows
 
         const buildingName = row.getCell(1).value;
         const unitNumber = row.getCell(2).value;
-        if (!buildingName || !unitNumber || buildingName === 'Example Court') return;
+        if (!buildingName || !unitNumber || String(buildingName).toLowerCase().includes('example') || String(buildingName).toLowerCase().includes('instruction')) return;
 
         const buildingId = buildingMap.get(String(buildingName));
         const unitId = unitMap.get(`${buildingName}:${unitNumber}`);
@@ -330,11 +326,10 @@ async function importOnboardingData(filename) {
       const apportionments = [];
       apportionmentsSheet.eachRow((row, rowNumber) => {
         if (rowNumber === 1) return; // Skip header
-        if (rowNumber <= 9) return; // Skip instruction rows
 
         const buildingName = row.getCell(1).value;
         const unitNumber = row.getCell(2).value;
-        if (!buildingName || !unitNumber || buildingName === 'Example Court') return;
+        if (!buildingName || !unitNumber || String(buildingName).toLowerCase().includes('example') || String(buildingName).toLowerCase().includes('instruction')) return;
 
         const buildingId = buildingMap.get(String(buildingName));
         const unitId = unitMap.get(`${buildingName}:${unitNumber}`);
@@ -388,11 +383,10 @@ async function importOnboardingData(filename) {
       const complianceRecords = [];
       complianceSheet.eachRow((row, rowNumber) => {
         if (rowNumber === 1) return; // Skip header
-        if (rowNumber <= 7) return; // Skip instruction rows
 
         const buildingName = row.getCell(1).value;
         const assetCode = row.getCell(2).value;
-        if (!buildingName || !assetCode || buildingName === 'Example Court') return;
+        if (!buildingName || !assetCode || String(buildingName).toLowerCase().includes('example') || String(buildingName).toLowerCase().includes('instruction')) return;
 
         const buildingId = buildingMap.get(String(buildingName));
         if (!buildingId) {
