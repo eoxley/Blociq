@@ -1,5 +1,4 @@
 import './globals.css';
-import { Inter } from 'next/font/google';
 import type { Metadata } from 'next';
 import SupabaseProvider from '@/components/SupabaseProvider';
 import { BlocIQProvider } from '@/components/BlocIQContext';
@@ -11,8 +10,6 @@ import { Toaster } from 'sonner';
 // Force dynamic rendering for the entire app to prevent static generation issues
 export const dynamic = 'force-dynamic';
 
-
-const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'Blociq - Property Management Platform',
@@ -26,7 +23,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${inter.className} bg-background text-foreground antialiased`}>
+      <body className="bg-background text-foreground antialiased font-sans">
         <ReactQueryProvider>
           <BlocIQProvider>
             <SupabaseProvider>

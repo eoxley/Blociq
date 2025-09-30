@@ -8,7 +8,7 @@
 function parseRobustGoogleCredentials(credentialsJson: string): any {
   try {
     // Strategy 1: Fix common escaping issues from environment variables
-    let cleanedJson = credentialsJson
+    const cleanedJson = credentialsJson
       .replace(/\\n/g, '\n')           // Fix escaped newlines
       .replace(/\\"/g, '"')            // Fix escaped quotes  
       .replace(/\\\\/g, '\\')          // Fix double backslashes

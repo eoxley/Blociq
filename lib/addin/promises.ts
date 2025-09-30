@@ -131,7 +131,7 @@ export function computeDueAtUK(
 
     case 'working_days':
       if (!spec.value) throw new Error('Working days value required');
-      let workingDaysResult = new Date(ukNow);
+      const workingDaysResult = new Date(ukNow);
       let daysToAdd = spec.value;
 
       while (daysToAdd > 0) {

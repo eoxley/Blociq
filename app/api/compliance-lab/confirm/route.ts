@@ -26,7 +26,7 @@ async function createBuildingDocumentAndLink(
     }
 
     // Check if a building document already exists for this job
-    let { data: existingDoc, error: lookupError } = await serviceSupabase
+    const { data: existingDoc, error: lookupError } = await serviceSupabase
       .from('building_documents')
       .select('id')
       .or(`file_name.eq.${documentJob.filename},metadata->>document_job_id.eq.${document_job_id}`)

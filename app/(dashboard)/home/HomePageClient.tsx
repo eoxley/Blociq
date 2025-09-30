@@ -180,7 +180,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   // Helper function to extract property info from document text
   const extractPropertyInfo = (text: string) => {
     let property = '';
-    let parties: string[] = [];
+    const parties: string[] = [];
     let premium = '';
     let term = '';
 

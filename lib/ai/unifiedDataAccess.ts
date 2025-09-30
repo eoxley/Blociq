@@ -631,7 +631,7 @@ export class UnifiedAIProcessor {
       
       // Step 2: Determine context and build system prompt
       const context = AIContextHandler.determineContext(prompt);
-      let systemPrompt = await AIContextHandler.buildPrompt(
+      const systemPrompt = await AIContextHandler.buildPrompt(
         context,
         prompt,
         buildingId
@@ -639,7 +639,7 @@ export class UnifiedAIProcessor {
       
       // Step 3: Gather comprehensive building context
       let buildingContext = '';
-      let contextMetadata: any = {};
+      const contextMetadata: any = {};
       
       if (buildingId) {
         buildingContext = await this.gatherBuildingContext(buildingId);

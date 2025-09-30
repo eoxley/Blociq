@@ -187,7 +187,7 @@ export default function DocumentLibraryOverview() {
 
         // Fetch general documents
         try {
-          const generalResponse = await fetch('/api/general-docs-lab/jobs')
+          const generalResponse = await fetch('/api/general-lab/jobs')
           if (generalResponse.ok) {
             const generalData = await generalResponse.json()
             categoryCounts.general = generalData.jobs?.length || 0

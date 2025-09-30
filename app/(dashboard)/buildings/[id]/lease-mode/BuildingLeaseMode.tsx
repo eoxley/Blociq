@@ -67,7 +67,7 @@ export default function BuildingLeaseMode({ building }: { building: Building }) 
   const fetchLeases = async () => {
     try {
       // Try to fetch with analysis_json first, fallback if column doesn't exist
-      let query = supabase
+      const query = supabase
         .from('leases')
         .select(`
           id,

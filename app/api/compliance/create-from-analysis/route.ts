@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
     console.log('📊 Compliance status:', analysis.compliance_status)
 
     // Create or update the compliance asset
-    let assetName = analysis.document_type || 'Fire Risk Assessment'
+    const assetName = analysis.document_type || 'Fire Risk Assessment'
     let category = 'Fire Safety'
 
     if (analysis.document_type?.toLowerCase().includes('electrical')) {

@@ -245,13 +245,10 @@ export async function POST(req: NextRequest) {
     // Be more specific about the conflict - check if this exact lease already exists
     let conflictQuery = supabase
       .from('leases')
-      .select('id, unit_number, leaseholder_name, document_job_id')
+      .select('id, unit_number, leaseholder_name, responsibilities')
       .eq('building_id', buildingId);
 
-    // If we have a document job ID, check for that specific document
-    if (documentJobId) {
-      conflictQuery = conflictQuery.eq('document_job_id', documentJobId);
-    }
+    // Note: document_job_id column doesn't exist in schema, skip this check
 
     // If we have unit scope, check for that specific unit
     if (scope === 'unit' && unitId) {
@@ -263,8 +260,9 @@ export async function POST(req: NextRequest) {
     if (existingLeases && existingLeases.length > 0) {
       const existingLease = existingLeases[0];
 
-      // If it's the same document job, return success (already processed)
-      if (existingLease.document_job_id === documentJobId) {
+      // Check if it's the same document job by looking at responsibilities field
+      const existingJobId = existingLease.responsibilities?.document_job_id;
+      if (existingJobId === documentJobId) {
         return NextResponse.json({
           success: true,
           lease: existingLease,
@@ -319,14 +317,14 @@ export async function POST(req: NextRequest) {
       ocr_text: documentJob.filename || 'Document',
       // New columns
       scope: scope,
-      document_job_id: documentJobId,
-      analysis_json: finalAnalysisJson,
-      metadata: {
+      // Store analysis data in responsibilities field as JSON since analysis_json column doesn't exist
+      responsibilities: {
+        ...finalAnalysisJson,
+        document_job_id: documentJobId,
         created_from_job: documentJobId,
         original_filename: documentJob.filename,
         extraction_quality: finalAnalysisJson.disclaimer ? 'ai_generated' : 'unknown',
-        linked_at: new Date().toISOString(),
-        document_job_id: documentJobId
+        linked_at: new Date().toISOString()
       }
     };
 

@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Initialize stats with default values
-    let stats = {
+    const stats = {
       total_documents: 0,
       recent_uploads: 0,
       pending_ocr: 0,

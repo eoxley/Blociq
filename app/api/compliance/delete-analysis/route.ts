@@ -48,7 +48,7 @@ export async function DELETE(request: NextRequest) {
       }, { status: 404 })
     }
 
-    let deletedItems = {
+    const deletedItems = {
       compliance_logs: 0,
       compliance_documents: 0,
       action_items: 0,

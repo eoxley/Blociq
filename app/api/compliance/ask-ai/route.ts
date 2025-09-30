@@ -212,8 +212,8 @@ async function generateComplianceAIResponse(
   // Analyze the question type and context
   let answer = '';
   let confidence = 75;
-  let sources: string[] = [];
-  let suggestions: string[] = [];
+  const sources: string[] = [];
+  const suggestions: string[] = [];
 
   // Check for specific compliance topics
   if (lowerQuestion.includes('overdue') || lowerQuestion.includes('expired')) {

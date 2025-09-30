@@ -13,7 +13,7 @@ export function stripHtml(htmlOrText: string): string {
   }
 
   // Strip HTML tags
-  let text = htmlOrText
+  const text = htmlOrText
     // Remove script and style elements completely
     .replace(/<(script|style)[^>]*>.*?<\/(script|style)>/gis, '')
     // Convert common HTML entities

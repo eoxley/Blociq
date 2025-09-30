@@ -420,22 +420,11 @@ export default function BuildingDetailClient({
           <InfoRow
             label="Status:"
             value={
-              <div className="flex items-center gap-2">
-                <span className={`px-2 py-1 rounded text-xs font-medium ${
-                  building.is_hrb ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
-                }`}>
-                  {building.is_hrb ? 'HRB' : 'Standard'}
-                </span>
-                <button
-                  onClick={syncWithAllSources}
-                  disabled={isSyncing}
-                  className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 transition-colors disabled:opacity-50"
-                  title="Sync with all sources (leases, compliance, major works)"
-                >
-                  <RefreshCw className={`h-3 w-3 ${isSyncing ? 'animate-spin' : ''}`} />
-                  {building.lease_data_source ? 'Re-sync All' : 'Sync All'}
-                </button>
-              </div>
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                building.is_hrb ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+              }`}>
+                {building.is_hrb ? 'High Rise Building' : 'Standard Building'}
+              </span>
             }
           />
         </div>
@@ -555,10 +544,18 @@ export default function BuildingDetailClient({
 
         {/* Demand Dates Section */}
         <div className="mt-6 pt-4 border-t border-gray-200">
-          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Demand Dates & Service Charge Year End
-          </h4>
+          {/* Hero Banner for Demand Dates & Service Charge */}
+          <div className="relative overflow-hidden bg-gradient-to-r from-[#008C8F] to-[#4f46e5] px-6 py-4 rounded-2xl mb-6">
+            <div className="flex items-center gap-3 text-white">
+              <Calendar className="h-6 w-6" />
+              <h4 className="text-xl font-semibold">Demand Dates & Service Charge Year End</h4>
+            </div>
+            <p className="text-white/90 text-sm mt-2">Manage service charge cycles and payment demand dates</p>
+            {/* Decorative elements */}
+            <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full blur-xl"></div>
+            <div className="absolute bottom-0 left-8 w-12 h-12 bg-white/5 rounded-full blur-lg"></div>
+            <div className="absolute top-1/2 right-8 w-6 h-6 bg-white/20 rounded-full blur-sm"></div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <InfoRow
               label="Service Charge Year End:"

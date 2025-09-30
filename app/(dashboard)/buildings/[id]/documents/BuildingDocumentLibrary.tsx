@@ -25,7 +25,7 @@ import {
   Droplets,
   HardHat,
   Building2,
-  FileContract,
+  FileText as FileContract,
   Home,
   Folders,
   Star,

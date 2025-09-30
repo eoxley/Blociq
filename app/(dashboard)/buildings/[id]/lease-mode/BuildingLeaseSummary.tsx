@@ -85,38 +85,22 @@ export default function BuildingLeaseSummary({ buildingId, buildingName }: Build
       // If no pre-computed summary exists or table doesn't exist, generate from lease data
       console.log('Building lease summary table not available, generating from lease data...')
 
-      // Fetch leases for this building that have analysis data
-      // Handle missing analysis_json column gracefully
-      let leasesQuery;
-      try {
-        // Try with analysis_json first
-        leasesQuery = await supabase
-          .from('leases')
-          .select(`
-            id,
-            unit_number,
-            leaseholder_name,
-            building_id,
-            analysis_json
-          `)
-          .eq('building_id', buildingId);
-      } catch (error: any) {
-        if (error?.code === '42703') {
-          // Column doesn't exist, query without it
-          console.log('analysis_json column not found, querying without it')
-          leasesQuery = await supabase
-            .from('leases')
-            .select(`
-              id,
-              unit_number,
-              leaseholder_name,
-              building_id
-            `)
-            .eq('building_id', buildingId);
-        } else {
-          throw error;
-        }
-      }
+      // Fetch leases for this building - get analysis metadata from responsibilities field
+      console.log('🔍 Fetching leases with analysis metadata...')
+      const leasesQuery = await supabase
+        .from('leases')
+        .select(`
+          id,
+          unit_number,
+          leaseholder_name,
+          building_id,
+          ground_rent,
+          service_charge_percentage,
+          start_date,
+          end_date,
+          responsibilities
+        `)
+        .eq('building_id', buildingId)
 
       const { data: leases, error: leasesError } = leasesQuery;
 
@@ -150,12 +134,40 @@ export default function BuildingLeaseSummary({ buildingId, buildingName }: Build
         return;
       }
 
-      // Process leases data (handle missing analysis_json)
-      const processedLeases = leases?.map(lease => ({
-        ...lease,
-        analysis_json: lease.analysis_json || null
-      })) || [];
+      // Process leases data and fetch analysis from document_jobs if needed
+      console.log('📊 Processing leases and fetching analysis data...')
+      const processedLeases = [];
 
+      for (const lease of leases || []) {
+        let analysisData = null;
+
+        // Check if we have analysis metadata in responsibilities field
+        if (lease.responsibilities && lease.responsibilities.document_job_id) {
+          console.log(`🔍 Fetching analysis for ${lease.unit_number} from document job ${lease.responsibilities.document_job_id}`)
+
+          try {
+            const { data: docJob } = await supabase
+              .from('document_jobs')
+              .select('summary_json')
+              .eq('id', lease.responsibilities.document_job_id)
+              .single();
+
+            if (docJob && docJob.summary_json) {
+              analysisData = docJob.summary_json;
+              console.log('✅ Analysis data loaded for', lease.unit_number)
+            }
+          } catch (error) {
+            console.warn('⚠️ Could not fetch analysis data for', lease.unit_number, error);
+          }
+        }
+
+        processedLeases.push({
+          ...lease,
+          analysis_json: analysisData
+        });
+      }
+
+      console.log(`📈 Processed ${processedLeases.length} leases, ${processedLeases.filter(l => l.analysis_json).length} with analysis`)
       const generatedSummary = generateBuildingSummaryFromLeases(processedLeases);
 
       if (!processedLeases || processedLeases.length === 0) {

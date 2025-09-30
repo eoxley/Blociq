@@ -1,0 +1,9 @@
+id,building_id,unit_id,leaseholder_id,file_name,file_url,type
+,,,,"Fire Risk Assessment 2024.pdf",https://example.com/docs/fire-risk-2024.pdf,"Compliance"
+,,,,"Building Insurance Certificate.pdf",https://example.com/docs/insurance-cert.pdf,"Insurance"
+,,,,"Gas Safety Certificate.pdf",https://example.com/docs/gas-safety-2024.pdf,"Compliance"
+,,,,"Electrical Safety Report.pdf",https://example.com/docs/electrical-2024.pdf,"Compliance"
+,,,,"Lease Agreement - Flat 1.pdf",https://example.com/docs/lease-flat1.pdf,"Lease"
+,,,,"Service Charge Budget 2024.pdf",https://example.com/docs/service-charge-2024.pdf,"Financial"
+,,,,"Maintenance Contract - Lifts.pdf",https://example.com/docs/lift-maintenance.pdf,"Contract"
+,,,,"Building Plans.pdf",https://example.com/docs/building-plans.pdf,"Property"

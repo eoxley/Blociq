@@ -288,7 +288,7 @@ ${JSON.stringify({
 
         // Parse the structured response from Ask BlocIQ
         const response = askResult.response;
-        let reply = response;
+        const reply = response;
         let usedFacts = [];
         let buildingContext = null;
 

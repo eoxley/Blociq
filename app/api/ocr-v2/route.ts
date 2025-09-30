@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     let extractedText = '';
     let provider = '';
     let confidence = 0;
-    let diagnostics: any = {};
+    const diagnostics: any = {};
 
     // Try Google Vision first (if available)
     if (vision) {
@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
 async function processWithGoogleVision(buffer: Buffer, mimeType: string) {
   if (!vision) throw new Error('Google Vision not initialized');
 
-  let images: Buffer[] = [];
+  const images: Buffer[] = [];
   const diagnostics: any = { provider: 'google_vision' };
 
   try {

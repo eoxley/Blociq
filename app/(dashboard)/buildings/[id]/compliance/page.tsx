@@ -8,7 +8,7 @@ import {
   Shield, 
   AlertTriangle, 
   CheckCircle, 
-  Clock, 
+  Clock,
   Building2,
   RefreshCw,
   AlertCircle,
@@ -39,7 +39,6 @@ import {
   Info,
   User,
   Award,
-  Clock,
   ChevronUp,
   FileDown
 } from 'lucide-react'

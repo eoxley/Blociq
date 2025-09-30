@@ -1,0 +1,11 @@
+id,building_id,asset_id,status,notes,next_due_date,last_updated,latest_document_id,last_renewed_date
+,,,pending,Initial setup - compliance check required,31/12/2024,,,
+,,,active,Fire risk assessment completed successfully,15/12/2024,,,01/12/2023
+,,,overdue,Gas safety certificate has expired,01/11/2024,,,15/11/2023
+,,,pending,Electrical inspection scheduled,28/02/2025,,,
+,,,active,Lift maintenance up to date,30/06/2024,,,15/06/2024
+,,,pending,Legionella assessment required,31/03/2025,,,
+,,,active,Building insurance current,20/03/2025,,,20/03/2024
+,,,pending,Energy performance certificate due for renewal,01/08/2025,,,
+,,,overdue,Emergency lighting test overdue,15/10/2024,,,15/04/2024
+,,,active,Asbestos management survey current,01/01/2026,,,01/01/2024

@@ -5,12 +5,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-/* Import Inter font for BlocIQ design system */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
-/* Import Bradley Hand ITC font for signatures */
-@import url('https://fonts.cdnfonts.com/css/bradley-hand-itc');
-
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -125,6 +119,8 @@
 
 :root {
   --radius: 1rem; /* Increased rounded corners for modern look */
+  --font-geist-sans: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-geist-mono: 'Menlo', 'Monaco', 'Courier New', monospace;
   
   /* BlocIQ Design System Colors */
   --background: #ffffff;

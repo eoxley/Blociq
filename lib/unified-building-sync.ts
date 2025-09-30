@@ -202,21 +202,15 @@ async function syncFromComplianceDocuments(supabase: any, buildingId: string, bu
       for (const action of actions) {
         try {
           const { error: insertError } = await supabase
-            .from('building_todos')
+            .from('building_action_tracker')
             .insert({
               building_id: buildingId,
-              title: action.title,
-              description: action.description,
-              category: action.category,
+              item_text: action.title,
+              notes: action.description,
               priority: action.priority,
               due_date: action.due_date,
-              status: 'pending',
-              source: 'compliance_analysis',
-              metadata: {
-                ...action.metadata,
-                document_id: doc.id,
-                document_name: doc.filename
-              }
+              completed: false,
+              source: 'Manual'
             })
 
           if (!insertError) {
@@ -268,21 +262,15 @@ async function syncFromMajorWorks(supabase: any, buildingId: string, building: a
       for (const action of actions) {
         try {
           const { error: insertError } = await supabase
-            .from('building_todos')
+            .from('building_action_tracker')
             .insert({
               building_id: buildingId,
-              title: action.title,
-              description: action.description,
-              category: action.category,
+              item_text: action.title,
+              notes: action.description,
               priority: action.priority,
               due_date: action.due_date,
-              status: 'pending',
-              source: 'major_works_analysis',
-              metadata: {
-                ...action.metadata,
-                document_id: doc.id,
-                document_name: doc.filename
-              }
+              completed: false,
+              source: 'Manual'
             })
 
           if (!insertError) {

@@ -60,7 +60,7 @@ export const searchAllRelevantTables = async (
       try {
         console.log(`🔍 Searching ${search.table}...`);
         
-        let query = supabase
+        const query = supabase
           .from(search.table)
           .select(search.columns)
           .limit(search.limit);

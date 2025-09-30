@@ -700,7 +700,7 @@ export async function POST(req: NextRequest) {
     let leaseholderId = '';
     let emailThreadId = '';
     let manualContext = '';
-    let uploadedFiles: File[] = [];
+    const uploadedFiles: File[] = [];
 
     const contentType = req.headers.get('content-type') || '';
     
@@ -1301,7 +1301,7 @@ export async function POST(req: NextRequest) {
     }
 
     let buildingContext = "";
-    let contextMetadata: any = {};
+    const contextMetadata: any = {};
     
     // Determine context and build appropriate prompt
     const context = AIContextHandler.determineContext(prompt);

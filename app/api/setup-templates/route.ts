@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
     for (const template of sampleTemplates) {
       try {
         // Try with all possible columns
-        let insertData: any = {
+        const insertData: any = {
           name: template.name,
           description: template.description,
           type: template.type,

@@ -136,7 +136,7 @@ export async function POST(req: NextRequest) {
     console.log(`✅ Lease extraction completed in ${extractionTime}ms`);
 
     // Step 3: Persist to database if we have required data
-    let persistenceResults: any = {};
+    const persistenceResults: any = {};
     
     if (buildingId && agencyId) {
       try {
