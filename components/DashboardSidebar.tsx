@@ -16,11 +16,11 @@ import { useLeaseSystemReadiness } from '@/hooks/useLeaseSystemReadiness';
 
 const navItems = [
   { label: "Home", icon: Home, href: "/home", comingSoon: false, description: "Dashboard overview", aiPowered: false },
-  { label: "Document Library", icon: FileText, href: "/documents", comingSoon: false, description: "Upload & manage documents", aiPowered: true },
   { label: "Buildings", icon: Building2, href: "/buildings", comingSoon: false, description: "Property portfolio", aiPowered: false },
   { label: "Compliance", icon: Shield, href: "/compliance", comingSoon: false, description: "Regulatory tracking", aiPowered: true },
-  { label: "Communications", icon: Megaphone, href: "/communications", comingSoon: false, description: "Letter & email templates", aiPowered: false },
   { label: "Major Works", icon: Wrench, href: "/major-works", comingSoon: false, description: "Project management", aiPowered: false },
+  { label: "Communications", icon: Megaphone, href: "/communications", comingSoon: false, description: "Letter & email templates", aiPowered: false },
+  { label: "Document Library", icon: FileText, href: "/documents", comingSoon: false, description: "Upload & manage documents", aiPowered: true },
   { label: "Finances", icon: PoundSterling, href: "/finances", comingSoon: false, description: "Financial tracking", aiPowered: false },
   { label: "Contractors", icon: HardHat, href: "/contractors", comingSoon: false, description: "Vendor management", aiPowered: false },
   { label: "Work Orders", icon: ClipboardList, href: "/work-orders", comingSoon: false, description: "Maintenance requests", aiPowered: false },
@@ -182,13 +182,13 @@ export default function DashboardSidebar() {
       <div className="border-t border-border pt-4">
         <div className="space-y-2">
           <Link
-            href="/account"
+            href="/settings/branding"
             className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium hover:bg-[#f8fafc] hover:text-[#4f46e5] transition-all duration-300 group text-text-primary hover-lift"
           >
             <div className="w-9 h-9 bg-[#f8fafc] rounded-xl flex items-center justify-center group-hover:bg-[#e2e8f0] transition-all duration-300">
-              <User className="h-4 w-4 text-[#4f46e5]" />
+              <Settings className="h-4 w-4 text-[#4f46e5]" />
             </div>
-            <span className="font-medium text-sm">Account Settings</span>
+            <span className="font-medium text-sm">Branding Settings</span>
           </Link>
           
           <button
