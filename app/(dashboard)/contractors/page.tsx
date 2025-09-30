@@ -117,18 +117,28 @@ export default function ContractorsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Contractors</h1>
-          <p className="text-gray-600 mt-1">Manage your approved contractor list</p>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+      {/* Hero Banner */}
+      <section className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] py-16 mx-6 rounded-3xl mb-6">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center">
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
+              Contractor Management
+            </h1>
+            <p className="text-xl text-white/90 max-w-3xl mx-auto mb-8">
+              Manage your approved vendor list, track compliance, and monitor active works
+            </p>
+            <div className="flex justify-center gap-4">
+              <Button onClick={() => setShowAddModal(true)} className="bg-white text-[#4f46e5] hover:bg-white/90">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Contractor
+              </Button>
+            </div>
+          </div>
         </div>
-        <Button onClick={() => setShowAddModal(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Contractor
-        </Button>
-      </div>
+      </section>
+
+      <div className="px-6 space-y-6">
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -290,6 +300,7 @@ export default function ContractorsPage() {
           )}
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }

@@ -113,20 +113,28 @@ export default function FinancesPage() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Finances</h1>
-          <p className="text-gray-600 mt-1">Portfolio financial overview and management</p>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+      {/* Hero Banner */}
+      <section className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] py-16 mx-6 rounded-3xl mb-6">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center">
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
+              Financial Management
+            </h1>
+            <p className="text-xl text-white/90 max-w-3xl mx-auto mb-8">
+              Track arrears, reserve funds, and financial performance across your property portfolio
+            </p>
+            <div className="flex justify-center gap-4">
+              <Button variant="outline" className="bg-white/10 text-white border-white/20 hover:bg-white/20">
+                <Download className="h-4 w-4 mr-2" />
+                Export Report
+              </Button>
+            </div>
+          </div>
         </div>
-        <div className="flex gap-3">
-          <Button variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Export Report
-          </Button>
-        </div>
-      </div>
+      </section>
+
+      <div className="px-6 space-y-6">
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -304,6 +312,7 @@ export default function FinancesPage() {
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }
