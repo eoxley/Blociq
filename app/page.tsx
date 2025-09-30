@@ -66,7 +66,7 @@ export default function LandingPage() {
                 BlocIQ Property Intelligence Platform
               </h2>
               <p className="text-xl text-white/90 mb-12 max-w-4xl mx-auto leading-relaxed">
-                The all-in-one property intelligence platform for safer, smarter, and more efficient block management.
+                The all-in-one platform for safer, smarter, and efficient block management.
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -96,43 +96,9 @@ export default function LandingPage() {
             <h2 className="text-4xl font-bold text-gray-900 mb-6">
               Why BlocIQ?
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              The property management industry is drowning in compliance fines, admin overload, and lack of transparency. BlocIQ changes that.
+            <p className="text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
+              The property management industry is evolving. Legislative demands are rising, clients expect more transparency, and managers are stretched thin by outdated systems. BlocIQ is the next step forward — an AI-powered operating system built to support the industry, keep buildings safe, and give managers back control.
             </p>
-          </div>
-          
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-red-50 rounded-xl flex items-center justify-center mx-auto mb-4 border-2 border-red-200">
-                <Shield className="h-8 w-8 text-red-600 stroke-2" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Compliance Fines</h3>
-              <p className="text-gray-600">BSA penalties, leasehold law breaches, missed deadlines</p>
-            </div>
-            
-            <div className="text-center">
-              <div className="w-16 h-16 bg-orange-50 rounded-xl flex items-center justify-center mx-auto mb-4 border-2 border-orange-200">
-                <FileText className="h-8 w-8 text-orange-600 stroke-2" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Admin Overload</h3>
-              <p className="text-gray-600">Spreadsheets, manual processes, endless paperwork</p>
-            </div>
-            
-            <div className="text-center">
-              <div className="w-16 h-16 bg-yellow-50 rounded-xl flex items-center justify-center mx-auto mb-4 border-2 border-yellow-200">
-                <Users className="h-8 w-8 text-yellow-600 stroke-2" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Staff Burnout</h3>
-              <p className="text-gray-600">Overworked teams, high turnover, stress</p>
-            </div>
-            
-            <div className="text-center">
-              <div className="w-16 h-16 bg-blue-50 rounded-xl flex items-center justify-center mx-auto mb-4 border-2 border-blue-200">
-                <Eye className="h-8 w-8 text-blue-600 stroke-2" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Transparency</h3>
-              <p className="text-gray-600">Directors and leaseholders left in the dark</p>
-            </div>
           </div>
         </div>
       </section>
@@ -144,8 +110,8 @@ export default function LandingPage() {
             <h2 className="text-4xl font-bold text-gray-900 mb-6">
               What BlocIQ Delivers
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              The complete operating system for block management. Everything you need, intelligently connected.
+            <p className="text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
+              BlocIQ threads AI intelligence through every workflow — transforming admin into automation, compliance into confidence, and data into instant answers.
             </p>
           </div>
           
@@ -156,11 +122,12 @@ export default function LandingPage() {
                 <Mail className="h-8 w-8 text-orange-600 stroke-2" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-4">AI-Powered Communications Hub</h3>
-              <p className="text-gray-600 mb-4">Smart email management, auto-categorize & prioritize.</p>
+              <p className="text-gray-600 mb-4">Email and correspondence, made smarter.</p>
               <ul className="text-sm text-gray-500 space-y-2">
-                <li>• Auto-draft responses (AI-generated)</li>
-                <li>• Outlook Add-in integration</li>
-                <li>• Template management + logging</li>
+                <li>• AI categorisation and prioritisation</li>
+                <li>• Auto-drafted responses in the right tone</li>
+                <li>• Outlook Add-in for seamless integration</li>
+                <li>• Template management and full audit trail</li>
               </ul>
             </div>
 
@@ -170,11 +137,11 @@ export default function LandingPage() {
                 <Building2 className="h-8 w-8 text-blue-600 stroke-2" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-4">Building & Portfolio Management</h3>
-              <p className="text-gray-600 mb-4">Building profiles, unit tracking, multi-building view.</p>
+              <p className="text-gray-600 mb-4">All your buildings, one intelligent view.</p>
               <ul className="text-sm text-gray-500 space-y-2">
-                <li>• Portfolio dashboard</li>
-                <li>• Visual building structures</li>
-                <li>• Asset tracking</li>
+                <li>• Visual building structures and unit tracking</li>
+                <li>• Portfolio dashboards</li>
+                <li>• Asset management with AI insights</li>
               </ul>
             </div>
 
@@ -184,11 +151,11 @@ export default function LandingPage() {
                 <Shield className="h-8 w-8 text-green-600 stroke-2" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-4">Compliance Management System</h3>
-              <p className="text-gray-600 mb-4">Automated deadline tracking, document management.</p>
+              <p className="text-gray-600 mb-4">Stay ahead of every deadline.</p>
               <ul className="text-sm text-gray-500 space-y-2">
-                <li>• FRA, EICR, Gas, Asbestos, Legionella</li>
-                <li>• AI document search</li>
-                <li>• Audit trails + setup wizard</li>
+                <li>• Automated reminders for FRA, EICR, Gas, Asbestos, Legionella</li>
+                <li>• AI-driven document search</li>
+                <li>• Complete audit trails and setup wizard</li>
               </ul>
             </div>
 
@@ -198,11 +165,11 @@ export default function LandingPage() {
                 <FileText className="h-8 w-8 text-purple-600 stroke-2" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-4">Document Intelligence (AI Labs)</h3>
-              <p className="text-gray-600 mb-4">Lease, Compliance, Major Works, General labs.</p>
+              <p className="text-gray-600 mb-4">Your documents, decoded.</p>
               <ul className="text-sm text-gray-500 space-y-2">
-                <li>• Extract terms, clauses, dates</li>
-                <li>• OCR processing</li>
-                <li>• Q&A with any document</li>
+                <li>• Extract lease terms, clauses, and dates</li>
+                <li>• OCR for scanned files</li>
+                <li>• Ask questions directly against any document</li>
               </ul>
             </div>
 
@@ -212,11 +179,11 @@ export default function LandingPage() {
                 <BarChart3 className="h-8 w-8 text-teal-600 stroke-2" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-4">Finance & Accounting</h3>
-              <p className="text-gray-600 mb-4">Bank reconciliation, invoice capture, works orders.</p>
+              <p className="text-gray-600 mb-4">Smart, compliant financial management.</p>
               <ul className="text-sm text-gray-500 space-y-2">
-                <li>• OCR invoice capture & approval</li>
-                <li>• Contractor management</li>
-                <li>• Spend analysis + automated reminders</li>
+                <li>• OCR invoice capture & approvals</li>
+                <li>• Contractor and works order management</li>
+                <li>• Automated reminders and spend analysis</li>
               </ul>
             </div>
 
@@ -226,11 +193,11 @@ export default function LandingPage() {
                 <Calendar className="h-8 w-8 text-indigo-600 stroke-2" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-4">Calendar & Events</h3>
-              <p className="text-gray-600 mb-4">Intelligent scheduling, Outlook sync, reminders.</p>
+              <p className="text-gray-600 mb-4">Never miss what matters.</p>
               <ul className="text-sm text-gray-500 space-y-2">
-                <li>• Automated reminders</li>
-                <li>• Multi-source events</li>
-                <li>• Compliance deadline tracking</li>
+                <li>• Intelligent scheduling with Outlook sync</li>
+                <li>• Automated compliance and event reminders</li>
+                <li>• Multi-building, multi-source event tracking</li>
               </ul>
             </div>
 
@@ -240,11 +207,11 @@ export default function LandingPage() {
                 <Settings className="h-8 w-8 text-pink-600 stroke-2" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-4">Major Works Management</h3>
-              <p className="text-gray-600 mb-4">Project tracking, contractor performance.</p>
+              <p className="text-gray-600 mb-4">AI-assisted project control.</p>
               <ul className="text-sm text-gray-500 space-y-2">
-                <li>• Budget tracking</li>
-                <li>• Timeline management</li>
-                <li>• Document storage</li>
+                <li>• Section 20 timeline and budget tracking</li>
+                <li>• Contractor performance logs</li>
+                <li>• Document and notice storage</li>
               </ul>
             </div>
 
@@ -254,11 +221,11 @@ export default function LandingPage() {
                 <Users className="h-8 w-8 text-cyan-600 stroke-2" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-4">Leaseholder Portal</h3>
-              <p className="text-gray-600 mb-4">Secure login with magic links.</p>
+              <p className="text-gray-600 mb-4">A secure, transparent window into management.</p>
               <ul className="text-sm text-gray-500 space-y-2">
-                <li>• Balance visibility + online payments</li>
-                <li>• Document access</li>
-                <li>• Chat/contact forms</li>
+                <li>• GDPR-compliant login with magic links</li>
+                <li>• Balance visibility and online payments</li>
+                <li>• Document access and direct contact</li>
               </ul>
             </div>
 
@@ -268,11 +235,11 @@ export default function LandingPage() {
                 <BookOpen className="h-8 w-8 text-amber-600 stroke-2" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-4">Unified Knowledge System</h3>
-              <p className="text-gray-600 mb-4">Upload regulatory/industry docs.</p>
+              <p className="text-gray-600 mb-4">Industry knowledge at your fingertips.</p>
               <ul className="text-sm text-gray-500 space-y-2">
-                <li>• Vector search + semantic Q&A</li>
-                <li>• Enhanced AI answers with citations</li>
-                <li>• Industry knowledge library</li>
+                <li>• Upload and query regulations or guidance</li>
+                <li>• Vector search with semantic AI Q&A</li>
+                <li>• Always GDPR-compliant and UK-focused</li>
               </ul>
             </div>
 
@@ -285,17 +252,20 @@ export default function LandingPage() {
                 <h3 className="text-2xl font-bold">AskBlocIQ AI</h3>
               </div>
               <p className="text-white/90 mb-4 text-lg">
-                Embedded everywhere: communications, finance, compliance, docs. Ask questions, get instant answers.
+                The intelligence layer that ties it all together.
+              </p>
+              <p className="text-white/80 mb-6">
+                Embedded across communications, compliance, finance, and documents — just ask:
               </p>
               <div className="grid md:grid-cols-3 gap-4 text-white/80">
                 <div className="bg-white/10 rounded-lg p-3 backdrop-blur-sm">
-                  <p className="text-sm">&ldquo;What&apos;s our compliance status for Building 123?&rdquo;</p>
+                  <p className="text-sm">"What's our compliance status for Ashwood House?"</p>
                 </div>
                 <div className="bg-white/10 rounded-lg p-3 backdrop-blur-sm">
-                  <p className="text-sm">&ldquo;Show overdue invoices &gt; £500.&rdquo;</p>
+                  <p className="text-sm">"Show overdue invoices over £500."</p>
                 </div>
                 <div className="bg-white/10 rounded-lg p-3 backdrop-blur-sm">
-                  <p className="text-sm">&ldquo;Generate a Section 20 notice for lift replacement.&rdquo;</p>
+                  <p className="text-sm">"Draft a Section 20 notice for a lift replacement."</p>
                 </div>
               </div>
             </div>
@@ -310,8 +280,8 @@ export default function LandingPage() {
             <h2 className="text-4xl font-bold text-gray-900 mb-6">
               How It Works
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Simple setup, powerful results. From onboarding to going live in weeks, not months.
+            <p className="text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
+              Simple setup, powerful results. BlocIQ gets you live in weeks, not months.
             </p>
           </div>
           
@@ -320,8 +290,8 @@ export default function LandingPage() {
               <div className="w-20 h-20 bg-purple-50 rounded-2xl flex items-center justify-center mx-auto mb-6 border-2 border-purple-200">
                 <Settings className="h-8 w-8 text-purple-600 stroke-2" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Simple Setup</h3>
-              <p className="text-gray-600">Onboarding call, upload docs, we handle the rest.</p>
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Onboarding Call</h3>
+              <p className="text-gray-600">We guide the process</p>
             </div>
             
             <div className="text-center">
@@ -329,7 +299,7 @@ export default function LandingPage() {
                 <Zap className="h-8 w-8 text-teal-600 stroke-2" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-4">We Do the Heavy Lifting</h3>
-              <p className="text-gray-600">Data import, Outlook sync, everything configured.</p>
+              <p className="text-gray-600">Import data, sync Outlook, configure everything</p>
             </div>
             
             <div className="text-center">
@@ -337,7 +307,7 @@ export default function LandingPage() {
                 <Play className="h-8 w-8 text-blue-600 stroke-2" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-4">Training That Fits</h3>
-              <p className="text-gray-600">Short, simple sessions. Ready to use immediately.</p>
+              <p className="text-gray-600">Short, simple, ready to use immediately</p>
             </div>
             
             <div className="text-center">
@@ -345,7 +315,7 @@ export default function LandingPage() {
                 <CheckCircle className="h-8 w-8 text-green-600 stroke-2" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-4">Go Live</h3>
-              <p className="text-gray-600">All-in-one platform. No more spreadsheets.</p>
+              <p className="text-gray-600">An all-in-one platform with no more spreadsheets</p>
             </div>
           </div>
         </div>
