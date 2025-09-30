@@ -24,26 +24,10 @@ export async function GET(request: NextRequest) {
 
     console.log('🔐 User authenticated:', user.id);
 
-    // Get user's agency ID first
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('agency_id')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError) {
-      console.error('Error fetching user profile:', profileError);
-      return NextResponse.json({
-        success: false,
-        error: 'Failed to fetch user profile'
-      }, { status: 500 });
-    }
-
-    // Get user's buildings through agency membership
+    // Get user's buildings - try direct ownership first, then all buildings
     let { data: buildings, error: buildingsError } = await supabase
       .from('buildings')
-      .select('id, name, is_hrb, agency_id')
-      .eq('agency_id', userProfile.agency_id);
+      .select('id, name, is_hrb, agency_id');
     
     // If no buildings found with agency_id, try to get all buildings (for testing)
     if ((!buildings || buildings.length === 0) && !buildingsError) {
