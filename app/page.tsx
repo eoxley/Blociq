@@ -65,10 +65,10 @@ export default function LandingPage() {
                 <span className="text-teal-200">clever.</span>
               </h1>
               <h2 className="text-2xl md:text-3xl text-white/90 mb-6 font-medium">
-                AI-powered property management, reimagined.
+                BlocIQ Property Intelligence Platform
               </h2>
               <p className="text-xl text-white/90 mb-12 max-w-4xl mx-auto leading-relaxed">
-                The all-in-one platform that saves managers hours, keeps buildings compliant, and gives directors instant transparency.
+                The all-in-one property intelligence platform for safer, smarter, and more efficient block management.
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -291,13 +291,13 @@ export default function LandingPage() {
               </p>
               <div className="grid md:grid-cols-3 gap-4 text-white/80">
                 <div className="bg-white/10 rounded-lg p-3 backdrop-blur-sm">
-                  <p className="text-sm">"What's our compliance status for Building 123?"</p>
+                  <p className="text-sm">&ldquo;What&apos;s our compliance status for Building 123?&rdquo;</p>
                 </div>
                 <div className="bg-white/10 rounded-lg p-3 backdrop-blur-sm">
-                  <p className="text-sm">"Show overdue invoices > £500."</p>
+                  <p className="text-sm">&ldquo;Show overdue invoices &gt; £500.&rdquo;</p>
                 </div>
                 <div className="bg-white/10 rounded-lg p-3 backdrop-blur-sm">
-                  <p className="text-sm">"Generate a Section 20 notice for lift replacement."</p>
+                  <p className="text-sm">&ldquo;Generate a Section 20 notice for lift replacement.&rdquo;</p>
                 </div>
               </div>
             </div>
