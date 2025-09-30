@@ -5,6 +5,7 @@ import { ArrowRight, Brain, FileText, Calendar, Shield, Zap, Building2, Users, H
 import { getAllPosts, formatDate } from '@/lib/blog';
 import BlocIQLogo from '@/components/BlocIQLogo';
 import AskBlocIQSection from '@/components/AskBlocIQSection';
+import FooterWithModals from '@/components/FooterWithModals';
 
 export default function LandingPage() {
   const blogPosts = getAllPosts().slice(0, 3); // Get latest 3 posts
@@ -521,63 +522,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-4 gap-8">
-            <div>
-              <div className="flex items-center mb-4">
-                <div className="w-8 h-8 bg-gradient-to-r from-[#6A00F5] to-[#8A2BE2] rounded-lg flex items-center justify-center mr-3">
-                  <BlocIQLogo className="text-white" size={16} />
-                </div>
-                <span className="text-xl font-bold">BlocIQ</span>
-              </div>
-              <p className="text-gray-400 mb-4">
-                The operating system for block management.
-              </p>
-              <div className="text-xs text-gray-400 space-y-1">
-                <p><strong>BlocIQ Ltd</strong> — Company No. 16533839</p>
-                <p><strong>ICO Registration:</strong> ZB995810</p>
-                <p><strong>Trademark No:</strong> UK00004267693</p>
-                <p><strong>Professional Indemnity Insurance:</strong> Hiscox, £1,000,000 cover, Policy PL-PSC10003772018/00</p>
-                <p>GDPR compliant, UK servers</p>
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Platform</h3>
-              <ul className="space-y-2 text-gray-400">
-                <li><Link href="#features" className="hover:text-white transition-colors">Features</Link></li>
-                <li><Link href="#how-it-works" className="hover:text-white transition-colors">How It Works</Link></li>
-                <li><Link href="/login" className="hover:text-white transition-colors">Log In</Link></li>
-              </ul>
-            </div>
-            
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Legal</h3>
-              <ul className="space-y-2 text-gray-400">
-                <li><Link href="/privacy-policy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
-                <li><Link href="/terms" className="hover:text-white transition-colors">Terms</Link></li>
-                <li><Link href="/cookies" className="hover:text-white transition-colors">Cookies</Link></li>
-                <li><Link href="/accessibility" className="hover:text-white transition-colors">Accessibility</Link></li>
-              </ul>
-            </div>
-            
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Contact</h3>
-              <ul className="space-y-2 text-gray-400">
-                <li><Link href="#book-demo" className="hover:text-white transition-colors">Book a Demo</Link></li>
-                <li><Link href="/contact" className="hover:text-white transition-colors">Contact Us</Link></li>
-                <li><a href="mailto:hello@blociq.co.uk" className="hover:text-white transition-colors">hello@blociq.co.uk</a></li>
-              </ul>
-            </div>
-          </div>
-          
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2024 BlocIQ Ltd. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
+      <FooterWithModals />
     </div>
   );
 }
