@@ -168,19 +168,19 @@ export default function HybridAskAI({ buildingId, onJobCreated }: HybridAskAIPro
   };
 
   return (
-    <div className=\"flex flex-col h-full bg-white rounded-lg shadow-sm border\">
+    <div className="flex flex-col h-full bg-white rounded-lg shadow-sm border">
       {/* Header */}
-      <div className=\"border-b px-6 py-4\">
-        <div className=\"flex items-center justify-between\">
+      <div className="border-b px-6 py-4">
+        <div className="flex items-center justify-between">
           <div>
-            <h2 className=\"text-lg font-semibold text-gray-900\">Ask AI about Leases</h2>
-            <p className=\"text-sm text-gray-600\">Upload a lease document and ask questions</p>
+            <h2 className="text-lg font-semibold text-gray-900">Ask AI about Leases</h2>
+            <p className="text-sm text-gray-600">Upload a lease document and ask questions</p>
           </div>
           
           {messages.length > 0 && (
             <button
               onClick={clearMessages}
-              className=\"text-sm text-gray-500 hover:text-gray-700 px-3 py-1 rounded-md border\"
+              className="text-sm text-gray-500 hover:text-gray-700 px-3 py-1 rounded-md border"
               disabled={isProcessing}
             >
               Clear Chat
@@ -190,31 +190,31 @@ export default function HybridAskAI({ buildingId, onJobCreated }: HybridAskAIPro
         
         {/* Processing Status */}
         {uploadStatus.isUploading && (
-          <div className=\"mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3\">
-            <div className=\"flex items-center justify-between mb-2\">
-              <span className=\"text-sm font-medium text-blue-900\">
+          <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-blue-900">
                 {getProcessingMessage()}
               </span>
               <button
                 onClick={abort}
-                className=\"text-xs text-blue-700 hover:text-blue-800\"
+                className="text-xs text-blue-700 hover:text-blue-800"
               >
                 Cancel
               </button>
             </div>
             
             {uploadStatus.progress > 0 && (
-              <div className=\"w-full bg-blue-200 rounded-full h-2\">
+              <div className="w-full bg-blue-200 rounded-full h-2">
                 <div 
-                  className=\"bg-blue-600 h-2 rounded-full transition-all duration-300\"
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                   style={{ width: `${uploadStatus.progress}%` }}
                 />
               </div>
             )}
             
             {uploadStatus.jobId && (
-              <div className=\"text-xs text-blue-700 mt-1\">
-                Background Job ID: <code className=\"bg-blue-100 px-1 rounded\">{uploadStatus.jobId}</code>
+              <div className="text-xs text-blue-700 mt-1">
+                Background Job ID: <code className="bg-blue-100 px-1 rounded">{uploadStatus.jobId}</code>
               </div>
             )}
           </div>
@@ -222,25 +222,25 @@ export default function HybridAskAI({ buildingId, onJobCreated }: HybridAskAIPro
       </div>
 
       {/* Messages */}
-      <div className=\"flex-1 overflow-y-auto p-6 space-y-4\">
+      <div className="flex-1 overflow-y-auto p-6 space-y-4">
         {messages.length === 0 ? (
-          <div className=\"text-center py-8\">
-            <div className=\"text-4xl mb-4\">📄</div>
-            <h3 className=\"text-lg font-medium text-gray-900 mb-2\">
+          <div className="text-center py-8">
+            <div className="text-4xl mb-4">📄</div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
               Ready to analyze lease documents
             </h3>
-            <p className=\"text-gray-600 mb-6\">
+            <p className="text-gray-600 mb-6">
               Upload a lease document and ask specific questions for instant analysis
             </p>
             
-            <div className=\"grid grid-cols-1 md:grid-cols-2 gap-3 max-w-md mx-auto text-sm\">
-              <div className=\"bg-green-50 border border-green-200 rounded-lg p-3\">
-                <div className=\"font-medium text-green-900 mb-1\">⚡ Quick Processing</div>
-                <div className=\"text-green-700\">Small files & targeted questions get instant answers</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-md mx-auto text-sm">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <div className="font-medium text-green-900 mb-1">⚡ Quick Processing</div>
+                <div className="text-green-700">Small files & targeted questions get instant answers</div>
               </div>
-              <div className=\"bg-blue-50 border border-blue-200 rounded-lg p-3\">
-                <div className=\"font-medium text-blue-900 mb-1\">🔄 Background Processing</div>
-                <div className=\"text-blue-700\">Large/complex documents processed thoroughly</div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div className="font-medium text-blue-900 mb-1">🔄 Background Processing</div>
+                <div className="text-blue-700">Large/complex documents processed thoroughly</div>
               </div>
             </div>
           </div>
@@ -260,11 +260,11 @@ export default function HybridAskAI({ buildingId, onJobCreated }: HybridAskAIPro
                 }`}
               >
                 {/* Message content */}
-                <div className=\"whitespace-pre-wrap\">{message.content}</div>
+                <div className="whitespace-pre-wrap">{message.content}</div>
                 
                 {/* Metadata */}
                 {message.metadata && (
-                  <div className=\"text-xs opacity-75 mt-2 space-y-1\">
+                  <div className="text-xs opacity-75 mt-2 space-y-1">
                     {message.metadata.filename && (
                       <div>📎 {message.metadata.filename}</div>
                     )}
@@ -284,7 +284,7 @@ export default function HybridAskAI({ buildingId, onJobCreated }: HybridAskAIPro
       </div>
 
       {/* Input Area */}
-      <div className=\"border-t p-4\">
+      <div className="border-t p-4">
         {/* File Upload Area */}
         {!currentFile ? (
           <div
@@ -299,48 +299,48 @@ export default function HybridAskAI({ buildingId, onJobCreated }: HybridAskAIPro
             onDragOver={handleDrag}
             onDrop={handleDrop}
           >
-            <div className=\"text-2xl mb-2\">📄</div>
-            <div className=\"text-sm text-gray-600\">
-              <span className=\"font-medium\">Drop your lease document here</span> or click to browse
+            <div className="text-2xl mb-2">📄</div>
+            <div className="text-sm text-gray-600">
+              <span className="font-medium">Drop your lease document here</span> or click to browse
             </div>
-            <div className=\"text-xs text-gray-500 mt-1\">
+            <div className="text-xs text-gray-500 mt-1">
               Supports PDF, images, Word docs (up to 100MB)
             </div>
             
             <input
               ref={fileInputRef}
-              type=\"file\"
+              type="file"
               onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
-              accept=\".pdf,.jpg,.jpeg,.png,.tiff,.webp,.doc,.docx\"
-              className=\"hidden\"
+              accept=".pdf,.jpg,.jpeg,.png,.tiff,.webp,.doc,.docx"
+              className="hidden"
             />
           </div>
         ) : (
-          <div className=\"bg-green-50 border border-green-200 rounded-lg p-3 mb-4\">
-            <div className=\"flex items-center justify-between\">
-              <div className=\"flex items-center space-x-2\">
-                <div className=\"text-green-600\">📄</div>
+          <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="text-green-600">📄</div>
                 <div>
-                  <div className=\"font-medium text-green-900\">{currentFile.name}</div>
-                  <div className=\"text-sm text-green-700\">{formatFileSize(currentFile.size)}</div>
+                  <div className="font-medium text-green-900">{currentFile.name}</div>
+                  <div className="text-sm text-green-700">{formatFileSize(currentFile.size)}</div>
                 </div>
               </div>
               <button
                 onClick={() => setCurrentFile(null)}
-                className=\"text-green-700 hover:text-green-800 text-sm\"
+                className="text-green-700 hover:text-green-800 text-sm"
               >
                 Remove
               </button>
             </div>
             
             {/* Quick Actions */}
-            <div className=\"flex flex-wrap gap-2 mt-3\">
-              <span className=\"text-xs text-green-700 font-medium\">Quick questions:</span>
+            <div className="flex flex-wrap gap-2 mt-3">
+              <span className="text-xs text-green-700 font-medium">Quick questions:</span>
               {['parties', 'rent', 'dates', 'address', 'summary'].map((action) => (
                 <button
                   key={action}
                   onClick={() => handleQuickAction(action)}
-                  className=\"text-xs bg-white text-green-700 border border-green-300 rounded px-2 py-1 hover:bg-green-50\"
+                  className="text-xs bg-white text-green-700 border border-green-300 rounded px-2 py-1 hover:bg-green-50"
                 >
                   {action.charAt(0).toUpperCase() + action.slice(1)}
                 </button>
@@ -350,33 +350,33 @@ export default function HybridAskAI({ buildingId, onJobCreated }: HybridAskAIPro
         )}
 
         {/* Message Input */}
-        <form onSubmit={handleSubmit} className=\"flex space-x-3\">
-          <div className=\"flex-1\">
+        <form onSubmit={handleSubmit} className="flex space-x-3">
+          <div className="flex-1">
             <input
-              type=\"text\"
+              type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               placeholder={
                 currentFile
-                  ? \"Ask a question about your lease document...\"
-                  : \"Ask a question or upload a lease document...\"
+                  ? "Ask a question about your lease document..."
+                  : "Ask a question or upload a lease document..."
               }
-              className=\"w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent\"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               disabled={isProcessing}
             />
           </div>
           <button
-            type=\"submit\"
+            type="submit"
             disabled={!inputValue.trim() || isProcessing}
-            className=\"px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium\"
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
             {isProcessing ? '...' : currentFile ? '📋 Analyze' : '💬 Send'}
           </button>
         </form>
         
         {currentFile && (
-          <div className=\"text-xs text-gray-500 mt-2\">
-            💡 Tip: For specific pages, try \"What's on page 2?\" or \"Show me the signature page\"
+          <div className="text-xs text-gray-500 mt-2">
+            💡 Tip: For specific pages, try "What's on page 2?" or "Show me the signature page"
           </div>
         )}
       </div>

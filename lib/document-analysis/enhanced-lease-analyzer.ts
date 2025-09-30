@@ -410,7 +410,7 @@ export function formatAnalysisResponse(analysisResult: any): AnalysisResult {
 }
 
 // Helper functions for OCR processing (mock implementations)
-async function ocrAPI = {
+const ocrAPI = {
   async process(file: File, options: OCROptions): Promise<OCRResult> {
     // This would be replaced with actual OCR service calls
     // For now, return a mock result

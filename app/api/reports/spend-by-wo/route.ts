@@ -171,14 +171,14 @@ function generateWorksOrderInsights(data: any[], summary: any): string[] {
   }
 
   // Contractor performance
-  const contractorVariance = data.reduce((acc, wo) => {
+  const contractorVariance = data.reduce<Record<string, { total_variance: number; count: number }>>((acc, wo) => {
     if (!acc[wo.contractor_name]) {
       acc[wo.contractor_name] = { total_variance: 0, count: 0 };
     }
     acc[wo.contractor_name].total_variance += wo.variance;
     acc[wo.contractor_name].count += 1;
     return acc;
-  }, {} as Record<string, { total_variance: number; count: number });
+  }, {});
 
   const contractorPerformance = Object.entries(contractorVariance)
     .map(([name, data]) => ({

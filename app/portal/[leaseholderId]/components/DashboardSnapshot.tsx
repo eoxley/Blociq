@@ -38,6 +38,10 @@ export function DashboardSnapshot({ lease }: DashboardSnapshotProps) {
     console.error('Error calculating years remaining:', error);
   }
 
+  // Get financial status from lease data if available
+  const isInArrears = lease.financial_status === 'in_arrears' || lease.current_balance > 0;
+  const currentBalance = lease.current_balance || 0;
+
   const snapshots = [
     {
       title: 'Lease Term',
@@ -68,14 +72,12 @@ export function DashboardSnapshot({ lease }: DashboardSnapshotProps) {
       iconColor: 'text-purple-600'
     },
     {
-      title: 'Property',
-      value: lease.unit_number
-        ? `Unit ${lease.unit_number}`
-        : lease.buildings?.name || 'Property',
-      subtitle: lease.buildings?.address || 'Address not available',
+      title: 'Payment Status',
+      value: isInArrears ? 'In Arrears' : 'Up to Date',
+      subtitle: isInArrears ? `Balance: £${currentBalance.toFixed(2)}` : 'All payments current',
       icon: ExclamationTriangleIcon,
-      bgColor: 'bg-orange-50',
-      iconColor: 'text-orange-600'
+      bgColor: isInArrears ? 'bg-red-50' : 'bg-green-50',
+      iconColor: isInArrears ? 'text-red-600' : 'text-green-600'
     }
   ];
 

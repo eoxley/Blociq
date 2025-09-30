@@ -37,95 +37,85 @@ export async function GET(
       }, { status: 404 });
     }
 
-    // Calculate financial summary
-    const currentYear = new Date().getFullYear();
+    // Get live financial data from accounting tables
+    const { data: demandHeaders } = await supabase
+      .from('ar_demand_headers')
+      .select(`
+        id,
+        total_amount,
+        outstanding_amount,
+        due_date,
+        status,
+        created_at
+      `)
+      .eq('leaseholder_id', params.leaseholderId)
+      .order('due_date', { ascending: false });
+
+    const { data: receipts } = await supabase
+      .from('ar_receipts')
+      .select(`
+        id,
+        amount,
+        payment_date,
+        description,
+        status
+      `)
+      .eq('leaseholder_id', params.leaseholderId)
+      .order('payment_date', { ascending: false });
+
+    // Calculate current balance and arrears
+    const totalOutstanding = demandHeaders?.reduce((sum, demand) => sum + (demand.outstanding_amount || 0), 0) || 0;
+    const totalPaid = receipts?.reduce((sum, receipt) => sum + (receipt.amount || 0), 0) || 0;
+    const currentBalance = totalOutstanding - totalPaid;
+    
+    // Get ground rent information from lease
     const groundRentAmount = parseFloat(lease.ground_rent?.replace(/[^\d.]/g, '') || '0');
     const serviceChargePercentage = lease.service_charge_apportionment || 0;
 
-    // Mock service charge calculation (in real app, this would come from actual building service charges)
-    const estimatedAnnualServiceCharge = 2500; // This should be calculated from building's actual service charges
-    const userServiceCharge = (estimatedAnnualServiceCharge * serviceChargePercentage) / 100;
+    // Calculate service charge from actual demands
+    const serviceChargeDemands = demandHeaders?.filter(d => d.description?.toLowerCase().includes('service')) || [];
+    const serviceChargeAmount = serviceChargeDemands.reduce((sum, demand) => sum + (demand.total_amount || 0), 0);
 
     const financialSummary = {
+      current_balance: currentBalance,
+      total_outstanding: totalOutstanding,
+      total_paid: totalPaid,
+      is_in_arrears: currentBalance > 0,
       ground_rent: {
         annual_amount: groundRentAmount,
-        next_payment_date: `${currentYear + 1}-01-01`, // Typically ground rent is paid annually
-        last_payment_date: `${currentYear}-01-01`,
-        status: 'up_to_date'
+        status: groundRentAmount > 0 ? 'active' : 'not_applicable'
       },
       service_charge: {
-        annual_estimate: userServiceCharge,
+        annual_amount: serviceChargeAmount,
         apportionment_percentage: serviceChargePercentage,
-        next_payment_date: `${currentYear + 1}-03-31`, // Typically service charge is paid quarterly
-        last_payment_date: `${currentYear}-12-31`,
-        status: 'pending'
+        status: serviceChargeAmount > 0 ? 'active' : 'not_applicable'
       },
-      total_annual_cost: groundRentAmount + userServiceCharge
+      payment_status: currentBalance > 0 ? 'in_arrears' : 'up_to_date'
     };
 
-    // Get recent payments/transactions (mock data for now)
-    const recentTransactions = [
-      {
-        id: '1',
-        type: 'ground_rent',
-        amount: groundRentAmount,
-        date: `${currentYear}-01-15`,
-        description: `Ground Rent Payment ${currentYear}`,
-        status: 'paid'
-      },
-      {
-        id: '2',
-        type: 'service_charge',
-        amount: userServiceCharge / 4, // Quarterly payment
-        date: `${currentYear}-03-31`,
-        description: `Service Charge Q1 ${currentYear}`,
-        status: 'paid'
-      },
-      {
-        id: '3',
-        type: 'service_charge',
-        amount: userServiceCharge / 4,
-        date: `${currentYear}-06-30`,
-        description: `Service Charge Q2 ${currentYear}`,
-        status: 'paid'
-      },
-      {
-        id: '4',
-        type: 'service_charge',
-        amount: userServiceCharge / 4,
-        date: `${currentYear}-09-30`,
-        description: `Service Charge Q3 ${currentYear}`,
-        status: 'paid'
-      },
-      {
-        id: '5',
-        type: 'service_charge',
-        amount: userServiceCharge / 4,
-        date: `${currentYear}-12-31`,
-        description: `Service Charge Q4 ${currentYear}`,
-        status: 'pending'
-      }
-    ];
+    // Transform demands into recent transactions
+    const recentTransactions = demandHeaders?.slice(0, 10).map(demand => ({
+      id: demand.id,
+      type: demand.description?.toLowerCase().includes('service') ? 'service_charge' : 'demand',
+      amount: demand.total_amount,
+      date: demand.due_date,
+      description: demand.description || 'Payment demand',
+      status: demand.outstanding_amount > 0 ? 'outstanding' : 'paid',
+      outstanding_amount: demand.outstanding_amount
+    })) || [];
 
-    // Get upcoming payments
-    const upcomingPayments = [
-      {
-        id: '1',
-        type: 'ground_rent',
-        amount: groundRentAmount,
-        due_date: `${currentYear + 1}-01-01`,
-        description: `Ground Rent Payment ${currentYear + 1}`,
-        status: 'upcoming'
-      },
-      {
-        id: '2',
-        type: 'service_charge',
-        amount: userServiceCharge / 4,
-        due_date: `${currentYear}-12-31`,
-        description: `Service Charge Q4 ${currentYear}`,
-        status: 'due'
-      }
-    ];
+    // Get upcoming payments (outstanding demands)
+    const upcomingPayments = demandHeaders?.filter(demand => 
+      demand.outstanding_amount > 0 && new Date(demand.due_date) >= new Date()
+    ).map(demand => ({
+      id: demand.id,
+      type: demand.description?.toLowerCase().includes('service') ? 'service_charge' : 'demand',
+      amount: demand.outstanding_amount,
+      due_date: demand.due_date,
+      description: demand.description || 'Payment due',
+      status: 'due',
+      days_overdue: demand.due_date ? Math.max(0, Math.floor((new Date().getTime() - new Date(demand.due_date).getTime()) / (1000 * 60 * 60 * 24))) : 0
+    })) || [];
 
     return NextResponse.json({
       success: true,
