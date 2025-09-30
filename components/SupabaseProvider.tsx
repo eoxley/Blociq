@@ -50,10 +50,26 @@ export default function SupabaseProvider({ children }: { children: React.ReactNo
   useEffect(() => {
     // Get initial session
     const getInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Session error:', error);
+          // Clear corrupted session
+          await supabase.auth.signOut();
+        }
+        setSession(session);
+        setUser(session?.user ?? null);
+      } catch (error) {
+        console.error('Failed to get session:', error);
+        // Clear any corrupted cookies
+        try {
+          await supabase.auth.signOut();
+        } catch (e) {
+          console.error('Failed to sign out:', e);
+        }
+      } finally {
+        setLoading(false);
+      }
     };
 
     getInitialSession();
@@ -68,7 +84,9 @@ export default function SupabaseProvider({ children }: { children: React.ReactNo
     );
 
     return () => {
-      subscription.unsubscribe();
+      if (subscription && typeof subscription.unsubscribe === 'function') {
+        subscription.unsubscribe();
+      }
     };
   }, [supabase]);
 
