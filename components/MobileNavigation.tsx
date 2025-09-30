@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSupabase } from '@/components/SupabaseProvider';
 import { useRouter } from 'next/navigation';
-import { Menu, X, Bell, Settings, User, HelpCircle, LogOut, Home, Inbox, Building2, Shield, Megaphone, Wrench, Brain, FileText } from 'lucide-react';
+import { Menu, X, Bell, Settings, User, HelpCircle, LogOut, Home, Inbox, Building2, Shield, Megaphone, Wrench, Brain, FileText, Upload } from 'lucide-react';
 import BlocIQLogo from './BlocIQLogo';
 import { BlocIQButton } from '@/components/ui/blociq-button';
 import { BlocIQBadge } from '@/components/ui/blociq-badge';
@@ -18,12 +18,29 @@ const navItems = [
   { label: "Communications", icon: Megaphone, href: "/communications", comingSoon: false, description: "Letter & email templates" },
   { label: "Major Works", icon: Wrench, href: "/major-works", comingSoon: false, description: "Project management" },
   { label: "AI History", icon: Brain, href: "/ai-history", comingSoon: false, description: "Search past AI interactions" },
+  { label: "Onboarding", icon: Upload, href: "/onboarding", comingSoon: false, description: "Internal data processing", superAdminOnly: true },
 ];
 
 export default function MobileNavigation() {
-  const { supabase } = useSupabase();
+  const { supabase, user } = useSupabase();
   const [isOpen, setIsOpen] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const pathname = usePathname();
+
+  // Check user role for super_admin access
+  useEffect(() => {
+    const checkUserRole = async () => {
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+        setUserRole(profile?.role || null);
+      }
+    };
+    checkUserRole();
+  }, [user, supabase]);
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -109,7 +126,13 @@ export default function MobileNavigation() {
                     Navigation
                   </h3>
                   
-                  {navItems.map(({ label, icon, href, comingSoon, description }) => {
+                  {navItems.filter(item => {
+                    // Hide super_admin only items for non-super_admins
+                    if (item.superAdminOnly && userRole !== 'super_admin') {
+                      return false;
+                    }
+                    return true;
+                  }).map(({ label, icon, href, comingSoon, description }) => {
                     const isActive = pathname === href || (pathname && pathname.startsWith(href + '/'));
                     
                     if (comingSoon) {
