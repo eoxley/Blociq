@@ -92,18 +92,18 @@ export function PortalNavigation({ leaseholderId, scope }: PortalNavigationProps
             Support
           </div>
           <div className="mt-2 space-y-2">
-            <a
+            <Link
               href={`/portal/${leaseholderId}/contact`}
               className="block text-sm text-gray-700 hover:text-gray-900"
             >
               Contact Support
-            </a>
-            <a
+            </Link>
+            <Link
               href={`/portal/${leaseholderId}/chat`}
               className="block text-sm text-gray-700 hover:text-gray-900"
             >
               Ask BlocAI
-            </a>
+            </Link>
           </div>
         </div>
       </div>

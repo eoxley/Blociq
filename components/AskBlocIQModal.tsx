@@ -65,6 +65,12 @@ export default function AskBlocIQModal({ isOpen, onClose }: AskBlocIQModalProps)
     e.preventDefault()
     if (!prompt.trim() || isLoading) return
 
+    // Require email before allowing chat
+    if (!hasSubmittedEmail) {
+      toast.error('Please enter your email address first')
+      return
+    }
+
     const userMessageId = `msg-${messageIdCounter}`
     setMessageIdCounter(prev => prev + 1)
     const userMessage: Message = {
@@ -192,9 +198,9 @@ export default function AskBlocIQModal({ isOpen, onClose }: AskBlocIQModalProps)
               <div className="w-8 h-8 bg-gradient-to-r from-[#6A00F5] to-[#8A2BE2] rounded-lg flex items-center justify-center">
                 <Sparkles className="h-4 w-4 text-white" />
               </div>
-              Ask BlocIQ
+              Ask BlocIQ – Your AI Property Assistant
             </h2>
-            <p className="text-sm text-gray-600 mt-1">Try our AI-powered property management assistant</p>
+            <p className="text-sm text-gray-600 mt-1">Professional UK Property Management AI</p>
           </div>
           <button
             onClick={onClose}
@@ -245,31 +251,70 @@ export default function AskBlocIQModal({ isOpen, onClose }: AskBlocIQModalProps)
           className="flex-1 overflow-y-auto p-6 space-y-4 min-h-[300px]"
         >
           {messages.length === 0 && (
-            <div className="text-center py-12">
+            <div className="text-center py-8">
               <div className="w-16 h-16 bg-gradient-to-r from-[#6A00F5] to-[#8A2BE2] rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <Sparkles className="h-8 w-8 text-white" />
               </div>
-              <p className="text-gray-600 mb-4">Ask me anything about property management!</p>
-              <div className="flex flex-wrap gap-2 justify-center max-w-md mx-auto">
-                <button
-                  onClick={() => setPrompt("What is the Building Safety Act?")}
-                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm text-gray-700 transition-colors"
-                >
-                  What is the Building Safety Act?
-                </button>
-                <button
-                  onClick={() => setPrompt("How do I manage Section 20 consultations?")}
-                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm text-gray-700 transition-colors"
-                >
-                  Section 20 consultations
-                </button>
-                <button
-                  onClick={() => setPrompt("Tell me about lease management")}
-                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm text-gray-700 transition-colors"
-                >
-                  Tell me about lease management
-                </button>
+              <p className="text-xs text-gray-500 mb-4">Scroll for more info ↕️</p>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Welcome to Ask BlocIQ</h3>
+              <p className="text-gray-600 mb-6">Your professional AI property management assistant</p>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-6 text-left max-w-lg mx-auto">
+                <p className="text-sm text-gray-700 mb-4">
+                  You are welcome to try our Ask BlocIQ AI. This is BlocIQ's own secure, ring-fenced AI service — designed specifically for UK leasehold property management.
+                </p>
+                <p className="text-sm text-gray-700">
+                  <strong>All information you input and receive is GDPR-safe, confidential, and never shared with third parties.</strong> Your chats stay private, and the service runs on a secure UK-based server.
+                </p>
               </div>
+
+              {!hasSubmittedEmail && (
+                <div className="bg-gradient-to-r from-[#6A00F5] to-[#8A2BE2] rounded-xl p-6 mb-6 max-w-lg mx-auto">
+                  <p className="text-white font-semibold mb-3">Enter your email address to start chatting</p>
+                  <form onSubmit={handleEmailSubmit} className="space-y-3">
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="your.email@example.com"
+                      className="w-full px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-white text-gray-900"
+                      required
+                    />
+                    <button
+                      type="submit"
+                      className="w-full px-6 py-3 bg-white text-[#6A00F5] rounded-lg font-semibold hover:bg-gray-100 transition-colors"
+                    >
+                      Start Using Ask BlocIQ
+                    </button>
+                  </form>
+                </div>
+              )}
+
+              {hasSubmittedEmail && (
+                <div className="space-y-4">
+                  <p className="text-gray-600 mb-4">Ask me anything about property management!</p>
+                  <div className="flex flex-wrap gap-2 justify-center max-w-md mx-auto">
+                    <button
+                      onClick={() => setPrompt("What is the Building Safety Act?")}
+                      className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm text-gray-700 transition-colors"
+                    >
+                      What is the Building Safety Act?
+                    </button>
+                    <button
+                      onClick={() => setPrompt("How do I manage Section 20 consultations?")}
+                      className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm text-gray-700 transition-colors"
+                    >
+                      Section 20 consultations
+                    </button>
+                    <button
+                      onClick={() => setPrompt("Tell me about lease management")}
+                      className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm text-gray-700 transition-colors"
+                    >
+                      Tell me about lease management
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

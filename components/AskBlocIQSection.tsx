@@ -30,8 +30,33 @@ export default function AskBlocIQSection() {
           The intelligence layer that ties it all together.
         </p>
         <p className="text-white/80 mb-6">
-          Embedded across communications, compliance, finance, and documents — just ask:
+          AskBlocIQ is your secure AI assistant built specifically for UK leasehold property management. Embedded across communications, compliance, finance, and documents, it understands your questions and provides instant, intelligent answers.
         </p>
+
+        <div className="space-y-4 mb-6">
+          <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm">
+            <h4 className="text-white font-semibold mb-2">How It Works</h4>
+            <p className="text-white/80 text-sm">
+              AskBlocIQ connects to your property data within BlocIQ and uses advanced AI to understand context and provide accurate answers. It works seamlessly within the main application and through our Outlook Add-in, so you can get answers wherever you work.
+            </p>
+          </div>
+
+          <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm">
+            <h4 className="text-white font-semibold mb-2">Safe & Secure</h4>
+            <p className="text-white/80 text-sm">
+              All data is GDPR-compliant, ring-fenced, and stored securely on UK-based servers. Your information stays private and is never shared with third parties. Every conversation is confidential and fully encrypted.
+            </p>
+          </div>
+
+          <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm">
+            <h4 className="text-white font-semibold mb-2">Integrated Everywhere</h4>
+            <p className="text-white/80 text-sm">
+              Access AskBlocIQ directly in the BlocIQ platform or from Microsoft Outlook with our Add-in. Get instant answers about compliance deadlines, financial summaries, document searches, and more — without leaving your inbox.
+            </p>
+          </div>
+        </div>
+
+        <p className="text-white/80 mb-4 font-medium">Try asking:</p>
         <div className="grid md:grid-cols-3 gap-4 text-white/80">
           <div className="bg-white/10 rounded-lg p-3 backdrop-blur-sm">
             <p className="text-sm">"What's our compliance status for Ashwood House?"</p>

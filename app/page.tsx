@@ -73,7 +73,7 @@ export default function LandingPage() {
             </div>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Link
-                href="#book-demo"
+                href="/book-demo"
                 className="inline-flex items-center gap-3 bg-white text-[#6A00F5] px-8 py-4 rounded-xl transition-all duration-200 font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 hover:bg-gray-50"
               >
                 Book a Demo
@@ -444,14 +444,14 @@ export default function LandingPage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
-              href="#book-demo"
+              href="/book-demo"
               className="inline-flex items-center gap-3 bg-gradient-to-r from-[#6A00F5] to-[#8A2BE2] text-white px-8 py-4 rounded-xl transition-all duration-200 font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1"
             >
               Book a Demo
               <ArrowRight className="h-5 w-5" />
             </Link>
             <Link
-              href="/login"
+              href="/outlook-addin"
               className="inline-flex items-center gap-3 bg-white border-2 border-[#6A00F5] text-[#6A00F5] px-8 py-4 rounded-xl transition-all duration-200 font-semibold text-lg hover:bg-[#6A00F5] hover:text-white"
             >
               Outlook Add-in Free Trial
