@@ -339,11 +339,11 @@ export default function LandingPage() {
                 <Settings className="h-8 w-8 text-blue-600 stroke-2" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-4">Property Managers</h3>
-              <p className="text-gray-600 mb-4">Faster, less stressful workflows. Everything in one place.</p>
+              <p className="text-gray-600 mb-4">Workflows that feel lighter, faster, smarter.</p>
               <ul className="text-sm text-gray-500 space-y-2">
-                <li>• Automated compliance tracking</li>
+                <li>• AI-driven compliance tracking</li>
                 <li>• Integrated communications</li>
-                <li>• Smart document management</li>
+                <li>• Smarter document handling</li>
               </ul>
             </div>
             
@@ -352,11 +352,11 @@ export default function LandingPage() {
                 <Award className="h-8 w-8 text-purple-600 stroke-2" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-4">Directors</h3>
-              <p className="text-gray-600 mb-4">Transparent finances, compliance status, real-time insights.</p>
+              <p className="text-gray-600 mb-4">Transparency, insight, and confidence.</p>
               <ul className="text-sm text-gray-500 space-y-2">
-                <li>• Financial transparency</li>
-                <li>• Compliance dashboards</li>
-                <li>• Approval workflows</li>
+                <li>• Clear compliance dashboards</li>
+                <li>• Transparent finances</li>
+                <li>• Approvals with ease</li>
               </ul>
             </div>
             
@@ -365,11 +365,11 @@ export default function LandingPage() {
                 <Home className="h-8 w-8 text-teal-600 stroke-2" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-4">Leaseholders</h3>
-              <p className="text-gray-600 mb-4">Clarity on balances, documents, easy contact with managers.</p>
+              <p className="text-gray-600 mb-4">Clarity and confidence in their homes.</p>
               <ul className="text-sm text-gray-500 space-y-2">
                 <li>• Balance visibility</li>
-                <li>• Document access</li>
-                <li>• Direct communication</li>
+                <li>• Secure document access</li>
+                <li>• Simple communication</li>
               </ul>
             </div>
           </div>
@@ -382,17 +382,17 @@ export default function LandingPage() {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
               <h2 className="text-4xl font-bold text-gray-900 mb-6">
-                Built by someone who gets it
+                Built by Someone Who Gets It
               </h2>
               <div className="space-y-6 text-gray-600">
                 <p className="text-lg">
-                  Ellie Oxley spent 10+ years in block management, balancing real-world pressures with a vision for better technology.
+                  Ellie Oxley spent over a decade in block management — balancing real-world pressures with a vision for better tools.
+                </p>
+                <p className="text-lg italic">
+                  "I built BlocIQ because managers deserve intelligent systems that solve problems, not create them. The industry needs technology that evolves with legislation and supports the people at its heart."
                 </p>
                 <p className="text-lg">
-                  "I built BlocIQ because managers deserve better tools — not more spreadsheets. The industry needs intelligent systems that actually solve problems, not create them."
-                </p>
-                <p className="text-lg">
-                  From compliance deadlines to leaseholder complaints, Ellie understands the daily challenges property managers face. That's why every feature in BlocIQ is designed to make your life easier, not harder.
+                  Every feature in BlocIQ reflects lived experience — from compliance reminders to AI-powered communications — designed to make life easier, not harder.
                 </p>
               </div>
             </div>
@@ -427,30 +427,29 @@ export default function LandingPage() {
             The Future of Block Management
           </h2>
           <p className="text-xl text-white/90 mb-8 max-w-4xl mx-auto">
-            BlocIQ transforms block management from fragmented tools into one intelligent, compliant platform. 
-            Replacing legacy systems like MRI, Qube, and Dwellant with modern, AI-powered solutions.
+            BlocIQ is more than a system — it's the evolution of the industry. Safe, smart, compliant, and powered by AI designed for the UK.
           </p>
           <div className="grid md:grid-cols-3 gap-8 mt-12">
             <div className="text-center">
               <div className="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center mx-auto mb-4 border-2 border-white/30">
-                <Target className="h-8 w-8 text-white stroke-2" />
+                <Zap className="h-8 w-8 text-white stroke-2" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">Less Admin</h3>
-              <p className="text-white/80">Automated workflows, smart templates, intelligent routing</p>
+              <h3 className="text-lg font-semibold mb-2">Smarter Workflows</h3>
+              <p className="text-white/80">AI automation and intelligent routing</p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center mx-auto mb-4 border-2 border-white/30">
                 <Shield className="h-8 w-8 text-white stroke-2" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">More Compliance</h3>
-              <p className="text-white/80">Building Safety Act ready, deadline tracking, audit trails</p>
+              <h3 className="text-lg font-semibold mb-2">Safer Buildings</h3>
+              <p className="text-white/80">Compliance tracking and Building Safety Act readiness</p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center mx-auto mb-4 border-2 border-white/30">
                 <Eye className="h-8 w-8 text-white stroke-2" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">Greater Transparency</h3>
-              <p className="text-white/80">Real-time insights, portal access, clear communication</p>
+              <h3 className="text-lg font-semibold mb-2">Clearer Communication</h3>
+              <p className="text-white/80">Transparency for managers, directors, and leaseholders</p>
             </div>
           </div>
         </div>
