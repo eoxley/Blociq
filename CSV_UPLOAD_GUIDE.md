@@ -7,8 +7,7 @@ This guide shows you how to upload your data directly to Supabase without needin
 1. Download the template: **BlocIQ_Onboarding_Template_Simple.xlsx** (located in `/public` folder)
 2. Open it in Excel or Google Sheets
 3. Fill in your data in each sheet:
-   - **Buildings** - Your building information
-   - **Building Setup** - Structure type and client info (optional)
+   - **Buildings** - Your building information (includes structure type and client details)
    - **Units** - Unit numbers and details
    - **Leaseholders** - Resident information
    - **Leases** - Lease documents (optional)
@@ -23,7 +22,6 @@ For each sheet you filled in:
 2. File > Save As > Choose "CSV (Comma delimited)" format
 3. Save with names like:
    - `buildings.csv`
-   - `building_setup.csv`
    - `units.csv`
    - `leaseholders.csv`
    - `leases.csv`
@@ -40,14 +38,7 @@ For each sheet you filled in:
 4. Upload `buildings.csv`
 5. Wait for success message
 
-### 3.2 Upload Building Setup (Optional)
-
-1. Click on the **building_setup** table
-2. Click **Insert** > **Insert rows via spreadsheet**
-3. Upload `building_setup.csv`
-4. Wait for success message
-
-### 3.3 Upload Units
+### 3.2 Upload Units
 
 1. Click on the **units** table
 2. Click **Insert** > **Insert rows via spreadsheet**
@@ -56,7 +47,7 @@ For each sheet you filled in:
 
 **NOTE**: The system will automatically link units to buildings by matching the building_name you provided.
 
-### 3.4 Upload Leaseholders
+### 3.3 Upload Leaseholders
 
 1. Click on the **leaseholders** table
 2. Click **Insert** > **Insert rows via spreadsheet**
@@ -65,7 +56,7 @@ For each sheet you filled in:
 
 **NOTE**: The system will automatically link leaseholders to units by matching building_name and unit_number.
 
-### 3.5 Upload Leases (Optional)
+### 3.4 Upload Leases (Optional)
 
 1. Click on the **leases** table
 2. Click **Insert** > **Insert rows via spreadsheet**
@@ -97,6 +88,12 @@ The template uses exact database column names:
 - `building_manager_phone` - Manager phone
 - `emergency_contact_name` - Emergency contact
 - `emergency_contact_phone` - Emergency phone
+- `structure_type` - Must be: Freehold, RMC, Tripartite, RTM, or Leasehold
+- `client_type` - Must be: Freeholder Company, Board of Directors, or Management Company
+- `client_name` - Client/company name
+- `client_contact` - Contact person
+- `client_email` - Contact email
+- `operational_notes` - Operational notes and procedures
 - `building_age` - Year built or age
 - `construction_type` - Building construction
 - `total_floors` - Number of floors
@@ -117,16 +114,6 @@ The template uses exact database column names:
 - `key_access_notes` - Key access details
 - `entry_code` - Entry code
 - `fire_panel_location` - Fire panel location
-
-### Building Setup Columns
-
-- `building_name` - Must match name from Buildings sheet (required)
-- `structure_type` - Must be: Freehold, RMC, or Tripartite
-- `operational_notes` - Operations notes
-- `client_type` - Must be: Freeholder Company or Board of Directors
-- `client_name` - Client/company name
-- `client_contact` - Contact person
-- `client_email` - Contact email
 
 ### Units Table Columns
 

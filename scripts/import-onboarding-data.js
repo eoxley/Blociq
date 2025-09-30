@@ -52,9 +52,7 @@ async function importOnboardingData(filename) {
     buildings: 0,
     units: 0,
     leaseholders: 0,
-    leases: 0,
-    apportionments: 0,
-    compliance: 0
+    leases: 0
   };
 
   const buildingMap = new Map(); // name -> id
@@ -65,37 +63,68 @@ async function importOnboardingData(filename) {
     // 1. IMPORT BUILDINGS
     // ============================================
     console.log('🏢 Importing buildings...');
-    const buildingsSheet = workbook.getWorksheet('1. Buildings');
+    const buildingsSheet = workbook.getWorksheet('Buildings');
 
     if (buildingsSheet) {
       const buildings = [];
       buildingsSheet.eachRow((row, rowNumber) => {
         if (rowNumber === 1) return; // Skip header
+        if (rowNumber === 3) return; // Skip note rows
 
         const name = row.getCell(1).value;
-        if (!name || String(name).toLowerCase().includes('example') || String(name).toLowerCase().includes('instruction')) return; // Skip empty or example
+        if (!name || String(name).toLowerCase().includes('example') || String(name).toLowerCase().includes('instruction') || String(name).toLowerCase().includes('note:')) return; // Skip empty or example
 
-        buildings.push({
+        const buildingData = {
           agency_id: AGENCY_ID,
-          name: String(name),
-          client: row.getCell(2).value,
-          type: row.getCell(3).value,
-          companies_house_number: row.getCell(4).value,
-          address: row.getCell(5).value,
-          postcode: row.getCell(6).value,
-          building_type: row.getCell(7).value || 'residential',
-          is_hrb: parseBoolean(row.getCell(8).value),
-          year_built: parseNumber(row.getCell(9).value),
-          storeys: parseNumber(row.getCell(10).value),
-          total_units: parseNumber(row.getCell(11).value),
-          management_start_date: parseDate(row.getCell(12).value),
-          freeholder_name: row.getCell(13).value,
-          freeholder_address: row.getCell(14).value,
-          service_charge_budget: parseNumber(row.getCell(15).value),
-          reserve_fund_balance: parseNumber(row.getCell(16).value),
-          insurance_renewal_date: parseDate(row.getCell(17).value),
-          onboarding_notes: row.getCell(18).value
-        });
+          name: String(name).trim(),
+          address: row.getCell(2).value,
+          unit_count: parseNumber(row.getCell(3).value),
+          structure_type: row.getCell(4).value,
+          client_type: row.getCell(5).value,
+          client_name: row.getCell(6).value,
+          client_contact: row.getCell(7).value,
+          client_email: row.getCell(8).value,
+          operational_notes: row.getCell(9).value,
+          access_notes: row.getCell(10).value,
+          sites_staff: row.getCell(11).value,
+          parking_info: row.getCell(12).value,
+          council_borough: row.getCell(13).value,
+          building_manager_name: row.getCell(14).value,
+          building_manager_email: row.getCell(15).value,
+          building_manager_phone: row.getCell(16).value,
+          emergency_contact_name: row.getCell(17).value,
+          emergency_contact_phone: row.getCell(18).value,
+          building_age: row.getCell(19).value,
+          construction_type: row.getCell(20).value,
+          total_floors: row.getCell(21).value,
+          lift_available: row.getCell(22).value,
+          heating_type: row.getCell(23).value,
+          hot_water_type: row.getCell(24).value,
+          waste_collection_day: row.getCell(25).value,
+          recycling_info: row.getCell(26).value,
+          building_insurance_provider: row.getCell(27).value,
+          building_insurance_expiry: parseDate(row.getCell(28).value),
+          fire_safety_status: row.getCell(29).value,
+          asbestos_status: row.getCell(30).value,
+          energy_rating: row.getCell(31).value,
+          service_charge_frequency: row.getCell(32).value,
+          ground_rent_amount: parseNumber(row.getCell(33).value),
+          ground_rent_frequency: row.getCell(34).value,
+          notes: row.getCell(35).value,
+          key_access_notes: row.getCell(36).value,
+          entry_code: row.getCell(37).value,
+          fire_panel_location: row.getCell(38).value,
+        };
+
+        // Only include fields that have values
+        const cleanedData = {};
+        for (const [key, value] of Object.entries(buildingData)) {
+          if (value !== null && value !== undefined && value !== '') {
+            cleanedData[key] = value;
+          }
+        }
+
+        buildings.push(cleanedData);
       });
 
       for (const building of buildings) {
@@ -120,7 +149,7 @@ async function importOnboardingData(filename) {
     // 2. IMPORT UNITS
     // ============================================
     console.log('🏘️  Importing units...');
-    const unitsSheet = workbook.getWorksheet('2. Units');
+    const unitsSheet = workbook.getWorksheet('Units');
 
     if (unitsSheet) {
       const units = [];
@@ -131,33 +160,20 @@ async function importOnboardingData(filename) {
         const unitNumber = row.getCell(2).value;
         if (!buildingName || !unitNumber || String(buildingName).toLowerCase().includes('example') || String(buildingName).toLowerCase().includes('instruction')) return;
 
-        const buildingId = buildingMap.get(String(buildingName));
+        const buildingId = buildingMap.get(String(buildingName).trim());
         if (!buildingId) {
           console.error(`  ⚠️  Building "${buildingName}" not found for unit ${unitNumber}`);
           return;
         }
 
         units.push({
-          building_name: String(buildingName),
-          unit_number: String(unitNumber),
+          building_name: String(buildingName).trim(),
+          unit_number: String(unitNumber).trim(),
           data: {
-            agency_id: AGENCY_ID,
             building_id: buildingId,
-            unit_number: String(unitNumber),
-            floor: row.getCell(3).value,
-            unit_type: row.getCell(4).value || 'flat',
-            bedrooms: parseNumber(row.getCell(5).value),
-            bathrooms: parseNumber(row.getCell(6).value),
-            sqft: parseNumber(row.getCell(7).value),
-            balcony: parseBoolean(row.getCell(8).value),
-            parking_spaces: parseNumber(row.getCell(9).value) || 0,
-            lease_start_date: parseDate(row.getCell(10).value),
-            lease_end_date: parseDate(row.getCell(11).value),
-            ground_rent_pa: parseNumber(row.getCell(12).value),
-            service_charge_pa: parseNumber(row.getCell(13).value),
-            is_let: parseBoolean(row.getCell(14).value),
-            tenant_name: row.getCell(15).value,
-            tenant_email: row.getCell(16).value
+            unit_number: String(unitNumber).trim(),
+            type: row.getCell(3).value,
+            floor: row.getCell(4).value
           }
         });
       });
@@ -184,7 +200,7 @@ async function importOnboardingData(filename) {
     // 3. IMPORT LEASEHOLDERS
     // ============================================
     console.log('👥 Importing leaseholders...');
-    const leaseholdersSheet = workbook.getWorksheet('3. Leaseholders');
+    const leaseholdersSheet = workbook.getWorksheet('Leaseholders');
 
     if (leaseholdersSheet) {
       const leaseholders = [];
@@ -195,40 +211,21 @@ async function importOnboardingData(filename) {
         const unitNumber = row.getCell(2).value;
         if (!buildingName || !unitNumber || String(buildingName).toLowerCase().includes('example') || String(buildingName).toLowerCase().includes('instruction')) return;
 
-        const unitId = unitMap.get(`${buildingName}:${unitNumber}`);
+        const unitId = unitMap.get(`${String(buildingName).trim()}:${String(unitNumber).trim()}`);
         if (!unitId) {
           console.error(`  ⚠️  Unit "${buildingName}:${unitNumber}" not found`);
           return;
         }
 
-        const firstName = row.getCell(4).value;
-        const lastName = row.getCell(5).value;
-        const name = `${firstName || ''} ${lastName || ''}`.trim();
+        const name = row.getCell(3).value;
 
         leaseholders.push({
           name_display: name,
           data: {
-            agency_id: AGENCY_ID,
             unit_id: unitId,
-            name: name,
-            title: row.getCell(3).value,
-            first_name: firstName,
-            last_name: lastName,
-            company_name: row.getCell(6).value,
-            email: row.getCell(7).value,
-            home_phone: row.getCell(8).value,
-            mobile_phone: row.getCell(9).value,
-            work_phone: row.getCell(10).value,
-            correspondence_address: row.getCell(11).value,
-            correspondence_postcode: row.getCell(12).value,
-            preferred_contact_method: row.getCell(13).value || 'email',
-            is_company: parseBoolean(row.getCell(14).value),
-            is_director: parseBoolean(row.getCell(15).value),
-            director_position: row.getCell(16).value,
-            director_since: parseDate(row.getCell(17).value),
-            emergency_contact_name: row.getCell(18).value,
-            emergency_contact_phone: row.getCell(19).value,
-            notes: row.getCell(20).value
+            name: name ? String(name).trim() : null,
+            email: row.getCell(4).value,
+            phone: row.getCell(5).value
           }
         });
       });
@@ -254,19 +251,20 @@ async function importOnboardingData(filename) {
     // 4. IMPORT LEASES
     // ============================================
     console.log('📄 Importing leases...');
-    const leasesSheet = workbook.getWorksheet('4. Leases');
+    const leasesSheet = workbook.getWorksheet('Leases');
 
     if (leasesSheet) {
       const leases = [];
       leasesSheet.eachRow((row, rowNumber) => {
         if (rowNumber === 1) return; // Skip header
+        if (rowNumber === 3) return; // Skip note row
 
         const buildingName = row.getCell(1).value;
         const unitNumber = row.getCell(2).value;
-        if (!buildingName || !unitNumber || String(buildingName).toLowerCase().includes('example') || String(buildingName).toLowerCase().includes('instruction')) return;
+        if (!buildingName || !unitNumber || String(buildingName).toLowerCase().includes('example') || String(buildingName).toLowerCase().includes('instruction') || String(buildingName).toLowerCase().includes('note:')) return;
 
-        const buildingId = buildingMap.get(String(buildingName));
-        const unitId = unitMap.get(`${buildingName}:${unitNumber}`);
+        const buildingId = buildingMap.get(String(buildingName).trim());
+        const unitId = unitMap.get(`${String(buildingName).trim()}:${String(unitNumber).trim()}`);
 
         if (!buildingId || !unitId) {
           console.error(`  ⚠️  Building or unit not found for lease "${buildingName}:${unitNumber}"`);
@@ -276,25 +274,13 @@ async function importOnboardingData(filename) {
         leases.push({
           display: `${buildingName} - ${unitNumber}`,
           data: {
-            agency_id: AGENCY_ID,
             building_id: buildingId,
             unit_id: unitId,
-            lease_type: row.getCell(3).value || 'residential',
-            start_date: parseDate(row.getCell(4).value),
-            expiry_date: parseDate(row.getCell(5).value),
-            original_term_years: parseNumber(row.getCell(6).value),
-            unexpired_term_years: parseNumber(row.getCell(7).value),
-            annual_ground_rent: parseNumber(row.getCell(8).value),
-            ground_rent_review_date: parseDate(row.getCell(9).value),
-            ground_rent_doubling_period: parseNumber(row.getCell(10).value),
-            service_charge_percentage: parseNumber(row.getCell(11).value),
-            lease_premium: parseNumber(row.getCell(12).value),
-            deed_of_variation: row.getCell(13).value,
-            permitted_use: row.getCell(14).value,
-            subletting_permitted: parseBoolean(row.getCell(15).value),
-            pets_permitted: parseBoolean(row.getCell(16).value),
-            lease_plan_attached: parseBoolean(row.getCell(17).value),
-            restrictions: row.getCell(18).value
+            doc_type: row.getCell(3).value,
+            doc_url: row.getCell(4).value,
+            start_date: parseDate(row.getCell(5).value),
+            expiry_date: parseDate(row.getCell(6).value),
+            is_headlease: parseBoolean(row.getCell(7).value)
           }
         });
       });
@@ -317,11 +303,37 @@ async function importOnboardingData(filename) {
     console.log(`\n📊 Imported ${stats.leases} leases\n`);
 
     // ============================================
-    // 5. IMPORT APPORTIONMENTS
+    // FINAL SUMMARY
     // ============================================
-    console.log('💰 Importing apportionments...');
-    const apportionmentsSheet = workbook.getWorksheet('5. Apportionments');
+    console.log('');
+    console.log('═══════════════════════════════════════');
+    console.log('✨ IMPORT COMPLETE!');
+    console.log('═══════════════════════════════════════');
+    console.log(`🏢 Buildings:      ${stats.buildings}`);
+    console.log(`🏘️  Units:          ${stats.units}`);
+    console.log(`👥 Leaseholders:   ${stats.leaseholders}`);
+    console.log(`📄 Leases:         ${stats.leases}`);
+    console.log('═══════════════════════════════════════');
+    console.log('');
+    console.log('🎉 Your data is now ready in BlocIQ!');
+    console.log('');
 
+  } catch (error) {
+    console.error('❌ Fatal error during import:', error);
+    process.exit(1);
+  }
+}
+
+const filename = process.argv[2];
+
+if (!filename) {
+  console.error('❌ Please provide an Excel file path');
+  console.error('Usage: node import-onboarding-data.js YOUR_FILE.xlsx');
+  process.exit(1);
+}
+
+importOnboardingData(filename);
+/* REMOVED SECTIONS - apportionments and compliance are not in simplified template
     if (apportionmentsSheet) {
       const apportionments = [];
       apportionmentsSheet.eachRow((row, rowNumber) => {

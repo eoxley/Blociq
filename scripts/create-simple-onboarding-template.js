@@ -13,6 +13,12 @@ async function createTemplate() {
     { header: 'name', key: 'name', width: 30 },
     { header: 'address', key: 'address', width: 40 },
     { header: 'unit_count', key: 'unit_count', width: 12 },
+    { header: 'structure_type', key: 'structure_type', width: 20 },
+    { header: 'client_type', key: 'client_type', width: 25 },
+    { header: 'client_name', key: 'client_name', width: 40 },
+    { header: 'client_contact', key: 'client_contact', width: 25 },
+    { header: 'client_email', key: 'client_email', width: 30 },
+    { header: 'operational_notes', key: 'operational_notes', width: 40 },
     { header: 'access_notes', key: 'access_notes', width: 30 },
     { header: 'sites_staff', key: 'sites_staff', width: 30 },
     { header: 'parking_info', key: 'parking_info', width: 30 },
@@ -60,6 +66,12 @@ async function createTemplate() {
     name: 'Pimlico Place',
     address: '123 Main Street, London',
     unit_count: 24,
+    structure_type: 'RMC',
+    client_type: 'Board of Directors',
+    client_name: 'Pimlico Place Management Company Limited',
+    client_contact: 'Board Secretary',
+    client_email: 'board@pimlicoplace.com',
+    operational_notes: 'Regular board meetings quarterly',
     access_notes: 'Key code entry',
     council_borough: 'Westminster',
     building_manager_name: 'John Smith',
@@ -83,47 +95,12 @@ async function createTemplate() {
     notes: 'Delete this example row before importing'
   });
 
-  // ========================================
-  // BUILDING SETUP SHEET - matches building_setup table
-  // ========================================
-  const setupSheet = workbook.addWorksheet('Building Setup');
+  // Add notes about valid values
+  buildingsSheet.getCell('D3').value = 'NOTE: structure_type must be: Freehold, RMC, Tripartite, RTM, or Leasehold';
+  buildingsSheet.getCell('D3').font = { italic: true, color: { argb: 'FFFF6600' } };
 
-  setupSheet.columns = [
-    { header: 'building_name', key: 'building_name', width: 30 },
-    { header: 'structure_type', key: 'structure_type', width: 20 },
-    { header: 'operational_notes', key: 'operational_notes', width: 40 },
-    { header: 'client_type', key: 'client_type', width: 25 },
-    { header: 'client_name', key: 'client_name', width: 30 },
-    { header: 'client_contact', key: 'client_contact', width: 25 },
-    { header: 'client_email', key: 'client_email', width: 30 },
-  ];
-
-  const setupHeaderRow = setupSheet.getRow(1);
-  setupHeaderRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-  setupHeaderRow.fill = {
-    type: 'pattern',
-    pattern: 'solid',
-    fgColor: { argb: 'FF4f46e5' }
-  };
-  setupHeaderRow.alignment = { vertical: 'middle', horizontal: 'center' };
-  setupHeaderRow.height = 25;
-
-  setupSheet.addRow({
-    building_name: 'Pimlico Place',
-    structure_type: 'RMC',
-    operational_notes: 'Regular board meetings quarterly',
-    client_type: 'Board of Directors',
-    client_name: 'Pimlico Place Management Company Limited',
-    client_contact: 'Board Secretary',
-    client_email: 'board@pimlicoplace.com'
-  });
-
-  // Add note about structure_type values
-  setupSheet.getCell('B3').value = 'NOTE: structure_type must be: Freehold, RMC, or Tripartite';
-  setupSheet.getCell('B3').font = { italic: true, color: { argb: 'FFFF0000' } };
-
-  setupSheet.getCell('D3').value = 'NOTE: client_type must be: Freeholder Company or Board of Directors';
-  setupSheet.getCell('D3').font = { italic: true, color: { argb: 'FFFF0000' } };
+  buildingsSheet.getCell('E3').value = 'NOTE: client_type must be: Freeholder Company, Board of Directors, or Management Company';
+  buildingsSheet.getCell('E3').font = { italic: true, color: { argb: 'FFFF6600' } };
 
   // ========================================
   // UNITS SHEET - matches units table
@@ -254,26 +231,21 @@ async function createTemplate() {
 
   instructionsSheet.addRow({
     step: '1',
-    instructions: 'Fill in the Buildings sheet with your building information. Use exact database column names as headers.'
+    instructions: 'Fill in the Buildings sheet with your building information including structure type and client details. Use exact database column names as headers.'
   });
 
   instructionsSheet.addRow({
     step: '2',
-    instructions: 'Fill in the Building Setup sheet (optional) with structure type and client information.'
-  });
-
-  instructionsSheet.addRow({
-    step: '3',
     instructions: 'Fill in the Units sheet with unit information. Make sure building_name matches exactly from Buildings sheet.'
   });
 
   instructionsSheet.addRow({
-    step: '4',
+    step: '3',
     instructions: 'Fill in the Leaseholders sheet. Make sure building_name and unit_number match exactly from previous sheets.'
   });
 
   instructionsSheet.addRow({
-    step: '5',
+    step: '4',
     instructions: 'Fill in the Leases sheet (optional) with lease documents. Match building_name and unit_number exactly.'
   });
 
@@ -287,7 +259,7 @@ async function createTemplate() {
     instructions: 'DELETE ALL EXAMPLE ROWS BEFORE IMPORTING! Only keep the header row with column names.'
   });
 
-  instructionsSheet.getCell('B7').font = { bold: true, color: { argb: 'FFFF0000' }, size: 12 };
+  instructionsSheet.getCell('B6').font = { bold: true, color: { argb: 'FFFF0000' }, size: 12 };
 
   instructionsSheet.addRow({
     step: '',
@@ -301,7 +273,7 @@ async function createTemplate() {
 
   instructionsSheet.addRow({
     step: '',
-    instructions: 'Order matters: 1) Buildings first, 2) Building Setup, 3) Units, 4) Leaseholders, 5) Leases'
+    instructions: 'Order matters: 1) Buildings first, 2) Units, 3) Leaseholders, 4) Leases'
   });
 
   // Save the workbook
