@@ -226,84 +226,88 @@ export default function AsyncLeaseUpload() {
   };
   
   return (
-    <div className=\"max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-lg\">
-      <h2 className=\"text-2xl font-bold text-gray-900 mb-6\">
+    <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-lg">
+      <h2 className="text-2xl font-bold text-gray-900 mb-6">
         📄 Background Lease Analysis
       </h2>
-      
-      <p className=\"text-gray-600 mb-6\">
-        Upload your lease document for comprehensive analysis. Processing happens in the background 
+
+      <p className="text-gray-600 mb-6">
+        Upload your lease document for comprehensive analysis. Processing happens in the background
         with no timeout limits, and you'll receive an email notification when complete.
       </p>
-      
+
       {!uploadResponse ? (
-        <div className=\"space-y-6\">
+        <div className="space-y-6">
           {/* File Upload Area */}
           <div
-            className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-colors ${\n              dragActive \n                ? 'border-blue-400 bg-blue-50' \n                : 'border-gray-300 hover:border-gray-400'\n            }`}
+            className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+              dragActive
+                ? 'border-blue-400 bg-blue-50'
+                : 'border-gray-300 hover:border-gray-400'
+            }`}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
             onDrop={handleDrop}
           >
             {file ? (
-              <div className=\"space-y-4\">
-                <div className=\"text-green-600\">✅ File Selected</div>
-                <div className=\"text-sm text-gray-600\">
-                  <div className=\"font-medium\">{file.name}</div>
+              <div className="space-y-4">
+                <div className="text-green-600">✅ File Selected</div>
+                <div className="text-sm text-gray-600">
+                  <div className="font-medium">{file.name}</div>
                   <div>{formatFileSize(file.size)} • {file.type}</div>
                 </div>
                 <button
                   onClick={() => setFile(null)}
-                  className=\"text-red-500 text-sm hover:text-red-700\"
+                  className="text-red-500 text-sm hover:text-red-700"
                 >
                   Remove file
                 </button>
               </div>
             ) : (
-              <div className=\"space-y-4\">
-                <div className=\"text-4xl\">📄</div>
+              <div className="space-y-4">
+                <div className="text-4xl">📄</div>
                 <div>
-                  <p className=\"text-lg font-medium text-gray-900\">
+                  <p className="text-lg font-medium text-gray-900">
                     Drop your lease document here
                   </p>
-                  <p className=\"text-sm text-gray-500\">
+                  <p className="text-sm text-gray-500">
                     or click to browse files
                   </p>
                 </div>
                 <input
-                  type=\"file\"
+                  type="file"
                   onChange={handleFileChange}
-                  accept=\".pdf,.jpg,.jpeg,.png,.tiff,.webp\"
-                  className=\"absolute inset-0 w-full h-full opacity-0 cursor-pointer\"
+                  accept=".pdf,.jpg,.jpeg,.png,.tiff,.webp"
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 />
               </div>
             )}
           </div>
           
           {/* Additional Options */}
-          <div className=\"grid grid-cols-1 md:grid-cols-2 gap-4\">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className=\"block text-sm font-medium text-gray-700 mb-2\">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Building (Optional)
               </label>
               <input
-                type=\"text\"
+                type="text"
                 value={buildingId}
                 onChange={(e) => setBuildingId(e.target.value)}
-                placeholder=\"Building ID or name\"
-                className=\"w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500\"
+                placeholder="Building ID or name"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             
             <div>
-              <label className=\"block text-sm font-medium text-gray-700 mb-2\">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Priority
               </label>
               <select
                 value={priority}
                 onChange={(e) => setPriority(parseInt(e.target.value))}
-                className=\"w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500\"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value={0}>Normal Priority</option>
                 <option value={1}>High Priority</option>
@@ -316,15 +320,19 @@ export default function AsyncLeaseUpload() {
           <button
             onClick={handleUpload}
             disabled={!file || isUploading}
-            className={`w-full py-3 px-4 rounded-md font-medium transition-colors ${\n              !file || isUploading\n                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'\n                : 'bg-blue-600 text-white hover:bg-blue-700'\n            }`}
+            className={`w-full py-3 px-4 rounded-md font-medium transition-colors ${
+              !file || isUploading
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
           >
             {isUploading ? '🔄 Uploading...' : '🚀 Start Background Analysis'}
           </button>
           
           {/* Info Box */}
-          <div className=\"bg-blue-50 border border-blue-200 rounded-md p-4\">
-            <h3 className=\"font-medium text-blue-900 mb-2\">✨ What happens next?</h3>
-            <ul className=\"text-sm text-blue-800 space-y-1\">
+          <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+            <h3 className="font-medium text-blue-900 mb-2">✨ What happens next?</h3>
+            <ul className="text-sm text-blue-800 space-y-1">
               <li>• Your document is uploaded and queued for processing</li>
               <li>• Analysis runs in the background (5-10 minutes typically)</li>
               <li>• You'll receive an email when analysis is complete</li>
@@ -333,21 +341,116 @@ export default function AsyncLeaseUpload() {
           </div>
         </div>
       ) : (
-        <div className=\"space-y-6\">
+        <div className="space-y-6">
           {/* Upload Success */}
-          <div className=\"bg-green-50 border border-green-200 rounded-md p-4\">
-            <div className=\"flex items-center space-x-3\">
-              <div className=\"text-green-500 text-xl\">✅</div>
+          <div className="bg-green-50 border border-green-200 rounded-md p-4">
+            <div className="flex items-center space-x-3">
+              <div className="text-green-500 text-xl">✅</div>
               <div>
-                <h3 className=\"font-medium text-green-900\">Upload Successful!</h3>
-                <p className=\"text-sm text-green-700\">{uploadResponse.message}</p>
+                <h3 className="font-medium text-green-900">Upload Successful!</h3>
+                <p className="text-sm text-green-700">{uploadResponse.message}</p>
               </div>
             </div>
           </div>
           
           {/* Job Status */}
           {jobStatus && (
-            <div className=\"border rounded-lg p-6\">
-              <div className=\"flex items-center justify-between mb-4\">
-                <h3 className=\"font-medium text-gray-900\">Processing Status</h3>
-                <span className={`px-3 py-1 rounded-full text-sm font-medium ${\n                  jobStatus.statusColor === 'green' ? 'bg-green-100 text-green-800' :\n                  jobStatus.statusColor === 'blue' ? 'bg-blue-100 text-blue-800' :\n                  jobStatus.statusColor === 'orange' ? 'bg-orange-100 text-orange-800' :\n                  jobStatus.statusColor === 'red' ? 'bg-red-100 text-red-800' :\n                  'bg-gray-100 text-gray-800'\n                }`}>                \n                  {jobStatus.status.toUpperCase()}\n                </span>\n              </div>\n              \n              <div className=\"space-y-3\">\n                <div>\n                  <div className=\"flex justify-between text-sm text-gray-600 mb-1\">\n                    <span>Progress</span>\n                    <span>{jobStatus.progress}%</span>\n                  </div>\n                  <div className=\"w-full bg-gray-200 rounded-full h-2\">\n                    <div \n                      className={`h-2 rounded-full transition-all duration-300 ${\n                        jobStatus.statusColor === 'green' ? 'bg-green-500' :\n                        jobStatus.statusColor === 'orange' ? 'bg-orange-500' :\n                        jobStatus.statusColor === 'red' ? 'bg-red-500' :\n                        'bg-blue-500'\n                      }`}\n                      style={{ width: `${jobStatus.progress}%` }}\n                    />\n                  </div>\n                </div>\n                \n                <div className=\"text-sm text-gray-600\">\n                  <div><strong>Document:</strong> {jobStatus.filename}</div>\n                  <div><strong>Status:</strong> {jobStatus.message}</div>\n                  {jobStatus.estimatedTimeRemaining && (\n                    <div><strong>Time Remaining:</strong> {jobStatus.estimatedTimeRemaining}</div>\n                  )}\n                </div>\n                \n                {/* Action Buttons */}\n                <div className=\"flex space-x-3 pt-3\">\n                  {jobStatus.isComplete && jobStatus.urls?.results && (\n                    <button\n                      onClick={handleViewResults}\n                      className=\"px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium\"\n                    >\n                      📊 View Results\n                    </button>\n                  )}\n                  \n                  {jobStatus.status === 'failed' && jobStatus.urls?.retry && (\n                    <button\n                      onClick={handleRetryJob}\n                      className=\"px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 font-medium\"\n                    >\n                      🔄 Retry Analysis\n                    </button>\n                  )}\n                  \n                  <button\n                    onClick={resetForm}\n                    className=\"px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 font-medium\"\n                  >\n                    📤 Upload Another Document\n                  </button>\n                </div>\n                \n                {/* Error Details */}\n                {jobStatus.error && (\n                  <div className=\"bg-red-50 border border-red-200 rounded-md p-3 mt-3\">\n                    <div className=\"text-sm text-red-800\">\n                      <div className=\"font-medium\">Error Details:</div>\n                      <div>{jobStatus.error.message}</div>\n                      {jobStatus.error.canRetry && (\n                        <div className=\"text-xs mt-1 text-red-600\">\n                          Retry attempt {jobStatus.error.retryCount} of {3}\n                        </div>\n                      )}\n                    </div>\n                  </div>\n                )}\n              </div>\n            </div>\n          )}\n          \n          {/* Live Monitoring Indicator */}\n          {isMonitoring && (\n            <div className=\"flex items-center space-x-2 text-sm text-gray-500\">\n              <div className=\"animate-pulse w-2 h-2 bg-blue-500 rounded-full\"></div>\n              <span>Live monitoring active - status updates every 10 seconds</span>\n            </div>\n          )}\n        </div>\n      )}\n    </div>\n  );\n}"
+            <div className="border rounded-lg p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-medium text-gray-900">Processing Status</h3>
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  jobStatus.statusColor === 'green' ? 'bg-green-100 text-green-800' :
+                  jobStatus.statusColor === 'blue' ? 'bg-blue-100 text-blue-800' :
+                  jobStatus.statusColor === 'orange' ? 'bg-orange-100 text-orange-800' :
+                  jobStatus.statusColor === 'red' ? 'bg-red-100 text-red-800' :
+                  'bg-gray-100 text-gray-800'
+                }`}>
+                  {jobStatus.status.toUpperCase()}
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <div className="flex justify-between text-sm text-gray-600 mb-1">
+                    <span>Progress</span>
+                    <span>{jobStatus.progress}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className={`h-2 rounded-full transition-all duration-300 ${
+                        jobStatus.statusColor === 'green' ? 'bg-green-500' :
+                        jobStatus.statusColor === 'orange' ? 'bg-orange-500' :
+                        jobStatus.statusColor === 'red' ? 'bg-red-500' :
+                        'bg-blue-500'
+                      }`}
+                      style={{ width: `${jobStatus.progress}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="text-sm text-gray-600">
+                  <div><strong>Document:</strong> {jobStatus.filename}</div>
+                  <div><strong>Status:</strong> {jobStatus.message}</div>
+                  {jobStatus.estimatedTimeRemaining && (
+                    <div><strong>Time Remaining:</strong> {jobStatus.estimatedTimeRemaining}</div>
+                  )}
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex space-x-3 pt-3">
+                  {jobStatus.isComplete && jobStatus.urls?.results && (
+                    <button
+                      onClick={handleViewResults}
+                      className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium"
+                    >
+                      📊 View Results
+                    </button>
+                  )}
+
+                  {jobStatus.status === 'failed' && jobStatus.urls?.retry && (
+                    <button
+                      onClick={handleRetryJob}
+                      className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 font-medium"
+                    >
+                      🔄 Retry Analysis
+                    </button>
+                  )}
+
+                  <button
+                    onClick={resetForm}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 font-medium"
+                  >
+                    📤 Upload Another Document
+                  </button>
+                </div>
+
+                {/* Error Details */}
+                {jobStatus.error && (
+                  <div className="bg-red-50 border border-red-200 rounded-md p-3 mt-3">
+                    <div className="text-sm text-red-800">
+                      <div className="font-medium">Error Details:</div>
+                      <div>{jobStatus.error.message}</div>
+                      {jobStatus.error.canRetry && (
+                        <div className="text-xs mt-1 text-red-600">
+                          Retry attempt {jobStatus.error.retryCount} of {3}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Live Monitoring Indicator */}
+          {isMonitoring && (
+            <div className="flex items-center space-x-2 text-sm text-gray-500">
+              <div className="animate-pulse w-2 h-2 bg-blue-500 rounded-full"></div>
+              <span>Live monitoring active - status updates every 10 seconds</span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
