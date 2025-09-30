@@ -58,8 +58,8 @@ export default function BookDemoPage() {
 
   if (isSubmitted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#6A00F5] via-[#7A2BE2] to-[#8A2BE2] flex items-center justify-center p-4">
-        <div className="max-w-2xl w-full bg-white rounded-2xl shadow-2xl p-8 text-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="max-w-2xl w-full bg-white rounded-2xl shadow-2xl p-8 text-center border border-gray-200">
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <CheckCircle className="h-10 w-10 text-green-600" />
           </div>
@@ -80,22 +80,22 @@ export default function BookDemoPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#6A00F5] via-[#7A2BE2] to-[#8A2BE2]">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <nav className="bg-white/10 backdrop-blur-sm border-b border-white/20">
+      <nav className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <Link href="/" className="flex items-center">
-              <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg">
-                <BlocIQLogo className="text-[#6A00F5]" size={24} />
+              <div className="w-12 h-12 bg-gradient-to-r from-[#6A00F5] to-[#8A2BE2] rounded-xl flex items-center justify-center shadow-lg">
+                <BlocIQLogo className="text-white" size={24} />
               </div>
-              <span className="ml-3 text-2xl font-bold text-white">
+              <span className="ml-3 text-2xl font-bold bg-gradient-to-r from-[#6A00F5] to-[#8A2BE2] bg-clip-text text-transparent">
                 BlocIQ
               </span>
             </Link>
             <Link
               href="/"
-              className="text-white hover:text-white/80 transition-colors font-medium flex items-center gap-2"
+              className="text-gray-700 hover:text-[#6A00F5] transition-colors font-medium flex items-center gap-2"
             >
               <ArrowLeft className="h-4 w-4" />
               Back to Home
@@ -106,14 +106,14 @@ export default function BookDemoPage() {
 
       {/* Main Content */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-200">
           {/* Header Section */}
-          <div className="bg-gradient-to-r from-[#6A00F5] to-[#8A2BE2] p-8 text-white text-center">
-            <div className="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+          <div className="bg-white border-b border-gray-200 p-8 text-center">
+            <div className="w-16 h-16 bg-gradient-to-r from-[#6A00F5] to-[#8A2BE2] rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
               <Calendar className="h-8 w-8 text-white" />
             </div>
-            <h1 className="text-4xl font-bold mb-4">Book Your Demo</h1>
-            <p className="text-xl text-white/90">
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">Book Your Demo</h1>
+            <p className="text-xl text-gray-600">
               See how BlocIQ transforms property management
             </p>
           </div>
@@ -259,32 +259,32 @@ export default function BookDemoPage() {
 
         {/* Benefits Section */}
         <div className="mt-12 grid md:grid-cols-3 gap-6">
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 text-white">
-            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mb-4">
-              <Calendar className="h-6 w-6 text-white" />
+          <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-200">
+            <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mb-4">
+              <Calendar className="h-6 w-6 text-purple-600" />
             </div>
-            <h3 className="text-lg font-bold mb-2">Personalized Demo</h3>
-            <p className="text-white/80 text-sm">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Personalized Demo</h3>
+            <p className="text-gray-600 text-sm">
               See BlocIQ tailored to your specific needs and portfolio size
             </p>
           </div>
 
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 text-white">
-            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mb-4">
-              <User className="h-6 w-6 text-white" />
+          <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-200">
+            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
+              <User className="h-6 w-6 text-blue-600" />
             </div>
-            <h3 className="text-lg font-bold mb-2">Expert Guidance</h3>
-            <p className="text-white/80 text-sm">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Expert Guidance</h3>
+            <p className="text-gray-600 text-sm">
               Get answers to your questions from our property management experts
             </p>
           </div>
 
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 text-white">
-            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mb-4">
-              <CheckCircle className="h-6 w-6 text-white" />
+          <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-200">
+            <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mb-4">
+              <CheckCircle className="h-6 w-6 text-green-600" />
             </div>
-            <h3 className="text-lg font-bold mb-2">No Commitment</h3>
-            <p className="text-white/80 text-sm">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">No Commitment</h3>
+            <p className="text-gray-600 text-sm">
               Learn about BlocIQ with no pressure or obligation to purchase
             </p>
           </div>
