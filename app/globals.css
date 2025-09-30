@@ -118,6 +118,7 @@
 }
 
 :root {
+  --brand-primary: #6366f1; /* Default BlocIQ purple */
   --radius: 1rem; /* Increased rounded corners for modern look */
   --font-geist-sans: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   --font-geist-mono: 'Menlo', 'Monaco', 'Courier New', monospace;

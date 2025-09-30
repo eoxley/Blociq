@@ -5,6 +5,7 @@ import { BlocIQProvider } from '@/components/BlocIQContext';
 import ReactQueryProvider from '@/components/ReactQueryProvider';
 import Footer from '@/components/Footer';
 import PublicAskBlocIQWidget from '@/components/PublicAskBlocIQWidget';
+import { BrandingProvider } from '@/components/BrandingProvider';
 import { Toaster } from 'sonner';
 
 // Force dynamic rendering for the entire app to prevent static generation issues
@@ -27,14 +28,16 @@ export default function RootLayout({
         <ReactQueryProvider>
           <BlocIQProvider>
             <SupabaseProvider>
-              <div className="min-h-screen flex flex-col">
-                <main className="flex-1">
-                  {children}
-                </main>
-                <Footer />
-              </div>
-              {/* Public Ask BlocIQ Widget - only appears on landing page for unauthenticated users */}
-              <PublicAskBlocIQWidget />
+              <BrandingProvider>
+                <div className="min-h-screen flex flex-col">
+                  <main className="flex-1">
+                    {children}
+                  </main>
+                  <Footer />
+                </div>
+                {/* Public Ask BlocIQ Widget - only appears on landing page for unauthenticated users */}
+                <PublicAskBlocIQWidget />
+              </BrandingProvider>
             </SupabaseProvider>
           </BlocIQProvider>
         </ReactQueryProvider>

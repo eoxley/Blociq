@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = ReconcileTransactionSchema.parse(body);
     
-    const supabase = createClient();
+    const supabase = await createClient();
     
     // Get user from session
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -230,7 +230,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'bank_txn_id is required' }, { status: 400 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
     
     // Get user from session
     const { data: { user }, error: authError } = await supabase.auth.getUser();

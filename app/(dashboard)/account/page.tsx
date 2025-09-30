@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Settings, User, Briefcase, Mail, FileText, Upload, X, Save, Loader2, Image, Trash2 } from 'lucide-react';
+import { Settings, User, FileText, Save, Loader2, Image, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -111,7 +111,7 @@ export default function AccountPage() {
       setSaving(true);
 
       // Only update fields that exist in the profile
-      const updateData: any = {};
+      const updateData: Record<string, string> = {};
       if (profile.first_name !== undefined) updateData.first_name = profile.first_name;
       if (profile.last_name !== undefined) updateData.last_name = profile.last_name;
       if (profile.job_title !== undefined) updateData.job_title = profile.job_title;

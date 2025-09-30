@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = BankImportSchema.parse(body);
     
-    const supabase = createClient();
+    const supabase = await createClient();
     
     // Get user from session
     const { data: { user }, error: authError } = await supabase.auth.getUser();

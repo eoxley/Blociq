@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
       limit: limit ? parseInt(limit) : 50,
     });
     
-    const supabase = createClient();
+    const supabase = await createClient();
     
     // Get user from session
     const { data: { user }, error: authError } = await supabase.auth.getUser();

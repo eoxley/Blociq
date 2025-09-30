@@ -7,6 +7,9 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // Dynamic brand color
+        'brand-primary': 'var(--brand-primary)',
+        
         // BlocIQ Design System Colors
         'brand-teal': '#0d9488',
         'brand-blue': '#2563eb',

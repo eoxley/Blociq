@@ -21,9 +21,6 @@
     "app/api/cron/sync-inbox/route.ts": {
       "maxDuration": 120
     },
-    "app/api/debug/cleanup-emails/route.ts": {
-      "maxDuration": 30
-    },
     "app/api/ocr-proxy-cors/route.ts": {
       "maxDuration": 300,
       "memory": 1024

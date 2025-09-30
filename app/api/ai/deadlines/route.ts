@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
       action,
     });
     
-    const supabase = createClient();
+    const supabase = await createClient();
     
     // Get user from session
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = DeadlinesQuerySchema.parse(body);
     
-    const supabase = createClient();
+    const supabase = await createClient();
     
     // Get user from session
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -205,7 +205,7 @@ async function createStandardPeriods(buildingId: string): Promise<{ periods_crea
   const currentYear = new Date().getFullYear();
   
   // Check if periods already exist for this year
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: existingPeriods } = await supabase
     .from('accounting_periods')
     .select('id')
