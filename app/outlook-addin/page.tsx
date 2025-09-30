@@ -278,19 +278,29 @@ export default function OutlookAddinPage() {
               Simple, Transparent Pricing
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Start with a 30-day free trial, then choose the plan that works for you.
+              Start with a 30-day free trial, then £15 per month.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {/* Free Trial */}
-            <div className={`bg-white rounded-2xl p-8 shadow-lg border-2 ${selectedPlan === 'trial' ? 'border-[#6A00F5]' : 'border-gray-200'} hover:shadow-xl transition-all cursor-pointer`}
-                 onClick={() => setSelectedPlan('trial')}>
+          <div className="flex justify-center">
+            {/* Single Plan Card */}
+            <div className="bg-white rounded-2xl p-8 shadow-2xl border-2 border-[#6A00F5] max-w-md w-full">
               <div className="text-center mb-6">
-                <Clock className="h-12 w-12 text-[#6A00F5] mx-auto mb-4" />
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">Free Trial</h3>
-                <div className="text-4xl font-bold text-gray-900 mb-2">£0</div>
-                <p className="text-gray-600">30 days, full access</p>
+                <div className="w-16 h-16 bg-gradient-to-r from-[#6A00F5] to-[#8A2BE2] rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <Sparkles className="h-8 w-8 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">BlocIQ Outlook Add-in</h3>
+                <div className="mb-4">
+                  <div className="text-5xl font-bold text-gray-900 mb-2">£15</div>
+                  <p className="text-gray-600">per month after free trial</p>
+                </div>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-6">
+                  <div className="flex items-center justify-center gap-2">
+                    <Clock className="h-5 w-5 text-green-600" />
+                    <span className="font-semibold text-green-800">30-day free trial included</span>
+                  </div>
+                  <p className="text-sm text-green-700 mt-1">Full access, no credit card required</p>
+                </div>
               </div>
               <ul className="space-y-3 mb-8">
                 <li className="flex items-start gap-2">
@@ -299,7 +309,7 @@ export default function OutlookAddinPage() {
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                  <span className="text-sm text-gray-600">Smart categorization</span>
+                  <span className="text-sm text-gray-600">Smart categorization & prioritization</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
@@ -309,66 +319,13 @@ export default function OutlookAddinPage() {
                   <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
                   <span className="text-sm text-gray-600">Calendar integration</span>
                 </li>
-              </ul>
-            </div>
-
-            {/* Monthly */}
-            <div className={`bg-white rounded-2xl p-8 shadow-lg border-2 ${selectedPlan === 'monthly' ? 'border-[#6A00F5]' : 'border-gray-200'} hover:shadow-xl transition-all cursor-pointer`}
-                 onClick={() => setSelectedPlan('monthly')}>
-              <div className="text-center mb-6">
-                <CalendarIcon className="h-12 w-12 text-[#6A00F5] mx-auto mb-4" />
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">Monthly</h3>
-                <div className="text-4xl font-bold text-gray-900 mb-2">£29</div>
-                <p className="text-gray-600">per month</p>
-              </div>
-              <ul className="space-y-3 mb-8">
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                  <span className="text-sm text-gray-600">Everything in Free Trial</span>
-                </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
                   <span className="text-sm text-gray-600">Priority support</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                  <span className="text-sm text-gray-600">Advanced AI features</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
                   <span className="text-sm text-gray-600">Cancel anytime</span>
-                </li>
-              </ul>
-            </div>
-
-            {/* Annual */}
-            <div className={`bg-white rounded-2xl p-8 shadow-lg border-2 ${selectedPlan === 'annual' ? 'border-[#6A00F5]' : 'border-gray-200'} hover:shadow-xl transition-all cursor-pointer relative`}
-                 onClick={() => setSelectedPlan('annual')}>
-              <div className="absolute top-0 right-0 bg-green-500 text-white px-3 py-1 rounded-bl-xl rounded-tr-xl text-sm font-semibold">
-                Save 20%
-              </div>
-              <div className="text-center mb-6">
-                <BarChart3 className="h-12 w-12 text-[#6A00F5] mx-auto mb-4" />
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">Annual</h3>
-                <div className="text-4xl font-bold text-gray-900 mb-2">£278</div>
-                <p className="text-gray-600">per year (£23.17/mo)</p>
-              </div>
-              <ul className="space-y-3 mb-8">
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                  <span className="text-sm text-gray-600">Everything in Monthly</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                  <span className="text-sm text-gray-600">20% discount</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                  <span className="text-sm text-gray-600">Premium support</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                  <span className="text-sm text-gray-600">Early access to features</span>
                 </li>
               </ul>
             </div>
