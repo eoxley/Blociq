@@ -79,20 +79,23 @@ async function importOnboardingData(filename) {
         buildings.push({
           agency_id: AGENCY_ID,
           name: String(name),
-          address: row.getCell(2).value,
-          postcode: row.getCell(3).value,
-          building_type: row.getCell(4).value || 'residential',
-          is_hrb: parseBoolean(row.getCell(5).value),
-          year_built: parseNumber(row.getCell(6).value),
-          storeys: parseNumber(row.getCell(7).value),
-          total_units: parseNumber(row.getCell(8).value),
-          management_start_date: parseDate(row.getCell(9).value),
-          freeholder_name: row.getCell(10).value,
-          freeholder_address: row.getCell(11).value,
-          service_charge_budget: parseNumber(row.getCell(12).value),
-          reserve_fund_balance: parseNumber(row.getCell(13).value),
-          insurance_renewal_date: parseDate(row.getCell(14).value),
-          onboarding_notes: row.getCell(15).value
+          client: row.getCell(2).value,
+          type: row.getCell(3).value,
+          companies_house_number: row.getCell(4).value,
+          address: row.getCell(5).value,
+          postcode: row.getCell(6).value,
+          building_type: row.getCell(7).value || 'residential',
+          is_hrb: parseBoolean(row.getCell(8).value),
+          year_built: parseNumber(row.getCell(9).value),
+          storeys: parseNumber(row.getCell(10).value),
+          total_units: parseNumber(row.getCell(11).value),
+          management_start_date: parseDate(row.getCell(12).value),
+          freeholder_name: row.getCell(13).value,
+          freeholder_address: row.getCell(14).value,
+          service_charge_budget: parseNumber(row.getCell(15).value),
+          reserve_fund_balance: parseNumber(row.getCell(16).value),
+          insurance_renewal_date: parseDate(row.getCell(17).value),
+          onboarding_notes: row.getCell(18).value
         });
       });
 

@@ -11,6 +11,9 @@ async function createOnboardingTemplate() {
 
   buildingsSheet.columns = [
     { header: 'Building Name*', key: 'name', width: 30 },
+    { header: 'Client*', key: 'client', width: 40 },
+    { header: 'Type', key: 'type', width: 15 },
+    { header: 'Companies House Number', key: 'companies_house_number', width: 25 },
     { header: 'Address*', key: 'address', width: 40 },
     { header: 'Postcode*', key: 'postcode', width: 12 },
     { header: 'Building Type', key: 'building_type', width: 15 },
@@ -38,6 +41,9 @@ async function createOnboardingTemplate() {
   // Add example data
   buildingsSheet.addRow({
     name: 'Example Court',
+    client: 'Pimlico Place Management Company Limited',
+    type: 'RMC',
+    companies_house_number: '3805608',
     address: '123 Example Street, London',
     postcode: 'SW1A 1AA',
     building_type: 'residential',
@@ -57,10 +63,12 @@ async function createOnboardingTemplate() {
   // Add instructions
   buildingsSheet.getCell('A3').value = 'INSTRUCTIONS: Fill in one row per building. Fields marked with * are required.';
   buildingsSheet.getCell('A3').font = { italic: true, color: { argb: 'FF666666' } };
-  buildingsSheet.getCell('A4').value = 'Building Type options: residential, commercial, mixed_use';
+  buildingsSheet.getCell('A4').value = 'Type options: RMC (Resident Management Company), RTM (Right to Manage), Freehold, Leasehold';
   buildingsSheet.getCell('A4').font = { italic: true, color: { argb: 'FF666666' } };
-  buildingsSheet.getCell('A5').value = 'Is High Risk Building: Yes or No';
+  buildingsSheet.getCell('A5').value = 'Building Type options: residential, commercial, mixed_use';
   buildingsSheet.getCell('A5').font = { italic: true, color: { argb: 'FF666666' } };
+  buildingsSheet.getCell('A6').value = 'Is High Risk Building: Yes or No';
+  buildingsSheet.getCell('A6').font = { italic: true, color: { argb: 'FF666666' } };
 
   // ============================================
   // SHEET 2: UNITS
