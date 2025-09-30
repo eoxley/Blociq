@@ -1,0 +1,23 @@
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+
+export async function middleware(req: NextRequest) {
+  // For now, we'll use a simplified middleware that just checks for portal routes
+  // The full auth check will be handled at the page level
+
+  // Check if the request is for a portal route
+  if (req.nextUrl.pathname.startsWith('/portal/')) {
+    // For now, we'll let the page-level auth handle the checks
+    // This avoids Edge Runtime compatibility issues
+    // The portal pages will handle authentication and authorization
+  }
+
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: [
+    // Temporarily disabled to avoid Edge Runtime issues
+    // '/portal/:path*',
+  ],
+};
