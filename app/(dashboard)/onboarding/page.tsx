@@ -131,12 +131,20 @@ export default function OnboardingDashboard() {
           'Authorization': `Bearer ${session?.access_token}`
         }
       });
+
+      if (!response.ok) {
+        console.error('Failed to fetch uploads:', response.status);
+        setRawUploads([]);
+        return;
+      }
+
       const result = await response.json();
       if (result.success) {
-        setRawUploads(result.data);
+        setRawUploads(result.data || []);
       }
     } catch (error) {
       console.error('Error fetching raw uploads:', error);
+      setRawUploads([]);
     }
   };
 
@@ -148,12 +156,20 @@ export default function OnboardingDashboard() {
           'Authorization': `Bearer ${session?.access_token}`
         }
       });
+
+      if (!response.ok) {
+        console.error('Failed to fetch extracts:', response.status);
+        setStructuredRecords([]);
+        return;
+      }
+
       const result = await response.json();
       if (result.success) {
-        setStructuredRecords(result.data);
+        setStructuredRecords(result.data || []);
       }
     } catch (error) {
       console.error('Error fetching structured records:', error);
+      setStructuredRecords([]);
     }
   };
 
