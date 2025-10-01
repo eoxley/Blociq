@@ -254,8 +254,20 @@ export default function OnboardingDashboard() {
         return;
       }
 
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        alert('No active session. Please log in again.');
+        setUploading(false);
+        event.target.value = '';
+        return;
+      }
+
       const response = await fetch('/api/onboarding/upload', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
         body: formData,
       });
 

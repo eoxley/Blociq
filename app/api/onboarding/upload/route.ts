@@ -11,14 +11,109 @@ export const config = {
   },
 };
 
-export async function POST(request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
     const cookieStore = await cookies();
     const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
 
     // Check authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    let user = null;
+    let authError = null;
+
+    // First try cookie-based auth
+    const cookieAuth = await supabase.auth.getUser();
+    if (cookieAuth.data.user) {
+      user = cookieAuth.data.user;
+    } else {
+      // Try Bearer token auth
+      const authHeader = request.headers.get('authorization');
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.substring(7);
+        const tokenAuth = await supabase.auth.getUser(token);
+        if (tokenAuth.data.user) {
+          user = tokenAuth.data.user;
+        } else {
+          authError = tokenAuth.error;
+        }
+      } else {
+        authError = cookieAuth.error;
+      }
+    }
+
     if (authError || !user) {
+      console.error('Upload API GET auth error:', authError);
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if user is super_admin
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role, agency_id')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError || !profile || profile.role !== 'super_admin') {
+      return NextResponse.json({ error: 'Super admin access required' }, { status: 403 });
+    }
+
+    // Fetch raw uploads
+    const { data: rawUploads, error: uploadsError } = await supabase
+      .from('onboarding_raw')
+      .select(`
+        *,
+        onboarding_batches (
+          batch_name
+        )
+      `)
+      .order('created_at', { ascending: false });
+
+    if (uploadsError) {
+      console.error('Error fetching raw uploads:', uploadsError);
+      return NextResponse.json({ error: 'Failed to fetch uploads' }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: rawUploads || []
+    });
+
+  } catch (error) {
+    console.error('Upload API GET error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const cookieStore = await cookies();
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+
+    // Check authentication - try both cookie and Bearer token methods
+    let user = null;
+    let authError = null;
+
+    // First try cookie-based auth
+    const cookieAuth = await supabase.auth.getUser();
+    if (cookieAuth.data.user) {
+      user = cookieAuth.data.user;
+    } else {
+      // Try Bearer token auth
+      const authHeader = request.headers.get('authorization');
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.substring(7);
+        const tokenAuth = await supabase.auth.getUser(token);
+        if (tokenAuth.data.user) {
+          user = tokenAuth.data.user;
+        } else {
+          authError = tokenAuth.error;
+        }
+      } else {
+        authError = cookieAuth.error;
+      }
+    }
+
+    if (authError || !user) {
+      console.error('Upload API auth error:', authError);
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
