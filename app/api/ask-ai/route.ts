@@ -966,18 +966,16 @@ export async function POST(req: NextRequest) {
           console.log('📄 Document intent detected:', documentIntent);
 
           // Ensure user has agency_id (with auto-assignment fallback) - skip for Outlook add-in
+          let userProfile = null;
           if (!isOutlookAddin) {
-            const userProfile = await ensureUserHasAgency(supabase, user.id);
+            userProfile = await ensureUserHasAgency(supabase, user.id);
 
             if (!userProfile?.agency_id) {
-              return NextResponse.json({
-                success: false,
-                error: 'User not linked to agency',
-                message: 'No agencies available. Please contact support to set up your account.'
-              }, { status: 403 });
+              console.warn('⚠️ User not linked to agency for document request, but allowing query to continue');
+              // Don't block - let the query continue but it won't find building-specific documents
             }
           }
-          
+
           // Resolve building context
           const buildingContext = resolveBuildingContext(prompt, { buildingId: building_id });
           
@@ -1159,15 +1157,13 @@ export async function POST(req: NextRequest) {
           console.log('📊 Report intent detected:', reportIntent);
 
           // Ensure user has agency_id (with auto-assignment fallback) - skip for Outlook add-in
+          let userProfile = null;
           if (!isOutlookAddin) {
-            const userProfile = await ensureUserHasAgency(supabase, user.id);
+            userProfile = await ensureUserHasAgency(supabase, user.id);
 
             if (!userProfile?.agency_id) {
-              return NextResponse.json({
-                success: false,
-                error: 'User not linked to agency',
-                message: 'No agencies available. Please contact support to set up your account.'
-              }, { status: 403 });
+              console.warn('⚠️ User not linked to agency for report request, but allowing query to continue');
+              // Don't block - let the query continue but reports won't have agency-specific data
             }
           }
 
