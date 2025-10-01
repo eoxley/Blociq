@@ -100,3 +100,5 @@ function generateContextualPrompt(context: string, data: any, buildingId: string
 }
 
 
+
+

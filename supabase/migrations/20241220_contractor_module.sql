@@ -224,3 +224,5 @@ CREATE TRIGGER update_contractor_document_updated_at_trigger
     EXECUTE FUNCTION update_contractor_document_updated_at();
 
 
+
+

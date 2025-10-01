@@ -241,3 +241,5 @@ INSERT INTO reminder_templates (reminder_type, title_template, description_templ
 ('monthly', 'Monthly Close Due: {period_name}', 'Monthly accounting close for {period_name} is due. Please complete all month-end procedures.', ARRAY[7, 3, 1], 'low');
 
 
+
+

@@ -172,3 +172,5 @@ function generateSpendInsights(data: any[], summary: any): string[] {
 }
 
 
+
+
