@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useSupabase } from '@/components/SupabaseProvider';
 import { useRouter } from 'next/navigation';
 import { 
   Upload, 
@@ -64,7 +64,7 @@ interface InlineEditState {
 }
 
 export default function OnboardingDashboard() {
-  const supabase = createClientComponentClient();
+  const { supabase, user } = useSupabase();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [unauthorized, setUnauthorized] = useState(false);
@@ -85,14 +85,13 @@ export default function OnboardingDashboard() {
       setLoading(true);
 
       // Check authentication
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      console.log('🔐 Auth check:', { user: user?.id, error: authError });
-
-      if (authError || !user) {
+      if (!user) {
         console.log('❌ No user, redirecting to login');
         router.push('/login');
         return;
       }
+
+      console.log('🔐 User authenticated:', user.id);
 
       // Check if user is super_admin
       const { data: profile, error: profileError } = await supabase
