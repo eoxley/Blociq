@@ -87,8 +87,14 @@ function extractBuildingNameAdvanced(query: string): string | null {
     .replace(/\s+/g, ' ')
     .trim();
 
-  // Building name patterns (ordered by specificity)
+  // Building name patterns (ordered by specificity) - enhanced for email content
   const patterns = [
+    // Email-specific patterns for tenant/property references
+    /(?:tenant|leaseholder|property)\s+(?:at|in|of)\s+([a-z]+(?:\s+(?:grove|road|street|lane|close|way|drive|avenue|place|court|square|gardens?|park|view|heights?|house|apartments?|building|block|manor|hall|tower|estate|development|mews|terrace|walk|rise|hill|point|residence|chambers))+)/i,
+    
+    // Unit references with building context from emails
+    /(?:unit|flat|apartment)\s+(\d+[a-z]?)\s+(?:at|in|of)\s+([a-z]+(?:\s+(?:grove|road|street|lane|close|way|drive|avenue|place|court|square|gardens?|park|view|heights?|house|apartments?|building|block|manor|hall|tower|estate|development|mews|terrace|walk|rise|hill|point|residence|chambers))+)/i,
+    
     // Pattern for "5 ashwood house" - extract "ashwood house" (not the unit number)
     /\d+\s+([a-z]+(?:\s+(?:house|apartments?|court|gardens?|heights?|point|view|mews|square|place|road|street|lane|close|way|drive|avenue|terrace|walk|rise|hill|park|manor|hall|tower|building|block|estate|development))+)/i,
 
@@ -99,7 +105,7 @@ function extractBuildingNameAdvanced(query: string): string | null {
     /\b([a-z]+(?:\s+(?:house|apartments?|court|gardens?|heights?|point|view|mews|square|place|road|street|lane|close|way|drive|avenue|terrace|walk|rise|hill|park|manor|hall|tower|building|block|estate|development))+)/i,
 
     // Standalone building names (common UK property names)
-    /\b(ashwood|oakwood|maple|cedar|pine|rose|ivy|holly|laurel|elm|beech|birch|willow)(?:\s+(?:house|court|apartments?|gardens?|heights?|point|view|manor|hall))?/i
+    /\b(ashwood|oakwood|maple|cedar|pine|rose|ivy|holly|laurel|elm|beech|birch|willow|westbourne|henrietta)(?:\s+(?:house|court|apartments?|gardens?|heights?|point|view|manor|hall|grove|place))?/i
   ];
 
   for (const pattern of patterns) {

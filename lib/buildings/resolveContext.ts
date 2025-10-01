@@ -17,11 +17,20 @@ export interface CurrentContext {
   unitName?: string;
 }
 
-// Common building name patterns
+// Common building name patterns - enhanced for street names and addresses
 const BUILDING_PATTERNS = [
-  /(?:for|of|at|in)\s+([A-Za-z0-9\s]+?)(?:\s+(?:house|building|block|flat|apartment|unit))/gi,
+  // Street names and addresses (like "Westbourne Grove", "Henrietta House")
+  /(?:for|of|at|in)\s+([A-Za-z0-9\s]+(?:grove|road|street|lane|close|way|drive|avenue|place|court|square|gardens?|park|view|heights?|house|building|block|apartment|manor|hall|tower|estate|development|mews|terrace|walk|rise|hill|point|residence|chambers))/gi,
+  
+  // Unit references with building context
+  /(?:unit|flat|apartment)\s+(\d+[a-z]?)\s+(?:at|in|of)\s+([A-Za-z0-9\s]+(?:grove|road|street|lane|close|way|drive|avenue|place|court|square|gardens?|park|view|heights?|house|building|block|apartment|manor|hall|tower|estate|development|mews|terrace|walk|rise|hill|point|residence|chambers))/gi,
+  
+  // Standard building patterns
   /(?:house|building|block)\s+([A-Za-z0-9\s]+)/gi,
-  /(?:flat|apartment|unit)\s+([A-Za-z0-9\s]+)/gi
+  /(?:flat|apartment|unit)\s+([A-Za-z0-9\s]+)/gi,
+  
+  // Tenant/property references
+  /(?:tenant|property|leaseholder)\s+(?:at|in|of)\s+([A-Za-z0-9\s]+(?:grove|road|street|lane|close|way|drive|avenue|place|court|square|gardens?|park|view|heights?|house|building|block|apartment|manor|hall|tower|estate|development|mews|terrace|walk|rise|hill|point|residence|chambers))/gi
 ];
 
 // Unit patterns

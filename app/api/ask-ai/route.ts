@@ -1109,8 +1109,16 @@ export async function POST(req: NextRequest) {
             }
           }
 
-          // Resolve building context
+          // Resolve building context - enhanced for email content
           const buildingContext = resolveBuildingContext(prompt, { buildingId: building_id });
+          
+          // If no building found, try email-specific extraction
+          if (!buildingContext.buildingName && !buildingContext.buildingId) {
+            const emailBuildingContext = extractBuildingFromEmailContent(prompt);
+            if (emailBuildingContext.buildingName) {
+              buildingContext.buildingName = emailBuildingContext.buildingName;
+            }
+          }
           
           if (!buildingContext.buildingId && !buildingContext.buildingName) {
             return NextResponse.json({
@@ -2392,4 +2400,58 @@ ${chunk.content.substring(0, 400)}...`
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
+}
+
+/**
+ * Extract building names from email content with enhanced patterns
+ */
+function extractBuildingFromEmailContent(text: string): { buildingName?: string; unitName?: string } {
+  const result: { buildingName?: string; unitName?: string } = {};
+  
+  // Email-specific patterns for building extraction
+  const emailBuildingPatterns = [
+    // "tenant at Unit 51 Westbourne Grove" pattern
+    /(?:tenant|leaseholder|property|unit)\s+(?:at|in|of)?\s*(?:unit\s+)?(\d+[a-z]?)?\s*([a-z]+(?:\s+(?:grove|road|street|lane|close|way|drive|avenue|place|court|square|gardens?|park|view|heights?|house|apartments?|building|block|manor|hall|tower|estate|development|mews|terrace|walk|rise|hill|point|residence|chambers))+)/i,
+    
+    // "Unit 51 Westbourne Grove" pattern
+    /(?:unit|flat|apartment)\s+(\d+[a-z]?)\s+([a-z]+(?:\s+(?:grove|road|street|lane|close|way|drive|avenue|place|court|square|gardens?|park|view|heights?|house|apartments?|building|block|manor|hall|tower|estate|development|mews|terrace|walk|rise|hill|point|residence|chambers))+)/i,
+    
+    // "at Westbourne Grove" pattern
+    /(?:at|in|of|for)\s+([a-z]+(?:\s+(?:grove|road|street|lane|close|way|drive|avenue|place|court|square|gardens?|park|view|heights?|house|apartments?|building|block|manor|hall|tower|estate|development|mews|terrace|walk|rise|hill|point|residence|chambers))+)/i,
+    
+    // Direct building name patterns
+    /([a-z]+(?:\s+(?:grove|road|street|lane|close|way|drive|avenue|place|court|square|gardens?|park|view|heights?|house|apartments?|building|block|manor|hall|tower|estate|development|mews|terrace|walk|rise|hill|point|residence|chambers))+)/i
+  ];
+  
+  // Try each pattern
+  for (const pattern of emailBuildingPatterns) {
+    const matches = [...text.matchAll(pattern)];
+    if (matches.length > 0) {
+      const match = matches[0];
+      
+      // If pattern has unit number, extract it
+      if (match[1] && /^\d+[a-z]?$/i.test(match[1])) {
+        result.unitName = match[1].trim();
+        result.buildingName = match[2]?.trim();
+      } else {
+        result.buildingName = match[1]?.trim();
+      }
+      
+      // Clean up the building name
+      if (result.buildingName) {
+        // Remove common prefixes/suffixes that aren't part of the building name
+        result.buildingName = result.buildingName
+          .replace(/^(the|at|in|of|for)\s+/i, '')
+          .replace(/\s+(building|property|development)$/i, '')
+          .trim();
+      }
+      
+      if (result.buildingName && result.buildingName.length > 3) {
+        console.log('🔍 [EmailBuildingExtractor] Found building:', result.buildingName, 'Unit:', result.unitName);
+        break;
+      }
+    }
+  }
+  
+  return result;
 } 
