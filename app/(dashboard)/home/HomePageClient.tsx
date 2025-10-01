@@ -31,6 +31,7 @@ import { getRandomWelcomeMessage } from '@/utils/messages'
 import { HybridLeaseProcessor } from '@/lib/hybrid-lease-processor'
 import ClientOnly from '@/components/ClientOnly'
 import UpcomingEventsWidget from '@/components/UpcomingEventsWidget'
+import BlocIQResponseFramework from '@/components/ai/BlocIQResponseFramework'
 
 // Helper function to format AI responses into paragraphs
 function formatResponse(text: string): string {
@@ -140,7 +141,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   // Ask BlocIQ state
   const [askInput, setAskInput] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [messages, setMessages] = useState<Array<{sender: 'user' | 'ai', text: string, timestamp: Date, type?: 'lease_analysis', leaseData?: any}>>([])
+  const [messages, setMessages] = useState<Array<{sender: 'user' | 'ai', text: string, timestamp: Date, type?: 'lease_analysis', leaseData?: any, isStructured?: boolean, structuredData?: any}>>([])
   const [showChat, setShowChat] = useState(false)
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([])
   const [uploadStatus, setUploadStatus] = useState('')
@@ -953,9 +954,18 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
       console.log("🤖 Processing request with enhanced AI:", payload);
 
+      // Check if this looks like an email reply request
+      const isEmailReply = prompt.toLowerCase().includes('write') && 
+                          (prompt.toLowerCase().includes('email') || 
+                           prompt.toLowerCase().includes('response') || 
+                           prompt.toLowerCase().includes('reply'));
+
       const res = await fetch("/api/ask-ai", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...(isEmailReply && { "x-wants-structured": "true" })
+        },
         body: JSON.stringify(payload),
       });
 
@@ -967,7 +977,24 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
       // Handle AI response
       let aiResponse = '';
-      if (data.response) {
+      let isStructuredResponse = false;
+      let structuredData = null;
+
+      if (data.isStructured && data.response) {
+        // Handle structured BlocIQ response
+        isStructuredResponse = true;
+        structuredData = data.response;
+        aiResponse = `**Part 1: Context & Reasoning**
+Legal Context: ${data.response.context_reasoning.legal_context}
+Why This Matters: ${data.response.context_reasoning.why_this_matters}
+Agency Obligations: ${data.response.context_reasoning.agency_obligations.join(', ')}
+Tone: ${data.response.context_reasoning.tone}
+
+**Part 2: Formatted Output**
+Subject: ${data.response.formatted_output.subject}
+
+${data.response.formatted_output.body}`;
+      } else if (data.response) {
         aiResponse = data.response;
       } else if (data.answer) {
         aiResponse = data.answer;
@@ -978,7 +1005,13 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       }
 
       // Add AI response to chat
-      const aiMessage = { sender: 'ai' as const, text: aiResponse, timestamp: new Date('2024-01-01') }
+      const aiMessage = { 
+        sender: 'ai' as const, 
+        text: aiResponse, 
+        timestamp: new Date('2024-01-01'),
+        isStructured: isStructuredResponse,
+        structuredData: structuredData
+      }
       setMessages(prev => [...prev, aiMessage])
 
       // Show chat interface
@@ -1236,10 +1269,23 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                           }`}
                         >
                           {message.sender === 'ai' ? (
-                            <div
-                              className="prose prose-sm max-w-none text-gray-900"
-                              dangerouslySetInnerHTML={{ __html: formatResponse(message.text) }}
-                            />
+                            message.isStructured && message.structuredData ? (
+                              <div className="w-full">
+                                <BlocIQResponseFramework 
+                                  response={message.structuredData}
+                                  onCopyToClipboard={(text) => {
+                                    navigator.clipboard.writeText(text);
+                                    toast.success('Copied to clipboard');
+                                  }}
+                                  className="max-w-4xl"
+                                />
+                              </div>
+                            ) : (
+                              <div
+                                className="prose prose-sm max-w-none text-gray-900"
+                                dangerouslySetInnerHTML={{ __html: formatResponse(message.text) }}
+                              />
+                            )
                           ) : (
                             <p className="text-sm">{message.text}</p>
                           )}
