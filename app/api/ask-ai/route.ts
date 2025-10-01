@@ -375,17 +375,42 @@ async function searchLeases(supabase: any, query: string, buildingId?: string) {
 const SYSTEM_PROMPTS = {
   general: `You are a professional block manager responding through BlocIQ, a UK property management platform. You are responding to resident queries and taking ownership of issues as their property manager.`,
 
-  email_reply: `You are a professional block manager using BlocIQ to respond to resident emails. You are the property manager responsible for this building and you will take action to resolve issues.
+  email_reply: `You are a professional property manager using BlocIQ to respond to emails. You are the property manager responsible for this building/property and you will take action to resolve issues.
 
 📌 ENHANCED REPLY GUIDELINES:
 - Read the user's message carefully and identify whether an action has already happened (e.g. "I received a notice" = consultation has started)
 - Avoid defaulting to generic explanations unless clearly being requested
-- Use reasoning based on UK leasehold law and best practice (TPI, RICS, BSA, LTA 1985)
+- Use reasoning based on UK property law and best practice (TPI, RICS, BSA, LTA 1985, LTA 1954)
+- CRITICAL: Identify if the tenancy is RESIDENTIAL or COMMERCIAL - they have different legal rights
 - Include realistic next steps (timelines, who to contact, what to expect)
 - Don't assume internal data like notice dates, contractor names, or building roles unless mentioned
 - If the user references a legal document or statutory notice, acknowledge what stage that implies
-- Use correct legal terminology (Notice of Intention, demised premises, major works, RTM, qualifying works)
+- Use correct legal terminology (Notice of Intention, demised premises, major works, RTM, qualifying works, service charge)
 - Remain neutral and professional — never guess or speculate if unclear
+
+🏢 COMMERCIAL VS RESIDENTIAL TENANCIES:
+CRITICAL: Always determine if the query relates to a commercial or residential tenancy.
+
+RESIDENTIAL TENANCIES (Long Leasehold):
+- Landlord and Tenant Act 1985 sections 21 & 22 APPLY
+- Statutory right to request service charge breakdown
+- Right to inspect accounts, receipts, and supporting documents
+- Section 20 consultation requirements for major works (£250+ per leaseholder or £100+ for long-term agreements)
+- Strong consumer protection under leasehold law
+
+COMMERCIAL TENANCIES (Business Leases):
+- Landlord and Tenant Act 1985 sections 21 & 22 DO NOT APPLY
+- No statutory right to service charge documentation
+- Rights governed by the LEASE TERMS, not statute
+- Landlord and Tenant Act 1954 covers security of tenure for business tenants
+- Service charge disputes handled under lease provisions
+- Commercial tenants should refer to their lease for disclosure rights
+
+When responding to commercial tenant queries about service charges:
+- Clarify that sections 21 & 22 LTA 1985 don't apply
+- State that rights are governed by the lease terms
+- Offer to provide information where reasonable under the lease
+- Be polite but firm about statutory vs contractual obligations
 
 BLOCK MANAGER RESPONSE REQUIREMENTS - FOLLOW EXACTLY:
 1. NO SUBJECT LINE in the email body - subject is handled separately by the email system
@@ -786,6 +811,44 @@ export async function POST(req: NextRequest) {
         result: hit.answer,
         response: hit.answer
       });
+    }
+
+    // 📧 Detect Email Reply/Draft Requests
+    // Check if user has pasted a large text (email/letter) and wants a reply
+    const emailReplyPatterns = [
+      /write\s+(a\s+)?reply/i,
+      /draft\s+(a\s+)?reply/i,
+      /write\s+(an?\s+)?email/i,
+      /draft\s+(an?\s+)?email/i,
+      /respond\s+to\s+this/i,
+      /create\s+(a\s+)?response/i,
+      /write\s+(a\s+)?response/i,
+      /reply\s+to\s+this/i,
+      /compose\s+(a\s+)?reply/i,
+      /can\s+you\s+write/i
+    ];
+
+    const hasEmailReplyIntent = emailReplyPatterns.some(pattern => pattern.test(prompt));
+    const promptLength = prompt.length;
+    const hasLongContext = promptLength > 300; // Likely contains pasted email/letter content
+
+    if (hasEmailReplyIntent && hasLongContext) {
+      console.log('📧 Email reply intent detected with long context');
+      contextType = 'email_reply';
+
+      // Extract the email content and the request
+      // The user's request is usually at the end (e.g., "can you write a email")
+      const lastSentence = prompt.split(/[.!?]\s+/).pop() || '';
+      const emailContent = prompt.substring(0, prompt.lastIndexOf(lastSentence)).trim();
+
+      console.log('📧 Email content length:', emailContent.length);
+      console.log('📧 User request:', lastSentence);
+
+      // Reformat the prompt to make it clear what the AI should do
+      if (emailContent.length > 50) {
+        prompt = `I received the following email/message:\n\n---\n${emailContent}\n---\n\n${lastSentence || 'Please draft a professional reply to this.'}`;
+        console.log('📧 Reformatted prompt for email reply generation');
+      }
     }
 
     // 🏢 Smart Query Detection and Handling (AGM, Events, Documents)
