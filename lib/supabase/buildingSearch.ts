@@ -270,6 +270,18 @@ export async function searchLeaseholderDirect(query: string, supabaseClient: any
 }
 
 function extractBuildingName(query: string): string | null {
+  // Clean the query first - remove disclaimer text and problematic words
+  const cleanedQuery = query
+    .replace(/CBRE Limited.*?Privacy Policy\./gs, '') // Remove CBRE disclaimer
+    .replace(/This communication.*?virus checks\./gs, '') // Remove communication disclaimer
+    .replace(/Any use of its contents.*?whatsoever\./gs, '') // Remove usage disclaimer
+    .replace(/Reasonable care.*?virus checks\./gs, '') // Remove virus disclaimer
+    .replace(/Details about.*?Privacy Policy\./gs, '') // Remove privacy disclaimer
+    .replace(/\b(any way|whatsoever|strictly prohibited|not copy|not disclose|rely on|contents|confidential|privileged)\b/gi, '') // Remove problematic words
+    .trim();
+
+  console.log('🔍 [BuildingSearch] Processing cleaned query:', cleanedQuery.substring(0, 200) + '...');
+
   // Common patterns for building names
   const patterns = [
     // Specific patterns for "5 ashwood house" type queries - extract "ashwood house"
@@ -280,16 +292,41 @@ function extractBuildingName(query: string): string | null {
   ];
   
   for (const pattern of patterns) {
-    const match = query.match(pattern);
+    const match = cleanedQuery.match(pattern);
     if (match && match[1]) {
       const extracted = match[1].trim();
-      console.log('🔍 Extracted building name:', extracted, 'from query:', query);
-      return extracted;
+      
+      // Filter out problematic matches
+      if (extracted && !isProblematicMatch(extracted)) {
+        console.log('✅ [BuildingSearch] Extracted building name:', extracted, 'from query:', query);
+        return extracted;
+      } else {
+        console.log('🚫 [BuildingSearch] Skipping problematic match:', extracted);
+      }
     }
   }
   
-  console.log('❌ No building name extracted from query:', query);
+  console.log('❌ [BuildingSearch] No building name extracted from query:', query);
   return null;
+}
+
+/**
+ * Check if a match is problematic (from disclaimer text, etc.)
+ */
+function isProblematicMatch(name: string): boolean {
+  const nameLower = name.toLowerCase();
+  
+  // Skip problematic words and phrases
+  const problematicWords = [
+    'any way', 'whatsoever', 'strictly', 'prohibited', 'copy', 'disclose', 'rely', 'contents', 
+    'confidential', 'privileged', 'communication', 'sender', 'immediately', 'computer', 'viruses',
+    'responsibility', 'accepted', 'associated', 'subsidiary', 'companies', 'recipient', 'carry',
+    'appropriate', 'virus', 'checks', 'details', 'personal', 'data', 'collects', 'privacy',
+    'policy', 'regulated', 'rics', 'registered', 'office', 'henrietta', 'place', 'london',
+    'england', 'wales', 'any', 'way'
+  ];
+  
+  return problematicWords.some(word => nameLower.includes(word));
 }
 
 function extractUnitNumber(query: string): string | null {

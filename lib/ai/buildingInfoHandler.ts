@@ -81,11 +81,19 @@ export function detectBuildingInfoQuery(query: string): BuildingInfoQuery | null
  * Enhanced building name extraction with better patterns
  */
 function extractBuildingNameAdvanced(query: string): string | null {
-  // Remove common question words first
+  // Remove common question words first and disclaimer text
   const cleaned = query
     .replace(/\b(how many|how much|what|where|when|who|which|does|do|is|are|the|a|an)\b/gi, ' ')
+    .replace(/CBRE Limited.*?Privacy Policy\./gs, '') // Remove CBRE disclaimer
+    .replace(/This communication.*?virus checks\./gs, '') // Remove communication disclaimer
+    .replace(/Any use of its contents.*?whatsoever\./gs, '') // Remove usage disclaimer
+    .replace(/Reasonable care.*?virus checks\./gs, '') // Remove virus disclaimer
+    .replace(/Details about.*?Privacy Policy\./gs, '') // Remove privacy disclaimer
+    .replace(/\b(any way|whatsoever|strictly prohibited|not copy|not disclose|rely on|contents|confidential|privileged)\b/gi, '') // Remove problematic words
     .replace(/\s+/g, ' ')
     .trim();
+
+  console.log('🔍 [BuildingInfoHandler] Processing cleaned text:', cleaned.substring(0, 200) + '...');
 
   // Building name patterns (ordered by specificity) - enhanced for email content
   const patterns = [
@@ -112,13 +120,38 @@ function extractBuildingNameAdvanced(query: string): string | null {
     const match = cleaned.match(pattern);
     if (match && match[1]) {
       const extracted = match[1].trim();
-      console.log('🔍 [BuildingInfoHandler] Extracted building name:', extracted);
-      return extracted;
+      
+      // Filter out problematic matches
+      if (extracted && !isProblematicMatch(extracted)) {
+        console.log('✅ [BuildingInfoHandler] Extracted building name:', extracted);
+        return extracted;
+      } else {
+        console.log('🚫 [BuildingInfoHandler] Skipping problematic match:', extracted);
+      }
     }
   }
 
-  console.log('❌ [BuildingInfoHandler] No building name found in:', query);
+  console.log('❌ [BuildingInfoHandler] No building name extracted from query:', query);
   return null;
+}
+
+/**
+ * Check if a match is problematic (from disclaimer text, etc.)
+ */
+function isProblematicMatch(name: string): boolean {
+  const nameLower = name.toLowerCase();
+  
+  // Skip problematic words and phrases
+  const problematicWords = [
+    'any way', 'whatsoever', 'strictly', 'prohibited', 'copy', 'disclose', 'rely', 'contents', 
+    'confidential', 'privileged', 'communication', 'sender', 'immediately', 'computer', 'viruses',
+    'responsibility', 'accepted', 'associated', 'subsidiary', 'companies', 'recipient', 'carry',
+    'appropriate', 'virus', 'checks', 'details', 'personal', 'data', 'collects', 'privacy',
+    'policy', 'regulated', 'rics', 'registered', 'office', 'henrietta', 'place', 'london',
+    'england', 'wales', 'any', 'way'
+  ];
+  
+  return problematicWords.some(word => nameLower.includes(word));
 }
 
 /**

@@ -46,18 +46,38 @@ const UNIT_PATTERNS = [
 export function extractNamesFromText(text: string): { buildingName?: string; unitName?: string } {
   const result: { buildingName?: string; unitName?: string } = {};
   
+  // Clean the text first - remove disclaimer text and problematic words
+  const cleanedText = text
+    .replace(/CBRE Limited.*?Privacy Policy\./gs, '') // Remove CBRE disclaimer
+    .replace(/This communication.*?virus checks\./gs, '') // Remove communication disclaimer
+    .replace(/Any use of its contents.*?whatsoever\./gs, '') // Remove usage disclaimer
+    .replace(/Reasonable care.*?virus checks\./gs, '') // Remove virus disclaimer
+    .replace(/Details about.*?Privacy Policy\./gs, '') // Remove privacy disclaimer
+    .replace(/\b(any way|whatsoever|strictly prohibited|not copy|not disclose|rely on|contents|confidential|privileged)\b/gi, '') // Remove problematic words
+    .trim();
+  
+  console.log('🔍 [ResolveContext] Processing cleaned text:', cleanedText.substring(0, 200) + '...');
+  
   // Extract building name
   for (const pattern of BUILDING_PATTERNS) {
-    const matches = [...text.matchAll(pattern)];
+    const matches = [...cleanedText.matchAll(pattern)];
     if (matches.length > 0) {
-      result.buildingName = matches[0][1]?.trim();
-      break;
+      const extractedName = matches[0][1]?.trim();
+      
+      // Filter out problematic matches
+      if (extractedName && !isProblematicMatch(extractedName)) {
+        result.buildingName = extractedName;
+        console.log('✅ [ResolveContext] Found building name:', extractedName);
+        break;
+      } else {
+        console.log('🚫 [ResolveContext] Skipping problematic match:', extractedName);
+      }
     }
   }
   
   // Extract unit name/number
   for (const pattern of UNIT_PATTERNS) {
-    const matches = [...text.matchAll(pattern)];
+    const matches = [...cleanedText.matchAll(pattern)];
     if (matches.length > 0) {
       result.unitName = matches[0][1]?.trim();
       break;
@@ -65,6 +85,25 @@ export function extractNamesFromText(text: string): { buildingName?: string; uni
   }
   
   return result;
+}
+
+/**
+ * Check if a match is problematic (from disclaimer text, etc.)
+ */
+function isProblematicMatch(name: string): boolean {
+  const nameLower = name.toLowerCase();
+  
+  // Skip problematic words and phrases
+  const problematicWords = [
+    'any way', 'whatsoever', 'strictly', 'prohibited', 'copy', 'disclose', 'rely', 'contents', 
+    'confidential', 'privileged', 'communication', 'sender', 'immediately', 'computer', 'viruses',
+    'responsibility', 'accepted', 'associated', 'subsidiary', 'companies', 'recipient', 'carry',
+    'appropriate', 'virus', 'checks', 'details', 'personal', 'data', 'collects', 'privacy',
+    'policy', 'regulated', 'rics', 'registered', 'office', 'henrietta', 'place', 'london',
+    'england', 'wales', 'any', 'way'
+  ];
+  
+  return problematicWords.some(word => nameLower.includes(word));
 }
 
 /**
