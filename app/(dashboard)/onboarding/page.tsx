@@ -76,6 +76,25 @@ export default function OnboardingDashboard() {
   const [uploading, setUploading] = useState(false);
   const [inlineEdit, setInlineEdit] = useState<InlineEditState>({});
 
+  // Add cookie clearing utility
+  const clearCookiesAndReload = () => {
+    try {
+      // Clear all cookies
+      document.cookie.split(";").forEach(function(c) { 
+        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+      });
+      
+      // Clear localStorage and sessionStorage
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Reload the page
+      window.location.reload();
+    } catch (error) {
+      console.error('Error clearing cookies:', error);
+    }
+  };
+
   useEffect(() => {
     checkAuthAndFetchData();
   }, []);
@@ -83,8 +102,8 @@ export default function OnboardingDashboard() {
   const checkAuthAndFetchData = async () => {
     try {
       setLoading(true);
-
-      // Check authentication
+      
+      // Check authentication with better error handling
       if (!user) {
         console.log('❌ No user, redirecting to login');
         router.push('/login');
@@ -93,12 +112,42 @@ export default function OnboardingDashboard() {
 
       console.log('🔐 User authenticated:', user.id);
 
-      // Check if user is super_admin
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
+      // Check if user is super_admin with retry logic
+      let profile = null;
+      let profileError = null;
+      
+      try {
+        const result = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+        
+        profile = result.data;
+        profileError = result.error;
+      } catch (cookieError) {
+        console.error('Cookie parsing error:', cookieError);
+        // Try to clear cookies and retry
+        try {
+          // Clear any malformed cookies
+          document.cookie.split(";").forEach(function(c) { 
+            document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+          });
+          
+          // Retry after clearing cookies
+          const retryResult = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+          
+          profile = retryResult.data;
+          profileError = retryResult.error;
+        } catch (retryError) {
+          console.error('Retry failed:', retryError);
+          profileError = retryError;
+        }
+      }
 
       console.log('👤 Profile check:', { profile, error: profileError });
 
@@ -126,9 +175,16 @@ export default function OnboardingDashboard() {
   const fetchRawUploads = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        console.error('No session found for fetchRawUploads');
+        return;
+      }
+
       const response = await fetch('/api/onboarding/upload', {
         headers: {
-          'Authorization': `Bearer ${session?.access_token}`
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
         }
       });
 
@@ -151,9 +207,16 @@ export default function OnboardingDashboard() {
   const fetchStructuredRecords = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        console.error('No session found for fetchStructuredRecords');
+        return;
+      }
+
       const response = await fetch('/api/onboarding/extract?status=pending', {
         headers: {
-          'Authorization': `Bearer ${session?.access_token}`
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
         }
       });
 
@@ -440,16 +503,27 @@ export default function OnboardingDashboard() {
   if (unauthorized) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
+        <div className="text-center max-w-md">
           <AlertCircle className="mx-auto h-12 w-12 text-red-500" />
           <h2 className="mt-4 text-xl font-semibold text-gray-900">Access Denied</h2>
           <p className="mt-2 text-gray-600">Super admin access required</p>
-          <button
-            onClick={() => router.push('/home')}
-            className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
-          >
-            Return Home
-          </button>
+          <p className="mt-2 text-sm text-gray-500">
+            If you're experiencing cookie parsing errors, try clearing your browser data:
+          </p>
+          <div className="mt-4 space-y-2">
+            <button
+              onClick={clearCookiesAndReload}
+              className="block w-full px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700"
+            >
+              Clear Cookies & Reload
+            </button>
+            <button
+              onClick={() => router.push('/home')}
+              className="block w-full px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+            >
+              Return Home
+            </button>
+          </div>
         </div>
       </div>
     );
