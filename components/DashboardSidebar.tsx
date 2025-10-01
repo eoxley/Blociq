@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { useSupabase } from '@/components/SupabaseProvider';
-import { Bell, Settings, User, HelpCircle, ExternalLink, LogOut, Lock, Home, Brain, Microscope, Building2, Shield, Megaphone, Wrench, PoundSterling, HardHat, ClipboardList, Monitor, FileText, Upload } from 'lucide-react';
+import { Bell, Settings, User, HelpCircle, ExternalLink, LogOut, Lock, Home, Brain, Microscope, Building2, Shield, Megaphone, Wrench, PoundSterling, HardHat, ClipboardList, Monitor, FileText } from 'lucide-react';
 import BlocIQLogo from './BlocIQLogo';
 import { BlocIQBadge } from '@/components/ui/blociq-badge';
 import AgencySwitcher from './AgencySwitcher';
@@ -25,7 +25,6 @@ const navItems = [
   { label: "Contractors", icon: HardHat, href: "/contractors", comingSoon: false, description: "Vendor management", aiPowered: false },
   { label: "Work Orders", icon: ClipboardList, href: "/work-orders", comingSoon: false, description: "Maintenance requests", aiPowered: false },
   { label: "Client Portal", icon: Monitor, href: "/client-portal", comingSoon: false, description: "Leaseholder access", aiPowered: false },
-  { label: "Onboarding", icon: Upload, href: "/onboarding", comingSoon: false, description: "Internal data processing", aiPowered: true, superAdminOnly: true },
 ];
 
 export default function DashboardSidebar() {

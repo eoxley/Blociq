@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSupabase } from '@/components/SupabaseProvider';
 import { useRouter } from 'next/navigation';
-import { Menu, X, Bell, Settings, User, HelpCircle, LogOut, Home, Inbox, Building2, Shield, Megaphone, Wrench, Brain, FileText, Upload } from 'lucide-react';
+import { Menu, X, Bell, Settings, User, HelpCircle, LogOut, Home, Inbox, Building2, Shield, Megaphone, Wrench, Brain, FileText } from 'lucide-react';
 import BlocIQLogo from './BlocIQLogo';
 import { BlocIQButton } from '@/components/ui/blociq-button';
 import { BlocIQBadge } from '@/components/ui/blociq-badge';
@@ -18,7 +18,6 @@ const navItems = [
   { label: "Communications", icon: Megaphone, href: "/communications", comingSoon: false, description: "Letter & email templates" },
   { label: "Major Works", icon: Wrench, href: "/major-works", comingSoon: false, description: "Project management" },
   { label: "AI History", icon: Brain, href: "/ai-history", comingSoon: false, description: "Search past AI interactions" },
-  { label: "Onboarding", icon: Upload, href: "/onboarding", comingSoon: false, description: "Internal data processing", superAdminOnly: true },
 ];
 
 export default function MobileNavigation() {
