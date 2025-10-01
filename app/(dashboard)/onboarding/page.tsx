@@ -412,7 +412,7 @@ export default function OnboardingDashboard() {
           <h2 className="mt-4 text-xl font-semibold text-gray-900">Access Denied</h2>
           <p className="mt-2 text-gray-600">Super admin access required</p>
           <button
-            onClick={() => router.push('/')}
+            onClick={() => router.push('/home')}
             className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
           >
             Return Home
