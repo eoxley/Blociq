@@ -1466,14 +1466,31 @@ export async function POST(req: NextRequest) {
     if (!building_id) {
       console.log('🔍 Auto-detecting building from prompt...');
 
+      // Clean the prompt first - remove disclaimer text and problematic words
+      const cleanedPrompt = prompt
+        .replace(/CBRE Limited.*?Privacy Policy\./gs, '') // Remove CBRE disclaimer
+        .replace(/This communication.*?virus checks\./gs, '') // Remove communication disclaimer
+        .replace(/Any use of its contents.*?whatsoever\./gs, '') // Remove usage disclaimer
+        .replace(/Reasonable care.*?virus checks\./gs, '') // Remove virus disclaimer
+        .replace(/Details about.*?Privacy Policy\./gs, '') // Remove privacy disclaimer
+        .replace(/\b(any way|whatsoever|strictly prohibited|not copy|not disclose|rely on|contents|confidential|privileged)\b/gi, '') // Remove problematic words
+        .trim();
+
       // Extract potential building names from the question with improved logic
-      const buildingKeywords = ['house', 'court', 'building', 'apartment', 'residence', 'manor', 'gardens', 'heights', 'view', 'plaza'];
-      const words = prompt.toLowerCase().split(/\s+/);
+      const buildingKeywords = ['house', 'court', 'building', 'apartment', 'residence', 'manor', 'gardens', 'heights', 'view', 'plaza', 'grove', 'road', 'street', 'place'];
+      const words = cleanedPrompt.toLowerCase().split(/\s+/);
+
+      // Filter out problematic words that aren't building names
+      const filteredWords = words.filter(word => 
+        !['any', 'way', 'whatsoever', 'strictly', 'prohibited', 'copy', 'disclose', 'rely', 'contents', 'confidential', 'privileged', 'communication', 'sender', 'immediately', 'computer', 'viruses', 'responsibility', 'accepted', 'associated', 'subsidiary', 'companies', 'recipient', 'carry', 'appropriate', 'virus', 'checks', 'details', 'personal', 'data', 'collects', 'privacy', 'policy', 'regulated', 'rics', 'registered', 'office', 'henrietta', 'place', 'london', 'england', 'wales'].includes(word)
+      );
+
+      console.log('🔍 [BuildingDetection] Cleaned words:', filteredWords.slice(0, 10));
 
       // Try different combinations of words (1-3 words)
       for (let wordCount = 1; wordCount <= 3; wordCount++) {
-        for (let i = 0; i <= words.length - wordCount; i++) {
-          const potentialName = words.slice(i, i + wordCount).join(' ');
+        for (let i = 0; i <= filteredWords.length - wordCount; i++) {
+          const potentialName = filteredWords.slice(i, i + wordCount).join(' ');
           if (buildingKeywords.some(keyword => potentialName.includes(keyword))) {
             console.log('🔍 Searching for building:', potentialName);
 
@@ -1497,6 +1514,29 @@ export async function POST(req: NextRequest) {
           }
         }
         if (building_id) break;
+      }
+
+      // If still no building found, try email-specific extraction
+      if (!building_id) {
+        console.log('🔍 [MainBuildingDetection] Trying email-specific extraction...');
+        const emailBuildingContext = extractBuildingFromEmailContent(prompt);
+        console.log('🔍 [MainBuildingDetection] Email extraction result:', emailBuildingContext);
+        
+        if (emailBuildingContext.buildingName) {
+          console.log('🔍 [MainBuildingDetection] Searching for email-extracted building:', emailBuildingContext.buildingName);
+          
+          const { data: building } = await supabase
+            .from('buildings')
+            .select('id, name, address, unit_count')
+            .ilike('name', `%${emailBuildingContext.buildingName}%`)
+            .limit(1)
+            .single();
+
+          if (building) {
+            building_id = building.id;
+            console.log('✅ [MainBuildingDetection] Auto-detected building from email:', building.name);
+          }
+        }
       }
     }
 
