@@ -2516,24 +2516,39 @@ ${chunk.content.substring(0, 400)}...`
 function extractBuildingFromEmailContent(text: string): { buildingName?: string; unitName?: string } {
   const result: { buildingName?: string; unitName?: string } = {};
   
+  // Remove disclaimer text and common email signatures that can interfere
+  const cleanedText = text
+    .replace(/CBRE Limited.*?Privacy Policy\./gs, '') // Remove CBRE disclaimer
+    .replace(/This communication.*?virus checks\./gs, '') // Remove communication disclaimer
+    .replace(/Any use of its contents.*?whatsoever\./gs, '') // Remove usage disclaimer
+    .replace(/Reasonable care.*?virus checks\./gs, '') // Remove virus disclaimer
+    .replace(/Details about.*?Privacy Policy\./gs, '') // Remove privacy disclaimer
+    .replace(/\b(any way|whatsoever|strictly prohibited|not copy|not disclose)\b/gi, '') // Remove problematic words
+    .trim();
+  
   // Email-specific patterns for building extraction - prioritize property addresses over office addresses
   const emailBuildingPatterns = [
-    // "tenant at Unit 51 Westbourne Grove" pattern - highest priority
-    /(?:tenant|leaseholder|property|unit)\s+(?:at|in|of)?\s*(?:unit\s+)?(\d+[a-z]?)?\s*([a-z]+(?:\s+(?:grove|road|street|lane|close|way|drive|avenue|place|court|square|gardens?|park|view|heights?|house|apartments?|building|block|manor|hall|tower|estate|development|mews|terrace|walk|rise|hill|point|residence|chambers))+)/i,
+    // Specific pattern for "Unit 51 Westbourne Grove" - highest priority
+    /(?:unit|flat|apartment)\s+(\d+[a-z]?)\s+(westbourne\s+grove)/i,
     
-    // "Unit 51 Westbourne Grove" pattern - high priority
+    // "tenant at Unit 51 Westbourne Grove" pattern - highest priority
+    /(?:tenant|leaseholder|property)\s+(?:at|in|of)?\s*(?:unit\s+)?(\d+[a-z]?)?\s*([a-z]+(?:\s+(?:grove|road|street|lane|close|way|drive|avenue|place|court|square|gardens?|park|view|heights?|house|apartments?|building|block|manor|hall|tower|estate|development|mews|terrace|walk|rise|hill|point|residence|chambers))+)/i,
+    
+    // "Unit 51 Westbourne Grove" pattern - high priority  
     /(?:unit|flat|apartment)\s+(\d+[a-z]?)\s+([a-z]+(?:\s+(?:grove|road|street|lane|close|way|drive|avenue|place|court|square|gardens?|park|view|heights?|house|apartments?|building|block|manor|hall|tower|estate|development|mews|terrace|walk|rise|hill|point|residence|chambers))+)/i,
     
     // "at Westbourne Grove" pattern - medium priority
     /(?:at|in|of|for)\s+([a-z]+(?:\s+(?:grove|road|street|lane|close|way|drive|avenue|place|court|square|gardens?|park|view|heights?|house|apartments?|building|block|manor|hall|tower|estate|development|mews|terrace|walk|rise|hill|point|residence|chambers))+)/i,
     
-    // Direct building name patterns - lower priority
+    // Direct building name patterns - lower priority but more restrictive
     /([a-z]+(?:\s+(?:grove|road|street|lane|close|way|drive|avenue|place|court|square|gardens?|park|view|heights?|house|apartments?|building|block|manor|hall|tower|estate|development|mews|terrace|walk|rise|hill|point|residence|chambers))+)/i
   ];
   
+  console.log('🔍 [EmailBuildingExtractor] Processing cleaned text:', cleanedText.substring(0, 200) + '...');
+  
   // Try each pattern
   for (const pattern of emailBuildingPatterns) {
-    const matches = [...text.matchAll(pattern)];
+    const matches = [...cleanedText.matchAll(pattern)];
     if (matches.length > 0) {
       const match = matches[0];
       
@@ -2558,12 +2573,18 @@ function extractBuildingFromEmailContent(text: string): { buildingName?: string;
       if (result.buildingName && result.buildingName.length > 3) {
         const buildingNameLower = result.buildingName.toLowerCase();
         
-        // Skip office addresses (CBRE, surveyor offices, etc.)
+        // Skip office addresses and problematic words
         if (buildingNameLower.includes('henrietta') || 
             buildingNameLower.includes('cbre') ||
             buildingNameLower.includes('surveyor') ||
-            buildingNameLower.includes('property management uk')) {
-          console.log('🚫 [EmailBuildingExtractor] Skipping office address:', result.buildingName);
+            buildingNameLower.includes('property management uk') ||
+            buildingNameLower.includes('any way') ||
+            buildingNameLower.includes('whatsoever') ||
+            buildingNameLower.includes('strictly') ||
+            buildingNameLower.includes('prohibited') ||
+            buildingNameLower.includes('disclose') ||
+            buildingNameLower.includes('copy')) {
+          console.log('🚫 [EmailBuildingExtractor] Skipping invalid match:', result.buildingName);
           continue; // Try next pattern
         }
         
