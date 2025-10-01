@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
       .from('onboarding_batches')
       .select(`
         *,
-        created_by_user:profiles!onboarding_batches_created_by_fkey(full_name),
+        created_by_user:profiles!onboarding_batches_created_by_fkey(first_name, last_name),
         agency:agencies!onboarding_batches_agency_id_fkey(name)
       `)
       .eq('agency_id', profile.agency_id)

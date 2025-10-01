@@ -136,7 +136,7 @@ export async function GET(request: NextRequest) {
           processing_status,
           batch:onboarding_batches!onboarding_raw_batch_id_fkey(batch_name)
         ),
-        reviewer:profiles!staging_structured_reviewer_id_fkey(full_name)
+        reviewer:profiles!staging_structured_reviewer_id_fkey(first_name, last_name)
       `)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);

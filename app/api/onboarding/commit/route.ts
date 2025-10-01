@@ -343,7 +343,7 @@ export async function GET(request: NextRequest) {
           building_name,
           batch:onboarding_batches!onboarding_raw_batch_id_fkey(batch_name)
         ),
-        committed_by_user:profiles!staging_structured_committed_by_fkey(full_name)
+        committed_by_user:profiles!staging_structured_committed_by_fkey(first_name, last_name)
       `)
       .eq('committed_to_production', committed === 'true' ? true : false)
       .order('committed_at', { ascending: false })

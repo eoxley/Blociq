@@ -210,7 +210,7 @@ export async function GET(request: NextRequest) {
       .from('onboarding_raw')
       .select(`
         *,
-        uploader:profiles!onboarding_raw_uploader_id_fkey(full_name),
+        uploader:profiles!onboarding_raw_uploader_id_fkey(first_name, last_name),
         batch:onboarding_batches!onboarding_raw_batch_id_fkey(batch_name, status)
       `)
       .order('created_at', { ascending: false })
