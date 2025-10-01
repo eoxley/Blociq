@@ -2,6 +2,12 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 <!-- Force deploy: 2025-09-23 -->
 
+## Client Onboarding
+
+Client onboarding is handled by a separate Python CLI tool located in `/BlocIQ_Onboarder/`. This tool is run locally by BlocIQ staff to process client data before it enters the application.
+
+See `/BlocIQ_Onboarder/README.md` and `/BlocIQ_Onboarder/EXAMPLE_USAGE.md` for details on how to onboard new clients.
+
 ## Getting Started
 
 First, run the development server:
