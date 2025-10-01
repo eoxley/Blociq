@@ -83,10 +83,13 @@ export default function OnboardingDashboard() {
   const checkAuthAndFetchData = async () => {
     try {
       setLoading(true);
-      
+
       // Check authentication
       const { data: { user }, error: authError } = await supabase.auth.getUser();
+      console.log('🔐 Auth check:', { user: user?.id, error: authError });
+
       if (authError || !user) {
+        console.log('❌ No user, redirecting to login');
         router.push('/login');
         return;
       }
@@ -98,11 +101,16 @@ export default function OnboardingDashboard() {
         .eq('id', user.id)
         .single();
 
+      console.log('👤 Profile check:', { profile, error: profileError });
+
       if (profileError || !profile || profile.role !== 'super_admin') {
+        console.log('⛔ Not super_admin, showing unauthorized');
         setUnauthorized(true);
         setLoading(false);
         return;
       }
+
+      console.log('✅ Super admin confirmed, fetching data');
 
       // Fetch data
       await fetchRawUploads();
