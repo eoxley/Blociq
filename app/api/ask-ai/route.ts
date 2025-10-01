@@ -17,6 +17,8 @@ import { logBuildingQuery, detectQueryContextType } from '../../../lib/ai/buildi
 import { buildPrompt } from '../../../lib/buildPrompt';
 import { insertAiLog } from '../../../lib/supabase/ai_logs';
 import { fetchBuildingLeaseContext, isLeaseRelatedQuery } from '../../../lib/ai/leaseContextFormatter';
+import { normaliseQueryForLeasehold, getQueryContextType, addLeaseholdContext } from '../../../lib/ai/queryNormalizer';
+import { getLeaseholdGuidancePack } from '../../../lib/ai/leaseholdGuidancePack';
 import {
   getTemplateVariations,
   analyzeSenderProfile,
@@ -373,17 +375,32 @@ async function searchLeases(supabase: any, query: string, buildingId?: string) {
 
 // Enhanced system prompts for different context types
 const SYSTEM_PROMPTS = {
-  general: `You are a professional property manager responding through BlocIQ, a UK property management platform. You are responding to queries and taking ownership of issues as the property manager.
+  general: `You are BlocIQ, an AI assistant for UK leasehold block management.
+
+CORE RULES - CRITICAL:
+- Default assumption: All queries relate to UK residential long leasehold block management, NOT assured shorthold tenancies or commercial property leases.
+- If a user or third party refers to "tenant", interpret this as "leaseholder" unless explicitly stated otherwise.
+- Always ground responses in UK leasehold legislation and best practice:
+  • Landlord & Tenant Act 1985 (esp. Sections 20, 21, 22)
+  • Building Safety Act 2022
+  • RICS Service Charge Code (4th Edition)
+  • ARMA/TPI guidance
+- NEVER reference tenancy law (e.g. Housing Act 1988, Section 21 notices for possession) unless the query is clearly about private rentals or commercial leases.
+- Prefer British English spelling (summarise, organise, etc).
 
 🔹 BlocIQ Response Framework - CRITICAL: ALWAYS use this structure:
 
 **Part 1: Context & Reasoning** (Private - for manager review only)
-- Explain the legal/compliance basis (e.g. "Sections 21 & 22 of the LTA 1985 apply here")
-- Clarify why the response is framed this way (leasehold vs tenancy, residential vs commercial, etc.)
-- Identify agency obligations (summaries, inspections, deadlines, notices)
-- Note any tone/formatting decisions (firm vs conciliatory, escalation or not)
+- Legal/compliance basis relevant to the query (LTA 1985, BSA 2022, etc.)
+- Why the response is framed this way (leasehold obligations, statutory rights, timelines)
+- Any assumptions made or missing data
+- This part is for internal users only
 
 **Part 2: Formatted Output** (Ready-to-use communication)
+- Professional draft communication (email or letter) ready to send externally
+- Include subject line, salutation, body, and sign-off
+- Routing guidance if needed (direct to leaseholder vs via surveyor)
+
 Then provide the specific output requested:
 
 FOR EMAIL/LETTER DRAFTS:
@@ -412,15 +429,25 @@ Answer clearly and concisely with practical guidance
 
 Always provide BOTH parts - the reasoning AND the ready-to-use output.`,
 
-  email_reply: `You are a professional property manager using BlocIQ to respond to emails. You are the property manager responsible for this building/property and you will take action to resolve issues.
+  email_reply: `You are BlocIQ, an AI assistant for UK leasehold block management responding to emails.
+
+CORE RULES - CRITICAL:
+- Default assumption: All email queries relate to UK residential long leasehold block management, NOT assured shorthold tenancies or commercial property leases.
+- If the email refers to "tenant", interpret this as "leaseholder" unless explicitly stated otherwise.
+- Always ground responses in UK leasehold legislation and best practice:
+  • Landlord & Tenant Act 1985 (esp. Sections 20, 21, 22)
+  • Building Safety Act 2022
+  • RICS Service Charge Code (4th Edition)
+  • ARMA/TPI guidance
+- NEVER reference tenancy law (e.g. Housing Act 1988, Section 21 notices for possession) unless the email is clearly about private rentals or commercial leases.
 
 🔹 BlocIQ Response Framework - CRITICAL: ALWAYS use this structure:
 
 **Part 1: Context & Reasoning** (Private - for manager review only)
-- Explain the legal/compliance basis (e.g. "Sections 21 & 22 of the LTA 1985 apply here")
-- Clarify why the response is framed this way (leasehold vs tenancy, residential vs commercial, etc.)
-- Identify agency obligations (summaries, inspections, deadlines, notices)
-- Note any tone/formatting decisions (firm vs conciliatory, escalation or not)
+- Legal/compliance basis relevant to the query (LTA 1985, BSA 2022, etc.)
+- Why the response is framed this way (leasehold obligations, statutory rights, timelines)
+- Any assumptions made or missing data
+- This part is for internal users only
 
 **Part 2: Formatted Output** (Ready-to-send communication)
 - Always begins with Subject line
@@ -859,6 +886,20 @@ export async function POST(req: NextRequest) {
       prompt = body.message || body.prompt || body.question || '';
       building_id = body.building_id || body.buildingId || '';
       contextType = body.context_type || body.contextType || 'general';
+
+      // Step 1: Normalise query for leasehold context
+      const normalisedPrompt = normaliseQueryForLeasehold(prompt);
+      const queryContextType = getQueryContextType(normalisedPrompt);
+      const contextualPrompt = addLeaseholdContext(normalisedPrompt);
+      
+      console.log('🔄 [QueryNormalizer] Processing:', {
+        original: prompt?.substring(0, 50),
+        normalised: normalisedPrompt?.substring(0, 50),
+        contextType: queryContextType
+      });
+
+      // Update prompt with normalised version
+      prompt = contextualPrompt;
       tone = body.tone || 'Professional';
       isPublic = body.is_public || isPublicAccess;
       documentIds = body.document_ids || body.documentIds || [];
@@ -1493,6 +1534,12 @@ export async function POST(req: NextRequest) {
       // Use the default context-based system prompt
       systemPrompt = await AIContextHandler.buildPrompt(context, prompt, buildingContext);
     }
+
+    // Step 2: Inject leasehold guidance pack
+    const leaseholdGuidance = getLeaseholdGuidancePack();
+    systemPrompt = `${leaseholdGuidance}\n\n${systemPrompt}`;
+    
+    console.log('📚 [GuidancePack] Injected leasehold guidance into system prompt');
 
     // Initialize OpenAI client
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
