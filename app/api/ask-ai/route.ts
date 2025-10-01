@@ -1115,10 +1115,18 @@ export async function POST(req: NextRequest) {
           // If no building found, try email-specific extraction
           if (!buildingContext.buildingName && !buildingContext.buildingId) {
             const emailBuildingContext = extractBuildingFromEmailContent(prompt);
+            console.log('🔍 [EmailBuildingExtractor] Result:', emailBuildingContext);
             if (emailBuildingContext.buildingName) {
               buildingContext.buildingName = emailBuildingContext.buildingName;
+              console.log('✅ [EmailBuildingExtractor] Using building name:', buildingContext.buildingName);
             }
           }
+          
+          console.log('🔍 [BuildingContext] Final context:', {
+            buildingName: buildingContext.buildingName,
+            buildingId: buildingContext.buildingId,
+            unitName: buildingContext.unitName
+          });
           
           if (!buildingContext.buildingId && !buildingContext.buildingName) {
             return NextResponse.json({
@@ -2404,18 +2412,18 @@ ${chunk.content.substring(0, 400)}...`
 function extractBuildingFromEmailContent(text: string): { buildingName?: string; unitName?: string } {
   const result: { buildingName?: string; unitName?: string } = {};
   
-  // Email-specific patterns for building extraction
+  // Email-specific patterns for building extraction - prioritize property addresses over office addresses
   const emailBuildingPatterns = [
-    // "tenant at Unit 51 Westbourne Grove" pattern
+    // "tenant at Unit 51 Westbourne Grove" pattern - highest priority
     /(?:tenant|leaseholder|property|unit)\s+(?:at|in|of)?\s*(?:unit\s+)?(\d+[a-z]?)?\s*([a-z]+(?:\s+(?:grove|road|street|lane|close|way|drive|avenue|place|court|square|gardens?|park|view|heights?|house|apartments?|building|block|manor|hall|tower|estate|development|mews|terrace|walk|rise|hill|point|residence|chambers))+)/i,
     
-    // "Unit 51 Westbourne Grove" pattern
+    // "Unit 51 Westbourne Grove" pattern - high priority
     /(?:unit|flat|apartment)\s+(\d+[a-z]?)\s+([a-z]+(?:\s+(?:grove|road|street|lane|close|way|drive|avenue|place|court|square|gardens?|park|view|heights?|house|apartments?|building|block|manor|hall|tower|estate|development|mews|terrace|walk|rise|hill|point|residence|chambers))+)/i,
     
-    // "at Westbourne Grove" pattern
+    // "at Westbourne Grove" pattern - medium priority
     /(?:at|in|of|for)\s+([a-z]+(?:\s+(?:grove|road|street|lane|close|way|drive|avenue|place|court|square|gardens?|park|view|heights?|house|apartments?|building|block|manor|hall|tower|estate|development|mews|terrace|walk|rise|hill|point|residence|chambers))+)/i,
     
-    // Direct building name patterns
+    // Direct building name patterns - lower priority
     /([a-z]+(?:\s+(?:grove|road|street|lane|close|way|drive|avenue|place|court|square|gardens?|park|view|heights?|house|apartments?|building|block|manor|hall|tower|estate|development|mews|terrace|walk|rise|hill|point|residence|chambers))+)/i
   ];
   
@@ -2442,7 +2450,29 @@ function extractBuildingFromEmailContent(text: string): { buildingName?: string;
           .trim();
       }
       
+      // Filter out office addresses and prioritize property addresses
       if (result.buildingName && result.buildingName.length > 3) {
+        const buildingNameLower = result.buildingName.toLowerCase();
+        
+        // Skip office addresses (CBRE, surveyor offices, etc.)
+        if (buildingNameLower.includes('henrietta') || 
+            buildingNameLower.includes('cbre') ||
+            buildingNameLower.includes('surveyor') ||
+            buildingNameLower.includes('property management uk')) {
+          console.log('🚫 [EmailBuildingExtractor] Skipping office address:', result.buildingName);
+          continue; // Try next pattern
+        }
+        
+        // Prioritize property addresses (grove, road, street, etc.)
+        if (buildingNameLower.includes('grove') || 
+            buildingNameLower.includes('road') || 
+            buildingNameLower.includes('street') ||
+            buildingNameLower.includes('place') ||
+            buildingNameLower.includes('court')) {
+          console.log('✅ [EmailBuildingExtractor] Found property address:', result.buildingName, 'Unit:', result.unitName);
+          break;
+        }
+        
         console.log('🔍 [EmailBuildingExtractor] Found building:', result.buildingName, 'Unit:', result.unitName);
         break;
       }
