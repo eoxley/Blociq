@@ -420,8 +420,16 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query;
 
     if (error) {
-      console.error('Database error:', error);
-      return NextResponse.json({ error: 'Failed to fetch extractions' }, { status: 500 });
+      console.error('Database error fetching extractions:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+      return NextResponse.json({
+        error: 'Failed to fetch extractions',
+        details: error.message
+      }, { status: 500 });
     }
 
     return NextResponse.json({

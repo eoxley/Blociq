@@ -227,8 +227,16 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query;
 
     if (error) {
-      console.error('Database error:', error);
-      return NextResponse.json({ error: 'Failed to fetch uploads' }, { status: 500 });
+      console.error('Database error fetching uploads:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+      return NextResponse.json({
+        error: 'Failed to fetch uploads',
+        details: error.message
+      }, { status: 500 });
     }
 
     return NextResponse.json({
