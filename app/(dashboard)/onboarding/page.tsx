@@ -245,10 +245,26 @@ export default function OnboardingDashboard() {
     formData.append('file', file);
 
     try {
+      // Check file size before upload
+      const maxSize = 100 * 1024 * 1024; // 100MB
+      if (file.size > maxSize) {
+        alert(`File too large. Maximum size: 100MB. Your file is ${(file.size / (1024 * 1024)).toFixed(1)}MB`);
+        setUploading(false);
+        event.target.value = '';
+        return;
+      }
+
       const response = await fetch('/api/onboarding/upload', {
         method: 'POST',
         body: formData,
       });
+
+      if (response.status === 413) {
+        alert('File too large. Maximum size: 100MB. Please try a smaller file.');
+        setUploading(false);
+        event.target.value = '';
+        return;
+      }
 
       const result = await response.json();
       if (result.success) {
@@ -259,7 +275,11 @@ export default function OnboardingDashboard() {
       }
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Upload failed');
+      if (error instanceof SyntaxError && error.message.includes('pattern')) {
+        alert('Upload failed due to malformed response. Please try again or clear your browser cookies.');
+      } else {
+        alert(`Upload failed: ${error.message || 'Unknown error'}`);
+      }
     } finally {
       setUploading(false);
       event.target.value = '';

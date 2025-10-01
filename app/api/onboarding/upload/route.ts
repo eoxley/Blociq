@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 
+// Configure body size limit for this route
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '100mb',
+    },
+  },
+};
+
 export async function POST(request: NextRequest) {
   try {
     const cookieStore = await cookies();
@@ -52,12 +61,12 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Validate file size (50MB limit)
-    const maxSize = 50 * 1024 * 1024; // 50MB
+    // Validate file size (100MB limit)
+    const maxSize = 100 * 1024 * 1024; // 100MB
     if (file.size > maxSize) {
       return NextResponse.json({ 
-        error: 'File too large. Maximum size: 50MB' 
-      }, { status: 400 });
+        error: 'File too large. Maximum size: 100MB' 
+      }, { status: 413 });
     }
 
     // Generate unique filename

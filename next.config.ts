@@ -29,6 +29,14 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
     turbo: {},
     optimizeServerReact: true,
+    serverComponentsExternalPackages: ['sharp'],
+  },
+  
+  // API configuration for file uploads
+  api: {
+    bodyParser: {
+      sizeLimit: '100mb',
+    },
   },
   // Configure webpack for faster builds
   webpack: (config, { dev, isServer }) => {
