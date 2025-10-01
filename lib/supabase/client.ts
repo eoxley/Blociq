@@ -20,6 +20,14 @@ export function getSupabaseClient() {
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: false,
+      storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+      storageKey: 'blociq-supabase-auth',
+      flowType: 'pkce',
+    },
+    global: {
+      headers: {
+        'X-Client-Info': 'blociq-frontend',
+      },
     },
   });
 

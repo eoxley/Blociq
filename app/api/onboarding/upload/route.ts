@@ -6,7 +6,7 @@ import { cookies } from 'next/headers';
 export const config = {
   api: {
     bodyParser: {
-      sizeLimit: '100mb',
+      sizeLimit: '500mb',
     },
   },
 };
@@ -85,6 +85,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('🚀 Upload API: Starting POST request');
+    
     const cookieStore = await cookies();
     const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
 
@@ -92,16 +94,24 @@ export async function POST(request: NextRequest) {
     let user = null;
     let authError = null;
 
+    console.log('🔐 Upload API: Checking authentication');
+
     // First try cookie-based auth
     const cookieAuth = await supabase.auth.getUser();
+    console.log('🍪 Upload API: Cookie auth result:', { user: !!cookieAuth.data.user, error: cookieAuth.error });
+    
     if (cookieAuth.data.user) {
       user = cookieAuth.data.user;
     } else {
       // Try Bearer token auth
       const authHeader = request.headers.get('authorization');
+      console.log('🔑 Upload API: Bearer token present:', !!authHeader);
+      
       if (authHeader && authHeader.startsWith('Bearer ')) {
         const token = authHeader.substring(7);
         const tokenAuth = await supabase.auth.getUser(token);
+        console.log('🎫 Upload API: Token auth result:', { user: !!tokenAuth.data.user, error: tokenAuth.error });
+        
         if (tokenAuth.data.user) {
           user = tokenAuth.data.user;
         } else {
@@ -113,29 +123,48 @@ export async function POST(request: NextRequest) {
     }
 
     if (authError || !user) {
-      console.error('Upload API auth error:', authError);
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      console.error('❌ Upload API auth error:', authError);
+      return NextResponse.json({ error: 'Unauthorized', details: authError?.message }, { status: 401 });
     }
 
+    console.log('✅ Upload API: User authenticated:', user.id);
+
     // Check if user is super_admin
+    console.log('👤 Upload API: Checking super_admin role for user:', user.id);
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('role, agency_id')
       .eq('id', user.id)
       .single();
 
+    console.log('👤 Upload API: Profile check result:', { profile, error: profileError });
+
     if (profileError || !profile || profile.role !== 'super_admin') {
-      return NextResponse.json({ error: 'Super admin access required' }, { status: 403 });
+      console.error('❌ Upload API: Super admin access denied:', { profileError, profile });
+      return NextResponse.json({ error: 'Super admin access required', details: profileError?.message }, { status: 403 });
     }
 
+    console.log('✅ Upload API: Super admin confirmed');
+
     // Parse form data
+    console.log('📄 Upload API: Parsing form data');
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const batchId = formData.get('batchId') as string;
     const buildingName = formData.get('buildingName') as string;
     const notes = formData.get('notes') as string;
 
+    console.log('📄 Upload API: Form data parsed:', { 
+      fileName: file?.name, 
+      fileSize: file?.size, 
+      fileType: file?.type,
+      batchId,
+      buildingName,
+      notes 
+    });
+
     if (!file) {
+      console.error('❌ Upload API: No file provided');
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
@@ -156,13 +185,13 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Validate file size (100MB limit)
-    const maxSize = 100 * 1024 * 1024; // 100MB
-    if (file.size > maxSize) {
-      return NextResponse.json({ 
-        error: 'File too large. Maximum size: 100MB' 
-      }, { status: 413 });
-    }
+        // Validate file size (500MB limit)
+        const maxSize = 500 * 1024 * 1024; // 500MB
+        if (file.size > maxSize) {
+          return NextResponse.json({ 
+            error: 'File too large. Maximum size: 500MB' 
+          }, { status: 413 });
+        }
 
     // Generate unique filename
     const timestamp = Date.now();

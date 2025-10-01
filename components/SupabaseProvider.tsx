@@ -17,28 +17,37 @@ const SupabaseContext = createContext<{
   loading: true,
 });
 
-// Singleton client instance
-let supabaseInstance: SupabaseClient | null = null;
+    // Global singleton client instance
+    let supabaseInstance: SupabaseClient | null = null;
 
-function getSupabaseClient() {
-  if (supabaseInstance) {
-    return supabaseInstance;
-  }
+    function getSupabaseClient() {
+      if (supabaseInstance) {
+        return supabaseInstance;
+      }
 
-  supabaseInstance = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: false,
-      },
+      // Create with more specific auth configuration to prevent multiple instances
+      supabaseInstance = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: false,
+            storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+            storageKey: 'blociq-supabase-auth',
+            flowType: 'pkce',
+          },
+          global: {
+            headers: {
+              'X-Client-Info': 'blociq-frontend',
+            },
+          },
+        }
+      );
+
+      return supabaseInstance;
     }
-  );
-
-  return supabaseInstance;
-}
 
 export function useSupabase() {
   const context = useContext(SupabaseContext);

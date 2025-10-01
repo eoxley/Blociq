@@ -32,12 +32,12 @@ const nextConfig: NextConfig = {
     serverComponentsExternalPackages: ['sharp'],
   },
   
-  // API configuration for file uploads
-  api: {
-    bodyParser: {
-      sizeLimit: '100mb',
-    },
-  },
+      // API configuration for file uploads
+      api: {
+        bodyParser: {
+          sizeLimit: '500mb',
+        },
+      },
   // Configure webpack for faster builds
   webpack: (config, { dev, isServer }) => {
     // Enable webpack caching for faster rebuilds
