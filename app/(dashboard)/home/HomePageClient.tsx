@@ -954,11 +954,28 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
       console.log("🤖 Processing request with enhanced AI:", payload);
 
-      // Check if this looks like an email reply request
-      const isEmailReply = prompt.toLowerCase().includes('write') && 
-                          (prompt.toLowerCase().includes('email') || 
-                           prompt.toLowerCase().includes('response') || 
-                           prompt.toLowerCase().includes('reply'));
+      // Check if this is specifically an email reply request
+      console.log("📧 Checking if email reply request:", prompt);
+      const isEmailReply = (
+        prompt.toLowerCase().includes('write') && 
+        (prompt.toLowerCase().includes('email') || 
+         prompt.toLowerCase().includes('reply')) &&
+        (prompt.toLowerCase().includes('response') || 
+         prompt.toLowerCase().includes('draft') ||
+         prompt.toLowerCase().includes('letter'))
+      ) || (
+        prompt.toLowerCase().includes('draft') && 
+        (prompt.toLowerCase().includes('email') || 
+         prompt.toLowerCase().includes('response') ||
+         prompt.toLowerCase().includes('reply'))
+      ) || (
+        prompt.toLowerCase().includes('generate') && 
+        (prompt.toLowerCase().includes('email') || 
+         prompt.toLowerCase().includes('response') ||
+         prompt.toLowerCase().includes('reply'))
+      );
+
+      console.log("📧 Is email reply request:", isEmailReply);
 
       const res = await fetch("/api/ask-ai", {
         method: "POST",

@@ -482,7 +482,6 @@ Then provide the specific output:
 🎯 FOR STRUCTURED RESPONSES (when requested):
 If the client requests structured output, provide your response in this exact JSON format:
 
-```json
 {
   "context_reasoning": {
     "legal_context": "Residential long leasehold – Landlord & Tenant Act 1985, Sections 21 & 22",
@@ -497,10 +496,9 @@ If the client requests structured output, provide your response in this exact JS
   },
   "formatted_output": {
     "subject": "RE: Tenant ID: T0038032 – Service Charge Information",
-    "body": "Dear Adrian,\n\nThank you for bringing this service charge query to my attention.\n\nI appreciate that the general budget does not address the level of detail the tenant has requested. Under Sections 21 and 22 of the Landlord and Tenant Act 1985, the landlord (or its managing agent) is obliged to provide a written summary of relevant costs and allow inspection of supporting documents upon request.\n\nTo assist, I will:\n- Prepare a full written summary of costs for the most recent accounting period, showing expenditure incurred and how it has been apportioned.\n- Provide a copy of the individual service charge demand for the unit.\n- Facilitate an inspection of invoices, receipts, and other supporting documents at a mutually convenient time.\n\nPlease confirm whether you would like me to issue the summary and demand directly to the tenant, or if you would prefer these to be routed via your office.\n\nKind regards,\nEllie\nOn behalf of the Agency"
+    "body": "Dear Adrian,\\n\\nThank you for bringing this service charge query to my attention.\\n\\nI appreciate that the general budget does not address the level of detail the tenant has requested. Under Sections 21 and 22 of the Landlord and Tenant Act 1985, the landlord (or its managing agent) is obliged to provide a written summary of relevant costs and allow inspection of supporting documents upon request.\\n\\nTo assist, I will:\\n- Prepare a full written summary of costs for the most recent accounting period, showing expenditure incurred and how it has been apportioned.\\n- Provide a copy of the individual service charge demand for the unit.\\n- Facilitate an inspection of invoices, receipts, and other supporting documents at a mutually convenient time.\\n\\nPlease confirm whether you would like me to issue the summary and demand directly to the tenant, or if you would prefer these to be routed via your office.\\n\\nKind regards,\\nEllie\\nOn behalf of the Agency"
   }
 }
-```
 
 FOR EMAIL DRAFTS:
 ---
