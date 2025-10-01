@@ -150,7 +150,8 @@ async function processFileAsync(rawId: string) {
   try {
     // This will trigger the AI extraction service
     // For now, we'll just update the status to processing
-    const supabase = createRouteHandlerClient({ cookies });
+    const cookieStore = await cookies();
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
     
     await supabase
       .from('onboarding_raw')
