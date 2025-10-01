@@ -125,7 +125,12 @@ export default function OnboardingDashboard() {
 
   const fetchRawUploads = async () => {
     try {
-      const response = await fetch('/api/onboarding/upload');
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch('/api/onboarding/upload', {
+        headers: {
+          'Authorization': `Bearer ${session?.access_token}`
+        }
+      });
       const result = await response.json();
       if (result.success) {
         setRawUploads(result.data);
@@ -137,7 +142,12 @@ export default function OnboardingDashboard() {
 
   const fetchStructuredRecords = async () => {
     try {
-      const response = await fetch('/api/onboarding/extract?status=pending');
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch('/api/onboarding/extract?status=pending', {
+        headers: {
+          'Authorization': `Bearer ${session?.access_token}`
+        }
+      });
       const result = await response.json();
       if (result.success) {
         setStructuredRecords(result.data);
