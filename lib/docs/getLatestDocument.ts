@@ -20,7 +20,7 @@ export interface DocumentRequest {
   docType: string;
   buildingId?: string;
   unitId?: string;
-  agencyId: string;
+  agencyId?: string | null; // Make optional for Ask AI context
   userId: string;
 }
 
@@ -107,9 +107,27 @@ export async function getLatestBuildingDocument(request: DocumentRequest): Promi
       `)
       .eq('building_id', buildingId)
       .eq('doc_type', docType)
-      .eq('agency_id', agencyId) // Ensure RLS compliance
       .eq('rn', 1) // Only get the latest (rn = 1)
       .single();
+    
+    // Only filter by agency if provided (for Ask AI, agencyId can be null)
+    if (agencyId) {
+      const { data: agencyFiltered } = await supabase
+        .from('building_documents')
+        .select(`
+          document_id, filename, doc_date, storage_path, doc_type, summary_json,
+          row_number() over (partition by doc_type order by doc_date desc) as rn
+        `)
+        .eq('building_id', buildingId)
+        .eq('doc_type', docType)
+        .eq('agency_id', agencyId) // Ensure RLS compliance for agency-specific access
+        .eq('rn', 1) // Only get the latest (rn = 1)
+        .single();
+      
+      if (agencyFiltered) {
+        result = agencyFiltered;
+      }
+    }
     
     if (error) {
       if (error.code === 'PGRST116') {
@@ -175,9 +193,28 @@ export async function getLatestUnitDocument(request: DocumentRequest): Promise<L
       .eq('building_id', buildingId)
       .eq('unit_id', unitId)
       .eq('doc_type', docType)
-      .eq('agency_id', agencyId) // Ensure RLS compliance
       .eq('rn', 1) // Only get the latest (rn = 1)
       .single();
+    
+    // Only filter by agency if provided (for Ask AI, agencyId can be null)
+    if (agencyId) {
+      const { data: agencyFiltered } = await supabase
+        .from('building_documents')
+        .select(`
+          document_id, filename, doc_date, storage_path, doc_type, summary_json,
+          row_number() over (partition by doc_type order by doc_date desc) as rn
+        `)
+        .eq('building_id', buildingId)
+        .eq('unit_id', unitId)
+        .eq('doc_type', docType)
+        .eq('agency_id', agencyId) // Ensure RLS compliance for agency-specific access
+        .eq('rn', 1) // Only get the latest (rn = 1)
+        .single();
+      
+      if (agencyFiltered) {
+        result = agencyFiltered;
+      }
+    }
     
     if (error) {
       if (error.code === 'PGRST116') {

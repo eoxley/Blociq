@@ -1129,11 +1129,11 @@ export async function POST(req: NextRequest) {
             });
           }
           
-          // Get available buildings for fuzzy matching
+          // Get available buildings for fuzzy matching - don't restrict by agency for Ask AI
           const { data: buildings } = await supabase
             .from('buildings')
             .select('id, name')
-            .eq('agency_id', userProfile?.agency_id || null);
+            .limit(100); // Limit to prevent performance issues, but don't filter by agency
           
           // Resolve building ID if we have a name
           let resolvedBuildingId = buildingContext.buildingId;
@@ -1398,10 +1398,8 @@ export async function POST(req: NextRequest) {
               .select('id, name, address, unit_count')
               .ilike('name', `%${potentialName}%`);
 
-            // Filter by agency for authenticated users
-            if (userAgencyId) {
-              buildingQuery = buildingQuery.eq('agency_id', userAgencyId);
-            }
+            // Don't filter by agency for Ask AI - allow access to all buildings
+            // This allows users to ask about any building mentioned in their content
 
             const { data: building } = await buildingQuery
               .limit(1)
@@ -1472,10 +1470,8 @@ export async function POST(req: NextRequest) {
           `)
           .eq('id', building_id);
 
-        // Filter by agency for authenticated users
-        if (userAgencyId) {
-          buildingDataQuery = buildingDataQuery.eq('agency_id', userAgencyId);
-        }
+        // Don't filter by agency for Ask AI - allow access to all buildings
+        // This allows users to ask about any building mentioned in their content
 
         const { data: buildingData, error: buildingError } = await buildingDataQuery.single();
 
