@@ -543,18 +543,10 @@ export default function BuildingDetailClient({
         </div>
 
         {/* Demand Dates Section */}
-        <div className="mt-6 pt-4 border-t border-gray-200">
-          {/* Hero Banner for Demand Dates & Service Charge */}
-          <div className="relative overflow-hidden bg-gradient-to-r from-[#008C8F] to-[#4f46e5] px-6 py-4 rounded-2xl mb-6">
-            <div className="flex items-center gap-3 text-white">
-              <Calendar className="h-6 w-6" />
-              <h4 className="text-xl font-semibold">Demand Dates & Service Charge Year End</h4>
-            </div>
-            <p className="text-white/90 text-sm mt-2">Manage service charge cycles and payment demand dates</p>
-            {/* Decorative elements */}
-            <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full blur-xl"></div>
-            <div className="absolute bottom-0 left-8 w-12 h-12 bg-white/5 rounded-full blur-lg"></div>
-            <div className="absolute top-1/2 right-8 w-6 h-6 bg-white/20 rounded-full blur-sm"></div>
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <div className="flex items-center gap-2 text-gray-700 mb-4">
+            <Calendar className="h-5 w-5 text-[#4f46e5]" />
+            <h4 className="font-semibold">Demand Dates & Service Charge</h4>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <InfoRow
