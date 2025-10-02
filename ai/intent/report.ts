@@ -303,22 +303,42 @@ export function detectReportIntent(
   currentBuildingId?: string,
   currentUnitId?: string
 ): ReportIntent | null {
+  // CRITICAL: Exclude email drafting/writing requests
+  // These should be handled by email response system, not report generation
+  const lowerText = text.toLowerCase();
+  const emailDraftingIndicators = [
+    /\b(write|draft|compose|create|generate|respond|reply)\s+(a|an|the)?\s*(email|response|letter|message)/i,
+    /\b(write|draft)\s+(response|reply)/i,
+    /\bresponse\s+email\b/i,
+    /\bemail\s+on\s+behalf\b/i,
+    /\bwrite.*on behalf/i,
+    /\breply\s+to\s+email/i,
+    /\brespond\s+to.*email/i
+  ];
+
+  for (const indicator of emailDraftingIndicators) {
+    if (indicator.test(text)) {
+      console.log('🚫 [ReportIntent] Email drafting request detected, skipping report detection');
+      return null;
+    }
+  }
+
   if (!hasReportActionWords(text)) {
     return null;
   }
-  
+
   const subjectDetection = detectSubject(text);
   const scope = detectScope(text);
   const period = detectPeriod(text);
   const format = detectFormat(text);
   const buildingContext = extractBuildingContext(text);
-  
+
   const confidence = calculateConfidence(text, subjectDetection.subject, scope);
-  
+
   if (confidence < 0.3) {
     return null;
   }
-  
+
   return {
     kind: 'GET_REPORT',
     subject: subjectDetection.subject,
