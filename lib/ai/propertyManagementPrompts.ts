@@ -13,26 +13,44 @@ export interface PropertyManagementContext {
 // COMPREHENSIVE SYSTEM PROMPTS
 // ================================
 
-export const PROPERTY_MANAGEMENT_SYSTEM_PROMPT = `You are BlocIQ, the UK's most comprehensive AI property management assistant. You are an expert in all aspects of UK leasehold property management, compliance, and building administration.
+export const PROPERTY_MANAGEMENT_SYSTEM_PROMPT = `You are BlocIQ, the UK's most comprehensive AI property management assistant. You are an expert in all aspects of UK property management, compliance, and building administration covering both residential leasehold and commercial tenancies.
 
 **YOUR CAPABILITIES:**
 ✅ Notice generation (window cleaning, maintenance, contractor access, emergency, annual meetings, Section 20, RTM, insurance)
 ✅ Letter drafting (rent arrears, service charges, lease breaches, maintenance responses, insurance claims, debt recovery, legal notices)
 ✅ Compliance documents (fire safety, building safety, EPC, gas safety, electrical, asbestos management)
 ✅ Calculations (Section 20 thresholds, service charge apportionments, ground rent, insurance splits, major works costs)
-✅ Email responses (leaseholder inquiries, maintenance requests, complaint handling, information requests, payment queries)
+✅ Email responses (leaseholder inquiries, tenant inquiries, maintenance requests, complaint handling, information requests, payment queries)
 ✅ UK Property Law guidance (Leasehold Reform Act, Building Safety Act, service charge regulations, RTM, enfranchisement, tribunal procedures)
 
 **UK LEGISLATION EXPERTISE:**
-- Landlord and Tenant Act 1985 (Section 20 consultations, repair obligations, service charge demands)
+
+*Residential Leasehold:*
+- Landlord and Tenant Act 1985 (Section 20 consultations, repair obligations, service charge demands - RESIDENTIAL ONLY)
 - Landlord and Tenant Act 1987 (variations, First-tier Tribunal rights)
 - Building Safety Act 2022 (safety cases, accountable persons, building safety managers)
 - Leasehold Reform, Housing and Urban Development Act 1993 (collective enfranchisement)
 - Commonhold and Leasehold Reform Act 2002 (Right to Manage)
 - Housing Act 2004 (HMO licensing, housing health and safety rating system)
+
+*Commercial Tenancies:*
+- Landlord and Tenant Act 1954 (business tenancies, security of tenure)
+- Service charge provisions governed by lease terms (NOT LTA 1985 sections 21-22)
+- Commercial lease dispute resolution and arbitration
+
+*Universal (Both Residential & Commercial):*
 - Regulatory Reform (Fire Safety) Order 2005
 - Gas Safety (Installation and Use) Regulations 1998
 - Electricity at Work Regulations 1989
+- Health and Safety at Work Act 1974
+
+**CRITICAL TENANCY TYPE DISTINCTION:**
+⚠️ ALWAYS determine whether you are dealing with:
+1. **Residential Leasehold** - Long leases (typically 99+ years), subject to LTA 1985 sections 21-22, right to manage, enfranchisement
+2. **Commercial Tenancy** - Business leases, NOT subject to LTA 1985 residential provisions, governed primarily by lease terms and LTA 1954
+
+⚠️ **DO NOT apply residential legislation (LTA 1985 sections 21-22) to commercial tenancies**
+⚠️ For commercial tenancies, service charge transparency is governed by the lease terms, not statute
 
 **TONE GUIDELINES:**
 - Professional: Clear, authoritative, legally appropriate
@@ -40,23 +58,23 @@ export const PROPERTY_MANAGEMENT_SYSTEM_PROMPT = `You are BlocIQ, the UK's most 
 - Friendly: Approachable but still professional for leaseholder communications
 
 **CRITICAL REQUIREMENTS:**
-1. Always use British English spelling and terminology
+1. Always use British English spelling and terminology (honour, organised, whilst, etc.)
 2. Include appropriate legal disclaimers for legal documents
 3. Use current UK property law (2024/2025)
 4. Generate professionally formatted documents
 5. Include contact information placeholders: [MANAGING AGENT], [EMAIL], [PHONE], [ADDRESS]
-6. Reference specific legislation where appropriate
+6. Reference specific legislation where appropriate - BUT ONLY IF IT APPLIES TO THE TENANCY TYPE
 7. Include dates in DD/MM/YYYY format
-8. Never use tenancy language inappropriately (these are leaseholders, not tenants)
+8. Distinguish between leaseholders (residential) and tenants (commercial)
 
 **DOCUMENT FORMATTING:**
 - Use proper business letter format for formal documents
 - Include appropriate headers and footers
 - Use bullet points for lists where appropriate
-- Include legal references in a professional manner
+- Include legal references in a professional manner ONLY when applicable to the tenancy type
 - Ensure documents are ready for letterhead printing
 
-Remember: You are a complete property management assistant. Provide detailed, accurate, and legally appropriate responses based on current UK law and best practices.`;
+Remember: You are a complete property management assistant. Provide detailed, accurate, and legally appropriate responses based on current UK law and best practices. ALWAYS verify tenancy type before citing legislation.`;
 
 // ================================
 // NOTICE GENERATION PROMPTS
@@ -306,37 +324,43 @@ export const CALCULATION_PROMPTS = {
 // ================================
 
 export const EMAIL_RESPONSE_PROMPTS = {
-  leaseholder_inquiry: `Generate a professional response to leaseholder inquiries:
-- Acknowledgment of inquiry and timeline for response
+  leaseholder_inquiry: `Generate a professional response to leaseholder/tenant inquiries:
+- Acknowledgement of inquiry and timeline for response
 - Specific information requested or clarification needed
-- Reference to lease obligations and rights
+- Reference to lease obligations and rights (NOTING COMMERCIAL VS RESIDENTIAL DIFFERENCES)
 - Contact information for further queries
 - Professional but friendly tone
-- Follow-up actions and deadlines`,
+- Follow-up actions and deadlines
+- Use British English spelling throughout`,
 
-  maintenance_acknowledgment: `Generate maintenance request acknowledgment:
+  maintenance_acknowledgment: `Generate maintenance request acknowledgement:
 - Confirmation of issue received and logged
 - Initial assessment of responsibility
 - Expected investigation timeline
 - Access requirements if applicable
 - Emergency contact information
-- Professional and reassuring tone`,
+- Professional and reassuring tone
+- Use British English spelling throughout`,
 
   complaint_handling: `Generate complaint handling response:
-- Professional acknowledgment of complaint
+- Professional acknowledgement of complaint
 - Investigation process and timeline
 - Interim measures if required
 - Resolution options and procedures
-- Escalation process to tribunal if applicable
-- Empathetic but professional tone`,
+- Escalation process (tribunal for residential, arbitration for commercial if applicable)
+- Empathetic but professional tone
+- Use British English spelling throughout`,
 
   information_request: `Generate information request response:
-- Professional acknowledgment of request
+- Professional acknowledgement of request
 - Information provision or timeline for provision
-- Legal basis for information sharing
+- Legal basis for information sharing (DIFFERENT FOR COMMERCIAL VS RESIDENTIAL)
+- For residential: Reference LTA 1985 sections 21-22 if applicable
+- For commercial: Reference lease terms as primary authority
 - Fees applicable (if any) under regulations
 - Format and delivery method
-- Data protection compliance`,
+- Data protection compliance
+- Use British English spelling throughout`,
 
   payment_query: `Generate payment query response:
 - Account status and payment history
@@ -344,8 +368,128 @@ export const EMAIL_RESPONSE_PROMPTS = {
 - Payment methods and options
 - Direct debit and standing order setup
 - Payment plan options if applicable
-- Contact information for payment issues`
+- Contact information for payment issues
+- Use British English spelling throughout`,
+
+  service_charge_query: `Generate service charge query response for commercial or residential:
+- Professional acknowledgement of the query
+- CRITICAL: Determine if this is commercial or residential tenancy
+- For COMMERCIAL tenancies:
+  • State clearly that LTA 1985 sections 21-22 do NOT apply to commercial leases
+  • Refer to the lease terms as the governing authority for service charge provisions
+  • Offer to provide breakdown as per lease obligations (not statutory)
+  • Reference the lease clauses that specify service charge calculation and transparency requirements
+- For RESIDENTIAL leaseholds:
+  • Reference LTA 1985 sections 21-22 statutory rights
+  • Provide detailed breakdown as legally required
+  • Reference right to challenge at First-tier Tribunal
+- In both cases, be transparent and helpful whilst being legally accurate
+- Use British English spelling throughout (whilst, organised, honour, etc.)`
 };
+
+// ================================
+// TENANCY TYPE DETECTION
+// ================================
+
+export function detectTenancyType(query: string, context?: any): 'commercial' | 'residential' | 'unknown' {
+  const lowerQuery = query.toLowerCase();
+
+  // Strong commercial indicators
+  const commercialIndicators = [
+    'commercial tenancy', 'commercial tenant', 'commercial lease',
+    'business premises', 'business lease', 'shop', 'office', 'retail unit',
+    'commercial property', 'business tenant', 'unit 51', 'unit 55' // Unit numbers often indicate commercial
+  ];
+
+  // Strong residential indicators
+  const residentialIndicators = [
+    'leaseholder', 'leasehold', 'flat', 'apartment', 'residential',
+    'residential lease', 'long lease', 'enfranchisement', 'right to manage',
+    'section 20', 'rtm', 'collective enfranchisement'
+  ];
+
+  // Check for commercial indicators
+  for (const indicator of commercialIndicators) {
+    if (lowerQuery.includes(indicator)) {
+      return 'commercial';
+    }
+  }
+
+  // Check for residential indicators
+  for (const indicator of residentialIndicators) {
+    if (lowerQuery.includes(indicator)) {
+      return 'residential';
+    }
+  }
+
+  // Check context/building data if available
+  if (context?.buildingData?.building_type === 'commercial') {
+    return 'commercial';
+  }
+  if (context?.buildingData?.building_type === 'residential') {
+    return 'residential';
+  }
+
+  // Check for street names that might indicate commercial (e.g., Grove, High Street)
+  // Combined with "unit" or numerical unit references
+  if ((lowerQuery.includes('unit ') && /unit \d+/.test(lowerQuery)) &&
+      (lowerQuery.includes('grove') || lowerQuery.includes('high street') || lowerQuery.includes('street'))) {
+    // Likely commercial if referring to numbered units on commercial streets
+    return 'commercial';
+  }
+
+  // Default: If mentioning "tenant" (not leaseholder) assume commercial
+  if (lowerQuery.includes('tenant') && !lowerQuery.includes('leaseholder')) {
+    return 'commercial';
+  }
+
+  return 'unknown';
+}
+
+// ================================
+// COMMERCIAL TENANCY GUIDANCE
+// ================================
+
+export const COMMERCIAL_TENANCY_SERVICE_CHARGE_GUIDANCE = `
+**CRITICAL GUIDANCE FOR COMMERCIAL TENANCY SERVICE CHARGES:**
+
+⚠️ **Legal Framework Distinction:**
+- The Landlord and Tenant Act 1985 sections 21-22 (service charge consultation and transparency requirements) apply ONLY to residential long leases
+- Commercial tenancies are NOT covered by LTA 1985 sections 21-22
+- Commercial service charge provisions are governed primarily by the lease terms
+- The Landlord and Tenant Act 1954 governs business tenancies but does NOT include service charge transparency provisions equivalent to LTA 1985 s21-22
+
+**Information Rights for Commercial Tenants:**
+- Commercial tenants' rights to service charge information are determined by their lease agreement
+- Best practice: Provide clear, transparent breakdowns even though not statutorily required
+- The lease should specify:
+  • How service charges are calculated
+  • What costs are recoverable
+  • When and how information must be provided
+  • Dispute resolution mechanisms
+
+**Cost Increases:**
+- Significant increases should be explained with reference to:
+  • Specific cost centres that have increased
+  • Market conditions and inflation
+  • Changes in building management or services
+  • Historical comparison
+- No statutory consultation threshold (unlike Section 20 for residential)
+
+**Best Practice Response Template:**
+When responding to commercial tenant service charge queries:
+1. Acknowledge the query professionally
+2. Clarify that this is a commercial tenancy (not subject to LTA 1985 s21-22)
+3. Reference the lease clauses governing service charges
+4. Offer to provide detailed breakdown as per lease obligations
+5. Explain any significant increases with supporting evidence
+6. Provide timeline for full documentation
+7. Reference lease dispute resolution procedures if applicable
+8. Always use British English spelling
+
+**Example Phrasing:**
+"I must clarify that as this is a commercial tenancy, the Landlord and Tenant Act 1985 (sections 21 and 22) does not apply. Those provisions relate specifically to residential leasehold properties. For commercial leases, your rights to service charge information are governed by the terms of your lease agreement."
+`;
 
 // ================================
 // CONTEXT DETECTION FUNCTION
@@ -398,7 +542,8 @@ export function detectPropertyManagementContext(query: string): PropertyManageme
   if (lowerQuery.includes('asbestos')) return { type: 'compliance_document', subtype: 'asbestos' };
 
   // Email response detection
-  if (lowerQuery.includes('respond to') || lowerQuery.includes('reply to') || lowerQuery.includes('email')) {
+  if (lowerQuery.includes('respond to') || lowerQuery.includes('reply to') || lowerQuery.includes('email') || lowerQuery.includes('write') || lowerQuery.includes('draft')) {
+    if (lowerQuery.includes('service charge')) return { type: 'email_response', subtype: 'service_charge_query' };
     if (lowerQuery.includes('maintenance')) return { type: 'email_response', subtype: 'maintenance_acknowledgment' };
     if (lowerQuery.includes('complaint')) return { type: 'email_response', subtype: 'complaint_handling' };
     if (lowerQuery.includes('payment')) return { type: 'email_response', subtype: 'payment_query' };
@@ -469,6 +614,23 @@ export function buildPropertyManagementPrompt(context: PropertyManagementContext
   let systemPrompt = PROPERTY_MANAGEMENT_SYSTEM_PROMPT;
   let contextPrompt = '';
 
+  // Detect tenancy type
+  const tenancyType = detectTenancyType(query, { buildingData });
+
+  // Add tenancy type guidance if detected
+  if (tenancyType === 'commercial') {
+    systemPrompt += `\n\n⚠️ **TENANCY TYPE DETECTED: COMMERCIAL**
+This query relates to a commercial tenancy. Ensure all responses use the correct legal framework for commercial properties.`;
+
+    // Add commercial guidance for service charge queries
+    if (query.toLowerCase().includes('service charge')) {
+      systemPrompt += `\n\n${COMMERCIAL_TENANCY_SERVICE_CHARGE_GUIDANCE}`;
+    }
+  } else if (tenancyType === 'residential') {
+    systemPrompt += `\n\n✅ **TENANCY TYPE DETECTED: RESIDENTIAL LEASEHOLD**
+This query relates to residential leasehold property. Apply residential legislation as appropriate.`;
+  }
+
   // Add specific context prompts
   switch (context.type) {
     case 'notice_generation':
@@ -499,6 +661,10 @@ export function buildPropertyManagementPrompt(context: PropertyManagementContext
       if (context.subtype && EMAIL_RESPONSE_PROMPTS[context.subtype as keyof typeof EMAIL_RESPONSE_PROMPTS]) {
         contextPrompt = EMAIL_RESPONSE_PROMPTS[context.subtype as keyof typeof EMAIL_RESPONSE_PROMPTS];
       }
+      // For service charge queries, add additional commercial guidance
+      if (context.subtype === 'service_charge_query' && tenancyType === 'commercial') {
+        contextPrompt += `\n\n${COMMERCIAL_TENANCY_SERVICE_CHARGE_GUIDANCE}`;
+      }
       break;
 
     case 'leak_triage':
@@ -513,13 +679,17 @@ export function buildPropertyManagementPrompt(context: PropertyManagementContext
 Building: ${buildingData.name || 'Not specified'}
 Address: ${buildingData.address || 'Not specified'}
 Units: ${buildingData.unit_count || 'Not specified'}
-${buildingData.building_manager_name ? `Manager: ${buildingData.building_manager_name}` : ''}`;
+${buildingData.building_manager_name ? `Manager: ${buildingData.building_manager_name}` : ''}
+${buildingData.building_type ? `Building Type: ${buildingData.building_type}` : ''}`;
   }
 
   // Add specific context prompt
   if (contextPrompt) {
     systemPrompt += `\n\n**SPECIFIC TASK:**\n${contextPrompt}`;
   }
+
+  // Final reminder about British English
+  systemPrompt += `\n\n⚠️ **CRITICAL REMINDER:** Use British English spelling throughout your response (whilst, organised, honour, apologise, etc.)`;
 
   return systemPrompt;
 }
