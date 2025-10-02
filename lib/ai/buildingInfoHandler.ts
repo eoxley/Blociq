@@ -35,6 +35,23 @@ export interface BuildingInfoQuery {
 export function detectBuildingInfoQuery(query: string): BuildingInfoQuery | null {
   const normalizedQuery = query.toLowerCase().trim();
 
+  // CRITICAL: Don't trigger on email drafting/writing requests
+  // These should be handled by email response system, not building info lookup
+  const emailDraftingIndicators = [
+    /\b(write|draft|compose|create|generate|respond|reply)\s+(a|an|the)?\s*(email|response|letter|message)/i,
+    /\b(write|draft)\s+(response|reply)/i,
+    /\bresponse\s+email\b/i,
+    /\bemail\s+on\s+behalf\b/i,
+    /\bwrite.*on behalf/i
+  ];
+
+  for (const indicator of emailDraftingIndicators) {
+    if (indicator.test(normalizedQuery)) {
+      console.log('🚫 [BuildingInfoHandler] Email drafting request detected, skipping building lookup');
+      return null;
+    }
+  }
+
   // Extract building name
   const buildingName = extractBuildingNameAdvanced(normalizedQuery);
   if (!buildingName) {
@@ -99,21 +116,21 @@ function extractBuildingNameAdvanced(query: string): string | null {
   const patterns = [
     // Email-specific patterns for tenant/property references
     /(?:tenant|leaseholder|property)\s+(?:at|in|of)\s+([a-z]+(?:\s+(?:grove|road|street|lane|close|way|drive|avenue|place|court|square|gardens?|park|view|heights?|house|apartments?|building|block|manor|hall|tower|estate|development|mews|terrace|walk|rise|hill|point|residence|chambers))+)/i,
-    
-    // Unit references with building context from emails
-    /(?:unit|flat|apartment)\s+(\d+[a-z]?)\s+(?:at|in|of)\s+([a-z]+(?:\s+(?:grove|road|street|lane|close|way|drive|avenue|place|court|square|gardens?|park|view|heights?|house|apartments?|building|block|manor|hall|tower|estate|development|mews|terrace|walk|rise|hill|point|residence|chambers))+)/i,
-    
+
+    // Unit references with building context from emails - extract building name (second capture group)
+    /(?:unit|flat|apartment)\s+\d+[a-z]?\s+(?:at|in|of|,)?\s*([a-z]+(?:\s+(?:grove|road|street|lane|close|way|drive|avenue|place|court|square|gardens?|park|view|heights?|house|apartments?|building|block|manor|hall|tower|estate|development|mews|terrace|walk|rise|hill|point|residence|chambers))+)/i,
+
     // Pattern for "5 ashwood house" - extract "ashwood house" (not the unit number)
     /\d+\s+([a-z]+(?:\s+(?:house|apartments?|court|gardens?|heights?|point|view|mews|square|place|road|street|lane|close|way|drive|avenue|terrace|walk|rise|hill|park|manor|hall|tower|building|block|estate|development))+)/i,
 
     // Standard "at/in/of building name" patterns
     /\b(?:at|in|of|for|from)\s+([a-z]+(?:\s+(?:house|apartments?|court|gardens?|heights?|point|view|mews|square|place|road|street|lane|close|way|drive|avenue|terrace|walk|rise|hill|park|manor|hall|tower|building|block|estate|development))+)/i,
 
-    // Building name with property type
-    /\b([a-z]+(?:\s+(?:house|apartments?|court|gardens?|heights?|point|view|mews|square|place|road|street|lane|close|way|drive|avenue|terrace|walk|rise|hill|park|manor|hall|tower|building|block|estate|development))+)/i,
+    // Building name with property type (requires property type suffix)
+    /\b([a-z]+\s+(?:house|apartments?|court|gardens?|heights?|point|view|mews|square|place|road|street|lane|close|way|drive|avenue|terrace|walk|rise|hill|park|manor|hall|tower|building|block|estate|development|grove))\b/i,
 
-    // Standalone building names (common UK property names)
-    /\b(ashwood|oakwood|maple|cedar|pine|rose|ivy|holly|laurel|elm|beech|birch|willow|westbourne|henrietta)(?:\s+(?:house|court|apartments?|gardens?|heights?|point|view|manor|hall|grove|place))?/i
+    // Standalone building names ONLY when very specific (requires property type)
+    /\b(ashwood house|oakwood house|westbourne grove|henrietta place)/i
   ];
 
   for (const pattern of patterns) {
@@ -140,17 +157,31 @@ function extractBuildingNameAdvanced(query: string): string | null {
  */
 function isProblematicMatch(name: string): boolean {
   const nameLower = name.toLowerCase();
-  
+
   // Skip problematic words and phrases
   const problematicWords = [
-    'any way', 'whatsoever', 'strictly', 'prohibited', 'copy', 'disclose', 'rely', 'contents', 
+    'any way', 'whatsoever', 'strictly', 'prohibited', 'copy', 'disclose', 'rely', 'contents',
     'confidential', 'privileged', 'communication', 'sender', 'immediately', 'computer', 'viruses',
     'responsibility', 'accepted', 'associated', 'subsidiary', 'companies', 'recipient', 'carry',
     'appropriate', 'virus', 'checks', 'details', 'personal', 'data', 'collects', 'privacy',
     'policy', 'regulated', 'rics', 'registered', 'office', 'henrietta', 'place', 'london',
-    'england', 'wales', 'any', 'way'
+    'england', 'wales', 'any', 'way',
+    // Generic property management terms that should not be treated as building names
+    'leasehold block', 'residential block', 'property management', 'managing agent',
+    'uk residential', 'long leasehold', 'block management'
   ];
-  
+
+  // Also skip if the name is EXACTLY just generic terms (not part of a real building name)
+  const genericTerms = [
+    'leasehold', 'block', 'building', 'property', 'management', 'residential', 'commercial',
+    'house', 'flat', 'apartment', 'unit'
+  ];
+
+  // If the name is just a single generic term, skip it
+  if (genericTerms.includes(nameLower.trim())) {
+    return true;
+  }
+
   return problematicWords.some(word => nameLower.includes(word));
 }
 
